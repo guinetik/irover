@@ -12,6 +12,14 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 const SKY_RADIUS = 900
 
 export class MarsSky {
+  // Color temperature stops (hoisted to avoid per-frame allocations)
+  private static readonly DAWN_COLOR = new THREE.Color(0xffaa66)
+  private static readonly MORNING_COLOR = new THREE.Color(0xffd0a0)
+  private static readonly NOON_COLOR = new THREE.Color(0xfff0d8)
+  private static readonly AMBIENT_DAY = new THREE.Color(0x8b5e3c)
+  private static readonly AMBIENT_NIGHT = new THREE.Color(0x1a1018)
+  private readonly _scratchColor = new THREE.Color()
+
   readonly mesh: THREE.Mesh
   private material: THREE.ShaderMaterial
   private sunLight: THREE.DirectionalLight
@@ -92,26 +100,36 @@ export class MarsSky {
     // Adjust light intensity/color based on sun elevation
     const sunUp = Math.max(0, elevation)
     this.nightFactor = 1.0 - smoothstep(-0.1, 0.2, elevation)
-    const isDusk = elevation > -0.2 && elevation < 0.1
 
-    // Sunlight intensity — strong directional for visible shadows
-    this.sunLight.intensity = sunUp * 3.5
-    this.ambientLight.intensity = 0.03 + sunUp * 0.2
-    this.hemiLight.intensity = 0.03 + sunUp * 0.15
+    // Sun intensity — multi-phase curve for dramatic day arc
+    // Dawn/dusk ramp (elevation -0.1 to 0.1): 0 to 2.0
+    // Morning (0.1-0.5): 2.0 to 4.0
+    // Noon (0.5-1.0): 4.0 to 5.5
+    const dawnRamp = smoothstep(-0.1, 0.1, elevation)
+    const morningRamp = smoothstep(0.1, 0.5, elevation)
+    const noonRamp = smoothstep(0.5, 1.0, elevation)
+    this.sunLight.intensity = dawnRamp * 2.0 + morningRamp * 2.0 + noonRamp * 1.5
 
-    // Color shift at dawn/dusk
-    if (isDusk) {
-      this.sunLight.color.setHex(0xffaa66)
-    } else {
-      this.sunLight.color.setHex(0xffe8d0)
-    }
+    // Ambient and hemisphere — higher daytime fill
+    this.ambientLight.intensity = 0.05 + sunUp * 0.35
+    this.hemiLight.intensity = 0.05 + sunUp * 0.25
 
-    // Night ambient color shift
+    // Sun color temperature arc — smooth lerp through day phases
+    // Dawn: warm orange -> Morning: soft gold -> Noon: bright warm white
+    // Dusk mirrors dawn symmetrically (elevation follows sin curve)
     if (elevation < 0) {
-      this.ambientLight.color.setHex(0x1a1018)
+      this.sunLight.color.copy(MarsSky.DAWN_COLOR)
     } else {
-      this.ambientLight.color.setHex(0x8b5e3c)
+      const dayProgress = smoothstep(0.0, 0.5, elevation)
+      const noonProgress = smoothstep(0.5, 1.0, elevation)
+      this._scratchColor.copy(MarsSky.DAWN_COLOR).lerp(MarsSky.MORNING_COLOR, dayProgress)
+      this._scratchColor.lerp(MarsSky.NOON_COLOR, noonProgress)
+      this.sunLight.color.copy(this._scratchColor)
     }
+
+    // Ambient color — smooth transition instead of hard toggle
+    const ambientT = smoothstep(-0.1, 0.2, elevation)
+    this.ambientLight.color.copy(MarsSky.AMBIENT_NIGHT).lerp(MarsSky.AMBIENT_DAY, ambientT)
   }
 
   dispose() {
