@@ -192,20 +192,20 @@ export class SiteScene {
       const sunUp = Math.max(0, this.sky.sunDirection.y)
       let r: number, g: number, b: number
       if (this.waterIceIndex > 0.7 || this.featureType === 'polar-cap') {
-        // Polar: cool blue-grey fog — dim bluish night, cold pale-blue day
-        r = 0.10 + sunUp * 0.38
-        g = 0.12 + sunUp * 0.42
-        b = 0.15 + sunUp * 0.50
+        // Polar: cool blue-grey fog — brighter cold blue during day
+        r = 0.10 + sunUp * 0.48
+        g = 0.12 + sunUp * 0.52
+        b = 0.15 + sunUp * 0.57
       } else if (this.featureType === 'volcano') {
-        // Volcanic: very dark, murky brown — barely lifts during day
-        r = 0.10 + sunUp * 0.08
-        g = 0.05 + sunUp * 0.04
-        b = 0.02 + sunUp * 0.02
+        // Volcanic: dark murky brown — lifts more visibly during day
+        r = 0.10 + sunUp * 0.18
+        g = 0.05 + sunUp * 0.10
+        b = 0.02 + sunUp * 0.06
       } else {
-        // Default warm Mars brown
-        r = 0.16 + sunUp * 0.10
-        g = 0.08 + sunUp * 0.05
-        b = 0.03 + sunUp * 0.03
+        // Default warm Mars brown — much warmer/brighter day fog
+        r = 0.16 + sunUp * 0.29
+        g = 0.08 + sunUp * 0.17
+        b = 0.03 + sunUp * 0.09
       }
       ;(this.scene.fog as THREE.FogExp2).color.setRGB(r, g, b)
     }

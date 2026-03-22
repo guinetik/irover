@@ -142,7 +142,7 @@ onMounted(async () => {
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 0.85
+  renderer.toneMappingExposure = 1.15
 
   camera = new THREE.PerspectiveCamera(
     50,

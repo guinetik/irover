@@ -207,7 +207,7 @@ void main() {
 
   // Wrap lighting for softer terminator, but keep shadows meaningful
   float wrap = max(0.0, (NdotL + 0.15) / 1.15);
-  float diffuse = wrap * 0.85 + 0.15; // low ambient floor = visible shadows
+  float diffuse = wrap * 0.75 + 0.25; // raised ambient floor for visible terrain detail
 
   float ao = 1.0 - vSlope * 0.3;
   color *= diffuse * ao;
@@ -220,7 +220,7 @@ void main() {
     vec3(0.55, 0.65, 0.78),  // cold polar haze
     smoothstep(0.3, 0.8, uWaterIce)
   );
-  color = mix(color, atmosphereColor * 0.3, scatter * 0.3);
+  color = mix(color, atmosphereColor * 0.45, scatter * 0.35);
 
   gl_FragColor = vec4(color, 1.0);
 }
