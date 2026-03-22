@@ -1,10 +1,12 @@
 import * as THREE from 'three'
+import type { RockTypeId } from '@/three/terrain/RockTypes'
 
 const MAX_RANGE = 2.5
 
 export interface TargetResult {
   rock: THREE.Mesh
   point: THREE.Vector3
+  rockType: RockTypeId
 }
 
 export class RockTargeting {
@@ -46,7 +48,8 @@ export class RockTargeting {
       const dx = this.rockWorldScratch.x - this.roverPosition.x
       const dz = this.rockWorldScratch.z - this.roverPosition.z
       if (Math.sqrt(dx * dx + dz * dz) > MAX_RANGE) continue
-      return { rock, point: hit.point }
+      const rockType = (rock.userData.rockType as RockTypeId) ?? 'basalt'
+      return { rock, point: hit.point, rockType }
     }
     return null
   }

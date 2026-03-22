@@ -81,6 +81,7 @@
       :is-full="isFull"
       @dump="removeSample"
     />
+    <SampleToast ref="sampleToastRef" />
     <Teleport to="body">
       <Transition name="deploy-fade">
         <div v-if="showOverdriveConfirm" class="overdrive-confirm-overlay">
@@ -129,6 +130,7 @@ import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
+import SampleToast from '@/components/SampleToast.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import { useInventory } from '@/composables/useInventory'
 import { useMarsPower } from '@/composables/useMarsPower'
@@ -150,6 +152,7 @@ const crosshairVisible = ref(false)
 const crosshairColor = ref<'green' | 'red'>('red')
 const drillProgress = ref(0)
 const isDrilling = ref(false)
+const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const marsSol = ref(1)
 const marsTimeOfDay = ref(0)
 const { samples, currentWeightKg, isFull, capacityKg, removeSample } = useInventory()
@@ -378,6 +381,12 @@ onMounted(async () => {
       drillProgress.value = apxs.drillProgress
       isDrilling.value = apxs.isDrilling
       apxsDrilling = apxs.isDrilling
+
+      if (apxs.lastCollected) {
+        const s = apxs.lastCollected
+        sampleToastRef.value?.show(s.type, s.label, s.weightKg)
+        apxs.lastCollected = null
+      }
     } else {
       crosshairVisible.value = false
       isDrilling.value = false

@@ -3,6 +3,7 @@ import { InstrumentController } from './InstrumentController'
 import { RockTargeting, type TargetResult } from './RockTargeting'
 import { LaserDrill } from './LaserDrill'
 import { useInventory } from '@/composables/useInventory'
+import type { RockTypeId } from '@/three/terrain/RockTypes'
 
 const ARM_SWING_SPEED = 0.8
 const ARM_EXTEND_SPEED = 0.6
@@ -39,6 +40,9 @@ export class APXSController extends InstrumentController {
   private currentTarget: TargetResult | null = null
 
   private inventory = useInventory()
+
+  /** Set after each successful sample collection; read + cleared by the view layer */
+  lastCollected: import('@/composables/useInventory').Sample | null = null
 
   get drillProgress(): number { return this.drill?.progress ?? 0 }
   get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
@@ -135,9 +139,11 @@ export class APXSController extends InstrumentController {
   }
 
   private collectSample(rock: THREE.Mesh): void {
-    const sample = this.inventory.addSample('regolith')
+    const rockType = (rock.userData.rockType as RockTypeId) ?? 'basalt'
+    const sample = this.inventory.addSample(rockType)
     if (sample && this.targeting) {
       this.targeting.depleteRock(rock)
+      this.lastCollected = sample
     }
   }
 

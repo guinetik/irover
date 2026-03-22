@@ -26,7 +26,7 @@
             :key="sample.id"
             class="inv-row"
           >
-            <span class="inv-sample-icon">&#x25CF;</span>
+            <span class="inv-sample-icon" :style="{ color: rockColor(sample.type) }">&#x25CF;</span>
             <span class="inv-sample-label">{{ sample.label }}</span>
             <span class="inv-sample-weight">{{ sample.weightKg.toFixed(2) }} kg</span>
             <button type="button" class="inv-dump-btn" @click="$emit('dump', sample.id)">DUMP</button>
@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Sample } from '@/composables/useInventory'
+import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
 
 const props = defineProps<{
   open: boolean
@@ -57,6 +58,10 @@ defineEmits<{
 
 const currentWeight = computed(() => props.currentWeightKg.toFixed(1))
 const fillPct = computed(() => (props.currentWeightKg / props.capacityKg) * 100)
+
+function rockColor(type: RockTypeId): string {
+  return ROCK_TYPES[type]?.color ?? '#c4753a'
+}
 </script>
 
 <style scoped>
@@ -162,8 +167,8 @@ const fillPct = computed(() => (props.currentWeightKg / props.capacityKg) * 100)
 }
 
 .inv-sample-icon {
-  color: rgba(196, 117, 58, 0.5);
-  font-size: 6px;
+  font-size: 8px;
+  text-shadow: 0 0 4px currentColor;
 }
 
 .inv-sample-label {

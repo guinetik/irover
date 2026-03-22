@@ -5,6 +5,14 @@ import terrainVert from '@/three/shaders/terrain.vert.glsl?raw'
 import terrainFrag from '@/three/shaders/terrain.frag.glsl?raw'
 import rockTextureUrl from '@/assets/texture1.jpg?url'
 import dustTextureUrl from '@/assets/texture2.jpg?url'
+import {
+  ROCK_TYPE_LIST,
+  type RockTypeId,
+  createRockGeometry,
+  createRockMaterial,
+  buildSpawnDistribution,
+  pickRockType,
+} from './RockTypes'
 
 const GRID_SIZE = 256
 const SCALE = 800
@@ -39,27 +47,29 @@ export class TerrainGenerator {
   private mountains: THREE.Mesh[] = []
   /** Rock positions, radii, and heights for collision/climbing */
   rockColliders: { x: number; z: number; radius: number; height: number }[] = []
-  private rockGeos: THREE.BufferGeometry[] = []
+  private rockGeoMap = new Map<RockTypeId, THREE.BufferGeometry>()
+  private rockMatMap = new Map<RockTypeId, THREE.MeshStandardMaterial>()
   private boulderGeos: THREE.BufferGeometry[] = []
-  private rockMat: THREE.MeshStandardMaterial
-  private boulderMat: THREE.MeshStandardMaterial
   private textures: THREE.Texture[] = []
 
   readonly group = new THREE.Group()
 
   constructor() {
-    // Small rock shapes
-    this.rockGeos = [
-      new THREE.DodecahedronGeometry(0.5, 0),
-      new THREE.IcosahedronGeometry(0.5, 0),
-      new THREE.OctahedronGeometry(0.5, 0),
-    ]
+    const texLoader = new THREE.TextureLoader()
 
-    // Boulder shapes — varied silhouettes
+    for (const rt of ROCK_TYPE_LIST) {
+      const tex = texLoader.load(`/${rt.textureFile}`)
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+      tex.minFilter = THREE.LinearMipmapLinearFilter
+      tex.magFilter = THREE.LinearFilter
+      tex.colorSpace = THREE.SRGBColorSpace
+      this.textures.push(tex)
+
+      this.rockGeoMap.set(rt.id, createRockGeometry(rt, true))
+      this.rockMatMap.set(rt.id, createRockMaterial(rt, tex))
+    }
+
     this.boulderGeos = this.createBoulderGeometries()
-
-    this.rockMat = new THREE.MeshStandardMaterial({ color: 0x4a3225, roughness: 1 })
-    this.boulderMat = new THREE.MeshStandardMaterial({ color: 0x3d2a1c, roughness: 0.95, metalness: 0.05 })
   }
 
   private createBoulderGeometries(): THREE.BufferGeometry[] {
@@ -117,59 +127,6 @@ export class TerrainGenerator {
       if (this.heightmap[i] < this.heightMin) this.heightMin = this.heightmap[i]
       if (this.heightmap[i] > this.heightMax) this.heightMax = this.heightmap[i]
     }
-
-    // Set site-aware rock and boulder material colors before building rocks
-    if (params.waterIceIndex > 0.7) {
-      // Polar caps — icy blue-grey rocks
-      this.rockMat.color.setHex(0x8899aa)
-      this.rockMat.roughness = 0.8
-      this.rockMat.metalness = 0.1
-      this.boulderMat.color.setHex(0x8899aa)
-      this.boulderMat.roughness = 0.8
-      this.boulderMat.metalness = 0.1
-    } else if (params.basalt > 0.8) {
-      // Volcanoes — very dark basalt
-      this.rockMat.color.setHex(0x2a2428)
-      this.rockMat.roughness = 1.0
-      this.rockMat.metalness = 0.0
-      this.boulderMat.color.setHex(0x2a2428)
-      this.boulderMat.roughness = 1.0
-      this.boulderMat.metalness = 0.0
-    } else if (params.featureType === 'canyon') {
-      // Canyons — layered red-brown with mineral glint
-      this.rockMat.color.setHex(0x6b3a2a)
-      this.rockMat.roughness = 0.9
-      this.rockMat.metalness = 0.08
-      this.boulderMat.color.setHex(0x6b3a2a)
-      this.boulderMat.roughness = 0.9
-      this.boulderMat.metalness = 0.08
-    } else if (params.featureType === 'plain') {
-      // Plains — sandy brown
-      this.rockMat.color.setHex(0x7a5a3a)
-      this.rockMat.roughness = 1.0
-      this.rockMat.metalness = 0.0
-      this.boulderMat.color.setHex(0x7a5a3a)
-      this.boulderMat.roughness = 1.0
-      this.boulderMat.metalness = 0.0
-    } else if (params.featureType === 'basin') {
-      // Basins — ancient grey-brown
-      this.rockMat.color.setHex(0x5a4a3a)
-      this.rockMat.roughness = 1.0
-      this.rockMat.metalness = 0.0
-      this.boulderMat.color.setHex(0x5a4a3a)
-      this.boulderMat.roughness = 1.0
-      this.boulderMat.metalness = 0.0
-    } else {
-      // Default / landing-site
-      this.rockMat.color.setHex(0x4a3225)
-      this.rockMat.roughness = 1.0
-      this.rockMat.metalness = 0.0
-      this.boulderMat.color.setHex(0x3d2a1c)
-      this.boulderMat.roughness = 0.95
-      this.boulderMat.metalness = 0.05
-    }
-    this.rockMat.needsUpdate = true
-    this.boulderMat.needsUpdate = true
 
     this.buildTerrainMesh(params)
     this.buildRocks(params)
@@ -579,13 +536,31 @@ export class TerrainGenerator {
       boulderMultiplier = 0.5
     }
 
+    // Build spawn distribution from landmark geological indices
+    const spawnDist = buildSpawnDistribution({
+      basalt: params.basalt,
+      ironOxide: params.ironOxide,
+      silicateIndex: params.silicateIndex,
+      waterIceIndex: params.waterIceIndex,
+      dustCover: params.dustCover,
+    })
+
     const rockCount = Math.floor(ROCK_COUNT * rockMultiplier)
     for (let i = 0; i < rockCount; i++) {
       const rx = (rng.n2(i * 1.7, 0) + 1) * 0.5 * SCALE - SCALE / 2
       const rz = (rng.n2(0, i * 1.7) + 1) * 0.5 * SCALE - SCALE / 2
       const sc = 0.3 + (rng.n2(i * 0.3, i * 0.7) + 1) * 0.8
 
-      const rock = new THREE.Mesh(this.rockGeos[i % this.rockGeos.length], this.rockMat)
+      // Seeded random for deterministic type selection
+      const typeRand = (rng.n2(i * 2.9, i * 1.3) + 1) * 0.5
+      const typeId = pickRockType(spawnDist, typeRand)
+      const typeGeo = this.rockGeoMap.get(typeId)!
+      const typeMat = this.rockMatMap.get(typeId)!
+      const typeScaleY = ROCK_TYPE_LIST.find(t => t.id === typeId)!.geometry.scaleY
+
+      const rock = new THREE.Mesh(typeGeo, typeMat)
+      rock.userData.rockType = typeId
+
       const gx = Math.floor((rx / SCALE + 0.5) * (GRID_SIZE - 1))
       const gz = Math.floor((rz / SCALE + 0.5) * (GRID_SIZE - 1))
       const ry = (gx >= 0 && gx < GRID_SIZE && gz >= 0 && gz < GRID_SIZE)
@@ -593,7 +568,7 @@ export class TerrainGenerator {
         : 0
 
       rock.position.set(rx, ry, rz)
-      rock.scale.set(sc, sc * 0.6, sc)
+      rock.scale.set(sc, sc * typeScaleY, sc)
       rock.rotation.set(Math.random() * 0.5, Math.random() * Math.PI * 2, Math.random() * 0.5)
       rock.castShadow = true
       this.group.add(rock)
@@ -601,20 +576,23 @@ export class TerrainGenerator {
       this.rockColliders.push({ x: rx, z: rz, radius: sc * 0.6, height: sc * 0.35 })
     }
 
-    // Boulders — large rocks for gameplay obstacles
+    // Boulders — large textured obstacles, type picked from biome distribution
     const boulderRng = new SimplexNoise(seed + 200)
     const boulderCount = Math.floor(BOULDER_COUNT * boulderMultiplier)
     for (let i = 0; i < boulderCount; i++) {
       const bx = (boulderRng.n2(i * 2.3, 0.7) + 1) * 0.5 * SCALE - SCALE / 2
       const bz = (boulderRng.n2(0.7, i * 2.3) + 1) * 0.5 * SCALE - SCALE / 2
-      let sc = 2.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.5 // scale 2–7
+      let sc = 2.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.5
 
-      // Volcanic lava bomb boulders — some much larger
       if (featureType === 'volcano' && i % 4 === 0) {
-        sc = 4.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.0 // scale 4–8
+        sc = 4.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.0
       }
 
-      const boulder = new THREE.Mesh(this.boulderGeos[i % this.boulderGeos.length], this.boulderMat)
+      const bTypeRand = (boulderRng.n2(i * 3.7, i * 2.1) + 1) * 0.5
+      const bTypeId = pickRockType(spawnDist, bTypeRand)
+      const bMat = this.rockMatMap.get(bTypeId)!
+
+      const boulder = new THREE.Mesh(this.boulderGeos[i % this.boulderGeos.length], bMat)
       const gx = Math.floor((bx / SCALE + 0.5) * (GRID_SIZE - 1))
       const gz = Math.floor((bz / SCALE + 0.5) * (GRID_SIZE - 1))
       const by = (gx >= 0 && gx < GRID_SIZE && gz >= 0 && gz < GRID_SIZE)
@@ -639,94 +617,109 @@ export class TerrainGenerator {
   private buildMountains(params: TerrainParams) {
     const { seed, elevation, featureType, waterIceIndex } = params
     const rng = new SimplexNoise(seed + 300)
+    const elev = Math.max(0.25, elevation)
 
-    // Site-aware near-ring material color
+    // Site-aware palette
     let nearColor: number
+    let midColor: number
     if (waterIceIndex > 0.7) {
-      nearColor = 0x7088a0 // Polar — blue-grey ice mountains
+      nearColor = 0x7088a0
+      midColor = 0x7a90a8
     } else if (featureType === 'volcano') {
-      nearColor = 0x3a2520 // Volcanic — dark basalt with reddish tint
+      nearColor = 0x3a2520
+      midColor = 0x4a3028
     } else if (featureType === 'canyon') {
-      nearColor = 0x6a3a25 // Canyon — red-orange layered cliffs
+      nearColor = 0x6a3a25
+      midColor = 0x7a4a30
     } else {
-      nearColor = 0x5a3d2a // Default warm brown
+      nearColor = 0x5a3d2a
+      midColor = 0x6a4d35
     }
-
-    // Far ring material fades toward atmosphere haze color
     const farColor = waterIceIndex > 0.7 ? 0x8090a0 : 0x7a5a40
 
-    const nearMat = new THREE.MeshStandardMaterial({
-      color: nearColor,
-      roughness: 0.95,
-      metalness: 0.05,
-    })
-    const farMat = new THREE.MeshStandardMaterial({
-      color: farColor,
-      roughness: 0.98,
-      metalness: 0.0,
-    })
+    const nearMat = new THREE.MeshStandardMaterial({ color: nearColor, roughness: 0.95, metalness: 0.05 })
+    const midMat = new THREE.MeshStandardMaterial({ color: midColor, roughness: 0.96, metalness: 0.03 })
+    const farMat = new THREE.MeshStandardMaterial({ color: farColor, roughness: 0.98, metalness: 0.0 })
 
-    // --- Inner ring ---
-    const innerCount = 14 + Math.floor(elevation * 12)
-    const innerRingRadius = SCALE * 0.6
-
-    for (let i = 0; i < innerCount; i++) {
-      const angle = (i / innerCount) * Math.PI * 2 + rng.n2(i * 3.1, 0) * 0.4
-      const dist = innerRingRadius + rng.n2(0, i * 2.7) * SCALE * 0.1
-
+    // Helper to place one mountain
+    const placeMountain = (
+      angle: number, dist: number, height: number, width: number,
+      mat: THREE.MeshStandardMaterial, idx: number,
+    ) => {
       const mx = Math.cos(angle) * dist
       const mz = Math.sin(angle) * dist
-
-      // Wide height range: low mesas to tall peaks
-      const heightSeed = (rng.n2(i * 1.3, i * 0.7) + 1) * 0.5 // 0–1
-      let peakHeight: number
-      if (heightSeed < 0.25) {
-        peakHeight = 15 + heightSeed * 40 // low mesa: 15–25
-      } else if (heightSeed > 0.75) {
-        peakHeight = 80 + (heightSeed - 0.75) * 4 * 40 * Math.max(0.3, elevation) // tall: 80–120
-      } else {
-        peakHeight = 30 + heightSeed * 80 * Math.max(0.2, elevation) // mid range
-      }
-      const baseWidth = 40 + (rng.n2(i * 0.9, i * 1.5) + 1) * 30
-
-      const geo = this.buildMountainGeo(rng, i, baseWidth, peakHeight, 5)
-      const mountain = new THREE.Mesh(geo, nearMat)
-      mountain.position.set(mx, -peakHeight * 0.1, mz)
-      mountain.rotation.y = rng.n2(i * 5.3, i * 2.1) * Math.PI * 2
-      mountain.castShadow = false
-      mountain.receiveShadow = false
-      this.group.add(mountain)
-      this.mountains.push(mountain)
+      const geo = this.buildMountainGeo(rng, idx, width, height, 5)
+      const m = new THREE.Mesh(geo, mat)
+      m.position.set(mx, -height * 0.1, mz)
+      m.rotation.y = rng.n2(idx * 5.3, idx * 2.1) * Math.PI * 2
+      m.castShadow = false
+      m.receiveShadow = false
+      this.group.add(m)
+      this.mountains.push(m)
     }
 
-    // --- Outer ring (sparser, taller, more atmospheric) ---
-    const outerCount = 8 + Math.floor(elevation * 6)
-    const outerRingRadius = SCALE * 0.75
+    // --- Inner ring: dense wall of overlapping peaks ---
+    const innerCount = 28 + Math.floor(elev * 16)
+    const innerRadius = SCALE * 0.52
+
+    for (let i = 0; i < innerCount; i++) {
+      const angle = (i / innerCount) * Math.PI * 2 + rng.n2(i * 3.1, 0) * 0.25
+      const dist = innerRadius + rng.n2(0, i * 2.7) * SCALE * 0.08
+
+      const hs = (rng.n2(i * 1.3, i * 0.7) + 1) * 0.5
+      const height = 30 + hs * 70 * elev
+      const width = 50 + (rng.n2(i * 0.9, i * 1.5) + 1) * 35
+
+      placeMountain(angle, dist, height, width, nearMat, i)
+    }
+
+    // --- Mid ring: fills gap, wider bases for solid ridgeline ---
+    const midCount = 22 + Math.floor(elev * 12)
+    const midRadius = SCALE * 0.65
+
+    for (let i = 0; i < midCount; i++) {
+      const angle = (i / midCount) * Math.PI * 2 + rng.n2(i * 4.3, 0.5) * 0.3
+      const dist = midRadius + rng.n2(0.5, i * 3.1) * SCALE * 0.08
+
+      const hs = (rng.n2(i * 1.7, i * 1.1) + 1) * 0.5
+      const height = 50 + hs * 80 * elev
+      const width = 60 + (rng.n2(i * 1.3, i * 0.9) + 1) * 40
+
+      placeMountain(angle, dist, height, width, midMat, i + 200)
+    }
+
+    // --- Outer ring: dramatic backdrop, tallest peaks ---
+    const outerCount = 18 + Math.floor(elev * 10)
+    const outerRadius = SCALE * 0.8
 
     for (let i = 0; i < outerCount; i++) {
-      const angle = (i / outerCount) * Math.PI * 2 + rng.n2(i * 5.7, 1.3) * 0.5
-      const dist = outerRingRadius + rng.n2(1.3, i * 3.1) * SCALE * 0.1
+      const angle = (i / outerCount) * Math.PI * 2 + rng.n2(i * 5.7, 1.3) * 0.3
+      const dist = outerRadius + rng.n2(1.3, i * 3.1) * SCALE * 0.1
 
-      const mx = Math.cos(angle) * dist
-      const mz = Math.sin(angle) * dist
+      const hs = (rng.n2(i * 2.1, i * 1.3) + 1) * 0.5
+      const height = 80 + hs * 80 * elev
+      const width = 70 + (rng.n2(i * 1.1, i * 0.7) + 1) * 50
 
-      // Outer mountains are generally taller (more dramatic silhouette)
-      const heightSeed = (rng.n2(i * 2.1, i * 1.3) + 1) * 0.5
-      const peakHeight = 60 + heightSeed * 60 * Math.max(0.4, elevation) // 60–120
-      const baseWidth = 50 + (rng.n2(i * 1.1, i * 0.7) + 1) * 40
+      placeMountain(angle, dist, height, width, farMat, i + 400)
+    }
 
-      const geo = this.buildMountainGeo(rng, i + 100, baseWidth, peakHeight, 5)
-      const mountain = new THREE.Mesh(geo, farMat)
-      mountain.position.set(mx, -peakHeight * 0.1, mz)
-      mountain.rotation.y = rng.n2(i * 7.1, i * 3.3) * Math.PI * 2
-      mountain.castShadow = false
-      mountain.receiveShadow = false
-      this.group.add(mountain)
-      this.mountains.push(mountain)
+    // --- Gap-filler peaks: scattered between rings to close holes ---
+    const fillerCount = 16 + Math.floor(elev * 8)
+    const fillerRng = new SimplexNoise(seed + 350)
+
+    for (let i = 0; i < fillerCount; i++) {
+      const angle = fillerRng.n2(i * 2.9, 0.3) * Math.PI * 2
+      const dist = SCALE * (0.55 + (fillerRng.n2(0.3, i * 2.9) + 1) * 0.15)
+
+      const height = 25 + (fillerRng.n2(i * 1.5, i * 0.9) + 1) * 35 * elev
+      const width = 40 + (fillerRng.n2(i * 0.7, i * 1.3) + 1) * 30
+
+      const mat = dist < SCALE * 0.63 ? nearMat : midMat
+      placeMountain(angle, dist, height, width, mat, i + 600)
     }
   }
 
-  /** Build a mountain geometry — 5 shape types for variety */
+  /** Build a mountain geometry — 5 shape types with aggressive multi-octave displacement */
   private buildMountainGeo(
     rng: SimplexNoise,
     i: number,
@@ -735,44 +728,74 @@ export class TerrainGenerator {
     shapeCount: number,
   ): THREE.BufferGeometry {
     const shapeType = i % shapeCount
+    let geo: THREE.BufferGeometry
 
     if (shapeType === 0) {
-      // Sharp cone peak
-      const geo = new THREE.ConeGeometry(baseWidth, peakHeight, 8, 4)
-      this.displaceVertices(geo, baseWidth * 0.08)
-      return geo
+      // Jagged peak
+      geo = new THREE.ConeGeometry(baseWidth, peakHeight, 12, 8)
     } else if (shapeType === 1) {
-      // Ridge / mesa cylinder
-      const geo = new THREE.CylinderGeometry(baseWidth * 0.6, baseWidth, peakHeight * 0.7, 7, 3)
-      this.displaceVertices(geo, baseWidth * 0.1)
-      return geo
+      // Mesa / butte with steep walls
+      geo = new THREE.CylinderGeometry(baseWidth * 0.5, baseWidth, peakHeight * 0.7, 10, 6)
     } else if (shapeType === 2) {
-      // Broad rounded hill (hemisphere)
-      const geo = new THREE.SphereGeometry(baseWidth, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5)
+      // Broad dome (half-sphere stretched tall)
+      geo = new THREE.SphereGeometry(baseWidth, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5)
       geo.scale(1, peakHeight / baseWidth, 1)
-      this.displaceVertices(geo, baseWidth * 0.06)
-      return geo
     } else if (shapeType === 3) {
-      // Twin peaks — two overlapping cones merged via a Group baked into geometry
-      const geo1 = new THREE.ConeGeometry(baseWidth * 0.65, peakHeight, 7, 3)
-      const geo2 = new THREE.ConeGeometry(baseWidth * 0.55, peakHeight * 0.85, 7, 3)
-      // Offset the second cone laterally
+      // Twin peaks — two merged cones
+      const geo1 = new THREE.ConeGeometry(baseWidth * 0.65, peakHeight, 10, 6)
+      const geo2 = new THREE.ConeGeometry(baseWidth * 0.55, peakHeight * 0.85, 10, 6)
       geo2.translate(baseWidth * 0.5, -peakHeight * 0.08, baseWidth * 0.2)
-      this.displaceVertices(geo1, baseWidth * 0.07)
-      this.displaceVertices(geo2, baseWidth * 0.07)
+      this.displaceMountainVertices(geo1, baseWidth * 0.18, i)
+      this.displaceMountainVertices(geo2, baseWidth * 0.18, i + 50)
       const merged = BufferGeometryUtils.mergeGeometries([geo1, geo2])
       geo1.dispose()
       geo2.dispose()
-      // mergeGeometries returns null only when the input list is empty, which can't happen here
-      if (!merged) {
-        return new THREE.ConeGeometry(baseWidth, peakHeight, 8, 4)
-      }
-      return merged
-    } else {
-      // Cliff wall — stretched box with vertex displacement (mesa wall silhouette)
-      const geo = new THREE.BoxGeometry(baseWidth * 2.5, peakHeight, baseWidth * 0.4, 4, 4, 2)
-      this.displaceVertices(geo, baseWidth * 0.12)
+      if (!merged) return new THREE.ConeGeometry(baseWidth, peakHeight, 10, 6)
+      geo = merged
+      geo.computeVertexNormals()
       return geo
+    } else {
+      // Cliff wall / ridge — stretched box
+      geo = new THREE.BoxGeometry(baseWidth * 2.5, peakHeight, baseWidth * 0.5, 8, 8, 4)
+    }
+
+    this.displaceMountainVertices(geo, baseWidth * 0.18, i)
+    geo.computeVertexNormals()
+    return geo
+  }
+
+  /**
+   * Multi-octave displacement tuned for mountains — produces craggy ridges
+   * and cliff faces rather than smooth lumps.
+   */
+  private displaceMountainVertices(
+    geo: THREE.BufferGeometry,
+    amount: number,
+    seed: number,
+  ): void {
+    const pos = geo.attributes.position
+    const s = seed * 0.37
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i)
+      const y = pos.getY(i)
+      const z = pos.getZ(i)
+
+      // Large ridges
+      const n1 = Math.sin(x * 0.08 + s) * Math.cos(z * 0.06 + s * 0.7) * 1.0
+      // Medium crags
+      const n2 = Math.sin(x * 0.18 + y * 0.12 + s * 1.3) * Math.cos(z * 0.15 + s) * 0.5
+      // Fine jagged detail
+      const n3 = Math.sin(x * 0.4 + z * 0.35 + s * 2.1) * Math.cos(y * 0.3 + x * 0.25) * 0.25
+      // Vertical cliff bands (abs creates sharp edges)
+      const cliff = Math.abs(Math.sin(y * 0.12 + x * 0.04 + s * 0.5)) * 0.4
+
+      const noise = n1 + n2 + n3 + cliff
+
+      // Displace radially outward, with less Y displacement to keep height coherent
+      const len = Math.sqrt(x * x + z * z) || 1
+      pos.setX(i, x + (x / len) * noise * amount)
+      pos.setY(i, y + noise * amount * 0.3)
+      pos.setZ(i, z + (z / len) * noise * amount)
     }
   }
 
@@ -849,7 +872,13 @@ export class TerrainGenerator {
     }
     this.textures.forEach((t) => t.dispose())
     this.textures = []
-    this.rocks.forEach((r) => this.group.remove(r))
+    this.rocks.forEach((r) => {
+      // Depleted rocks have cloned materials that need disposal
+      if (r.userData._depletedMat) {
+        ;(r.material as THREE.Material).dispose()
+      }
+      this.group.remove(r)
+    })
     this.rocks = []
     this.rockColliders = []
     this.mountains.forEach((m) => {

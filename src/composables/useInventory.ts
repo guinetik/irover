@@ -1,13 +1,14 @@
 import { ref, computed } from 'vue'
+import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
 
 export interface Sample {
   id: string
-  type: 'regolith'
+  type: RockTypeId
   label: string
   weightKg: number
 }
 
-const CAPACITY_KG = 15
+const CAPACITY_KG = 5
 let sampleCounter = 0
 
 const samples = ref<Sample[]>([])
@@ -21,15 +22,22 @@ export function useInventory() {
 
   const capacityKg = CAPACITY_KG
 
-  function addSample(type: 'regolith' = 'regolith'): Sample | null {
-    const weight = 0.5 + Math.random() * 1.0
+  /**
+   * Collects a sample of the given rock type into the inventory.
+   * Weight is randomised within the type's weight range.
+   * Returns null if the sample would exceed capacity.
+   */
+  function addSample(type: RockTypeId): Sample | null {
+    const rockType = ROCK_TYPES[type]
+    const [minW, maxW] = rockType.weightRange
+    const weight = minW + Math.random() * (maxW - minW)
     if (currentWeightKg.value + weight > CAPACITY_KG) return null
 
     sampleCounter++
     const sample: Sample = {
       id: `sample-${sampleCounter}`,
       type,
-      label: `Regolith Sample #${sampleCounter}`,
+      label: `${rockType.label} #${sampleCounter}`,
       weightKg: Math.round(weight * 100) / 100,
     }
     samples.value.push(sample)
