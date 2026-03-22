@@ -7,8 +7,8 @@ const TRACK_SEPARATION = 0.42
 const MIN_DISTANCE = 0.3
 const TRAIL_Y_OFFSET = 0.05
 const FADE_START = 0.5
-// Offset from rover origin to rear axle (model is scaled 0.5, rotated PI)
-const REAR_AXLE_OFFSET = 0.75
+// Offset from rover origin to rear axle (negative = behind rover forward direction)
+const REAR_AXLE_OFFSET = -0.75
 
 export class RoverTrails {
   readonly mesh: THREE.Mesh

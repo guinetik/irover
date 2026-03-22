@@ -35,10 +35,19 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
-      <div v-if="!deploying" class="controls-hint">
-        WASD to drive &middot; Drag to orbit
+      <div v-if="!deploying && !descending && activeInstrumentSlot === null" class="controls-hint">
+        WASD to drive &middot; Drag to orbit &middot; 1-5 instruments
       </div>
     </Transition>
+    <Transition name="deploy-fade">
+      <InstrumentToolbar
+        v-if="!deploying && !descending"
+        :active-slot="activeInstrumentSlot"
+        @select="(slot: number) => controller?.activateInstrument(slot)"
+        @deselect="controller?.activateInstrument(null)"
+      />
+    </Transition>
+    <InstrumentOverlay :active-slot="activeInstrumentSlot" />
   </div>
 </template>
 
@@ -55,6 +64,9 @@ import { useMarsData } from '@/composables/useMarsData'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { GeologicalFeature } from '@/types/landmark'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
+import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
+import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController } from '@/three/instruments'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -63,6 +75,7 @@ const roverHeading = ref(0)
 const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
+const activeInstrumentSlot = ref<number | null>(null)
 const { landmarks, loadLandmarks } = useMarsData()
 
 let renderer: THREE.WebGLRenderer | null = null
@@ -156,6 +169,18 @@ onMounted(async () => {
     )
   }
 
+  // Create instrument controllers
+  const instrumentControllers = [
+    new MastCamController(),
+    new ChemCamController(),
+    new APXSController(),
+    new DANController(),
+    new SAMController(),
+  ]
+  if (controller) {
+    controller.instruments = instrumentControllers
+  }
+
   // Post-processing
   composer = new EffectComposer(renderer)
   composer.addPass(new RenderPass(siteScene.scene, camera))
@@ -195,6 +220,14 @@ onMounted(async () => {
       deploying.value = false
       deployProgress.value = 1
     }
+
+    // Attach instruments once ready (idempotent — attach() checks its own flag)
+    if (siteScene.roverState === 'ready' && siteScene.rover && controller && !controller.instruments[0]?.attached) {
+      controller.instruments.forEach(i => i.attach(siteScene!.rover!))
+    }
+
+    // Track active instrument for toolbar
+    activeInstrumentSlot.value = controller?.activeInstrument?.slot ?? null
 
     if (siteScene.rover && siteScene.trails) {
       siteScene.trails.update(siteScene.rover.position, controller?.heading ?? 0)

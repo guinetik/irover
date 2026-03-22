@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
+import type { InstrumentController } from './instruments'
 
 const CAMERA_DISTANCE_DEFAULT = 8
 const CAMERA_DISTANCE_MIN = 4
@@ -23,6 +24,11 @@ const MAST_PAN_MAX = 0.5         // max mast pan range (radians)
 const MAST_TILT_MIN = -0.4       // look up
 const MAST_TILT_MAX = 0.5        // look down
 const MAST_LERP = 0.03           // smooth mast tracking
+const INSTRUMENT_CAMERA_DISTANCE_MIN = 1.0
+const INSTRUMENT_CAMERA_DISTANCE_MAX = 6
+const INSTRUMENT_CAMERA_DISTANCE_DEFAULT = 1.5
+const INSTRUMENT_CAMERA_LERP = 0.06
+const INSTRUMENT_SHAKE_FACTOR = 0.25
 
 export interface RoverConfig {
   moveSpeed: number
@@ -54,6 +60,7 @@ export class RoverController {
   private orbitAngle = Math.PI
   private orbitPitch = 0.3 // slight downward look
   private cameraDistance = CAMERA_DISTANCE_MIN
+  private instrumentCameraDistance = INSTRUMENT_CAMERA_DISTANCE_DEFAULT
   private isDragging = false
   private lastMouseX = 0
   private lastMouseY = 0
@@ -77,6 +84,11 @@ export class RoverController {
   // Mast tracking state
   private mastPanAngle = 0
   private mastTiltAngle = 0
+
+  // Instrument mode
+  mode: 'driving' | 'instrument' = 'driving'
+  activeInstrument: InstrumentController | null = null
+  instruments: InstrumentController[] = []
 
   constructor(
     rover: THREE.Group,
@@ -118,10 +130,17 @@ export class RoverController {
 
   private onWheel(e: WheelEvent) {
     e.preventDefault()
-    this.cameraDistance = Math.max(
-      CAMERA_DISTANCE_MIN,
-      Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
-    )
+    if (this.mode === 'instrument') {
+      this.instrumentCameraDistance = Math.max(
+        INSTRUMENT_CAMERA_DISTANCE_MIN,
+        Math.min(INSTRUMENT_CAMERA_DISTANCE_MAX, this.instrumentCameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+      )
+    } else {
+      this.cameraDistance = Math.max(
+        CAMERA_DISTANCE_MIN,
+        Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+      )
+    }
   }
 
   private onMouseDown(e: MouseEvent) {
@@ -147,10 +166,49 @@ export class RoverController {
 
   private onKeyDown(e: KeyboardEvent) {
     this.keys.add(e.code)
+
+    // Instrument hotkeys (only when rover is ready)
+    if (this.siteScene.roverState !== 'ready') return
+
+    if (e.code === 'Escape' && this.mode === 'instrument') {
+      this.mode = 'driving'
+      this.activeInstrument = null
+      return
+    }
+
+    const slotMatch = e.code.match(/^Digit([1-5])$/)
+    if (slotMatch) {
+      const slot = parseInt(slotMatch[1])
+      const instrument = this.instruments.find(i => i.slot === slot)
+      if (instrument && instrument !== this.activeInstrument) {
+        this.setInstrument(instrument)
+      }
+    }
   }
 
   private onKeyUp(e: KeyboardEvent) {
     this.keys.delete(e.code)
+  }
+
+  activateInstrument(slot: number | null): void {
+    if (slot === null) {
+      this.mode = 'driving'
+      this.activeInstrument = null
+      return
+    }
+    const instrument = this.instruments.find(i => i.slot === slot)
+    if (instrument) {
+      this.setInstrument(instrument)
+    }
+  }
+
+  private setInstrument(instrument: InstrumentController): void {
+    this.mode = 'instrument'
+    this.activeInstrument = instrument
+    this.instrumentCameraDistance = INSTRUMENT_CAMERA_DISTANCE_DEFAULT
+    // Snap orbit to the instrument's preferred viewing angle (relative to rover heading)
+    this.orbitAngle = instrument.viewAngle + this.heading
+    this.orbitPitch = instrument.viewPitch
   }
 
   update(delta: number) {
@@ -230,8 +288,10 @@ export class RoverController {
     }
 
     // Animate mast — tracks camera orbit angle and steering
+    // Freeze mast when viewing mast-mounted instruments (slots 1-2) to prevent feedback loops
+    const mastFrozen = this.mode === 'instrument' && this.activeInstrument !== null && this.activeInstrument.slot <= 2
     const mast = this.siteScene.roverMast
-    if (mast) {
+    if (mast && !mastFrozen) {
       // Pan: driven only by A/D steering
       const targetPan = steerSign * MAST_PAN_MAX
       this.mastPanAngle += (targetPan - this.mastPanAngle) * MAST_LERP
@@ -268,7 +328,8 @@ export class RoverController {
     if (this.isMoving) {
       this.shakeTime += delta * 15
       const slope = 1 - Math.abs(normal.y) // rougher terrain = more shake
-      const intensity = 0.012 + slope * 0.03
+      const shakeScale = this.mode === 'instrument' ? INSTRUMENT_SHAKE_FACTOR : 1.0
+      const intensity = (0.012 + slope * 0.03) * shakeScale
       const shakeX = Math.sin(this.shakeTime * 3.7) * intensity
       const shakeZ = Math.cos(this.shakeTime * 5.3) * intensity * 0.7
       const shakeY = Math.sin(this.shakeTime * 7.1) * intensity * 0.4
@@ -289,26 +350,49 @@ export class RoverController {
 
   private updateCamera(_delta: number) {
     // Smoothly zoom out to default distance after deployment
-    if (this.siteScene.roverState === 'ready' && this.cameraDistance < CAMERA_DISTANCE_DEFAULT) {
+    if (this.siteScene.roverState === 'ready' && this.mode === 'driving' && this.cameraDistance < CAMERA_DISTANCE_DEFAULT) {
       this.cameraDistance += (CAMERA_DISTANCE_DEFAULT - this.cameraDistance) * 0.02
     }
 
-    // Camera orbit around rover (orbit is independent of rover heading)
-    const totalAngle = this.orbitAngle
-    const camX = Math.sin(totalAngle) * this.cameraDistance * Math.cos(this.orbitPitch)
-    const camZ = Math.cos(totalAngle) * this.cameraDistance * Math.cos(this.orbitPitch)
-    const camY = this.rover.position.y + CAMERA_HEIGHT_OFFSET + Math.sin(this.orbitPitch) * this.cameraDistance * 0.5
+    let desiredPos: THREE.Vector3
+    let desiredTarget: THREE.Vector3
 
-    const desiredPos = new THREE.Vector3(
-      this.rover.position.x + camX,
-      camY,
-      this.rover.position.z + camZ,
-    )
-    const desiredTarget = new THREE.Vector3(
-      this.rover.position.x,
-      this.rover.position.y + CAMERA_LOOK_HEIGHT_OFFSET,
-      this.rover.position.z,
-    )
+    if (this.mode === 'instrument' && this.activeInstrument?.node) {
+      // Camera orbits around the instrument node
+      const focusPos = this.activeInstrument.getWorldFocusPosition()
+      const camDist = this.instrumentCameraDistance
+
+      const camX = Math.sin(this.orbitAngle) * camDist * Math.cos(this.orbitPitch)
+      const camZ = Math.cos(this.orbitAngle) * camDist * Math.cos(this.orbitPitch)
+      const camY = focusPos.y + Math.sin(this.orbitPitch) * camDist * 0.5
+
+      desiredPos = new THREE.Vector3(
+        focusPos.x + camX,
+        camY,
+        focusPos.z + camZ,
+      )
+      desiredTarget = focusPos
+
+      // Update active instrument
+      this.activeInstrument.update(_delta)
+    } else {
+      // Normal driving orbit around rover
+      const totalAngle = this.orbitAngle
+      const camX = Math.sin(totalAngle) * this.cameraDistance * Math.cos(this.orbitPitch)
+      const camZ = Math.cos(totalAngle) * this.cameraDistance * Math.cos(this.orbitPitch)
+      const camY = this.rover.position.y + CAMERA_HEIGHT_OFFSET + Math.sin(this.orbitPitch) * this.cameraDistance * 0.5
+
+      desiredPos = new THREE.Vector3(
+        this.rover.position.x + camX,
+        camY,
+        this.rover.position.z + camZ,
+      )
+      desiredTarget = new THREE.Vector3(
+        this.rover.position.x,
+        this.rover.position.y + CAMERA_LOOK_HEIGHT_OFFSET,
+        this.rover.position.z,
+      )
+    }
 
     if (!this.initialized) {
       this.cameraPos.copy(desiredPos)
@@ -316,8 +400,9 @@ export class RoverController {
       this.initialized = true
     }
 
-    this.cameraPos.lerp(desiredPos, CAMERA_LERP)
-    this.cameraTarget.lerp(desiredTarget, CAMERA_LERP)
+    const lerp = this.mode === 'instrument' ? INSTRUMENT_CAMERA_LERP : CAMERA_LERP
+    this.cameraPos.lerp(desiredPos, lerp)
+    this.cameraTarget.lerp(desiredTarget, lerp)
 
     this.camera.position.copy(this.cameraPos)
     this.camera.lookAt(this.cameraTarget)
@@ -331,5 +416,6 @@ export class RoverController {
     window.removeEventListener('mousemove', this.onMouseMove)
     this.canvas.removeEventListener('contextmenu', this.onContextMenu)
     this.canvas.removeEventListener('wheel', this.onWheel)
+    this.instruments.forEach(i => i.dispose())
   }
 }

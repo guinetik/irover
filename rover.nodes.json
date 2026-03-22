@@ -1,0 +1,196 @@
+[
+  {
+    "name": "Sketchfab_Scene",
+    "type": "Group",
+    "children": [
+      {
+        "name": "Sketchfab_model",
+        "type": "Object3D",
+        "children": [
+          {
+            "name": "Root",
+            "type": "Object3D",
+            "children": [
+              {
+                "name": "_root_p",
+                "type": "Object3D",
+                "children": [
+                  {
+                    "name": "Chassis",
+                    "type": "Object3D",
+                    "children": [
+                      { "name": "Chassis_0", "type": "Mesh" },
+                      { "name": "Chassis_1", "type": "Mesh" },
+                      { "name": "Chassis_2", "type": "Mesh" },
+                      { "name": "Chassis_3", "type": "Mesh" },
+                      { "name": "RAD", "type": "Object3D", "children": [ { "name": "RAD_0", "type": "Mesh" } ] },
+                      { "name": "REMS", "type": "Object3D", "children": [ { "name": "REMS_0", "type": "Mesh" } ] },
+                      { "name": "DAN_L", "type": "Object3D", "children": [ { "name": "DAN_L_0", "type": "Mesh" } ] },
+                      { "name": "DAN_R", "type": "Object3D", "children": [ { "name": "DAN_R_0", "type": "Mesh" } ] },
+                      { "name": "sundial", "type": "Object3D", "children": [ { "name": "sundial_0", "type": "Mesh" } ] },
+                      { "name": "HazCam_-_rear", "type": "Object3D", "children": [ { "name": "HazCam_-_rear_0", "type": "Mesh" } ] },
+                      { "name": "HazCam_-_front", "type": "Object3D", "children": [ { "name": "HazCam_-_front_0", "type": "Mesh" } ] },
+                      { "name": "MARDI001", "type": "Object3D", "children": [ { "name": "MARDI001_0", "type": "Mesh" } ] },
+                      { "name": "CheMin", "type": "Object3D", "children": [ { "name": "CheMin_0", "type": "Mesh" } ] },
+                      { "name": "SAM", "type": "Object3D", "children": [ { "name": "SAM_0", "type": "Mesh" } ] },
+                      { "name": "body001", "type": "Object3D", "children": [ { "name": "body001_0", "type": "Mesh" } ] },
+                      { "name": "radiators", "type": "Object3D", "children": [ { "name": "radiators_0", "type": "Mesh" } ] },
+                      { "name": "RTG", "type": "Object3D", "children": [ { "name": "RTG_0", "type": "Mesh" } ] },
+                      { "name": "antenna_LG", "type": "Object3D", "children": [ { "name": "antenna_LG_0", "type": "Mesh" } ] },
+                      { "name": "antenna_UHF", "type": "Object3D", "children": [ { "name": "antenna_UHF_0", "type": "Mesh" } ] },
+                      { "name": "cover_02", "type": "Object3D", "children": [ { "name": "cover_02_0", "type": "Mesh" } ] },
+                      { "name": "cover_03", "type": "Object3D", "children": [ { "name": "cover_03_0", "type": "Mesh" } ] },
+                      { "name": "cover_01", "type": "Object3D", "children": [ { "name": "cover_01_0", "type": "Mesh" } ] }
+                    ]
+                  },
+                  {
+                    "name": "body",
+                    "type": "Object3D",
+                    "children": [
+                      { "name": "body_0", "type": "Mesh" },
+                      { "name": "body_1", "type": "Mesh" },
+                      { "name": "body_2", "type": "Mesh" },
+                      { "name": "body_3", "type": "Mesh" },
+                      { "name": "body_4", "type": "Mesh" },
+                      { "name": "body_5", "type": "Mesh" },
+
+                      {
+                        "name": "arm_01001",
+                        "type": "Object3D",
+                        "children": [
+                          { "name": "arm_01001_0", "type": "Mesh" },
+                          { "name": "arm_01001_1", "type": "Mesh" },
+
+                          {
+                            "name": "MAHLI_cal_target",
+                            "type": "Object3D",
+                            "children": [
+                              { "name": "MAHLI_cal_target_0", "type": "Mesh" }
+                            ]
+                          },
+
+                          {
+                            "name": "arm_02001",
+                            "type": "Object3D",
+                            "children": [
+                              { "name": "arm_02001_0", "type": "Mesh" },
+                              { "name": "arm_02001_1", "type": "Mesh" },
+                              { "name": "arm_02001_2", "type": "Mesh" },
+                              { "name": "arm_02001_3", "type": "Mesh" },
+
+                              {
+                                "name": "arm_03001",
+                                "type": "Object3D",
+                                "children": [
+                                  { "name": "arm_03001_0", "type": "Mesh" },
+                                  { "name": "arm_03001_1", "type": "Mesh" },
+                                  { "name": "arm_03001_2", "type": "Mesh" },
+                                  { "name": "arm_03001_3", "type": "Mesh" },
+
+                                  {
+                                    "name": "arm_04001",
+                                    "type": "Object3D",
+                                    "children": [
+                                      { "name": "arm_04001_0", "type": "Mesh" },
+                                      { "name": "arm_04001_1", "type": "Mesh" },
+
+                                      {
+                                        "name": "arm_05_head001",
+                                        "type": "Object3D",
+                                        "children": [
+                                          { "name": "arm_05_head001_0", "type": "Mesh" },
+
+                                          {
+                                            "name": "CHIMERA",
+                                            "type": "Object3D",
+                                            "children": [
+                                              { "name": "CHIMERA_0", "type": "Mesh" },
+                                              { "name": "CHIMERA_1", "type": "Mesh" }
+                                            ]
+                                          },
+
+                                          {
+                                            "name": "Drill",
+                                            "type": "Object3D",
+                                            "children": [
+                                              { "name": "Drill_0", "type": "Mesh" },
+                                              { "name": "Drill_1", "type": "Mesh" }
+                                            ]
+                                          },
+
+                                          {
+                                            "name": "Dust_Removal_Tool",
+                                            "type": "Object3D",
+                                            "children": [
+                                              { "name": "Dust_Removal_Tool_0", "type": "Mesh" }
+                                            ]
+                                          },
+
+                                          {
+                                            "name": "MAHLI",
+                                            "type": "Object3D",
+                                            "children": [
+                                              { "name": "MAHLI_0", "type": "Mesh" },
+
+                                              { "name": "MAHLI_LED_03", "type": "Object3D", "children": [ { "name": "MAHLI_LED_03_0", "type": "Mesh" } ] },
+                                              { "name": "MAHLI_LED_02", "type": "Object3D", "children": [ { "name": "MAHLI_LED_02_0", "type": "Mesh" } ] },
+                                              { "name": "MAHLI_LED_04", "type": "Object3D", "children": [ { "name": "MAHLI_LED_04_0", "type": "Mesh" } ] },
+                                              { "name": "MAHLI_LED_01", "type": "Object3D", "children": [ { "name": "MAHLI_LED_01_0", "type": "Mesh" } ] },
+
+                                              {
+                                                "name": "MAHLI_lens_cover_p",
+                                                "type": "Object3D",
+                                                "children": [
+                                                  {
+                                                    "name": "MAHLI_lens_cover",
+                                                    "type": "Object3D",
+                                                    "children": [
+                                                      { "name": "MAHLI_lens_cover_0", "type": "Mesh" }
+                                                    ]
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
+
+                                          {
+                                            "name": "APXS",
+                                            "type": "Object3D",
+                                            "children": [
+                                              { "name": "APXS_0", "type": "Mesh" }
+                                            ]
+                                          },
+
+                                          {
+                                            "name": "bit_01001",
+                                            "type": "Object3D",
+                                            "children": [
+                                              { "name": "bit_01001_0", "type": "Mesh" }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    "name": "(unnamed)",
+    "type": "PointLight"
+  }
+]

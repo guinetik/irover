@@ -102,7 +102,7 @@ export class SiteScene {
     this.scene.add(this.dust.mesh)
 
     // Tire trails
-    this.trails = new RoverTrails((x, z) => this.terrain.heightAt(x, z))
+    this.trails = new RoverTrails((x, z) => this.terrain.terrainHeightAt(x, z))
     this.scene.add(this.trails.mesh)
 
     await this.loadRover()
