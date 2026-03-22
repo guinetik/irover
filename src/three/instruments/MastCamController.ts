@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { ROCK_TYPES, ROCK_TYPE_LIST, type RockTypeId } from '@/three/terrain/RockTypes'
+import { mastState } from './MastState'
 
 const PAN_SPEED = 0.5      // radians/sec
 const TILT_SPEED = 0.35    // radians/sec
@@ -28,10 +29,13 @@ export class MastCamController extends InstrumentController {
   // Mast head node (for first-person camera position)
   private mastHead: THREE.Object3D | null = null
 
-  // Pan/tilt state (relative to rover heading)
-  panAngle = 0
-  tiltAngle = 0
-  fov = FOV_DEFAULT
+  // Pan/tilt state — shared with ChemCam via mastState
+  get panAngle() { return mastState.panAngle }
+  set panAngle(v: number) { mastState.panAngle = v }
+  get tiltAngle() { return mastState.tiltAngle }
+  set tiltAngle(v: number) { mastState.tiltAngle = v }
+  get fov() { return mastState.fov }
+  set fov(v: number) { mastState.fov = v }
 
   // Survey state
   private rocks: THREE.Mesh[] = []
@@ -50,6 +54,8 @@ export class MastCamController extends InstrumentController {
   scanTarget: THREE.Mesh | null = null
   /** Persistent tag markers above scanned rocks — survive mode exit */
   private tagMarkers = new Map<THREE.Mesh, THREE.Mesh>()
+  /** Callback when a scan completes — set by view for SP awards */
+  onScanComplete: ((rock: THREE.Mesh, rockType: RockTypeId) => void) | null = null
   /** True while scan key is held AND target is valid */
   get isScanning(): boolean { return this.scanning && this.scanTarget !== null }
   get scanProgressValue(): number { return this.scanProgress }
@@ -174,6 +180,8 @@ export class MastCamController extends InstrumentController {
       if (this.scanProgress >= 1) {
         this.scanTarget.userData.mastcamScanned = true
         this.addTagMarker(this.scanTarget)
+        const rockType = (this.scanTarget.userData.rockType as RockTypeId) ?? 'basalt'
+        this.onScanComplete?.(this.scanTarget, rockType)
         this.scanProgress = 0
         this.scanning = false
         this.rebuildOverlays()
@@ -380,12 +388,10 @@ export class MastCamController extends InstrumentController {
     this.overlayMeshes = []
   }
 
-  /** Reset on deactivation */
+  /** Reset on deactivation — keep mast orientation for ChemCam */
   deactivate(): void {
     this.exitSurveyMode()
     this.clearOverlays()
-    this.panAngle = 0
-    this.tiltAngle = 0
     this.fov = FOV_DEFAULT
     this.scanning = false
     this.scanProgress = 0

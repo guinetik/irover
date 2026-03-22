@@ -5,6 +5,7 @@
         v-for="item in visible"
         :key="item.id"
         class="sample-toast"
+        :class="item.variant"
       >
         <span class="toast-dot" :style="{ color: item.color }">&#x25CF;</span>
         <span class="toast-label">{{ item.prefix }} {{ item.label }}</span>
@@ -24,45 +25,47 @@ interface ToastItem {
   label: string
   weight: string
   color: string
+  variant: string
 }
 
 const visible = ref<ToastItem[]>([])
 
 const DURATION_MS = 2500
 
-/**
- * Shows a pickup toast for a collected sample.
- */
+function push(item: ToastItem): void {
+  visible.value.push(item)
+  setTimeout(() => {
+    const idx = visible.value.findIndex(t => t.id === item.id)
+    if (idx >= 0) visible.value.splice(idx, 1)
+  }, DURATION_MS)
+}
+
 function show(type: RockTypeId, label: string, weightKg: number): void {
-  const id = `toast-${Date.now()}-${Math.random()}`
   const color = ROCK_TYPES[type]?.color ?? '#c4753a'
-  const item: ToastItem = { id, prefix: '+', label, weight: weightKg.toFixed(2), color }
-
-  visible.value.push(item)
-
-  setTimeout(() => {
-    const idx = visible.value.findIndex(t => t.id === id)
-    if (idx >= 0) visible.value.splice(idx, 1)
-  }, DURATION_MS)
+  push({ id: uid(), prefix: '+', label, weight: weightKg.toFixed(2), color, variant: '' })
 }
 
-/**
- * Shows a ChemCam analysis toast (no weight).
- */
 function showChemCam(type: RockTypeId, rockLabel: string): void {
-  const id = `toast-${Date.now()}-${Math.random()}`
-  const color = '#66ffee'
-  const item: ToastItem = { id, prefix: 'CHEMCAM', label: rockLabel, weight: '', color }
-
-  visible.value.push(item)
-
-  setTimeout(() => {
-    const idx = visible.value.findIndex(t => t.id === id)
-    if (idx >= 0) visible.value.splice(idx, 1)
-  }, DURATION_MS)
+  push({ id: uid(), prefix: 'CHEMCAM', label: rockLabel, weight: '', color: '#66ffee', variant: 'chemcam' })
 }
 
-defineExpose({ show, showChemCam })
+function showSP(amount: number, source: string, bonusMult: number): void {
+  const bonusTag = bonusMult > 1 ? ` (x${bonusMult.toFixed(1)})` : ''
+  push({
+    id: uid(),
+    prefix: `+${amount} SP`,
+    label: source.toUpperCase() + bonusTag,
+    weight: '',
+    color: '#f0c040',
+    variant: 'sp',
+  })
+}
+
+function uid(): string {
+  return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+}
+
+defineExpose({ show, showChemCam, showSP })
 </script>
 
 <style scoped>
@@ -93,6 +96,15 @@ defineExpose({ show, showChemCam })
   white-space: nowrap;
 }
 
+.sample-toast.chemcam {
+  border-color: rgba(102, 255, 238, 0.3);
+}
+
+.sample-toast.sp {
+  background: rgba(40, 30, 5, 0.9);
+  border-color: rgba(240, 192, 64, 0.4);
+}
+
 .toast-dot {
   font-size: 10px;
   text-shadow: 0 0 6px currentColor;
@@ -101,6 +113,10 @@ defineExpose({ show, showChemCam })
 .toast-label {
   color: rgba(232, 200, 160, 0.9);
   letter-spacing: 0.04em;
+}
+
+.sample-toast.sp .toast-label {
+  color: rgba(240, 200, 80, 0.95);
 }
 
 .toast-weight {

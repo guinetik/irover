@@ -1,11 +1,12 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
+import { mastState } from './MastState'
 
-// --- Timing ---
-const PULSE_TRAIN_DURATION = 0.9   // seconds of pulsed laser fire
-const INTEGRATE_DURATION = 2.0     // spectrometer processing
-const COOLDOWN_DURATION = 0.8      // gap before next shot
+// --- Timing (base values — modified by durationMultiplier) ---
+const BASE_PULSE_TRAIN_DURATION = 7.0   // seconds of pulsed laser fire
+const BASE_INTEGRATE_DURATION = 6.0     // spectrometer processing
+const COOLDOWN_DURATION = 0.8           // gap before next shot
 const SHOTS_MAX = 10
 
 // --- Targeting ---
@@ -78,6 +79,8 @@ export class ChemCamController extends InstrumentController {
   private phaseTimer = 0
   shotsRemaining = SHOTS_MAX
   shotsMax = SHOTS_MAX
+  /** External multiplier on sequence duration (thermal + player buffs). <1 = faster. */
+  durationMultiplier = 1.0
 
   // --- Readout queue ---
   readouts: ChemCamReadout[] = []
@@ -85,9 +88,13 @@ export class ChemCamController extends InstrumentController {
 
   // --- Mast head (shared with MastCam pattern) ---
   private mastHead: THREE.Object3D | null = null
-  panAngle = 0
-  tiltAngle = 0
-  fov = FOV_DEFAULT
+  // Pan/tilt state — shared with MastCam via mastState
+  get panAngle() { return mastState.panAngle }
+  set panAngle(v: number) { mastState.panAngle = v }
+  get tiltAngle() { return mastState.tiltAngle }
+  set tiltAngle(v: number) { mastState.tiltAngle = v }
+  get fov() { return mastState.fov }
+  set fov(v: number) { mastState.fov = v }
 
   // Camera state for RoverController
   readonly mastWorldPos = new THREE.Vector3()
@@ -245,6 +252,11 @@ export class ChemCamController extends InstrumentController {
     this.createBeamVFX()
   }
 
+  /** Effective pulse train duration after multiplier */
+  private get pulseDuration(): number { return BASE_PULSE_TRAIN_DURATION * this.durationMultiplier }
+  /** Effective integrate duration after multiplier */
+  private get integrateDuration(): number { return BASE_INTEGRATE_DURATION * this.durationMultiplier }
+
   // --- Phase machine ---
   private updatePhase(delta: number): void {
     if (this.phase === 'ARMED' || this.phase === 'IDLE') return
@@ -252,13 +264,13 @@ export class ChemCamController extends InstrumentController {
     this.phaseTimer += delta
 
     if (this.phase === 'PULSE_TRAIN') {
-      if (this.phaseTimer >= PULSE_TRAIN_DURATION) {
+      if (this.phaseTimer >= this.pulseDuration) {
         this.phase = 'INTEGRATING'
         this.phaseTimer = 0
         this.removeBeamVFX()
       }
     } else if (this.phase === 'INTEGRATING') {
-      if (this.phaseTimer >= INTEGRATE_DURATION) {
+      if (this.phaseTimer >= this.integrateDuration) {
         this.phase = 'READY'
         this.phaseTimer = 0
         this.completeAnalysis()
@@ -277,14 +289,14 @@ export class ChemCamController extends InstrumentController {
 
   /** Get integration progress (0–1) during INTEGRATING phase */
   get integrateProgress(): number {
-    if (this.phase === 'INTEGRATING') return Math.min(1, this.phaseTimer / INTEGRATE_DURATION)
+    if (this.phase === 'INTEGRATING') return Math.min(1, this.phaseTimer / this.integrateDuration)
     if (this.phase === 'READY' || this.phase === 'COOLDOWN' || this.phase === 'IDLE') return 1
     return 0
   }
 
   /** Get pulse train progress (0–1) during PULSE_TRAIN phase */
   get pulseProgress(): number {
-    if (this.phase === 'PULSE_TRAIN') return Math.min(1, this.phaseTimer / PULSE_TRAIN_DURATION)
+    if (this.phase === 'PULSE_TRAIN') return Math.min(1, this.phaseTimer / this.pulseDuration)
     return 0
   }
 
@@ -490,8 +502,6 @@ export class ChemCamController extends InstrumentController {
   // --- Deactivation ---
   deactivate(): void {
     this.removeBeamVFX()
-    this.panAngle = 0
-    this.tiltAngle = 0
     this.fov = FOV_DEFAULT
     // Don't reset phase — integrating/ready should survive deactivation
     this._eHeld = false

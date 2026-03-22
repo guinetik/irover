@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
 import { RTGController, MastCamController, ChemCamController } from './instruments'
+import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
 const CAMERA_DISTANCE_MIN = 4
@@ -267,6 +268,16 @@ export class RoverController {
     // Block activation for non-RTG instruments during overdrive/cooldown
     const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
     if (rtg?.instrumentsLocked && this.activeInstrument !== rtg) return
+
+    // Initialize mast orientation from current orbit camera angle
+    if (this.activeInstrument instanceof MastCamController || this.activeInstrument instanceof ChemCamController) {
+      // Only set if mast is at default (0,0) — preserve if already oriented
+      if (mastState.panAngle === 0 && mastState.tiltAngle === 0) {
+        mastState.panAngle = this.orbitAngle - this.heading - Math.PI
+        mastState.tiltAngle = Math.max(-0.5, Math.min(0.6, this.orbitPitch - 0.3))
+      }
+    }
+
     this.mode = 'active'
   }
 

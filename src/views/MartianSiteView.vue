@@ -4,6 +4,11 @@
     <div class="site-hud">
       <button class="back-btn" @click="$router.push('/globe')">BACK</button>
       <h2 class="site-name">{{ siteId }}</h2>
+      <div class="sp-counter">
+        <span class="sp-icon">&#x2726;</span>
+        <span class="sp-value">{{ totalSP }}</span>
+        <span class="sp-label">SP</span>
+      </div>
     </div>
     <SiteCompass :heading="roverHeading" />
     <Transition name="deploy-fade">
@@ -171,6 +176,18 @@
       :time-of-day="marsTimeOfDay"
       :night-factor="currentNightFactor"
     />
+    <MastTelemetry
+      v-if="isInstrumentActive && (activeInstrumentSlot === 1 || activeInstrumentSlot === 2)"
+      :base-lat="siteLat"
+      :base-lon="siteLon"
+      :rover-x="roverWorldX"
+      :rover-z="roverWorldZ"
+      :pan-angle="mastPan"
+      :tilt-angle="mastTilt"
+      :fov="mastFov"
+      :heading="roverHeading"
+      :target-range="mastTargetRange"
+    />
     <PowerHud
       v-if="!deploying && !descending"
       :battery-wh="batteryWh"
@@ -191,6 +208,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
+import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { useMarsData } from '@/composables/useMarsData'
 import SiteCompass from '@/components/SiteCompass.vue'
@@ -199,6 +217,7 @@ import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
+import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SampleToast from '@/components/SampleToast.vue'
@@ -209,6 +228,8 @@ import { useInventory } from '@/composables/useInventory'
 import { useMarsPower } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
+import { useSciencePoints } from '@/composables/useSciencePoints'
+import { ROCK_TYPES } from '@/three/terrain/RockTypes'
 import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, type InstrumentController } from '@/three/instruments'
 
 const route = useRoute()
@@ -268,6 +289,14 @@ const chemcamPhaseLabel = computed(() => {
   }
 })
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
+const siteLat = ref(0)
+const siteLon = ref(0)
+const roverWorldX = ref(0)
+const roverWorldZ = ref(0)
+const mastPan = ref(0)
+const mastTilt = ref(0)
+const mastFov = ref(50)
+const mastTargetRange = ref(-1)
 const marsSol = ref(1)
 const marsTimeOfDay = ref(0)
 const currentNightFactor = ref(0)
@@ -275,6 +304,7 @@ const { samples, currentWeightKg, isFull, capacityKg, removeSample } = useInvent
 const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower } = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
 const { mod: playerMod } = usePlayerProfile()
+const { totalSP, award: awardSP } = useSciencePoints()
 const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
@@ -325,6 +355,7 @@ let controller: RoverController | null = null
 let clock: THREE.Clock | null = null
 let dustPass: ReturnType<typeof createDustAtmospherePass> | null = null
 let animationId = 0
+let cameraFillLight: THREE.DirectionalLight | null = null
 
 function getTerrainParams(): TerrainParams {
   const site = landmarks.value.find((l) => l.id === siteId)
@@ -391,11 +422,20 @@ onMounted(async () => {
   )
 
   await loadLandmarks()
+  const site = landmarks.value.find((l) => l.id === siteId)
+  if (site) {
+    siteLat.value = site.lat
+    siteLon.value = site.lon
+  }
   const terrainParams = getTerrainParams()
   siteTerrainParams = terrainParams
 
   siteScene = new SiteScene()
   await siteScene.init(terrainParams)
+
+  cameraFillLight = createCameraFillLight()
+  siteScene.scene.add(cameraFillLight)
+  siteScene.scene.add(cameraFillLight.target)
 
   if (siteScene.rover) {
     controller = new RoverController(
@@ -460,6 +500,18 @@ onMounted(async () => {
 
     controller?.update(delta)
     roverHeading.value = controller?.heading ?? 0
+    if (siteScene?.rover) {
+      roverWorldX.value = siteScene.rover.position.x
+      roverWorldZ.value = siteScene.rover.position.z
+    }
+
+    if (camera && cameraFillLight) {
+      syncCameraFillLight(
+        cameraFillLight,
+        camera,
+        siteScene.sky?.nightFactor ?? 0,
+      )
+    }
 
     isInstrumentActive.value = controller?.mode === 'active'
 
@@ -549,6 +601,8 @@ onMounted(async () => {
       if (apxs.lastCollected) {
         const s = apxs.lastCollected
         sampleToastRef.value?.show(s.type, s.label, s.weightKg)
+        const gain = awardSP('apxs', s.id, s.label)
+        if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         apxs.lastCollected = null
       }
     } else {
@@ -632,12 +686,19 @@ onMounted(async () => {
           })
         }
         mc.initSurvey(siteScene.scene, siteScene.terrain.getSmallRocks(), sceneMeshes)
+        mc.onScanComplete = (rock, rockType) => {
+          const label = ROCK_TYPES[rockType]?.label ?? 'Unknown'
+          const gain = awardSP('mastcam', rock.uuid, label)
+          if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
+        }
       }
       const cc = controller?.instruments.find(i => i.id === 'chemcam')
       if (cc instanceof ChemCamController && cc.attached && !cc['scene']) {
         cc.initTargeting(siteScene.scene, siteScene.terrain.getSmallRocks())
         cc.onReady = (readout) => {
           sampleToastRef.value?.showChemCam(readout.rockType, readout.rockLabel)
+          const gain = awardSP('chemcam', readout.rockMeshUuid, readout.rockLabel)
+          if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         }
       }
     }
@@ -660,12 +721,20 @@ onMounted(async () => {
     // Track active instrument for toolbar
     activeInstrumentSlot.value = controller?.activeInstrument?.slot ?? null
 
-    // MastCam HUD state + crosshair
+    // MastCam HUD state + crosshair + telemetry
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
       const mc = controller.activeInstrument
       mastcamFilterLabel.value = mc.filterLabel
       mastcamScanning.value = mc.isScanning
       mastcamScanProgress.value = mc.scanProgressValue
+
+      // Telemetry
+      mastPan.value = mc.panAngle
+      mastTilt.value = mc.tiltAngle
+      mastFov.value = mc.fov
+      mastTargetRange.value = mc.scanTarget
+        ? mc.mastWorldPos.distanceTo(mc.scanTargetWorldPos)
+        : -1
 
       // Show crosshair at target rock position
       crosshairVisible.value = true
@@ -691,12 +760,24 @@ onMounted(async () => {
     }
     if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
       const cc = controller.activeInstrument
+      // Thermal + player analysisSpeed buff on sequence duration
+      const z = thermalZone.value
+      const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
+      cc.durationMultiplier = thermalMult / playerMod('analysisSpeed')
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax
       chemcamProgressPct.value = cc.phase === 'PULSE_TRAIN'
         ? cc.pulseProgress * 100
         : cc.integrateProgress * 100
+
+      // Telemetry
+      mastPan.value = cc.panAngle
+      mastTilt.value = cc.tiltAngle
+      mastFov.value = cc.fov
+      mastTargetRange.value = cc.currentTarget
+        ? cc.mastWorldPos.distanceTo(cc.targetWorldPos)
+        : -1
 
       crosshairVisible.value = true
       crosshairColor.value = cc.targetValid ? 'green' : 'red'
@@ -745,6 +826,12 @@ onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
   window.removeEventListener('keydown', onGlobalKeyDown)
   controller?.dispose()
+  if (cameraFillLight && siteScene) {
+    siteScene.scene.remove(cameraFillLight.target)
+    siteScene.scene.remove(cameraFillLight)
+    cameraFillLight.dispose()
+    cameraFillLight = null
+  }
   siteScene?.dispose()
   composer?.dispose()
   renderer?.dispose()
@@ -767,6 +854,39 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sp-counter {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  background: rgba(240, 192, 64, 0.08);
+  border: 1px solid rgba(240, 192, 64, 0.25);
+  border-radius: 4px;
+}
+
+.sp-icon {
+  color: #f0c040;
+  font-size: 12px;
+  text-shadow: 0 0 6px rgba(240, 192, 64, 0.4);
+}
+
+.sp-value {
+  color: #f0c040;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.sp-label {
+  color: rgba(240, 192, 64, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
 }
 
 .back-btn {
