@@ -99,7 +99,7 @@ export function useThreeScene() {
 
   let onClickCallback: ((pointer: THREE.Vector2, camera: THREE.Camera) => void) | null = null
 
-  function onPointerClick(_e: PointerEvent) {
+  function onPointerClick(_e: MouseEvent) {
     if (camera && onClickCallback) {
       onClickCallback(pointer, camera)
     }
