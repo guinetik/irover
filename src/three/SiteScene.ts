@@ -46,6 +46,7 @@ export class SiteScene {
   private readonly DESCENT_DURATION = 3.5 // seconds
   private readonly DESCENT_HEIGHT = 8     // units above ground
   private landingDust: THREE.Points | null = null
+  private landingDustMaterial: THREE.ShaderMaterial | null = null
   private landingDustTime = 0
   private dustCover = 0.5
   private waterIceIndex = 0
@@ -137,33 +138,18 @@ export class SiteScene {
     this.mixer?.update(delta)
 
     // Animate landing dust
-    if (this.landingDust) {
+    if (this.landingDust && this.landingDustMaterial) {
       this.landingDustTime += delta
-      const dustLife = 2.5
+      const dustLife = 4.0
       const dt = this.landingDustTime / dustLife
       if (dt >= 1) {
         this.scene.remove(this.landingDust)
         this.landingDust.geometry.dispose()
-        ;(this.landingDust.material as THREE.PointsMaterial).dispose()
+        this.landingDustMaterial.dispose()
         this.landingDust = null
+        this.landingDustMaterial = null
       } else {
-        // Expand outward and fade
-        const positions = this.landingDust.geometry.getAttribute('position') as THREE.BufferAttribute
-        for (let i = 0; i < positions.count; i++) {
-          const vx = positions.getX(i)
-          const vy = positions.getY(i)
-          const vz = positions.getZ(i)
-          // Radial expansion + slight upward drift
-          const dist = Math.sqrt(vx * vx + vz * vz) || 0.1
-          const speed = 1.5 + dist * 0.3
-          positions.setX(i, vx + (vx / dist) * speed * delta)
-          positions.setY(i, vy + 0.8 * delta)
-          positions.setZ(i, vz + (vz / dist) * speed * delta)
-        }
-        positions.needsUpdate = true
-        const mat = this.landingDust.material as THREE.PointsMaterial
-        mat.opacity = 0.6 * (1 - dt * dt)
-        mat.size = 0.3 + dt * 0.5
+        this.landingDustMaterial.uniforms.uTime.value = this.landingDustTime
       }
     }
 
@@ -283,26 +269,118 @@ export class SiteScene {
 
   private spawnLandingDust(): void {
     if (!this.rover) return
-    const count = 120
+    const count = 350
     const positions = new Float32Array(count * 3)
+    const aSpeed = new Float32Array(count)      // per-particle radial speed
+    const aSize = new Float32Array(count)       // per-particle base size
+    const aPhase = new Float32Array(count)      // random phase offset for turbulence
+    const aRise = new Float32Array(count)       // vertical rise speed
+
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2
-      const radius = 0.3 + Math.random() * 1.2
+      // Spawn in a tight ring under the rover
+      const radius = 0.2 + Math.random() * 0.8
       positions[i * 3] = Math.cos(angle) * radius
-      positions[i * 3 + 1] = Math.random() * 0.3
+      positions[i * 3 + 1] = Math.random() * 0.15
       positions[i * 3 + 2] = Math.sin(angle) * radius
+      // Fast ground particles vs slow rising cloud
+      const isGroundRing = Math.random() < 0.6
+      aSpeed[i] = isGroundRing
+        ? 3.0 + Math.random() * 4.0   // fast radial burst
+        : 0.5 + Math.random() * 1.5   // slow drift
+      aSize[i] = isGroundRing
+        ? 0.15 + Math.random() * 0.25 // smaller ground spray
+        : 0.4 + Math.random() * 0.8   // bigger billowing clouds
+      aPhase[i] = Math.random() * Math.PI * 2
+      aRise[i] = isGroundRing
+        ? 0.2 + Math.random() * 0.5   // ground particles barely rise
+        : 1.5 + Math.random() * 2.5   // cloud particles billow up
     }
+
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-    const mat = new THREE.PointsMaterial({
-      color: 0xc4956a,
-      size: 0.3,
+    geo.setAttribute('aSpeed', new THREE.Float32BufferAttribute(aSpeed, 1))
+    geo.setAttribute('aSize', new THREE.Float32BufferAttribute(aSize, 1))
+    geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(aPhase, 1))
+    geo.setAttribute('aRise', new THREE.Float32BufferAttribute(aRise, 1))
+
+    this.landingDustMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+      },
+      vertexShader: `
+        attribute float aSpeed;
+        attribute float aSize;
+        attribute float aPhase;
+        attribute float aRise;
+        uniform float uTime;
+        varying float vAlpha;
+        varying float vLife;
+
+        void main() {
+          float life = uTime / 4.0; // 0-1 over dust lifetime
+          vLife = life;
+
+          // Decelerate over time (fast burst then slow)
+          float decel = 1.0 - life * life * 0.6;
+          vec3 pos = position;
+          float dist = length(pos.xz);
+          vec2 dir = dist > 0.01 ? pos.xz / dist : vec2(1.0, 0.0);
+
+          // Radial expansion with deceleration
+          float radial = aSpeed * uTime * decel;
+          pos.xz += dir * radial;
+
+          // Turbulence — swirl and wobble
+          float turb = sin(aPhase + uTime * 2.5) * 0.5 + cos(aPhase * 1.7 + uTime * 1.8) * 0.3;
+          pos.x += turb * (0.3 + life * 0.8);
+          pos.z += cos(aPhase + uTime * 3.0) * turb * 0.4;
+
+          // Vertical rise with slight deceleration
+          pos.y += aRise * uTime * (1.0 - life * 0.4);
+
+          // Fade: quick appearance, slow fade out
+          float fadeIn = smoothstep(0.0, 0.05, life);
+          float fadeOut = 1.0 - smoothstep(0.3, 1.0, life);
+          vAlpha = fadeIn * fadeOut * 0.7;
+
+          // Size grows over time (billowing effect)
+          float size = aSize * (1.0 + uTime * 1.5);
+
+          vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = size * (300.0 / -mvPos.z);
+          gl_Position = projectionMatrix * mvPos;
+        }
+      `,
+      fragmentShader: `
+        varying float vAlpha;
+        varying float vLife;
+
+        void main() {
+          // Soft circular falloff (no square edges)
+          vec2 center = gl_PointCoord - 0.5;
+          float dist = length(center) * 2.0;
+          float circle = 1.0 - smoothstep(0.4, 1.0, dist);
+
+          // Color: warm Mars dust, slightly darker at edges
+          vec3 dustColor = mix(
+            vec3(0.76, 0.58, 0.40),  // core: warm tan
+            vec3(0.55, 0.40, 0.28),  // edge: darker brown
+            dist * 0.6
+          );
+
+          // Slight color shift as particles age (cooler as they disperse)
+          dustColor = mix(dustColor, vec3(0.60, 0.52, 0.45), vLife * 0.4);
+
+          gl_FragColor = vec4(dustColor, vAlpha * circle);
+        }
+      `,
       transparent: true,
-      opacity: 0.6,
       depthWrite: false,
       blending: THREE.NormalBlending,
     })
-    this.landingDust = new THREE.Points(geo, mat)
+
+    this.landingDust = new THREE.Points(geo, this.landingDustMaterial)
     this.landingDust.position.copy(this.rover.position)
     this.landingDustTime = 0
     this.scene.add(this.landingDust)
