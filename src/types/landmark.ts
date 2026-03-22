@@ -18,8 +18,29 @@ export interface LandingSite extends LandmarkBase {
 export interface GeologicalFeature extends LandmarkBase {
   type: 'geological'
   featureType: 'volcano' | 'canyon' | 'basin' | 'plain' | 'polar-cap'
-  diameterKm?: number
-  elevationKm?: number
+
+  // Dimensions
+  diameterKm: number
+  elevationKm: number
+
+  // Atmosphere at surface level
+  surfacePressureMbar: number
+  temperatureMinK: number
+  temperatureMaxK: number
+
+  // Resource indicators (0.0 - 1.0 normalized)
+  waterIceIndex: number
+  ironOxideIndex: number
+  silicateIndex: number
+  basaltIndex: number
+
+  // Terrain characteristics (0.0 - 1.0 normalized)
+  roughness: number
+  dustCover: number
+  craterDensity: number
+
+  // Classification
+  geologicalAge: 'noachian' | 'hesperian' | 'amazonian'
 }
 
 export type Landmark = LandingSite | GeologicalFeature

@@ -55,6 +55,8 @@ onMounted(async () => {
     marsScene!.update(elapsed)
     const cam = getCamera()
     if (cam) {
+      marsScene!.globe.checkDetailLevel(cam.position.length())
+      marsScene!.landmarks.updateVisibility(cam)
       marsScene!.landmarks.pick(getPointer(), cam)
     }
   })

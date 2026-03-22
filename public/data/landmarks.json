@@ -217,7 +217,18 @@
     "type": "geological",
     "featureType": "volcano",
     "diameterKm": 610,
-    "elevationKm": 21.9
+    "elevationKm": 21.9,
+    "surfacePressureMbar": 0.72,
+    "temperatureMinK": 150,
+    "temperatureMaxK": 300,
+    "waterIceIndex": 0.15,
+    "ironOxideIndex": 0.5,
+    "silicateIndex": 0.3,
+    "basaltIndex": 0.95,
+    "roughness": 0.3,
+    "dustCover": 0.6,
+    "craterDensity": 0.1,
+    "geologicalAge": "amazonian"
   },
   {
     "id": "valles-marineris",
@@ -229,7 +240,18 @@
     "type": "geological",
     "featureType": "canyon",
     "diameterKm": 4000,
-    "elevationKm": -7.0
+    "elevationKm": -7.0,
+    "surfacePressureMbar": 10.8,
+    "temperatureMinK": 160,
+    "temperatureMaxK": 290,
+    "waterIceIndex": 0.3,
+    "ironOxideIndex": 0.65,
+    "silicateIndex": 0.7,
+    "basaltIndex": 0.6,
+    "roughness": 0.95,
+    "dustCover": 0.35,
+    "craterDensity": 0.15,
+    "geologicalAge": "hesperian"
   },
   {
     "id": "hellas-basin",
@@ -241,7 +263,18 @@
     "type": "geological",
     "featureType": "basin",
     "diameterKm": 2300,
-    "elevationKm": -7.2
+    "elevationKm": -7.2,
+    "surfacePressureMbar": 12.4,
+    "temperatureMinK": 150,
+    "temperatureMaxK": 310,
+    "waterIceIndex": 0.6,
+    "ironOxideIndex": 0.55,
+    "silicateIndex": 0.5,
+    "basaltIndex": 0.4,
+    "roughness": 0.4,
+    "dustCover": 0.7,
+    "craterDensity": 0.6,
+    "geologicalAge": "noachian"
   },
   {
     "id": "ascraeus-mons",
@@ -253,7 +286,18 @@
     "type": "geological",
     "featureType": "volcano",
     "diameterKm": 460,
-    "elevationKm": 18.0
+    "elevationKm": 18.0,
+    "surfacePressureMbar": 1.1,
+    "temperatureMinK": 155,
+    "temperatureMaxK": 270,
+    "waterIceIndex": 0.1,
+    "ironOxideIndex": 0.45,
+    "silicateIndex": 0.25,
+    "basaltIndex": 0.9,
+    "roughness": 0.35,
+    "dustCover": 0.55,
+    "craterDensity": 0.12,
+    "geologicalAge": "amazonian"
   },
   {
     "id": "pavonis-mons",
@@ -265,7 +309,18 @@
     "type": "geological",
     "featureType": "volcano",
     "diameterKm": 375,
-    "elevationKm": 14.0
+    "elevationKm": 14.0,
+    "surfacePressureMbar": 1.8,
+    "temperatureMinK": 160,
+    "temperatureMaxK": 280,
+    "waterIceIndex": 0.08,
+    "ironOxideIndex": 0.5,
+    "silicateIndex": 0.2,
+    "basaltIndex": 0.88,
+    "roughness": 0.3,
+    "dustCover": 0.5,
+    "craterDensity": 0.1,
+    "geologicalAge": "amazonian"
   },
   {
     "id": "arsia-mons",
@@ -277,7 +332,18 @@
     "type": "geological",
     "featureType": "volcano",
     "diameterKm": 435,
-    "elevationKm": 17.0
+    "elevationKm": 17.0,
+    "surfacePressureMbar": 1.3,
+    "temperatureMinK": 155,
+    "temperatureMaxK": 275,
+    "waterIceIndex": 0.25,
+    "ironOxideIndex": 0.45,
+    "silicateIndex": 0.25,
+    "basaltIndex": 0.92,
+    "roughness": 0.35,
+    "dustCover": 0.5,
+    "craterDensity": 0.08,
+    "geologicalAge": "amazonian"
   },
   {
     "id": "elysium-mons",
@@ -289,7 +355,18 @@
     "type": "geological",
     "featureType": "volcano",
     "diameterKm": 240,
-    "elevationKm": 12.6
+    "elevationKm": 12.6,
+    "surfacePressureMbar": 2.1,
+    "temperatureMinK": 160,
+    "temperatureMaxK": 275,
+    "waterIceIndex": 0.12,
+    "ironOxideIndex": 0.5,
+    "silicateIndex": 0.3,
+    "basaltIndex": 0.85,
+    "roughness": 0.25,
+    "dustCover": 0.45,
+    "craterDensity": 0.15,
+    "geologicalAge": "amazonian"
   },
   {
     "id": "syrtis-major",
@@ -301,7 +378,18 @@
     "type": "geological",
     "featureType": "plain",
     "diameterKm": 1500,
-    "elevationKm": 1.0
+    "elevationKm": 1.0,
+    "surfacePressureMbar": 5.5,
+    "temperatureMinK": 170,
+    "temperatureMaxK": 295,
+    "waterIceIndex": 0.15,
+    "ironOxideIndex": 0.7,
+    "silicateIndex": 0.35,
+    "basaltIndex": 0.8,
+    "roughness": 0.2,
+    "dustCover": 0.2,
+    "craterDensity": 0.35,
+    "geologicalAge": "hesperian"
   },
   {
     "id": "utopia-planitia",
@@ -312,7 +400,19 @@
     "accent": "#ffca28",
     "type": "geological",
     "featureType": "plain",
-    "diameterKm": 3300
+    "diameterKm": 3300,
+    "elevationKm": -3.5,
+    "surfacePressureMbar": 8.2,
+    "temperatureMinK": 150,
+    "temperatureMaxK": 260,
+    "waterIceIndex": 0.7,
+    "ironOxideIndex": 0.6,
+    "silicateIndex": 0.4,
+    "basaltIndex": 0.5,
+    "roughness": 0.1,
+    "dustCover": 0.75,
+    "craterDensity": 0.25,
+    "geologicalAge": "hesperian"
   },
   {
     "id": "acidalia-planitia",
@@ -323,7 +423,19 @@
     "accent": "#ffca28",
     "type": "geological",
     "featureType": "plain",
-    "diameterKm": 2900
+    "diameterKm": 2900,
+    "elevationKm": -4.0,
+    "surfacePressureMbar": 8.8,
+    "temperatureMinK": 155,
+    "temperatureMaxK": 255,
+    "waterIceIndex": 0.55,
+    "ironOxideIndex": 0.65,
+    "silicateIndex": 0.35,
+    "basaltIndex": 0.45,
+    "roughness": 0.1,
+    "dustCover": 0.65,
+    "craterDensity": 0.2,
+    "geologicalAge": "hesperian"
   },
   {
     "id": "argyre-basin",
@@ -335,7 +447,18 @@
     "type": "geological",
     "featureType": "basin",
     "diameterKm": 1800,
-    "elevationKm": -5.2
+    "elevationKm": -5.2,
+    "surfacePressureMbar": 9.8,
+    "temperatureMinK": 148,
+    "temperatureMaxK": 265,
+    "waterIceIndex": 0.5,
+    "ironOxideIndex": 0.55,
+    "silicateIndex": 0.45,
+    "basaltIndex": 0.35,
+    "roughness": 0.45,
+    "dustCover": 0.55,
+    "craterDensity": 0.75,
+    "geologicalAge": "noachian"
   },
   {
     "id": "north-polar-cap",
@@ -346,7 +469,19 @@
     "accent": "#e0e0e0",
     "type": "geological",
     "featureType": "polar-cap",
-    "diameterKm": 1000
+    "diameterKm": 1000,
+    "elevationKm": -5.0,
+    "surfacePressureMbar": 8.5,
+    "temperatureMinK": 143,
+    "temperatureMaxK": 205,
+    "waterIceIndex": 1.0,
+    "ironOxideIndex": 0.1,
+    "silicateIndex": 0.15,
+    "basaltIndex": 0.05,
+    "roughness": 0.15,
+    "dustCover": 0.3,
+    "craterDensity": 0.05,
+    "geologicalAge": "amazonian"
   },
   {
     "id": "south-polar-cap",
@@ -357,6 +492,18 @@
     "accent": "#e0e0e0",
     "type": "geological",
     "featureType": "polar-cap",
-    "diameterKm": 350
+    "diameterKm": 350,
+    "elevationKm": -1.5,
+    "surfacePressureMbar": 6.5,
+    "temperatureMinK": 130,
+    "temperatureMaxK": 195,
+    "waterIceIndex": 0.95,
+    "ironOxideIndex": 0.08,
+    "silicateIndex": 0.1,
+    "basaltIndex": 0.05,
+    "roughness": 0.2,
+    "dustCover": 0.25,
+    "craterDensity": 0.08,
+    "geologicalAge": "amazonian"
   }
 ]

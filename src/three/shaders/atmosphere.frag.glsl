@@ -6,11 +6,15 @@ varying vec3 vWorldPosition;
 
 void main() {
   vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
-  float fresnel = pow(1.0 - dot(viewDirection, vNormal), uFresnelPower);
+  float rim = 1.0 - dot(viewDirection, vNormal);
+  float fresnel = pow(rim, uFresnelPower);
 
-  vec3 innerColor = uAtmosphereColor;
-  vec3 outerColor = vec3(1.0, 0.6, 0.2);
-  vec3 color = mix(innerColor, outerColor, fresnel);
+  // Thin, subtle haze — barely visible except at the very edge
+  vec3 color = uAtmosphereColor;
+  float alpha = fresnel * 0.25;
 
-  gl_FragColor = vec4(color, fresnel * 0.8);
+  // Fade out quickly away from the limb
+  alpha *= smoothstep(0.0, 0.6, rim);
+
+  gl_FragColor = vec4(color, alpha);
 }

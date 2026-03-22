@@ -31,13 +31,56 @@
             <span class="detail-label">Feature</span>
             <span class="detail-value capitalize">{{ landmark.featureType.replace('-', ' ') }}</span>
           </div>
-          <div v-if="landmark.diameterKm" class="detail-row">
+          <div class="detail-row">
             <span class="detail-label">Diameter</span>
             <span class="detail-value">{{ landmark.diameterKm.toLocaleString() }} km</span>
           </div>
-          <div v-if="landmark.elevationKm" class="detail-row">
+          <div class="detail-row">
             <span class="detail-label">Elevation</span>
             <span class="detail-value">{{ landmark.elevationKm > 0 ? '+' : '' }}{{ landmark.elevationKm }} km</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Pressure</span>
+            <span class="detail-value">{{ landmark.surfacePressureMbar }} mbar</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Temp Range</span>
+            <span class="detail-value">{{ landmark.temperatureMinK }}K — {{ landmark.temperatureMaxK }}K</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Age</span>
+            <span class="detail-value capitalize">{{ landmark.geologicalAge }}</span>
+          </div>
+
+          <div class="stat-bars">
+            <div class="stat-bar-row">
+              <span class="stat-label">Water Ice</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.waterIceIndex * 100}%`, background: '#4fc3f7' }" /></div>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Iron Oxide</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.ironOxideIndex * 100}%`, background: '#ff7043' }" /></div>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Silicate</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.silicateIndex * 100}%`, background: '#ab47bc' }" /></div>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Basalt</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.basaltIndex * 100}%`, background: '#66bb6a' }" /></div>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Roughness</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.roughness * 100}%`, background: '#ffca28' }" /></div>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Dust Cover</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.dustCover * 100}%`, background: '#bcaaa4' }" /></div>
+            </div>
+            <div class="stat-bar-row">
+              <span class="stat-label">Cratering</span>
+              <div class="stat-track"><div class="stat-fill" :style="{ width: `${landmark.craterDensity * 100}%`, background: '#78909c' }" /></div>
+            </div>
           </div>
         </template>
 
@@ -134,6 +177,42 @@ defineEmits<{
 
 .detail-value {
   color: rgba(255, 255, 255, 0.7);
+}
+
+.stat-bars {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stat-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.stat-label {
+  width: 64px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease-out;
 }
 
 .card-enter-active { transition: all 0.3s ease-out; }

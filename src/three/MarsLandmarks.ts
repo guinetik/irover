@@ -6,7 +6,7 @@ import type { Landmark, LandmarkHoverEvent } from '@/types/landmark'
 import { latLonToCartesian, surfaceNormal } from '@/lib/areography/coordinates'
 import { GLOBE_RADIUS, FLY_TO_DISTANCE } from './constants'
 
-const PIN_RADIUS = 0.06
+const PIN_RADIUS = 0.15
 const PIN_HEIGHT = 0.15
 const PICK_THROTTLE_FRAMES = 3
 
@@ -14,10 +14,14 @@ export class MarsLandmarks implements SceneLayer {
   readonly root: THREE.Group
   private readonly raycaster = new THREE.Raycaster()
   private readonly pinMeshes: THREE.Mesh[] = []
+  private readonly labelObjects: CSS2DObject[] = []
+  private readonly normals: THREE.Vector3[] = []
   private readonly landmarkMap = new Map<THREE.Mesh, Landmark>()
   private pinGeometry: THREE.SphereGeometry | null = null
   private frameCount = 0
   private hoveredMesh: THREE.Mesh | null = null
+  private readonly _worldPos = new THREE.Vector3()
+  private readonly _camDir = new THREE.Vector3()
 
   onHover: ((event: LandmarkHoverEvent | null) => void) | null = null
   onClick: ((landmark: Landmark) => void) | null = null
@@ -58,6 +62,9 @@ export class MarsLandmarks implements SceneLayer {
       const normal = surfaceNormal(landmark.lat, landmark.lon)
       label.position.copy(position).addScaledVector(normal, PIN_HEIGHT)
       this.root.add(label)
+
+      this.labelObjects.push(label)
+      this.normals.push(normal)
     }
   }
 
@@ -98,6 +105,31 @@ export class MarsLandmarks implements SceneLayer {
       const mesh = intersects[0].object as THREE.Mesh
       const landmark = this.landmarkMap.get(mesh)
       if (landmark) this.onClick?.(landmark)
+    }
+  }
+
+  /**
+   * Hide landmarks on the far side of the globe by checking the dot product
+   * between the landmark's world-space normal and the camera direction.
+   */
+  updateVisibility(camera: THREE.Camera): void {
+    for (let i = 0; i < this.pinMeshes.length; i++) {
+      const pin = this.pinMeshes[i]
+      const label = this.labelObjects[i]
+      const normal = this.normals[i]
+
+      // Get world position of the pin and compute direction to camera
+      pin.getWorldPosition(this._worldPos)
+      this._camDir.copy(camera.position).sub(this._worldPos).normalize()
+
+      // Transform the local normal into world space (account for marsGroup rotation)
+      const worldNormal = normal.clone().applyQuaternion(this.root.getWorldQuaternion(new THREE.Quaternion()))
+
+      const dot = worldNormal.dot(this._camDir)
+      const visible = dot > 0.05 // small threshold to hide at grazing angles
+
+      pin.visible = visible
+      label.visible = visible
     }
   }
 

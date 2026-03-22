@@ -27,8 +27,15 @@ export function useThreeScene() {
   let animationId = 0
   let updateCallback: ((elapsed: number) => void) | null = null
 
-  // Auto-rotate idle timer
+  // Manual Y-axis auto-rotate
+  let isIdle = true
   let idleTimer: ReturnType<typeof setTimeout> | null = null
+  const AUTO_ROTATE_RAD_PER_SEC = AUTO_ROTATE_SPEED * Math.PI / 180 * 0.5
+
+  // Smooth zoom
+  let targetDistance = CAMERA_DEFAULT_DISTANCE
+  const ZOOM_LERP = 0.08
+  const WHEEL_ZOOM_FACTOR = 0.08
 
   // Fly-to state
   let flyToActive = false
@@ -61,12 +68,12 @@ export function useThreeScene() {
 
     controls = new OrbitControls(camera, canvas)
     controls.enableDamping = true
-    controls.dampingFactor = 0.05
+    controls.dampingFactor = 0.02
     controls.minDistance = CAMERA_MIN_DISTANCE
     controls.maxDistance = CAMERA_MAX_DISTANCE
-    controls.autoRotate = true
-    controls.autoRotateSpeed = AUTO_ROTATE_SPEED
+    controls.autoRotate = false  // we handle auto-rotate manually on Y axis
     controls.enablePan = false
+    controls.enableZoom = false  // we handle zoom manually for smooth lerp
 
     controls.addEventListener('start', onInteractionStart)
     controls.addEventListener('end', onInteractionEnd)
@@ -75,18 +82,25 @@ export function useThreeScene() {
 
     canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('click', onPointerClick)
+    canvas.addEventListener('wheel', onWheel, { passive: false })
     window.addEventListener('resize', onResize)
   }
 
   function onInteractionStart() {
-    if (controls) controls.autoRotate = false
+    isIdle = false
+    if (controls && camera) {
+      // Reset orbit target to globe center when user starts dragging
+      controls.target.set(0, 0, 0)
+      // Sync targetDistance to current actual distance so zoom doesn't jump
+      targetDistance = camera.position.distanceTo(controls.target)
+    }
     if (idleTimer) clearTimeout(idleTimer)
   }
 
   function onInteractionEnd() {
     if (idleTimer) clearTimeout(idleTimer)
     idleTimer = setTimeout(() => {
-      if (controls) controls.autoRotate = true
+      isIdle = true
     }, AUTO_ROTATE_RESUME_DELAY)
   }
 
@@ -95,6 +109,17 @@ export function useThreeScene() {
     if (!canvas) return
     pointer.x = (e.offsetX / canvas.clientWidth) * 2 - 1
     pointer.y = -(e.offsetY / canvas.clientHeight) * 2 + 1
+  }
+
+  function onWheel(e: WheelEvent) {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? 1 : -1
+    targetDistance *= 1 + delta * WHEEL_ZOOM_FACTOR
+    targetDistance = Math.max(CAMERA_MIN_DISTANCE, Math.min(CAMERA_MAX_DISTANCE, targetDistance))
+    // Any interaction resets idle
+    isIdle = false
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => { isIdle = true }, AUTO_ROTATE_RESUME_DELAY)
   }
 
   let onClickCallback: ((pointer: THREE.Vector2, camera: THREE.Camera) => void) | null = null
@@ -128,6 +153,7 @@ export function useThreeScene() {
       if (!renderer || !camera || !controls || !clock || !css2dRenderer) return
 
       const elapsed = clock.getElapsedTime()
+      const delta = clock.getDelta()
 
       // Fly-to animation
       if (flyToActive) {
@@ -141,6 +167,25 @@ export function useThreeScene() {
           controls.enabled = true
           flyToResolve?.()
         }
+      }
+
+      // Smooth zoom lerp
+      if (!flyToActive) {
+        const dir = camera.position.clone().sub(controls.target).normalize()
+        const currentDist = camera.position.distanceTo(controls.target)
+        const newDist = currentDist + (targetDistance - currentDist) * ZOOM_LERP
+        camera.position.copy(controls.target).addScaledVector(dir, newDist)
+      }
+
+      // Manual Y-axis auto-rotate when idle
+      if (isIdle && !flyToActive) {
+        const angle = AUTO_ROTATE_RAD_PER_SEC * delta
+        const pos = camera.position.clone().sub(controls.target)
+        const cosA = Math.cos(angle)
+        const sinA = Math.sin(angle)
+        const newX = pos.x * cosA + pos.z * sinA
+        const newZ = -pos.x * sinA + pos.z * cosA
+        camera.position.set(newX + controls.target.x, camera.position.y, newZ + controls.target.z)
       }
 
       controls.update()
@@ -174,7 +219,7 @@ export function useThreeScene() {
       flyToEndPos.copy(targetPosition).addScaledVector(direction, distance)
 
       controls!.enabled = false
-      controls!.autoRotate = false
+      targetDistance = flyToEndPos.distanceTo(flyToEndTarget)
     })
   }
 
@@ -193,6 +238,7 @@ export function useThreeScene() {
     controls?.dispose()
     renderer?.domElement.removeEventListener('pointermove', onPointerMove)
     renderer?.domElement.removeEventListener('click', onPointerClick)
+    renderer?.domElement.removeEventListener('wheel', onWheel)
     window.removeEventListener('resize', onResize)
     renderer?.dispose()
     if (idleTimer) clearTimeout(idleTimer)
