@@ -263,7 +263,7 @@ export class SiteScene {
         g = 0.08 + sunUp * 0.17
         b = 0.03 + sunUp * 0.09
       }
-      ;(this.scene.fog as THREE.FogExp2).color.setRGB(r, g, b)
+      if (this.scene.fog) (this.scene.fog as THREE.FogExp2).color.setRGB(r, g, b)
     }
   }
 

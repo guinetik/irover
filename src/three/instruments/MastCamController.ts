@@ -12,7 +12,8 @@ const FOV_DEFAULT = 50
 const ZOOM_STEP = 3        // FOV degrees per wheel tick
 const SURVEY_RANGE = 40     // meters — rocks beyond this aren't highlighted
 const SCAN_DURATION = 2.0   // seconds to complete a scan
-const SCAN_POWER_W = 3
+const IDLE_POWER_W = 3      // base draw while MastCam is active
+const SCAN_POWER_W = 5      // extra draw while scanning (total = idle + scan = 8W)
 
 export class MastCamController extends InstrumentController {
   readonly id = 'mastcam'
@@ -52,8 +53,8 @@ export class MastCamController extends InstrumentController {
   /** True while scan key is held AND target is valid */
   get isScanning(): boolean { return this.scanning && this.scanTarget !== null }
   get scanProgressValue(): number { return this.scanProgress }
-  /** Power draw: 3W while scanning, 0 otherwise */
-  get powerDrawW(): number { return this.scanning ? SCAN_POWER_W : 0 }
+  /** Power draw: 3W idle + 5W extra while scanning */
+  get powerDrawW(): number { return IDLE_POWER_W + (this.isScanning ? SCAN_POWER_W : 0) }
 
   // Camera state for RoverController to read
   /** World position of mast camera (offset forward for rendering) */
@@ -77,6 +78,8 @@ export class MastCamController extends InstrumentController {
   /** All scene meshes to darken during survey (terrain, rover, etc.) */
   private sceneMeshes: THREE.Mesh[] = []
   private sceneOriginalMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>()
+  private originalBackground: THREE.Color | THREE.Texture | null = null
+  private originalFog: THREE.Fog | THREE.FogExp2 | null = null
 
   initSurvey(scene: THREE.Scene, rocks: THREE.Mesh[], sceneMeshes?: THREE.Mesh[]): void {
     this.overlayScene = scene
@@ -242,28 +245,34 @@ export class MastCamController extends InstrumentController {
   enterSurveyMode(): void {
     if (!this.surveyMat) {
       this.surveyMat = new THREE.MeshBasicMaterial({
-        color: 0x080604,
-        transparent: true,
-        opacity: 0.7,
+        color: 0x000000,
       })
     }
-    // Darken rocks (wireframe overlays provide the color)
+    // Black background, kill fog
+    if (this.overlayScene) {
+      this.originalBackground = this.overlayScene.background as THREE.Color | THREE.Texture | null
+      this.originalFog = this.overlayScene.fog
+      this.overlayScene.background = new THREE.Color(0x000000)
+      this.overlayScene.fog = null
+    }
+
+    // Rocks go black — wireframe overlays provide the neon color
     for (const rock of this.rocks) {
       if (!this.originalMaterials.has(rock)) {
         this.originalMaterials.set(rock, rock.material)
       }
       rock.material = this.surveyMat
     }
-    // Scene meshes → wireframe
+    // Scene meshes → black fill + white wireframe
     for (const mesh of this.sceneMeshes) {
       if (!this.sceneOriginalMaterials.has(mesh)) {
         this.sceneOriginalMaterials.set(mesh, mesh.material)
       }
       const wireMat = new THREE.MeshBasicMaterial({
-        color: 0x443c34,
+        color: 0xffffff,
         wireframe: true,
         transparent: true,
-        opacity: 0.25,
+        opacity: 0.15,
       })
       mesh.material = wireMat
     }
@@ -271,12 +280,17 @@ export class MastCamController extends InstrumentController {
 
   /** Restore original materials */
   exitSurveyMode(): void {
+    // Restore background + fog
+    if (this.overlayScene) {
+      this.overlayScene.background = this.originalBackground
+      this.overlayScene.fog = this.originalFog
+    }
+
     for (const [rock, mat] of this.originalMaterials) {
       rock.material = mat
     }
     this.originalMaterials.clear()
     for (const [mesh, mat] of this.sceneOriginalMaterials) {
-      // Dispose the wireframe material we created
       if (Array.isArray(mesh.material)) {
         mesh.material.forEach(m => m.dispose())
       } else {

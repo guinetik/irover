@@ -123,7 +123,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     slot: 2, icon: 'LZR', name: 'CHEMCAM', type: 'LASER SPECTROGRAPH',
     desc: 'Standoff laser spectroscopy: vaporizes a pin spot and reads elemental composition. Use after MastCam to judge if a rock is worth SAM or contact science — get chemistry before you drill.',
     power: '12W', powerColor: '#ef9f27', status: '8/10 SHOTS', statusColor: '#ef9f27', health: '87%',
-    hint: 'MastCam-tagged rock in range. Press [E] to fire. Readout is saved for SAM planning.',
+    hint: 'MastCam-tagged rock in range. [E] fires pulses; ~few s to ready — same toast as samples, CHEM badge, then SEE RESULTS for spectrum. Saved for SAM.',
     temp: 'Cold penalty \u2014 range reduced 20%',
     upgName: 'MULTI-SHOT BURST', upgDesc: '3 shots on different spots for averaged reading. Better accuracy.', upgReq: 'Requires: Science Pack Alpha drop',
   },

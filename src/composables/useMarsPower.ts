@@ -88,6 +88,8 @@ export interface PowerTickInput {
   moving: boolean
   /** True while APXS drill is firing. */
   apxsDrilling: boolean
+  /** Extra instrument draw (W) — MastCam, ChemCam, etc. */
+  instrumentW?: number
   /** Heater draw from thermal system (W, 0–12). Added to consumption. */
   heaterW?: number
 }
@@ -120,6 +122,7 @@ export function useMarsPower() {
     if (!isSleeping.value) {
       if (input.moving) baseUse += profile.baseDriveW
       if (input.apxsDrilling) baseUse += APXS_DRILL_BASE_W
+      baseUse += (input.instrumentW ?? 0)
     }
     // Heater always runs (survival), affected by heaterDraw player modifier only
     const heater = (input.heaterW ?? 0) * mod('heaterDraw')

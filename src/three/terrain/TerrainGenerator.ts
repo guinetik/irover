@@ -520,7 +520,6 @@ export class TerrainGenerator {
   private buildRocks(params: TerrainParams) {
     const { seed, featureType } = params
     const rng = new SimplexNoise(seed)
-    const hm = this.heightmap!
 
     // Site-aware rock count multipliers
     let rockMultiplier = 1.0
@@ -561,11 +560,7 @@ export class TerrainGenerator {
       const rock = new THREE.Mesh(typeGeo, typeMat)
       rock.userData.rockType = typeId
 
-      const gx = Math.floor((rx / SCALE + 0.5) * (GRID_SIZE - 1))
-      const gz = Math.floor((rz / SCALE + 0.5) * (GRID_SIZE - 1))
-      const ry = (gx >= 0 && gx < GRID_SIZE && gz >= 0 && gz < GRID_SIZE)
-        ? hm[gz * GRID_SIZE + gx] - 0.15
-        : 0
+      const ry = this.terrainHeightAt(rx, rz) - sc * 0.05
 
       rock.position.set(rx, ry, rz)
       rock.scale.set(sc, sc * typeScaleY, sc)
@@ -593,11 +588,7 @@ export class TerrainGenerator {
       const bMat = this.rockMatMap.get(bTypeId)!
 
       const boulder = new THREE.Mesh(this.boulderGeos[i % this.boulderGeos.length], bMat)
-      const gx = Math.floor((bx / SCALE + 0.5) * (GRID_SIZE - 1))
-      const gz = Math.floor((bz / SCALE + 0.5) * (GRID_SIZE - 1))
-      const by = (gx >= 0 && gx < GRID_SIZE && gz >= 0 && gz < GRID_SIZE)
-        ? hm[gz * GRID_SIZE + gx] - sc * 0.15
-        : 0
+      const by = this.terrainHeightAt(bx, bz) - sc * 0.1
 
       boulder.position.set(bx, by, bz)
       boulder.scale.set(sc, sc * 0.5, sc * 0.8)

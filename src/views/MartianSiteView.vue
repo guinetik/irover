@@ -513,11 +513,16 @@ onMounted(async () => {
       heaterInst.zone = thermalZone.value
     }
 
+    // Compute active instrument power draw (MastCam, etc.)
+    const mcActive = controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController
+      ? (controller.activeInstrument as MastCamController).powerDrawW : 0
+
     tickPower(delta, {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       roverInSunlight: siteScene.roverInSunlight,
       moving: controller?.isMoving ?? false,
       apxsDrilling,
+      instrumentW: mcActive,
       heaterW: heaterW.value,
     })
 
