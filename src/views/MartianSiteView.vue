@@ -35,7 +35,19 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
-      <div v-if="!deploying && !descending && activeInstrumentSlot === null" class="controls-hint">
+      <div v-if="rtgPhase === 'overdrive'" class="rtg-banner overdrive" key="rtg-overdrive">
+        <span class="rtg-banner-icon">&#x26A1;</span>
+        <span class="rtg-banner-text">OVERDRIVE ACTIVE</span>
+        <div class="rtg-banner-bar"><div class="rtg-banner-fill" :style="{ width: (1 - rtgPhaseProgress) * 100 + '%' }" /></div>
+      </div>
+      <div v-else-if="rtgPhase === 'cooldown'" class="rtg-banner cooldown" key="rtg-cooldown">
+        <span class="rtg-banner-icon">&#x23F3;</span>
+        <span class="rtg-banner-text">RTG COOLDOWN &mdash; INSTRUMENTS LOCKED</span>
+        <div class="rtg-banner-bar"><div class="rtg-banner-fill cooldown" :style="{ width: (1 - rtgPhaseProgress) * 100 + '%' }" /></div>
+      </div>
+    </Transition>
+    <Transition name="deploy-fade">
+      <div v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle'" class="controls-hint">
         WASD to drive &middot; Drag to orbit &middot; 1-5 instruments
       </div>
     </Transition>
@@ -43,11 +55,60 @@
       <InstrumentToolbar
         v-if="!deploying && !descending"
         :active-slot="activeInstrumentSlot"
+        :inventory-open="inventoryOpen"
         @select="(slot: number) => controller?.activateInstrument(slot)"
         @deselect="controller?.activateInstrument(null)"
+        @toggle-inventory="inventoryOpen = !inventoryOpen"
       />
     </Transition>
-    <InstrumentOverlay :active-slot="activeInstrumentSlot" />
+    <InstrumentOverlay
+      :active-slot="activeInstrumentSlot"
+      :can-activate="controller?.activeInstrument?.canActivate ?? false"
+      :is-active-mode="isInstrumentActive"
+      @activate="handleActivate()"
+    />
+    <InstrumentCrosshair
+      :visible="crosshairVisible"
+      :color="crosshairColor"
+      :drilling="isDrilling"
+      :progress="drillProgress"
+    />
+    <InventoryPanel
+      :open="inventoryOpen"
+      :samples="samples"
+      :current-weight-kg="currentWeightKg"
+      :capacity-kg="capacityKg"
+      :is-full="isFull"
+      @dump="removeSample"
+    />
+    <Teleport to="body">
+      <Transition name="deploy-fade">
+        <div v-if="showOverdriveConfirm" class="overdrive-confirm-overlay">
+          <div class="overdrive-confirm">
+            <div class="overdrive-icon">&#x26A1;</div>
+            <div class="overdrive-title">EMERGENCY OVERDRIVE</div>
+            <div class="overdrive-desc">
+              Routing all power to drive systems. Movement speed will be doubled for approximately 2 hours.
+            </div>
+            <div class="overdrive-warning">
+              All instruments will be locked during overdrive and for half a sol afterwards while the RTG cools down. You will not be able to scan, drill, or analyze until cooldown completes.
+            </div>
+            <div class="overdrive-buttons">
+              <button class="overdrive-btn confirm" @click="confirmOverdrive()">ENGAGE OVERDRIVE</button>
+              <button class="overdrive-btn cancel" @click="cancelOverdrive()">CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <PowerHud
+      v-if="!deploying && !descending"
+      :battery-wh="batteryWh"
+      :capacity-wh="capacityWh"
+      :net-w="netW"
+      :sol="marsSol"
+      :time-of-day="marsTimeOfDay"
+    />
   </div>
 </template>
 
@@ -66,7 +127,12 @@ import type { GeologicalFeature } from '@/types/landmark'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController } from '@/three/instruments'
+import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
+import InventoryPanel from '@/components/InventoryPanel.vue'
+import PowerHud from '@/components/PowerHud.vue'
+import { useInventory } from '@/composables/useInventory'
+import { useMarsPower } from '@/composables/useMarsPower'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController } from '@/three/instruments'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -76,7 +142,55 @@ const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
+const isInstrumentActive = ref(false)
+const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown'>('idle')
+const rtgPhaseProgress = ref(0)
+const inventoryOpen = ref(false)
+const crosshairVisible = ref(false)
+const crosshairColor = ref<'green' | 'red'>('red')
+const drillProgress = ref(0)
+const isDrilling = ref(false)
+const marsSol = ref(1)
+const marsTimeOfDay = ref(0)
+const { samples, currentWeightKg, isFull, capacityKg, removeSample } = useInventory()
+const { batteryWh, capacityWh, netW, tickPower } = useMarsPower()
 const { landmarks, loadLandmarks } = useMarsData()
+
+let lastSkyTimeOfDay = -1
+
+const showOverdriveConfirm = ref(false)
+
+function handleActivate() {
+  if (!controller) return
+  if (controller.activeInstrument instanceof RTGController) {
+    showOverdriveConfirm.value = true
+  } else {
+    controller.enterActiveMode()
+  }
+}
+
+function confirmOverdrive() {
+  showOverdriveConfirm.value = false
+  if (!controller) return
+  const rtg = controller.activeInstrument
+  if (rtg instanceof RTGController) {
+    rtg.activateOverdrive()
+    // Return to driving — dismiss the instrument view
+    controller.mode = 'driving'
+    controller.activeInstrument = null
+  }
+}
+
+function cancelOverdrive() {
+  showOverdriveConfirm.value = false
+}
+
+function onGlobalKeyDown(e: KeyboardEvent) {
+  if (e.code === 'Tab') {
+    e.preventDefault()
+    inventoryOpen.value = !inventoryOpen.value
+  }
+}
 
 let renderer: THREE.WebGLRenderer | null = null
 let camera: THREE.PerspectiveCamera | null = null
@@ -176,6 +290,7 @@ onMounted(async () => {
     new APXSController(),
     new DANController(),
     new SAMController(),
+    new RTGController(),
   ]
   if (controller) {
     controller.instruments = instrumentControllers
@@ -197,15 +312,84 @@ onMounted(async () => {
     const delta = clock.getDelta()
     const elapsed = clock.getElapsedTime()
 
-    // Night penalty — halve speed when dark
+    // Night penalty — halve speed when dark. RTG overdrive doubles speed.
     if (controller && siteScene.sky) {
       const nightPenalty = 1.0 - siteScene.sky.nightFactor * 0.5
-      controller.config.moveSpeed = 1.2 * nightPenalty
-      controller.config.turnSpeed = 0.5 * nightPenalty
+      const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
+      const rtgBoost = rtg?.speedMultiplier ?? 1.0
+      controller.config.moveSpeed = 1.2 * nightPenalty * rtgBoost
+      controller.config.turnSpeed = 0.5 * nightPenalty * rtgBoost
     }
 
     controller?.update(delta)
     roverHeading.value = controller?.heading ?? 0
+
+    isInstrumentActive.value = controller?.mode === 'active'
+
+    // Track RTG overdrive state + glow effect
+    const rtg = controller?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
+    if (rtg) {
+      rtgPhase.value = rtg.phase
+      rtgPhaseProgress.value = rtg.phaseProgress
+
+      // Glow effect on RTG node
+      if (rtg.node && rtg.phase !== 'idle') {
+        rtg.node.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh
+            const mat = mesh.material as THREE.MeshStandardMaterial
+            if (rtg.phase === 'overdrive') {
+              mat.emissive = mat.emissive || new THREE.Color()
+              mat.emissive.setHex(0xff6600)
+              mat.emissiveIntensity = 0.3 + Math.sin(elapsed * 4) * 0.15
+            } else {
+              mat.emissive = mat.emissive || new THREE.Color()
+              mat.emissive.setHex(0xff2200)
+              mat.emissiveIntensity = 0.1 + Math.sin(elapsed * 2) * 0.05
+            }
+          }
+        })
+      } else if (rtg.node && rtg.phase === 'idle') {
+        rtg.node.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+            if (mat.emissiveIntensity > 0) {
+              mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - delta * 0.5)
+            }
+          }
+        })
+      }
+    }
+
+    if (siteScene.sky) {
+      marsTimeOfDay.value = siteScene.sky.timeOfDay
+      if (lastSkyTimeOfDay >= 0 && siteScene.sky.timeOfDay < lastSkyTimeOfDay - 0.25) {
+        marsSol.value++
+      }
+      lastSkyTimeOfDay = siteScene.sky.timeOfDay
+    }
+
+    let apxsDrilling = false
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof APXSController) {
+      const apxs = controller.activeInstrument
+      apxs.setRoverPosition(siteScene.rover!.position)
+      crosshairVisible.value = true
+      crosshairColor.value = apxs.hasTarget && !apxs.isInventoryFull ? 'green' : 'red'
+      drillProgress.value = apxs.drillProgress
+      isDrilling.value = apxs.isDrilling
+      apxsDrilling = apxs.isDrilling
+    } else {
+      crosshairVisible.value = false
+      isDrilling.value = false
+      drillProgress.value = 0
+    }
+
+    tickPower(delta, {
+      nightFactor: siteScene.sky?.nightFactor ?? 0,
+      roverInSunlight: siteScene.roverInSunlight,
+      moving: controller?.isMoving ?? false,
+      apxsDrilling,
+    })
 
     // Track descent → deployment → ready states
     if (siteScene.roverState === 'descending') {
@@ -226,6 +410,13 @@ onMounted(async () => {
       controller.instruments.forEach(i => i.attach(siteScene!.rover!))
     }
 
+    if (siteScene.roverState === 'ready' && siteScene.rover && camera) {
+      const apxs = controller?.instruments.find(i => i.id === 'apxs')
+      if (apxs instanceof APXSController && apxs.attached && !apxs.targeting) {
+        apxs.initGameplay(siteScene.scene, camera, siteScene.terrain.getSmallRocks())
+      }
+    }
+
     // Track active instrument for toolbar
     activeInstrumentSlot.value = controller?.activeInstrument?.slot ?? null
 
@@ -244,6 +435,7 @@ onMounted(async () => {
   }
   animate()
 
+  window.addEventListener('keydown', onGlobalKeyDown)
   window.addEventListener('resize', onResize)
 })
 
@@ -261,6 +453,7 @@ function onResize() {
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
+  window.removeEventListener('keydown', onGlobalKeyDown)
   controller?.dispose()
   siteScene?.dispose()
   composer?.dispose()
@@ -427,5 +620,154 @@ onUnmounted(() => {
 .deploy-fade-enter-from,
 .deploy-fade-leave-to {
   opacity: 0;
+}
+
+/* RTG status banner */
+.rtg-banner {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  background: rgba(10, 5, 2, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.rtg-banner.overdrive {
+  border: 1px solid rgba(239, 159, 39, 0.4);
+}
+
+.rtg-banner.cooldown {
+  border: 1px solid rgba(224, 80, 48, 0.3);
+}
+
+.rtg-banner-icon {
+  font-size: 14px;
+}
+
+.rtg-banner-text {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #ef9f27;
+}
+
+.rtg-banner.cooldown .rtg-banner-text {
+  color: #e05030;
+}
+
+.rtg-banner-bar {
+  width: 80px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.rtg-banner-fill {
+  height: 100%;
+  background: rgba(239, 159, 39, 0.8);
+  border-radius: 2px;
+  transition: width 0.5s linear;
+}
+
+.rtg-banner-fill.cooldown {
+  background: rgba(224, 80, 48, 0.7);
+}
+
+/* Overdrive confirm dialog */
+.overdrive-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.overdrive-confirm {
+  width: 340px;
+  background: rgba(10, 5, 2, 0.95);
+  border: 1px solid rgba(239, 159, 39, 0.4);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+}
+
+.overdrive-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.overdrive-title {
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  color: #ef9f27;
+  margin-bottom: 14px;
+}
+
+.overdrive-desc {
+  font-size: 10px;
+  color: rgba(196, 149, 106, 0.7);
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+.overdrive-warning {
+  font-size: 9px;
+  color: #e05030;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  padding: 8px 10px;
+  background: rgba(224, 80, 48, 0.08);
+  border: 1px solid rgba(224, 80, 48, 0.2);
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.overdrive-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.overdrive-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.overdrive-btn:hover {
+  opacity: 0.85;
+}
+
+.overdrive-btn.confirm {
+  background: #ef9f27;
+  color: #1a0d08;
+}
+
+.overdrive-btn.cancel {
+  background: transparent;
+  border: 1px solid rgba(196, 117, 58, 0.3);
+  color: #a08060;
 }
 </style>

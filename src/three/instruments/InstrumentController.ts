@@ -9,6 +9,7 @@ export abstract class InstrumentController {
   abstract readonly viewAngle: number   // orbit angle the camera snaps to (radians)
   abstract readonly viewPitch: number   // orbit pitch the camera snaps to (radians)
   readonly altNodeNames: string[] = []
+  readonly canActivate: boolean = false
 
   node: THREE.Object3D | null = null
   attached = false
@@ -30,6 +31,10 @@ export abstract class InstrumentController {
 
   update(_delta: number): void {
     // Override per-instrument for animation (stubs for now)
+  }
+
+  handleInput(_keys: Set<string>, _delta: number): void {
+    // Override per-instrument for active-mode input handling
   }
 
   getWorldFocusPosition(): THREE.Vector3 {

@@ -39,7 +39,12 @@
 
         <!-- Buttons -->
         <div class="ov-buttons">
-          <button class="ov-btn-primary" @click="$emit('activate')">ACTIVATE</button>
+          <button
+            class="ov-btn-primary"
+            :class="{ disabled: !canActivate || isActiveMode }"
+            :disabled="!canActivate || isActiveMode"
+            @click="canActivate && !isActiveMode && $emit('activate')"
+          >ACTIVATE</button>
           <div class="ov-btn-row">
             <button class="ov-btn-secondary" @click="$emit('repair')">REPAIR</button>
             <button
@@ -60,14 +65,14 @@
           </div>
         </Transition>
 
-        <div class="ov-esc">[ESC] BACK TO DRIVING</div>
+        <div class="ov-esc">{{ isActiveMode ? '[ESC] BACK TO OVERVIEW' : '[ESC] BACK TO DRIVING' }}</div>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, withDefaults } from 'vue'
 
 export interface InstrumentData {
   slot: number
@@ -128,16 +133,32 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     temp: 'Cold \u2014 DRILL LOCKED below -20C',
     upgName: 'SENSITIVITY MODULE', upgDesc: 'Detects organics at 10x lower concentration.', upgReq: 'Requires: Full Science Suite drop',
   },
+  6: {
+    slot: 6, icon: '\u26A1', name: 'RTG', type: 'POWER GENERATOR',
+    desc: 'Radioisotope Thermoelectric Generator. Converts plutonium-238 decay heat into electrical power. The rover\u2019s only power source.',
+    power: '110W', powerColor: '#5dc9a5', status: '87W', statusColor: '#5dc9a5', health: '94%',
+    hint: 'ACTIVATE to overdrive emergency power. 2x movement speed for 1 sol, but all instruments are locked during cooldown.',
+    temp: '',
+    upgName: 'HEAT EXCHANGER', upgDesc: 'Improves thermal efficiency. Faster charge rate.', upgReq: 'Requires: Engineering Package drop',
+  },
 }
-
-const props = defineProps<{
-  activeSlot: number | null
-}>()
 
 defineEmits<{
   activate: []
   repair: []
 }>()
+
+const props = withDefaults(
+  defineProps<{
+    activeSlot: number | null
+    canActivate?: boolean
+    isActiveMode?: boolean
+  }>(),
+  {
+    canActivate: true,
+    isActiveMode: false,
+  },
+)
 
 const upgradeOpen = ref(false)
 
@@ -400,5 +421,10 @@ const healthColor = computed(() => {
 .overlay-slide-leave-to {
   transform: translateY(-50%) translateX(30px);
   opacity: 0;
+}
+
+.ov-btn-primary.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 </style>

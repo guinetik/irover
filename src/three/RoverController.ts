@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
+import { RTGController } from './instruments'
 
 const CAMERA_DISTANCE_DEFAULT = 8
 const CAMERA_DISTANCE_MIN = 4
@@ -75,7 +76,8 @@ export class RoverController {
 
   // Chassis shake
   private shakeTime = 0
-  private isMoving = false
+  /** True while W/S drive input requests movement (updated each frame). */
+  isMoving = false
 
   // Wheel animation state
   private wheelAngle = 0
@@ -86,7 +88,7 @@ export class RoverController {
   private mastTiltAngle = 0
 
   // Instrument mode
-  mode: 'driving' | 'instrument' = 'driving'
+  mode: 'driving' | 'instrument' | 'active' = 'driving'
   activeInstrument: InstrumentController | null = null
   instruments: InstrumentController[] = []
 
@@ -170,19 +172,29 @@ export class RoverController {
     // Instrument hotkeys (only when rover is ready)
     if (this.siteScene.roverState !== 'ready') return
 
-    if (e.code === 'Escape' && this.mode === 'instrument') {
-      this.mode = 'driving'
-      this.activeInstrument = null
-      return
+    if (e.code === 'Escape') {
+      if (this.mode === 'active') {
+        this.mode = 'instrument'
+        return
+      }
+      if (this.mode === 'instrument') {
+        this.mode = 'driving'
+        this.activeInstrument = null
+        return
+      }
     }
 
-    const slotMatch = e.code.match(/^Digit([1-5])$/)
+    const slotMatch = e.code.match(/^Digit([1-6])$/)
     if (slotMatch) {
       const slot = parseInt(slotMatch[1])
       const instrument = this.instruments.find(i => i.slot === slot)
-      if (instrument && instrument !== this.activeInstrument) {
-        this.setInstrument(instrument)
-      }
+      if (!instrument || instrument === this.activeInstrument) return
+
+      // When RTG overdrive/cooldown is active, only RTG itself can be selected
+      const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
+      if (rtg?.instrumentsLocked && instrument !== rtg) return
+
+      this.setInstrument(instrument)
     }
   }
 
@@ -211,9 +223,29 @@ export class RoverController {
     this.orbitPitch = instrument.viewPitch
   }
 
+  enterActiveMode(): void {
+    if (this.mode !== 'instrument' || !this.activeInstrument?.canActivate) return
+    // Block activation for non-RTG instruments during overdrive/cooldown
+    const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
+    if (rtg?.instrumentsLocked && this.activeInstrument !== rtg) return
+    this.mode = 'active'
+  }
+
   update(delta: number) {
     // During descent/deployment, only update camera — no movement or wheel control
     if (this.siteScene.roverState !== 'ready') {
+      this.updateCamera(delta)
+      return
+    }
+
+    // Always tick RTG (overdrive/cooldown/recharge run regardless of mode)
+    const rtgInst = this.instruments.find(i => i.id === 'rtg')
+    if (rtgInst) rtgInst.update(delta)
+
+    // In active mode, route input to instrument and skip rover controls
+    if (this.mode === 'active' && this.activeInstrument) {
+      this.activeInstrument.handleInput(this.keys, delta)
+      if (this.activeInstrument !== rtgInst) this.activeInstrument.update(delta)
       this.updateCamera(delta)
       return
     }
@@ -357,7 +389,10 @@ export class RoverController {
     let desiredPos: THREE.Vector3
     let desiredTarget: THREE.Vector3
 
-    if (this.mode === 'instrument' && this.activeInstrument?.node) {
+    if (
+      (this.mode === 'instrument' || this.mode === 'active') &&
+      this.activeInstrument?.node
+    ) {
       // Camera orbits around the instrument node
       const focusPos = this.activeInstrument.getWorldFocusPosition()
       const camDist = this.instrumentCameraDistance
@@ -373,7 +408,6 @@ export class RoverController {
       )
       desiredTarget = focusPos
 
-      // Update active instrument
       this.activeInstrument.update(_delta)
     } else {
       // Normal driving orbit around rover

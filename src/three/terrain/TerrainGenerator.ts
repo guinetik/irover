@@ -8,7 +8,7 @@ import dustTextureUrl from '@/assets/texture2.jpg?url'
 
 const GRID_SIZE = 256
 const SCALE = 800
-const ROCK_COUNT = 500
+const ROCK_COUNT = 1200
 const BOULDER_COUNT = 50
 
 export interface TerrainParams {
@@ -798,7 +798,7 @@ export class TerrainGenerator {
   }
 
   /** Raw terrain height without rocks */
-  private terrainHeightAt(x: number, z: number): number {
+  terrainHeightAt(x: number, z: number): number {
     if (!this.heightmap) return 0
     const gx = (x / SCALE + 0.5) * (GRID_SIZE - 1)
     const gz = (z / SCALE + 0.5) * (GRID_SIZE - 1)
@@ -835,6 +835,11 @@ export class TerrainGenerator {
 
   get scale(): number {
     return SCALE
+  }
+
+  /** Returns only small rocks (excludes boulders with scale >= 2.0) */
+  getSmallRocks(): THREE.Mesh[] {
+    return this.rocks.filter(r => r.scale.x < 2.0)
   }
 
   dispose() {

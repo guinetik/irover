@@ -11,17 +11,31 @@
       <span class="slot-icon">{{ inst.icon }}</span>
       <span class="slot-name">{{ inst.name }}</span>
     </button>
+
+    <div class="toolbar-divider" />
+
+    <button
+      class="instrument-slot inventory-btn"
+      :class="{ active: inventoryOpen }"
+      @click="emit('toggleInventory')"
+    >
+      <span class="slot-key">Tab</span>
+      <span class="slot-icon">&#x2261;</span>
+      <span class="slot-name">INV</span>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
 const props = defineProps<{
   activeSlot: number | null
+  inventoryOpen?: boolean
 }>()
 
 const emit = defineEmits<{
   select: [slot: number]
   deselect: []
+  toggleInventory: []
 }>()
 
 const instruments = [
@@ -30,6 +44,7 @@ const instruments = [
   { slot: 3, id: 'apxs',    name: 'APXS', icon: '\u25CE' },
   { slot: 4, id: 'dan',     name: 'DAN',  icon: '\u2261' },
   { slot: 5, id: 'sam',     name: 'SAM',  icon: '\u2394' },
+  { slot: 6, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },
 ]
 
 function handleClick(slot: number) {
@@ -120,5 +135,12 @@ function handleClick(slot: number) {
 
 .instrument-slot.active .slot-name {
   color: rgba(196, 149, 106, 0.7);
+}
+
+.toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: rgba(196, 117, 58, 0.15);
 }
 </style>

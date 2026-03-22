@@ -1,5 +1,15 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
+import { RockTargeting, type TargetResult } from './RockTargeting'
+import { LaserDrill } from './LaserDrill'
+import { useInventory } from '@/composables/useInventory'
+
+const ARM_SWING_SPEED = 0.8
+const ARM_EXTEND_SPEED = 0.6
+const ARM_SWING_MAX = 1.0
+const ARM_EXTEND_MIN = -0.3
+const ARM_EXTEND_MAX = 0.8
+const ARM_LERP = 0.1
 
 export class APXSController extends InstrumentController {
   readonly id = 'apxs'
@@ -9,4 +19,134 @@ export class APXSController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.3, 0.1, 0.3)
   readonly viewAngle = Math.PI * 0.4
   readonly viewPitch = 0.3
+  override readonly canActivate = true
+
+  private shoulder: THREE.Object3D | null = null
+  private elbow: THREE.Object3D | null = null
+  private drillNode: THREE.Object3D | null = null
+  private shoulderBaseQuat = new THREE.Quaternion()
+  private elbowBaseQuat = new THREE.Quaternion()
+
+  private swingAngle = 0
+  private extendAngle = 0
+  private targetSwing = 0
+  private targetExtend = 0
+
+  targeting: RockTargeting | null = null
+  private drill: LaserDrill | null = null
+  private camera: THREE.PerspectiveCamera | null = null
+  private drilling = false  // E key held
+  private currentTarget: TargetResult | null = null
+
+  private inventory = useInventory()
+
+  get drillProgress(): number { return this.drill?.progress ?? 0 }
+  get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
+  get hasTarget(): boolean { return this.currentTarget !== null }
+  get isInventoryFull(): boolean { return this.inventory.isFull.value }
+
+  override attach(rover: THREE.Group): void {
+    super.attach(rover)
+    this.shoulder = rover.getObjectByName('arm_01001') ?? null
+    this.elbow = rover.getObjectByName('arm_02001') ?? null
+    this.drillNode = rover.getObjectByName('Drill') ?? null
+
+    if (this.shoulder) this.shoulderBaseQuat.copy(this.shoulder.quaternion)
+    if (this.elbow) this.elbowBaseQuat.copy(this.elbow.quaternion)
+
+    if (!this.shoulder) console.warn('[APXS] arm_01001 not found')
+    if (!this.elbow) console.warn('[APXS] arm_02001 not found')
+    if (!this.drillNode) console.warn('[APXS] Drill node not found')
+  }
+
+  initGameplay(scene: THREE.Scene, camera: THREE.PerspectiveCamera, rocks: THREE.Mesh[]): void {
+    this.camera = camera
+    this.targeting = new RockTargeting()
+    this.targeting.setRocks(rocks)
+    this.drill = new LaserDrill(scene)
+  }
+
+  override handleInput(keys: Set<string>, delta: number): void {
+    if (keys.has('KeyA') || keys.has('ArrowLeft')) {
+      this.targetSwing = Math.min(ARM_SWING_MAX, this.targetSwing + ARM_SWING_SPEED * delta)
+    }
+    if (keys.has('KeyD') || keys.has('ArrowRight')) {
+      this.targetSwing = Math.max(-ARM_SWING_MAX, this.targetSwing - ARM_SWING_SPEED * delta)
+    }
+    if (keys.has('KeyW') || keys.has('ArrowUp')) {
+      this.targetExtend = Math.min(ARM_EXTEND_MAX, this.targetExtend + ARM_EXTEND_SPEED * delta)
+    }
+    if (keys.has('KeyS') || keys.has('ArrowDown')) {
+      this.targetExtend = Math.max(ARM_EXTEND_MIN, this.targetExtend - ARM_EXTEND_SPEED * delta)
+    }
+
+    // E key triggers drill
+    this.drilling = keys.has('KeyE')
+  }
+
+  override update(delta: number): void {
+    this.swingAngle += (this.targetSwing - this.swingAngle) * ARM_LERP
+    this.extendAngle += (this.targetExtend - this.extendAngle) * ARM_LERP
+
+    if (this.shoulder) {
+      const swingDelta = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0), this.swingAngle
+      )
+      this.shoulder.quaternion.copy(this.shoulderBaseQuat).multiply(swingDelta)
+    }
+
+    if (this.elbow) {
+      const extendDelta = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0), this.extendAngle
+      )
+      this.elbow.quaternion.copy(this.elbowBaseQuat).multiply(extendDelta)
+    }
+
+    if (this.targeting && this.camera) {
+      this.currentTarget = this.targeting.cast(this.camera)
+    }
+
+    if (this.drill) {
+      if (this.drilling && this.currentTarget && !this.inventory.isFull.value) {
+        const drillOrigin = this.getDrillWorldPosition()
+        if (!this.drill.isDrilling) {
+          this.drill.startDrill(drillOrigin, this.currentTarget.point)
+        } else {
+          this.drill.updateTarget(drillOrigin, this.currentTarget.point)
+        }
+      } else if (this.drill.isDrilling && !this.drilling) {
+        this.drill.cancelDrill()
+      }
+
+      this.drill.update(delta, this.currentTarget !== null && this.drilling)
+
+      if (this.drill.isComplete && this.currentTarget) {
+        this.collectSample(this.currentTarget.rock)
+        this.drill.isComplete = false
+      }
+    }
+  }
+
+  private getDrillWorldPosition(): THREE.Vector3 {
+    if (!this.drillNode) return this.getWorldFocusPosition()
+    const pos = new THREE.Vector3()
+    this.drillNode.getWorldPosition(pos)
+    return pos
+  }
+
+  private collectSample(rock: THREE.Mesh): void {
+    const sample = this.inventory.addSample('regolith')
+    if (sample && this.targeting) {
+      this.targeting.depleteRock(rock)
+    }
+  }
+
+  setRoverPosition(pos: THREE.Vector3): void {
+    this.targeting?.setRoverPosition(pos)
+  }
+
+  override dispose(): void {
+    this.drill?.dispose()
+    this.targeting?.dispose()
+  }
 }
