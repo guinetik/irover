@@ -5,6 +5,7 @@
       <button class="back-btn" @click="$router.push('/globe')">BACK</button>
       <h2 class="site-name">{{ siteId }}</h2>
     </div>
+    <SiteCompass :heading="roverHeading" />
     <div class="controls-hint">
       WASD to drive &middot; Drag to orbit
     </div>
@@ -15,21 +16,29 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
+import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { useMarsData } from '@/composables/useMarsData'
+import SiteCompass from '@/components/SiteCompass.vue'
 import type { GeologicalFeature } from '@/types/landmark'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+const roverHeading = ref(0)
 const { landmarks, loadLandmarks } = useMarsData()
+
 let renderer: THREE.WebGLRenderer | null = null
 let camera: THREE.PerspectiveCamera | null = null
+let composer: EffectComposer | null = null
 let siteScene: SiteScene | null = null
 let controller: RoverController | null = null
 let clock: THREE.Clock | null = null
+let dustPass: ReturnType<typeof createDustAtmospherePass> | null = null
 let animationId = 0
 
 function getTerrainParams(): TerrainParams {
@@ -46,7 +55,6 @@ function getTerrainParams(): TerrainParams {
       seed: hashString(geo.id),
     }
   }
-  // Default params for landing sites or unknown
   return {
     roughness: 0.4,
     craterDensity: 0.3,
@@ -82,10 +90,9 @@ onMounted(async () => {
     50,
     canvas.clientWidth / canvas.clientHeight,
     0.1,
-    500,
+    1200,
   )
 
-  // Load landmarks so we can derive terrain params from site data
   await loadLandmarks()
   const terrainParams = getTerrainParams()
 
@@ -99,18 +106,41 @@ onMounted(async () => {
       canvas,
       (x, z) => siteScene!.terrain.heightAt(x, z),
       (x, z) => siteScene!.terrain.normalAt(x, z),
+      { moveSpeed: 1.2, turnSpeed: 0.5 },
     )
   }
+
+  // Post-processing
+  composer = new EffectComposer(renderer)
+  composer.addPass(new RenderPass(siteScene.scene, camera))
+
+  dustPass = createDustAtmospherePass(terrainParams.dustCover)
+  composer.addPass(dustPass)
 
   clock = new THREE.Clock()
 
   function animate() {
     animationId = requestAnimationFrame(animate)
-    if (!renderer || !camera || !clock) return
+    if (!camera || !clock || !siteScene || !composer) return
 
     const delta = clock.getDelta()
+    const elapsed = clock.getElapsedTime()
+
     controller?.update(delta)
-    renderer.render(siteScene!.scene, camera)
+    roverHeading.value = controller?.heading ?? 0
+
+    if (siteScene.rover && siteScene.trails) {
+      siteScene.trails.update(siteScene.rover.position, controller?.heading ?? 0)
+    }
+
+    siteScene.update(elapsed, delta, camera.position)
+
+    // Update dust pass time
+    if (dustPass) {
+      dustPass.uniforms.uTime.value = elapsed
+    }
+
+    composer.render()
   }
   animate()
 
@@ -119,16 +149,21 @@ onMounted(async () => {
 
 function onResize() {
   const canvas = canvasRef.value
-  if (!canvas || !renderer || !camera) return
+  if (!canvas || !renderer || !camera || !composer) return
   camera.aspect = canvas.clientWidth / canvas.clientHeight
   camera.updateProjectionMatrix()
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
+  composer.setSize(canvas.clientWidth, canvas.clientHeight)
+  if (dustPass) {
+    dustPass.uniforms.uResolution.value.set(canvas.clientWidth, canvas.clientHeight)
+  }
 }
 
 onUnmounted(() => {
   if (animationId) cancelAnimationFrame(animationId)
   controller?.dispose()
   siteScene?.dispose()
+  composer?.dispose()
   renderer?.dispose()
   window.removeEventListener('resize', onResize)
 })

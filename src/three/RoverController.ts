@@ -1,7 +1,5 @@
 import * as THREE from 'three'
 
-const MOVE_SPEED = 5
-const TURN_SPEED = 2
 const CAMERA_DISTANCE = 8
 const CAMERA_HEIGHT_OFFSET = 3
 const CAMERA_LOOK_HEIGHT_OFFSET = 1
@@ -9,7 +7,20 @@ const CAMERA_LERP = 0.08
 const GROUND_LERP = 0.2
 const TILT_LERP = 0.1
 const ORBIT_SENSITIVITY = 0.005
-const TERRAIN_BOUNDARY = 245 // stay within SCALE/2 - margin
+const TERRAIN_BOUNDARY = 380
+
+const ORBIT_PITCH_MIN = -0.3 // look up at sky
+const ORBIT_PITCH_MAX = 1.3  // look down at ground
+
+export interface RoverConfig {
+  moveSpeed: number
+  turnSpeed: number
+}
+
+const DEFAULT_CONFIG: RoverConfig = {
+  moveSpeed: 5,
+  turnSpeed: 2,
+}
 
 export type HeightFn = (x: number, z: number) => number
 export type NormalFn = (x: number, z: number) => THREE.Vector3
@@ -21,9 +32,10 @@ export class RoverController {
   private canvas: HTMLCanvasElement
   private heightAt: HeightFn
   private normalAt: NormalFn
+  config: RoverConfig
 
   // Rover heading (Y rotation) — model rotated PI so "forward" = +Z in model space
-  private heading = 0
+  heading = 0
 
   // Orbit angle around the rover (mouse drag)
   private orbitAngle = 0
@@ -40,18 +52,24 @@ export class RoverController {
   // Smoothed tilt quaternion
   private tiltQuat = new THREE.Quaternion()
 
+  // Chassis shake
+  private shakeTime = 0
+  private isMoving = false
+
   constructor(
     rover: THREE.Group,
     camera: THREE.PerspectiveCamera,
     canvas: HTMLCanvasElement,
     heightAt: HeightFn,
     normalAt: NormalFn,
+    config?: Partial<RoverConfig>,
   ) {
     this.rover = rover
     this.camera = camera
     this.canvas = canvas
     this.heightAt = heightAt
     this.normalAt = normalAt
+    this.config = { ...DEFAULT_CONFIG, ...config }
 
     // Rotate model 180° so it faces away from the default camera
     this.rover.rotation.y = Math.PI
@@ -93,7 +111,7 @@ export class RoverController {
     this.lastMouseY = e.clientY
 
     this.orbitAngle -= dx * ORBIT_SENSITIVITY
-    this.orbitPitch = Math.max(0.05, Math.min(1.2, this.orbitPitch + dy * ORBIT_SENSITIVITY))
+    this.orbitPitch = Math.max(ORBIT_PITCH_MIN, Math.min(ORBIT_PITCH_MAX, this.orbitPitch + dy * ORBIT_SENSITIVITY))
   }
 
   private onKeyDown(e: KeyboardEvent) {
@@ -107,10 +125,10 @@ export class RoverController {
   update(delta: number) {
     // Keyboard turn (A/D or Arrow keys)
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
-      this.heading += TURN_SPEED * delta
+      this.heading += this.config.turnSpeed * delta
     }
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) {
-      this.heading -= TURN_SPEED * delta
+      this.heading -= this.config.turnSpeed * delta
     }
 
     // Movement direction based on heading
@@ -129,10 +147,12 @@ export class RoverController {
       moveDir.sub(forward)
     }
 
-    if (moveDir.lengthSq() > 0) {
+    this.isMoving = moveDir.lengthSq() > 0
+
+    if (this.isMoving) {
       moveDir.normalize()
-      let nx = this.rover.position.x + moveDir.x * MOVE_SPEED * delta
-      let nz = this.rover.position.z + moveDir.z * MOVE_SPEED * delta
+      let nx = this.rover.position.x + moveDir.x * this.config.moveSpeed * delta
+      let nz = this.rover.position.z + moveDir.z * this.config.moveSpeed * delta
 
       // Terrain bounds
       nx = Math.max(-TERRAIN_BOUNDARY, Math.min(TERRAIN_BOUNDARY, nx))
@@ -160,6 +180,24 @@ export class RoverController {
       slopeQuat.setFromAxisAngle(tiltAxis, tiltAngle)
     }
     const targetQuat = slopeQuat.multiply(headingQuat)
+
+    // Chassis shake when moving — bumpy terrain feel
+    if (this.isMoving) {
+      this.shakeTime += delta * 15
+      const slope = 1 - Math.abs(normal.y) // rougher terrain = more shake
+      const intensity = 0.012 + slope * 0.03
+      const shakeX = Math.sin(this.shakeTime * 3.7) * intensity
+      const shakeZ = Math.cos(this.shakeTime * 5.3) * intensity * 0.7
+      const shakeY = Math.sin(this.shakeTime * 7.1) * intensity * 0.4
+      const shakeQuat = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(shakeX, shakeY, shakeZ),
+      )
+      targetQuat.multiply(shakeQuat)
+
+      // Subtle vertical bounce
+      this.rover.position.y += Math.sin(this.shakeTime * 6.3) * intensity * 0.3
+    }
+
     this.tiltQuat.slerp(targetQuat, TILT_LERP)
     this.rover.quaternion.copy(this.tiltQuat)
 

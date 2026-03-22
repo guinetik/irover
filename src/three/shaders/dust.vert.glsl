@@ -1,0 +1,37 @@
+uniform float uTime;
+uniform float uDustCover;
+uniform vec3 uWindDirection;
+uniform vec3 uCameraPos;
+
+attribute float aSize;
+attribute float aSpeed;
+attribute float aPhase;
+
+varying float vAlpha;
+varying float vDist;
+
+void main() {
+  vec3 pos = position;
+
+  // Drift with wind + individual turbulence
+  float t = uTime * aSpeed + aPhase;
+  pos += uWindDirection * t * 2.0;
+  pos.x += sin(t * 1.3 + aPhase * 6.28) * 1.5;
+  pos.y += sin(t * 0.7 + aPhase * 3.14) * 0.8;
+  pos.z += cos(t * 1.1 + aPhase * 4.71) * 1.5;
+
+  // Wrap particles within a box around the camera
+  float boxSize = 80.0;
+  pos = mod(pos - uCameraPos + boxSize * 0.5, vec3(boxSize)) - boxSize * 0.5 + uCameraPos;
+
+  vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+  vDist = -mvPosition.z;
+
+  // Fade with distance and near camera
+  float distFade = smoothstep(60.0, 10.0, vDist);
+  float nearFade = smoothstep(1.0, 4.0, vDist);
+  vAlpha = distFade * nearFade * uDustCover * 0.6;
+
+  gl_PointSize = aSize * (200.0 / -mvPosition.z);
+  gl_Position = projectionMatrix * mvPosition;
+}

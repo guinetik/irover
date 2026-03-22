@@ -2,43 +2,57 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import curiosityUrl from '@/assets/curiosity.glb?url'
 import { TerrainGenerator, type TerrainParams } from './terrain/TerrainGenerator'
+import { DustParticles } from './DustParticles'
+import { MarsSky } from './MarsSky'
+import { RoverTrails } from './RoverTrails'
 
 const ROVER_SCALE = 0.5
 
 export class SiteScene {
   readonly scene = new THREE.Scene()
   readonly terrain = new TerrainGenerator()
+  sky: MarsSky | null = null
+  dust: DustParticles | null = null
+  trails: RoverTrails | null = null
   rover: THREE.Group | null = null
 
-  async init(params: TerrainParams): Promise<void> {
-    this.scene.background = new THREE.Color(0x1a0d08)
-    this.scene.fog = new THREE.FogExp2(0x2a1508, 0.007)
+  private dustCover = 0.5
+  private roverLight: THREE.PointLight | null = null
 
+  async init(params: TerrainParams): Promise<void> {
+    this.dustCover = params.dustCover
+    this.scene.fog = new THREE.FogExp2(0x2a1508, 0.003)
+
+    // Sky with day/night cycle and lighting
+    this.sky = new MarsSky(this.scene)
+
+    // Terrain
     this.terrain.generate(params)
     this.scene.add(this.terrain.group)
 
-    this.createLighting()
+    // Dust particles
+    this.dust = new DustParticles(params.dustCover)
+    this.scene.add(this.dust.mesh)
+
+    // Tire trails
+    this.trails = new RoverTrails((x, z) => this.terrain.heightAt(x, z))
+    this.scene.add(this.trails.mesh)
+
     await this.loadRover()
   }
 
-  private createLighting() {
-    const sun = new THREE.DirectionalLight(0xffe8d0, 1.8)
-    sun.position.set(50, 80, 30)
-    sun.castShadow = true
-    sun.shadow.mapSize.width = 2048
-    sun.shadow.mapSize.height = 2048
-    sun.shadow.camera.near = 0.5
-    sun.shadow.camera.far = 120
-    const d = 30
-    sun.shadow.camera.left = -d
-    sun.shadow.camera.right = d
-    sun.shadow.camera.top = d
-    sun.shadow.camera.bottom = -d
-    sun.shadow.bias = -0.0002
-    this.scene.add(sun)
+  update(elapsed: number, delta: number, cameraPosition: THREE.Vector3) {
+    this.sky?.update(delta)
+    this.dust?.update(elapsed, cameraPosition)
 
-    this.scene.add(new THREE.AmbientLight(0x8b5e3c, 0.4))
-    this.scene.add(new THREE.HemisphereLight(0xc4956a, 0x3d2817, 0.3))
+    // Update fog color to match sky time of day
+    if (this.sky) {
+      const sunUp = Math.max(0, this.sky.sunDirection.y)
+      const r = 0.16 + sunUp * 0.10
+      const g = 0.08 + sunUp * 0.05
+      const b = 0.03 + sunUp * 0.03
+      ;(this.scene.fog as THREE.FogExp2).color.setRGB(r, g, b)
+    }
   }
 
   private async loadRover(): Promise<void> {
@@ -52,38 +66,48 @@ export class SiteScene {
         child.receiveShadow = true
       }
     })
-    // Find a clear spawn point (no rocks nearby)
     const { x: sx, z: sz } = this.findClearSpawn()
     const startY = this.terrain.heightAt(sx, sz)
     this.rover.position.set(sx, startY, sz)
     this.scene.add(this.rover)
+
+    // Soft fill light attached to rover so it's always visible
+    this.roverLight = new THREE.PointLight(0xffe0c0, 6.0, 25, 0.8)
+    this.roverLight.position.set(0, 5, 0)
+    this.rover.add(this.roverLight)
   }
 
   private findClearSpawn(): { x: number; z: number } {
+    // Sample a grid of candidates and pick the flattest, rock-free spot
     const colliders = this.terrain.rockColliders
-    const candidates = [
-      { x: 0, z: 0 },
-      { x: 10, z: 10 },
-      { x: -10, z: -10 },
-      { x: 20, z: 0 },
-      { x: 0, z: -20 },
-      { x: -15, z: 15 },
-      { x: 25, z: -10 },
-    ]
-    for (const c of candidates) {
-      const tooClose = colliders.some((r) => {
-        if (r.radius < 0.6) return false // ignore small rocks
-        const dx = c.x - r.x
-        const dz = c.z - r.z
-        return Math.sqrt(dx * dx + dz * dz) < r.radius + 1.5
-      })
-      if (!tooClose) return c
+    let bestSpot = { x: 0, z: 0 }
+    let bestSlope = Infinity
+
+    for (let x = -40; x <= 40; x += 10) {
+      for (let z = -40; z <= 40; z += 10) {
+        const slope = this.terrain.slopeAt(x, z)
+        if (slope >= bestSlope) continue
+
+        const tooClose = colliders.some((r) => {
+          if (r.radius < 0.6) return false
+          const dx = x - r.x
+          const dz = z - r.z
+          return Math.sqrt(dx * dx + dz * dz) < r.radius + 1.5
+        })
+        if (tooClose) continue
+
+        bestSlope = slope
+        bestSpot = { x, z }
+      }
     }
-    return { x: 0, z: 0 }
+    return bestSpot
   }
 
   dispose() {
     this.terrain.dispose()
+    this.sky?.dispose()
+    this.dust?.dispose()
+    this.trails?.dispose()
     this.rover?.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh
