@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { SiteScene } from './SiteScene'
 
 const CAMERA_DISTANCE_DEFAULT = 8
 const CAMERA_DISTANCE_MIN = 4
@@ -14,6 +15,14 @@ const TERRAIN_BOUNDARY = 380
 
 const ORBIT_PITCH_MIN = -0.3 // look up at sky
 const ORBIT_PITCH_MAX = 1.3  // look down at ground
+
+const WHEEL_SPIN_SPEED = 8       // radians per second at full speed
+const STEER_ANGLE_MAX = 0.4      // max steering angle in radians (~23°)
+const STEER_LERP = 0.15          // steering return-to-center smoothing
+const MAST_PAN_MAX = 0.5         // max mast pan range (radians)
+const MAST_TILT_MIN = -0.4       // look up
+const MAST_TILT_MAX = 0.5        // look down
+const MAST_LERP = 0.03           // smooth mast tracking
 
 export interface RoverConfig {
   moveSpeed: number
@@ -35,15 +44,16 @@ export class RoverController {
   private canvas: HTMLCanvasElement
   private heightAt: HeightFn
   private normalAt: NormalFn
+  private siteScene: SiteScene
   config: RoverConfig
 
   // Rover heading (Y rotation) — model rotated PI so "forward" = +Z in model space
   heading = 0
 
   // Orbit angle around the rover (mouse drag)
-  private orbitAngle = 0
+  private orbitAngle = Math.PI
   private orbitPitch = 0.3 // slight downward look
-  private cameraDistance = CAMERA_DISTANCE_DEFAULT
+  private cameraDistance = CAMERA_DISTANCE_MIN
   private isDragging = false
   private lastMouseX = 0
   private lastMouseY = 0
@@ -60,6 +70,14 @@ export class RoverController {
   private shakeTime = 0
   private isMoving = false
 
+  // Wheel animation state
+  private wheelAngle = 0
+  private currentSteerAngle = 0
+
+  // Mast tracking state
+  private mastPanAngle = 0
+  private mastTiltAngle = 0
+
   constructor(
     rover: THREE.Group,
     camera: THREE.PerspectiveCamera,
@@ -67,16 +85,15 @@ export class RoverController {
     heightAt: HeightFn,
     normalAt: NormalFn,
     config?: Partial<RoverConfig>,
+    siteScene?: SiteScene,
   ) {
     this.rover = rover
     this.camera = camera
     this.canvas = canvas
     this.heightAt = heightAt
     this.normalAt = normalAt
+    this.siteScene = siteScene!
     this.config = { ...DEFAULT_CONFIG, ...config }
-
-    // Rotate model 180° so it faces away from the default camera
-    this.rover.rotation.y = Math.PI
 
     this.onKeyDown = this.onKeyDown.bind(this)
     this.onKeyUp = this.onKeyUp.bind(this)
@@ -137,6 +154,12 @@ export class RoverController {
   }
 
   update(delta: number) {
+    // During descent/deployment, only update camera — no movement or wheel control
+    if (this.siteScene.roverState !== 'ready') {
+      this.updateCamera(delta)
+      return
+    }
+
     // Keyboard turn (A/D or Arrow keys)
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
       this.heading += this.config.turnSpeed * delta
@@ -155,13 +178,23 @@ export class RoverController {
     const moveDir = new THREE.Vector3()
 
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) {
-      moveDir.add(forward)
+      moveDir.sub(forward)
     }
     if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) {
-      moveDir.sub(forward)
+      moveDir.add(forward)
     }
 
     this.isMoving = moveDir.lengthSq() > 0
+
+    // Determine drive direction: +1 forward, -1 reverse, 0 stopped
+    let driveSign = 0
+    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) driveSign += 1
+    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) driveSign -= 1
+
+    // Determine steering direction: +1 left, -1 right, 0 straight
+    let steerSign = 0
+    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) steerSign += 1
+    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) steerSign -= 1
 
     if (this.isMoving) {
       moveDir.normalize()
@@ -176,6 +209,42 @@ export class RoverController {
       this.rover.position.z = nz
     }
 
+    // Animate wheels (read dynamically — set after deployment finishes)
+    const wheels = this.siteScene.roverWheels
+    if (wheels) {
+      // Spin all 6 wheels based on drive direction
+      this.wheelAngle += driveSign * WHEEL_SPIN_SPEED * delta
+      for (const wheel of wheels.wheels) {
+        wheel.rotation.x = this.wheelAngle
+      }
+
+      // Steer front and rear wheels (Curiosity steers front + rear, not middle)
+      const targetSteer = steerSign * STEER_ANGLE_MAX
+      this.currentSteerAngle += (targetSteer - this.currentSteerAngle) * STEER_LERP
+      // Front wheels steer in the turn direction
+      if (wheels.steerFL) wheels.steerFL.rotation.y = this.currentSteerAngle
+      if (wheels.steerFR) wheels.steerFR.rotation.y = this.currentSteerAngle
+      // Rear wheels steer opposite (like real Curiosity)
+      if (wheels.steerBL) wheels.steerBL.rotation.y = -this.currentSteerAngle
+      if (wheels.steerBR) wheels.steerBR.rotation.y = -this.currentSteerAngle
+    }
+
+    // Animate mast — tracks camera orbit angle and steering
+    const mast = this.siteScene.roverMast
+    if (mast) {
+      // Pan: driven only by A/D steering
+      const targetPan = steerSign * MAST_PAN_MAX
+      this.mastPanAngle += (targetPan - this.mastPanAngle) * MAST_LERP
+      const panDelta = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), this.mastPanAngle)
+      mast.pan.quaternion.copy(mast.panBaseQuat).multiply(panDelta)
+
+      // Tilt: follow camera pitch
+      const targetTilt = Math.max(MAST_TILT_MIN, Math.min(MAST_TILT_MAX, this.orbitPitch * 1.0))
+      this.mastTiltAngle += (targetTilt - this.mastTiltAngle) * MAST_LERP
+      const tiltDelta = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), this.mastTiltAngle)
+      mast.tilt.quaternion.copy(mast.tiltBaseQuat).multiply(tiltDelta)
+    }
+
     // Ground follow — lerp rover Y to terrain height
     const groundY = this.heightAt(this.rover.position.x, this.rover.position.z)
     this.rover.position.y += (groundY - this.rover.position.y) * GROUND_LERP
@@ -184,7 +253,7 @@ export class RoverController {
     const normal = this.normalAt(this.rover.position.x, this.rover.position.z)
     const headingQuat = new THREE.Quaternion().setFromAxisAngle(
       new THREE.Vector3(0, 1, 0),
-      this.heading + Math.PI,
+      this.heading,
     )
     const up = new THREE.Vector3(0, 1, 0)
     const tiltAxis = new THREE.Vector3().crossVectors(up, normal).normalize()
@@ -214,6 +283,15 @@ export class RoverController {
 
     this.tiltQuat.slerp(targetQuat, TILT_LERP)
     this.rover.quaternion.copy(this.tiltQuat)
+
+    this.updateCamera(delta)
+  }
+
+  private updateCamera(_delta: number) {
+    // Smoothly zoom out to default distance after deployment
+    if (this.siteScene.roverState === 'ready' && this.cameraDistance < CAMERA_DISTANCE_DEFAULT) {
+      this.cameraDistance += (CAMERA_DISTANCE_DEFAULT - this.cameraDistance) * 0.02
+    }
 
     // Camera orbit around rover (orbit is independent of rover heading)
     const totalAngle = this.orbitAngle
