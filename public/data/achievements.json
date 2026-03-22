@@ -1,0 +1,44 @@
+{
+  "libs-calibration": [
+    {
+      "id": "libs-first-light",
+      "sp": 0,
+      "icon": "🔬",
+      "title": "FIRST LIGHT",
+      "description": "ChemCam spectrometer powered on. Signal noisy — calibration sequence initiated.",
+      "type": "LIBS CALIBRATION"
+    },
+    {
+      "id": "libs-baseline",
+      "sp": 25,
+      "icon": "📡",
+      "title": "BASELINE ACQUIRED",
+      "description": "Background emission characterized. Strongest emission lines now resolvable.",
+      "type": "LIBS CALIBRATION"
+    },
+    {
+      "id": "libs-partial",
+      "sp": 75,
+      "icon": "📊",
+      "title": "PARTIAL SPECTRUM",
+      "description": "Wavelength calibration improving. Major elements identifiable — minor peaks still uncertain.",
+      "type": "LIBS CALIBRATION"
+    },
+    {
+      "id": "libs-resolved",
+      "sp": 150,
+      "icon": "🔎",
+      "title": "HIGH RESOLUTION",
+      "description": "Spectrometer approaching full calibration. Trace element detection coming online.",
+      "type": "LIBS CALIBRATION"
+    },
+    {
+      "id": "libs-full",
+      "sp": 250,
+      "icon": "✦",
+      "title": "FULL LIBS CAPABILITY",
+      "description": "Spectrometer fully calibrated. All emission lines resolved — maximum scientific yield.",
+      "type": "LIBS CALIBRATION"
+    }
+  ]
+}
