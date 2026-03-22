@@ -126,6 +126,13 @@ onMounted(async () => {
     const delta = clock.getDelta()
     const elapsed = clock.getElapsedTime()
 
+    // Night penalty — halve speed when dark
+    if (controller && siteScene.sky) {
+      const nightPenalty = 1.0 - siteScene.sky.nightFactor * 0.5
+      controller.config.moveSpeed = 1.2 * nightPenalty
+      controller.config.turnSpeed = 0.5 * nightPenalty
+    }
+
     controller?.update(delta)
     roverHeading.value = controller?.heading ?? 0
 

@@ -2,8 +2,13 @@ import * as THREE from 'three'
 import skyVert from '@/three/shaders/mars-sky.vert.glsl?raw'
 import skyFrag from '@/three/shaders/mars-sky.frag.glsl?raw'
 
-// Full day cycle in seconds (accelerated — 1 real minute = 1 sol)
-const SOL_DURATION = 60
+// Full day cycle in seconds (accelerated — 3 real minutes = 1 sol)
+const SOL_DURATION = 180
+
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
 const SKY_RADIUS = 900
 
 export class MarsSky {
@@ -16,6 +21,8 @@ export class MarsSky {
   // Exposed for other systems (terrain shader, dust)
   readonly sunDirection = new THREE.Vector3()
   timeOfDay = 0.35 // start mid-morning
+  /** 0 = full day, 1 = full night */
+  nightFactor = 0
 
   constructor(scene: THREE.Scene) {
     this.material = new THREE.ShaderMaterial({
@@ -77,6 +84,7 @@ export class MarsSky {
 
     // Adjust light intensity/color based on sun elevation
     const sunUp = Math.max(0, elevation)
+    this.nightFactor = 1.0 - smoothstep(-0.1, 0.2, elevation)
     const isDusk = elevation > -0.2 && elevation < 0.1
 
     // Sunlight intensity
