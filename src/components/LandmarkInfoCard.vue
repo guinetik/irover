@@ -89,6 +89,14 @@
           <span class="detail-value">{{ landmark.lat.toFixed(2) }}°, {{ landmark.lon.toFixed(2) }}°</span>
         </div>
       </div>
+
+      <button
+        v-if="landmark.type === 'geological'"
+        class="select-site-btn"
+        @click="$emit('select-site', landmark)"
+      >
+        SELECT SITE
+      </button>
     </div>
   </Transition>
 </template>
@@ -102,6 +110,7 @@ defineProps<{
 
 defineEmits<{
   close: []
+  'select-site': [landmark: Landmark]
 }>()
 </script>
 
@@ -177,6 +186,30 @@ defineEmits<{
 
 .detail-value {
   color: rgba(255, 255, 255, 0.7);
+}
+
+.select-site-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #000;
+  background: #ffca28;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.select-site-btn:hover {
+  background: #ffd54f;
+}
+
+.select-site-btn:active {
+  transform: scale(0.98);
 }
 
 .stat-bars {

@@ -10,3 +10,8 @@ declare module '*.glsl?raw' {
   const value: string
   export default value
 }
+
+declare module '*.glb?url' {
+  const url: string
+  export default url
+}
