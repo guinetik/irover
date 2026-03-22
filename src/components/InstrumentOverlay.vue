@@ -95,17 +95,17 @@ export interface InstrumentData {
 const INSTRUMENTS: Record<number, InstrumentData> = {
   1: {
     slot: 1, icon: 'CAM', name: 'MASTCAM', type: 'SURVEY CAMERA',
-    desc: 'Two box cameras mounted on the mast. Point at rocks and scan to reveal type, mineral composition, and scientific interest level.',
+    desc: 'Twin mast cameras for wide-area survey (visible + optional IR). Filter by rock type — matches show as wireframe-style highlights. Fix a target with a scan to tag it on the compass before you spend laser or drill time.',
     power: '3W', powerColor: '#5dc9a5', status: 'READY', statusColor: '#5dc9a5', health: '92%',
-    hint: 'Aim at target + hold [E] to scan. Scroll to zoom. Results tag the rock on your compass.',
+    hint: 'Set survey filter, pan the mast. Hold [E] on a rock to scan and tag. Scroll to zoom.',
     temp: '',
-    upgName: 'INFRARED FILTER', upgDesc: 'Reveals mineral signatures invisible to standard scan.', upgReq: 'Requires: Science Pack Alpha drop',
+    upgName: 'INFRARED / MULTISPECTRAL', upgDesc: 'Stronger mineral contrast in the passive survey view — still no laser.', upgReq: 'Requires: Science Pack Alpha drop',
   },
   2: {
     slot: 2, icon: 'LZR', name: 'CHEMCAM', type: 'LASER SPECTROGRAPH',
-    desc: 'Fires a laser at rocks up to 7m away, vaporizing a spot into plasma. Spectrograph reads the light to determine elemental composition.',
+    desc: 'Standoff laser spectroscopy: vaporizes a pin spot and reads elemental composition. Use after MastCam to judge if a rock is worth SAM or contact science — get chemistry before you drill.',
     power: '12W', powerColor: '#ef9f27', status: '8/10 SHOTS', statusColor: '#ef9f27', health: '87%',
-    hint: 'Aim at tagged rock within range. Press [E] to fire. Watch the spectrograph readout.',
+    hint: 'MastCam-tagged rock in range. Press [E] to fire. Readout is saved for SAM planning.',
     temp: 'Cold penalty \u2014 range reduced 20%',
     upgName: 'MULTI-SHOT BURST', upgDesc: '3 shots on different spots for averaged reading. Better accuracy.', upgReq: 'Requires: Science Pack Alpha drop',
   },
@@ -140,6 +140,22 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     hint: 'ACTIVATE to overdrive emergency power. 2x movement speed for 1 sol, but all instruments are locked during cooldown.',
     temp: '',
     upgName: 'HEAT EXCHANGER', upgDesc: 'Improves thermal efficiency. Faster charge rate.', upgReq: 'Requires: Engineering Package drop',
+  },
+  7: {
+    slot: 7, icon: '\u2602', name: 'REMS', type: 'WEATHER STATION',
+    desc: 'Twin boom sensors on the mast measure temperature, wind, pressure, humidity, and UV radiation. Provides continuous environmental monitoring and alerts for weather events.',
+    power: '1W', powerColor: '#5dc9a5', status: 'SURVEYING', statusColor: '#5dc9a5', health: '98%',
+    hint: 'Passive instrument \u2014 always active. Provides +10% sample quality within 3m radius. Weather alerts will warn of dust storms and thermal events.',
+    temp: '',
+    upgName: 'DUST STORM PREDICTOR', upgDesc: 'Forecasts storms 2 sols ahead. Gives time to find shelter or stow instruments.', upgReq: 'Requires: Meteorology Package drop',
+  },
+  8: {
+    slot: 8, icon: '\u2622', name: 'RAD', type: 'RADIATION DETECTOR',
+    desc: 'Measures high-energy radiation on the Martian surface \u2014 protons, heavy ions, neutrons, and gamma rays. Monitors cumulative dose and alerts on solar particle events.',
+    power: '2W', powerColor: '#5dc9a5', status: 'MONITORING', statusColor: '#5dc9a5', health: '96%',
+    hint: 'Passive instrument \u2014 always active. Tracks cumulative radiation exposure. Solar storm alerts trigger shelter warnings.',
+    temp: '',
+    upgName: 'PARTICLE SPECTROMETER', upgDesc: 'Identifies individual isotopes in cosmic ray flux. Better storm prediction.', upgReq: 'Requires: Deep Space Package drop',
   },
 }
 

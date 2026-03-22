@@ -184,7 +184,7 @@ export class RoverController {
       }
     }
 
-    const slotMatch = e.code.match(/^Digit([1-6])$/)
+    const slotMatch = e.code.match(/^Digit([1-8])$/)
     if (slotMatch) {
       const slot = parseInt(slotMatch[1])
       const instrument = this.instruments.find(i => i.slot === slot)

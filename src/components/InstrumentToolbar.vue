@@ -45,6 +45,8 @@ const instruments = [
   { slot: 4, id: 'dan',     name: 'DAN',  icon: '\u2261' },
   { slot: 5, id: 'sam',     name: 'SAM',  icon: '\u2394' },
   { slot: 6, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },
+  { slot: 7, id: 'rems',    name: 'REMS', icon: '\u2602' },
+  { slot: 8, id: 'rad',     name: 'RAD',  icon: '\u2622' },
 ]
 
 function handleClick(slot: number) {

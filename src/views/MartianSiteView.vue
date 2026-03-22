@@ -134,7 +134,7 @@ import SampleToast from '@/components/SampleToast.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import { useInventory } from '@/composables/useInventory'
 import { useMarsPower } from '@/composables/useMarsPower'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController } from '@/three/instruments'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, REMSController, RADController } from '@/three/instruments'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -294,6 +294,8 @@ onMounted(async () => {
     new DANController(),
     new SAMController(),
     new RTGController(),
+    new REMSController(),
+    new RADController(),
   ]
   if (controller) {
     controller.instruments = instrumentControllers
