@@ -47,6 +47,21 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
+      <div v-if="isInstrumentActive && activeInstrumentSlot === 1" class="mastcam-hud">
+        <div class="mc-strip">
+          <span class="mc-label">MASTCAM</span>
+          <span class="mc-divider">|</span>
+          <span class="mc-filter">SURVEY: {{ mastcamFilterLabel }}</span>
+          <span class="mc-divider">|</span>
+          <span class="mc-hint">A/D pan &middot; W/S tilt &middot; Scroll zoom &middot; Q filter &middot; Hold E scan</span>
+        </div>
+        <div v-if="mastcamScanning" class="mc-scan-bar">
+          <div class="mc-scan-fill" :style="{ width: mastcamScanProgress * 100 + '%' }" />
+          <span class="mc-scan-label">SCANNING...</span>
+        </div>
+      </div>
+    </Transition>
+    <Transition name="deploy-fade">
       <div v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle'" class="controls-hint">
         WASD to drive &middot; Drag to orbit &middot; 1-5 instruments
       </div>
@@ -62,6 +77,7 @@
       />
     </Transition>
     <InstrumentOverlay
+      v-if="!isInstrumentActive"
       :active-slot="activeInstrumentSlot"
       :can-activate="controller?.activeInstrument?.canActivate ?? false"
       :is-active-mode="isInstrumentActive"
@@ -165,7 +181,7 @@ import { useInventory } from '@/composables/useInventory'
 import { useMarsPower } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController } from '@/three/instruments'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, type InstrumentController } from '@/three/instruments'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -186,6 +202,9 @@ const crosshairX = ref(50)
 const crosshairY = ref(50)
 const drillProgress = ref(0)
 const isDrilling = ref(false)
+const mastcamFilterLabel = ref('ALL TYPES')
+const mastcamScanning = ref(false)
+const mastcamScanProgress = ref(0)
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const marsSol = ref(1)
 const marsTimeOfDay = ref(0)
@@ -526,10 +545,66 @@ onMounted(async () => {
       if (apxs instanceof APXSController && apxs.attached && !apxs.targeting) {
         apxs.initGameplay(siteScene.scene, camera, siteScene.terrain.getSmallRocks())
       }
+      const mc = controller?.instruments.find(i => i.id === 'mastcam')
+      if (mc instanceof MastCamController && mc.attached && !mc['overlayScene']) {
+        // Collect scene meshes to wireframe during survey — exclude small rocks (handled separately)
+        const smallRocks = new Set(siteScene.terrain.getSmallRocks())
+        const sceneMeshes: THREE.Mesh[] = []
+        siteScene.terrain.group.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh && !smallRocks.has(child as THREE.Mesh)) {
+            sceneMeshes.push(child as THREE.Mesh)
+          }
+        })
+        if (siteScene.rover) {
+          siteScene.rover.traverse((child) => {
+            if ((child as THREE.Mesh).isMesh) sceneMeshes.push(child as THREE.Mesh)
+          })
+        }
+        mc.initSurvey(siteScene.scene, siteScene.terrain.getSmallRocks(), sceneMeshes)
+      }
+    }
+
+    // Enter survey mode when MastCam is active
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
+      const mc = controller.activeInstrument
+      if (mc['overlayMeshes'].length === 0) {
+        mc.enterSurveyMode()
+        mc.rebuildOverlays()
+      }
+    }
+
+    // Animate MastCam tag markers (always, not just in active mode)
+    const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
+    if (mcInst instanceof MastCamController) {
+      mcInst.updateTagMarkers(elapsed)
     }
 
     // Track active instrument for toolbar
     activeInstrumentSlot.value = controller?.activeInstrument?.slot ?? null
+
+    // MastCam HUD state + crosshair
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
+      const mc = controller.activeInstrument
+      mastcamFilterLabel.value = mc.filterLabel
+      mastcamScanning.value = mc.isScanning
+      mastcamScanProgress.value = mc.scanProgressValue
+
+      // Show crosshair at target rock position
+      crosshairVisible.value = true
+      const hasTarget = mc.scanTarget !== null
+      const alreadyScanned = mc.scanTarget?.userData.mastcamScanned === true
+      crosshairColor.value = hasTarget && !alreadyScanned ? 'green' : 'red'
+      isDrilling.value = mc.isScanning
+      drillProgress.value = mc.scanProgressValue
+
+      if (camera) {
+        const projected = mc.scanTargetWorldPos.clone().project(camera)
+        crosshairX.value = (projected.x * 0.5 + 0.5) * 100
+        crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
+      }
+    } else {
+      mastcamScanning.value = false
+    }
 
     if (siteScene.rover && siteScene.trails) {
       siteScene.trails.update(siteScene.rover.position, controller?.heading ?? 0)
@@ -880,6 +955,80 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid rgba(196, 117, 58, 0.3);
   color: #a08060;
+}
+
+/* MastCam HUD */
+.mastcam-hud {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 42;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.mc-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 5, 2, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(196, 117, 58, 0.3);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.mc-label {
+  color: #e8a060;
+  font-weight: bold;
+}
+
+.mc-divider {
+  color: rgba(196, 117, 58, 0.25);
+}
+
+.mc-filter {
+  color: #5dc9a5;
+  font-weight: bold;
+}
+
+.mc-hint {
+  color: rgba(196, 117, 58, 0.4);
+  font-size: 8px;
+}
+
+.mc-scan-bar {
+  width: 200px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mc-scan-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5dc9a5, #3a9a7a);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.mc-scan-label {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  color: #5dc9a5;
+  letter-spacing: 0.15em;
 }
 
 /* Sleep mode overlay */

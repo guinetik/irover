@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController } from './instruments'
+import { RTGController, MastCamController } from './instruments'
 
 const CAMERA_DISTANCE_DEFAULT = 8
 const CAMERA_DISTANCE_MIN = 4
@@ -132,7 +132,9 @@ export class RoverController {
 
   private onWheel(e: WheelEvent) {
     e.preventDefault()
-    if (this.mode === 'instrument') {
+    if (this.mode === 'active' && this.activeInstrument instanceof MastCamController) {
+      this.activeInstrument.handleWheel(e.deltaY)
+    } else if (this.mode === 'instrument') {
       this.instrumentCameraDistance = Math.max(
         INSTRUMENT_CAMERA_DISTANCE_MIN,
         Math.min(INSTRUMENT_CAMERA_DISTANCE_MAX, this.instrumentCameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
@@ -174,6 +176,18 @@ export class RoverController {
 
     if (e.code === 'Escape') {
       if (this.mode === 'active') {
+        if (this.activeInstrument instanceof MastCamController) {
+          // Carry mast look direction into orbit angle, skip instrument view
+          const mc = this.activeInstrument
+          this.orbitAngle = this.heading + mc.panAngle + Math.PI
+          this.orbitPitch = Math.max(0.1, mc.tiltAngle + 0.3)
+          mc.deactivate()
+          this.camera.fov = 50
+          this.camera.updateProjectionMatrix()
+          this.mode = 'driving'
+          this.activeInstrument = null
+          return
+        }
         this.mode = 'instrument'
         return
       }
@@ -203,6 +217,12 @@ export class RoverController {
   }
 
   activateInstrument(slot: number | null): void {
+    // Deactivate MastCam if leaving it
+    if (this.activeInstrument instanceof MastCamController && (slot === null || slot !== this.activeInstrument.slot)) {
+      this.activeInstrument.deactivate()
+      this.camera.fov = 50
+      this.camera.updateProjectionMatrix()
+    }
     if (slot === null) {
       this.mode = 'driving'
       this.activeInstrument = null
@@ -390,6 +410,17 @@ export class RoverController {
     let desiredTarget: THREE.Vector3
 
     if (
+      this.mode === 'active' &&
+      this.activeInstrument instanceof MastCamController
+    ) {
+      // MastCam first-person: camera at mast head, looking along mast direction
+      const mc = this.activeInstrument
+      mc.update(_delta)
+      desiredPos = mc.mastWorldPos.clone()
+      desiredTarget = mc.mastWorldPos.clone().add(mc.mastLookDir.clone().multiplyScalar(10))
+      this.camera.fov = mc.fov
+      this.camera.updateProjectionMatrix()
+    } else if (
       (this.mode === 'instrument' || this.mode === 'active') &&
       this.activeInstrument?.node
     ) {
