@@ -64,9 +64,16 @@ export class MarsSky {
     this.updateSun()
   }
 
-  update(delta: number) {
+  update(delta: number, roverPosition?: THREE.Vector3) {
     this.timeOfDay = (this.timeOfDay + delta / SOL_DURATION) % 1.0
     this.updateSun()
+
+    // Shadow camera follows the rover so cast shadows are always visible
+    if (roverPosition) {
+      this.sunLight.target.position.copy(roverPosition)
+      this.sunLight.position.copy(this.sunDirection).multiplyScalar(80).add(roverPosition)
+      this.sunLight.target.updateMatrixWorld()
+    }
   }
 
   private updateSun() {
@@ -87,10 +94,10 @@ export class MarsSky {
     this.nightFactor = 1.0 - smoothstep(-0.1, 0.2, elevation)
     const isDusk = elevation > -0.2 && elevation < 0.1
 
-    // Sunlight intensity
-    this.sunLight.intensity = sunUp * 2.0
-    this.ambientLight.intensity = 0.05 + sunUp * 0.4
-    this.hemiLight.intensity = 0.05 + sunUp * 0.3
+    // Sunlight intensity — strong directional for visible shadows
+    this.sunLight.intensity = sunUp * 3.5
+    this.ambientLight.intensity = 0.03 + sunUp * 0.2
+    this.hemiLight.intensity = 0.03 + sunUp * 0.15
 
     // Color shift at dawn/dusk
     if (isDusk) {

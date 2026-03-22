@@ -2,6 +2,7 @@ uniform float uTime;
 uniform float uDustCover;
 uniform vec3 uWindDirection;
 uniform vec3 uCameraPos;
+uniform float uVerticalDrift;
 
 attribute float aSize;
 attribute float aSpeed;
@@ -17,7 +18,7 @@ void main() {
   float t = uTime * aSpeed + aPhase;
   pos += uWindDirection * t * 2.0;
   pos.x += sin(t * 1.3 + aPhase * 6.28) * 1.5;
-  pos.y += sin(t * 0.7 + aPhase * 3.14) * 0.8;
+  pos.y += sin(t * 0.7 + aPhase * 3.14) * 0.8 + uVerticalDrift * t;
   pos.z += cos(t * 1.1 + aPhase * 4.71) * 1.5;
 
   // Wrap particles within a box around the camera

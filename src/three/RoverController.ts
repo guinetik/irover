@@ -1,6 +1,9 @@
 import * as THREE from 'three'
 
-const CAMERA_DISTANCE = 8
+const CAMERA_DISTANCE_DEFAULT = 8
+const CAMERA_DISTANCE_MIN = 4
+const CAMERA_DISTANCE_MAX = 18
+const ZOOM_SENSITIVITY = 0.8
 const CAMERA_HEIGHT_OFFSET = 3
 const CAMERA_LOOK_HEIGHT_OFFSET = 1
 const CAMERA_LERP = 0.08
@@ -40,6 +43,7 @@ export class RoverController {
   // Orbit angle around the rover (mouse drag)
   private orbitAngle = 0
   private orbitPitch = 0.3 // slight downward look
+  private cameraDistance = CAMERA_DISTANCE_DEFAULT
   private isDragging = false
   private lastMouseX = 0
   private lastMouseY = 0
@@ -80,6 +84,7 @@ export class RoverController {
     this.onMouseUp = this.onMouseUp.bind(this)
     this.onMouseMove = this.onMouseMove.bind(this)
     this.onContextMenu = this.onContextMenu.bind(this)
+    this.onWheel = this.onWheel.bind(this)
 
     window.addEventListener('keydown', this.onKeyDown)
     window.addEventListener('keyup', this.onKeyUp)
@@ -87,10 +92,19 @@ export class RoverController {
     window.addEventListener('mouseup', this.onMouseUp)
     window.addEventListener('mousemove', this.onMouseMove)
     canvas.addEventListener('contextmenu', this.onContextMenu)
+    canvas.addEventListener('wheel', this.onWheel, { passive: false })
   }
 
   private onContextMenu(e: Event) {
     e.preventDefault()
+  }
+
+  private onWheel(e: WheelEvent) {
+    e.preventDefault()
+    this.cameraDistance = Math.max(
+      CAMERA_DISTANCE_MIN,
+      Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+    )
   }
 
   private onMouseDown(e: MouseEvent) {
@@ -203,9 +217,9 @@ export class RoverController {
 
     // Camera orbit around rover (orbit is independent of rover heading)
     const totalAngle = this.orbitAngle
-    const camX = Math.sin(totalAngle) * CAMERA_DISTANCE * Math.cos(this.orbitPitch)
-    const camZ = Math.cos(totalAngle) * CAMERA_DISTANCE * Math.cos(this.orbitPitch)
-    const camY = this.rover.position.y + CAMERA_HEIGHT_OFFSET + Math.sin(this.orbitPitch) * CAMERA_DISTANCE * 0.5
+    const camX = Math.sin(totalAngle) * this.cameraDistance * Math.cos(this.orbitPitch)
+    const camZ = Math.cos(totalAngle) * this.cameraDistance * Math.cos(this.orbitPitch)
+    const camY = this.rover.position.y + CAMERA_HEIGHT_OFFSET + Math.sin(this.orbitPitch) * this.cameraDistance * 0.5
 
     const desiredPos = new THREE.Vector3(
       this.rover.position.x + camX,
@@ -238,5 +252,6 @@ export class RoverController {
     window.removeEventListener('mouseup', this.onMouseUp)
     window.removeEventListener('mousemove', this.onMouseMove)
     this.canvas.removeEventListener('contextmenu', this.onContextMenu)
+    this.canvas.removeEventListener('wheel', this.onWheel)
   }
 }

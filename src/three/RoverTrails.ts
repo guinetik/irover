@@ -7,6 +7,8 @@ const TRACK_SEPARATION = 0.42
 const MIN_DISTANCE = 0.3
 const TRAIL_Y_OFFSET = 0.05
 const FADE_START = 0.5
+// Offset from rover origin to rear axle (model is scaled 0.5, rotated PI)
+const REAR_AXLE_OFFSET = 0.75
 
 export class RoverTrails {
   readonly mesh: THREE.Mesh
@@ -88,25 +90,29 @@ export class RoverTrails {
 
     // Add new point — 4 vertices
     const i = this.pointCount
+
+    // Offset stamp to rear axle position
+    const fwd = new THREE.Vector3(-Math.sin(heading), 0, -Math.cos(heading))
+    const rearX = roverPosition.x + fwd.x * REAR_AXLE_OFFSET
+    const rearZ = roverPosition.z + fwd.z * REAR_AXLE_OFFSET
+
     const right = new THREE.Vector3(
       -Math.cos(heading),
       0,
       Math.sin(heading),
     )
 
-    const baseY = this.heightAt(roverPosition.x, roverPosition.z) + TRAIL_Y_OFFSET
-
     // Left track: outer and inner edges
-    const loX = roverPosition.x - right.x * (TRACK_SEPARATION + TRACK_WIDTH)
-    const loZ = roverPosition.z - right.z * (TRACK_SEPARATION + TRACK_WIDTH)
-    const liX = roverPosition.x - right.x * TRACK_SEPARATION
-    const liZ = roverPosition.z - right.z * TRACK_SEPARATION
+    const loX = rearX - right.x * (TRACK_SEPARATION + TRACK_WIDTH)
+    const loZ = rearZ - right.z * (TRACK_SEPARATION + TRACK_WIDTH)
+    const liX = rearX - right.x * TRACK_SEPARATION
+    const liZ = rearZ - right.z * TRACK_SEPARATION
 
     // Right track: inner and outer edges
-    const riX = roverPosition.x + right.x * TRACK_SEPARATION
-    const riZ = roverPosition.z + right.z * TRACK_SEPARATION
-    const roX = roverPosition.x + right.x * (TRACK_SEPARATION + TRACK_WIDTH)
-    const roZ = roverPosition.z + right.z * (TRACK_SEPARATION + TRACK_WIDTH)
+    const riX = rearX + right.x * TRACK_SEPARATION
+    const riZ = rearZ + right.z * TRACK_SEPARATION
+    const roX = rearX + right.x * (TRACK_SEPARATION + TRACK_WIDTH)
+    const roZ = rearZ + right.z * (TRACK_SEPARATION + TRACK_WIDTH)
 
     const vi = i * 4 * 3
     // Vert 0: left outer

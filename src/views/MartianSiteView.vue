@@ -53,6 +53,12 @@ function getTerrainParams(): TerrainParams {
       ironOxide: geo.ironOxideIndex,
       basalt: geo.basaltIndex,
       seed: hashString(geo.id),
+      siteId: geo.id,
+      featureType: geo.featureType,
+      waterIceIndex: geo.waterIceIndex,
+      silicateIndex: geo.silicateIndex,
+      temperatureMaxK: geo.temperatureMaxK,
+      temperatureMinK: geo.temperatureMinK,
     }
   }
   return {
@@ -63,6 +69,12 @@ function getTerrainParams(): TerrainParams {
     ironOxide: 0.6,
     basalt: 0.5,
     seed: hashString(siteId),
+    siteId: siteId,
+    featureType: 'plain' as const,
+    waterIceIndex: 0.1,
+    silicateIndex: 0.3,
+    temperatureMaxK: 280,
+    temperatureMinK: 160,
   }
 }
 
