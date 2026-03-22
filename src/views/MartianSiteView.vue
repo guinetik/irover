@@ -85,7 +85,7 @@
     </Transition>
     <Transition name="deploy-fade">
       <div v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle'" class="controls-hint">
-        WASD to drive &middot; Drag to orbit &middot; 1-5 instruments
+        WASD to drive &middot; Drag to orbit &middot; 1&ndash;9 instruments &middot; E quick-activates when selected
       </div>
     </Transition>
     <Transition name="deploy-fade">
@@ -134,6 +134,7 @@
     />
     <ProfilePanel :open="profileOpen" />
     <SampleToast ref="sampleToastRef" />
+    <AchievementBanner ref="achievementRef" />
     <Teleport to="body">
       <Transition name="deploy-fade">
         <div v-if="showOverdriveConfirm" class="overdrive-confirm-overlay">
@@ -201,7 +202,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
@@ -217,6 +218,7 @@ import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
+import AchievementBanner from '@/components/AchievementBanner.vue'
 import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
@@ -272,8 +274,14 @@ const activeChemCamReadout = computed(() => {
 function handleChemCamAck(readoutId: string) {
   const cc = controller?.instruments.find(i => i.id === 'chemcam')
   if (cc instanceof ChemCamController) {
+    const readout = cc.readouts.find(r => r.id === readoutId)
     cc.markRead(readoutId)
     chemCamUnreadCount.value = cc.unreadCount
+    // SP for reviewing the spectrum
+    if (readout) {
+      const gain = awardAck(readoutId, readout.rockLabel)
+      if (gain) sampleToastRef.value?.showSP(gain.amount, 'REVIEW', gain.bonus)
+    }
   }
   showChemCamResults.value = false
 }
@@ -289,6 +297,7 @@ const chemcamPhaseLabel = computed(() => {
   }
 })
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
+const achievementRef = ref<InstanceType<typeof AchievementBanner> | null>(null)
 const siteLat = ref(0)
 const siteLon = ref(0)
 const roverWorldX = ref(0)
@@ -304,10 +313,31 @@ const { samples, currentWeightKg, isFull, capacityKg, removeSample } = useInvent
 const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower } = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
 const { mod: playerMod } = usePlayerProfile()
-const { totalSP, award: awardSP } = useSciencePoints()
+const { totalSP, award: awardSP, awardAck } = useSciencePoints()
 const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
+
+// --- LIBS calibration achievements ---
+interface LibsAchievement { id: string; sp: number; icon: string; title: string; description: string; type: string }
+const libsAchievements = ref<LibsAchievement[]>([])
+const triggeredAchievements = new Set<string>()
+
+fetch('/data/achievements.json')
+  .then(r => r.json())
+  .then((data: { 'libs-calibration': LibsAchievement[] }) => {
+    libsAchievements.value = data['libs-calibration'] ?? []
+  })
+  .catch(() => {})
+
+watch(totalSP, (sp) => {
+  for (const ach of libsAchievements.value) {
+    if (sp >= ach.sp && !triggeredAchievements.has(ach.id)) {
+      triggeredAchievements.add(ach.id)
+      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+    }
+  }
+})
 
 const showOverdriveConfirm = ref(false)
 
@@ -326,9 +356,7 @@ function confirmOverdrive() {
   const rtg = controller.activeInstrument
   if (rtg instanceof RTGController) {
     rtg.activateOverdrive()
-    // Return to driving — dismiss the instrument view
-    controller.mode = 'driving'
-    controller.activeInstrument = null
+    controller.activateInstrument(null)
   }
 }
 
@@ -444,9 +472,10 @@ onMounted(async () => {
       canvas,
       (x, z) => siteScene!.terrain.heightAt(x, z),
       (x, z) => siteScene!.terrain.normalAt(x, z),
-      { moveSpeed: 1.2, turnSpeed: 0.5 },
+      { moveSpeed: 1.2, turnSpeed: 0.5, instrumentZoomDelaySeconds: 5 },
       siteScene,
     )
+    controller.onInstrumentActivateRequest = handleActivate
   }
 
   // Create instrument controllers
@@ -757,6 +786,7 @@ onMounted(async () => {
     const ccInst = controller?.instruments.find(i => i.id === 'chemcam')
     if (ccInst instanceof ChemCamController) {
       chemCamUnreadCount.value = ccInst.unreadCount
+      ccInst.currentSP = totalSP.value
     }
     if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
       const cc = controller.activeInstrument
@@ -764,6 +794,7 @@ onMounted(async () => {
       const z = thermalZone.value
       const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
       cc.durationMultiplier = thermalMult / playerMod('analysisSpeed')
+      cc.currentSP = totalSP.value
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax
@@ -862,19 +893,19 @@ onUnmounted(() => {
   align-items: center;
   gap: 5px;
   padding: 4px 12px;
-  background: rgba(240, 192, 64, 0.08);
-  border: 1px solid rgba(240, 192, 64, 0.25);
+  background: rgba(102, 255, 238, 0.08);
+  border: 1px solid rgba(102, 255, 238, 0.25);
   border-radius: 4px;
 }
 
 .sp-icon {
-  color: #f0c040;
+  color: #66ffee;
   font-size: 12px;
-  text-shadow: 0 0 6px rgba(240, 192, 64, 0.4);
+  text-shadow: 0 0 6px rgba(102, 255, 238, 0.4);
 }
 
 .sp-value {
-  color: #f0c040;
+  color: #66ffee;
   font-family: 'Courier New', monospace;
   font-size: 13px;
   font-weight: bold;
@@ -883,7 +914,7 @@ onUnmounted(() => {
 }
 
 .sp-label {
-  color: rgba(240, 192, 64, 0.5);
+  color: rgba(102, 255, 238, 0.5);
   font-family: 'Courier New', monospace;
   font-size: 9px;
   letter-spacing: 0.12em;

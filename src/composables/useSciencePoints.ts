@@ -36,7 +36,13 @@ function rollYield(min: number, max: number): number {
   return Math.round(min + Math.random() * (max - min))
 }
 
-export type SPSource = 'mastcam' | 'chemcam' | 'apxs'
+const ACK_SP = { min: 5, max: 15 }
+
+/** Track acknowledged readouts to prevent double-count */
+const acknowledgedReadouts = new Set<string>()
+
+export type SPSource = 'mastcam' | 'chemcam' | 'apxs' | 'chemcam-ack'
+type InstrumentSource = 'mastcam' | 'chemcam' | 'apxs'
 
 export interface SPGain {
   amount: number
@@ -49,7 +55,7 @@ export interface SPGain {
 const lastGain = ref<SPGain | null>(null)
 
 export function useSciencePoints() {
-  function award(source: SPSource, rockId: string, rockLabel: string): SPGain | null {
+  function award(source: InstrumentSource, rockId: string, rockLabel: string): SPGain | null {
     // Idempotent — no double-count
     if (scored[source].has(rockId)) return null
     scored[source].add(rockId)
@@ -68,6 +74,23 @@ export function useSciencePoints() {
     return gain
   }
 
+  /** Bonus SP for reviewing a ChemCam readout */
+  function awardAck(readoutId: string, rockLabel: string): SPGain | null {
+    if (acknowledgedReadouts.has(readoutId)) return null
+    acknowledgedReadouts.add(readoutId)
+
+    const base = rollYield(ACK_SP.min, ACK_SP.max)
+    const spYieldMult = mod('spYield')
+    const amount = Math.round(base * spYieldMult)
+
+    totalSP.value += amount
+    sessionSP.value += amount
+
+    const gain: SPGain = { amount, source: 'chemcam-ack', rockLabel, bonus: 1 }
+    lastGain.value = gain
+    return gain
+  }
+
   function consumeLastGain(): SPGain | null {
     const g = lastGain.value
     lastGain.value = null
@@ -79,6 +102,7 @@ export function useSciencePoints() {
     sessionSP,
     lastGain,
     award,
+    awardAck,
     consumeLastGain,
   }
 }

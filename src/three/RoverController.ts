@@ -32,14 +32,23 @@ const INSTRUMENT_CAMERA_DISTANCE_DEFAULT = 1.5
 const INSTRUMENT_CAMERA_LERP = 0.06
 const INSTRUMENT_SHAKE_FACTOR = 0.25
 
+/** Default seconds to keep chase cam after selecting an instrument before orbiting to it (0 = immediate). */
+export const DEFAULT_INSTRUMENT_ZOOM_DELAY_SECONDS = 2
+
 export interface RoverConfig {
   moveSpeed: number
   turnSpeed: number
+  /**
+   * Seconds to wait before moving the camera to the instrument orbit after selection.
+   * Set to 0 for immediate zoom (legacy behavior). Activatable instruments can press E to skip.
+   */
+  instrumentZoomDelaySeconds?: number
 }
 
 const DEFAULT_CONFIG: RoverConfig = {
   moveSpeed: 5,
   turnSpeed: 2,
+  instrumentZoomDelaySeconds: DEFAULT_INSTRUMENT_ZOOM_DELAY_SECONDS,
 }
 
 export type HeightFn = (x: number, z: number) => number
@@ -93,6 +102,12 @@ export class RoverController {
   activeInstrument: InstrumentController | null = null
   instruments: InstrumentController[] = []
 
+  /** When set (e.g. to Vue `handleActivate`), Key E in instrument mode invokes the same flow as the Activate button (RTG confirm, etc.). */
+  onInstrumentActivateRequest: (() => void) | null = null
+
+  private instrumentZoomPending = false
+  private instrumentZoomElapsed = 0
+
   constructor(
     rover: THREE.Group,
     camera: THREE.PerspectiveCamera,
@@ -138,10 +153,17 @@ export class RoverController {
     } else if (this.mode === 'active' && this.activeInstrument instanceof ChemCamController) {
       this.activeInstrument.handleWheel(e.deltaY)
     } else if (this.mode === 'instrument') {
-      this.instrumentCameraDistance = Math.max(
-        INSTRUMENT_CAMERA_DISTANCE_MIN,
-        Math.min(INSTRUMENT_CAMERA_DISTANCE_MAX, this.instrumentCameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
-      )
+      if (this.instrumentZoomPending) {
+        this.cameraDistance = Math.max(
+          CAMERA_DISTANCE_MIN,
+          Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+        )
+      } else {
+        this.instrumentCameraDistance = Math.max(
+          INSTRUMENT_CAMERA_DISTANCE_MIN,
+          Math.min(INSTRUMENT_CAMERA_DISTANCE_MAX, this.instrumentCameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+        )
+      }
     } else {
       this.cameraDistance = Math.max(
         CAMERA_DISTANCE_MIN,
@@ -177,6 +199,19 @@ export class RoverController {
     // Instrument hotkeys (only when rover is ready)
     if (this.siteScene.roverState !== 'ready') return
 
+    if (e.code === 'KeyE' && !e.repeat) {
+      if (this.mode === 'instrument' && this.activeInstrument?.canActivate) {
+        this.instrumentZoomPending = false
+        if (this.onInstrumentActivateRequest) {
+          this.onInstrumentActivateRequest()
+        } else {
+          this.enterActiveMode()
+        }
+        e.preventDefault()
+        return
+      }
+    }
+
     if (e.code === 'Escape') {
       if (this.mode === 'active') {
         if (this.activeInstrument instanceof MastCamController) {
@@ -206,6 +241,8 @@ export class RoverController {
         return
       }
       if (this.mode === 'instrument') {
+        this.instrumentZoomPending = false
+        this.instrumentZoomElapsed = 0
         this.mode = 'driving'
         this.activeInstrument = null
         return
@@ -221,6 +258,17 @@ export class RoverController {
       // When RTG overdrive/cooldown is active, only RTG itself can be selected
       const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
       if (rtg?.instrumentsLocked && instrument !== rtg) return
+
+      // Deactivate current mast instrument if switching away from active mode
+      if (this.mode === 'active') {
+        if (this.activeInstrument instanceof MastCamController) {
+          this.activeInstrument.deactivate()
+        } else if (this.activeInstrument instanceof ChemCamController) {
+          this.activeInstrument.deactivate()
+        }
+        this.camera.fov = 50
+        this.camera.updateProjectionMatrix()
+      }
 
       this.setInstrument(instrument)
     }
@@ -244,6 +292,8 @@ export class RoverController {
       this.camera.updateProjectionMatrix()
     }
     if (slot === null) {
+      this.instrumentZoomPending = false
+      this.instrumentZoomElapsed = 0
       this.mode = 'driving'
       this.activeInstrument = null
       return
@@ -258,9 +308,16 @@ export class RoverController {
     this.mode = 'instrument'
     this.activeInstrument = instrument
     this.instrumentCameraDistance = INSTRUMENT_CAMERA_DISTANCE_DEFAULT
-    // Snap orbit to the instrument's preferred viewing angle (relative to rover heading)
-    this.orbitAngle = instrument.viewAngle + this.heading
-    this.orbitPitch = instrument.viewPitch
+    this.instrumentZoomElapsed = 0
+    const delaySec = this.config.instrumentZoomDelaySeconds ?? 0
+    if (delaySec > 0) {
+      this.instrumentZoomPending = true
+      // Keep current chase orbit until delay elapses or user activates / UI zoom completes
+    } else {
+      this.instrumentZoomPending = false
+      this.orbitAngle = instrument.viewAngle + this.heading
+      this.orbitPitch = instrument.viewPitch
+    }
   }
 
   enterActiveMode(): void {
@@ -269,15 +326,7 @@ export class RoverController {
     const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
     if (rtg?.instrumentsLocked && this.activeInstrument !== rtg) return
 
-    // Initialize mast orientation from current orbit camera angle
-    if (this.activeInstrument instanceof MastCamController || this.activeInstrument instanceof ChemCamController) {
-      // Only set if mast is at default (0,0) — preserve if already oriented
-      if (mastState.panAngle === 0 && mastState.tiltAngle === 0) {
-        mastState.panAngle = this.orbitAngle - this.heading - Math.PI
-        mastState.tiltAngle = Math.max(-0.5, Math.min(0.6, this.orbitPitch - 0.3))
-      }
-    }
-
+    this.instrumentZoomPending = false
     this.mode = 'active'
   }
 
@@ -291,6 +340,19 @@ export class RoverController {
     // Always tick RTG (overdrive/cooldown/recharge run regardless of mode)
     const rtgInst = this.instruments.find(i => i.id === 'rtg')
     if (rtgInst) rtgInst.update(delta)
+
+    if (this.mode === 'instrument' && this.instrumentZoomPending && this.activeInstrument) {
+      const delaySec = this.config.instrumentZoomDelaySeconds ?? 0
+      if (delaySec > 0) {
+        this.instrumentZoomElapsed += delta
+        if (this.instrumentZoomElapsed >= delaySec) {
+          this.instrumentZoomPending = false
+          this.orbitAngle = this.activeInstrument.viewAngle + this.heading
+          this.orbitPitch = this.activeInstrument.viewPitch
+        }
+      }
+      this.activeInstrument.update(delta)
+    }
 
     // In active mode, route input to instrument and skip rover controls
     if (this.mode === 'active' && this.activeInstrument) {
@@ -462,10 +524,10 @@ export class RoverController {
       this.camera.fov = cc.fov
       this.camera.updateProjectionMatrix()
     } else if (
-      (this.mode === 'instrument' || this.mode === 'active') &&
+      ((this.mode === 'instrument' && !this.instrumentZoomPending) || this.mode === 'active') &&
       this.activeInstrument?.node
     ) {
-      // Camera orbits around the instrument node
+      // Camera orbits around the instrument node (MastCam/ChemCam only hit this in instrument mode — active uses branches above)
       const focusPos = this.activeInstrument.getWorldFocusPosition()
       const camDist = this.instrumentCameraDistance
 

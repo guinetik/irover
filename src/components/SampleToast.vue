@@ -56,7 +56,7 @@ function showSP(amount: number, source: string, bonusMult: number): void {
     prefix: `+${amount} SP`,
     label: source.toUpperCase() + bonusTag,
     weight: '',
-    color: '#f0c040',
+    color: '#66ffee',
     variant: 'sp',
   })
 }
@@ -101,8 +101,9 @@ defineExpose({ show, showChemCam, showSP })
 }
 
 .sample-toast.sp {
-  background: rgba(40, 30, 5, 0.9);
-  border-color: rgba(240, 192, 64, 0.4);
+  background: rgba(5, 30, 35, 0.92);
+  border-color: rgba(102, 255, 238, 0.45);
+  box-shadow: 0 0 12px rgba(102, 255, 238, 0.15);
 }
 
 .toast-dot {
@@ -116,7 +117,9 @@ defineExpose({ show, showChemCam, showSP })
 }
 
 .sample-toast.sp .toast-label {
-  color: rgba(240, 200, 80, 0.95);
+  color: rgba(102, 255, 238, 0.95);
+  font-weight: bold;
+  letter-spacing: 0.08em;
 }
 
 .toast-weight {

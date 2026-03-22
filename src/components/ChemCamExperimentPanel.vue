@@ -13,6 +13,16 @@
             <button class="cp-close" @click="$emit('close')">&times;</button>
           </div>
 
+          <!-- Calibration bar -->
+          <div class="cp-calibration">
+            <span class="cp-cal-label">LIBS CALIBRATION</span>
+            <div class="cp-cal-bar">
+              <div class="cp-cal-fill" :style="{ width: calPct + '%' }" />
+            </div>
+            <span class="cp-cal-pct">{{ calPct }}%</span>
+            <span v-if="calPct < 100" class="cp-cal-hint">{{ calHint }}</span>
+          </div>
+
           <!-- Spectrum plot -->
           <div class="cp-plot-wrap">
             <svg class="cp-spectrum" viewBox="0 0 600 200" preserveAspectRatio="none">
@@ -64,6 +74,7 @@
           <!-- Actions -->
           <div class="cp-actions">
             <button class="cp-btn-ack" @click="$emit('acknowledge', readout.id)">ACKNOWLEDGE</button>
+            <button class="cp-btn-transmit" disabled>TRANSMIT TO EARTH</button>
           </div>
         </div>
       </div>
@@ -83,6 +94,7 @@ const props = defineProps<{
 defineEmits<{
   close: []
   acknowledge: [id: string]
+  transmit: [id: string]
 }>()
 
 // --- Spectrum layout ---
@@ -190,7 +202,22 @@ const uniqueElements = computed(() => {
   return Array.from(map.values()).sort((a, b) => b.maxIntensity - a.maxIntensity)
 })
 
-// --- Science blurb ---
+// --- Calibration ---
+const calPct = computed(() => {
+  if (!props.readout) return 0
+  return Math.round(props.readout.calibration * 100)
+})
+
+const calHint = computed(() => {
+  const c = props.readout?.calibration ?? 0
+  if (c < 0.2) return 'Spectrometer uncalibrated — most peaks unresolved'
+  if (c < 0.4) return 'Partial calibration — some elements identifiable'
+  if (c < 0.7) return 'Improving resolution — minor peaks still noisy'
+  if (c < 1.0) return 'Near full calibration — trace elements emerging'
+  return ''
+})
+
+// --- Science blurb (degrades with low calibration) ---
 const BLURBS: Record<string, string> = {
   basalt: 'Si and Fe emission consistent with tholeiitic basalt. Mg presence suggests mafic composition.',
   hematite: 'Strong Fe emission with Mn enrichment. Oxidizing conditions — possible aqueous alteration history.',
@@ -200,8 +227,17 @@ const BLURBS: Record<string, string> = {
   'iron-meteorite': 'Fe-Ni alloy signature. Extraterrestrial origin confirmed — kamacite/taenite lattice probable.',
 }
 
+const LOW_CAL_BLURBS = [
+  'Signal-to-noise ratio too low for conclusive analysis. Continue calibrating spectrometer.',
+  'Partial spectrum acquired. Dominant emission lines detected but element assignment uncertain.',
+  'Spectrometer warming up. Strongest peaks suggest metallic content — further data needed.',
+]
+
 const scienceBlurb = computed(() => {
   if (!props.readout) return ''
+  const cal = props.readout.calibration
+  if (cal < 0.3) return LOW_CAL_BLURBS[Math.floor(Math.random() * 3)] ?? LOW_CAL_BLURBS[0]
+  if (cal < 0.6) return 'Preliminary analysis: ' + (BLURBS[props.readout.rockType]?.split('.')[0] ?? 'Composition uncertain') + '. Confidence limited — calibrate further.'
   return BLURBS[props.readout.rockType] ?? 'Spectrum acquired. Elemental composition logged for SAM cross-reference.'
 })
 </script>
@@ -226,6 +262,56 @@ const scienceBlurb = computed(() => {
   border-radius: 10px;
   padding: 20px;
   font-family: 'Courier New', monospace;
+}
+
+/* Calibration bar */
+.cp-calibration {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(102, 255, 238, 0.08);
+}
+
+.cp-cal-label {
+  font-size: 8px;
+  color: rgba(102, 255, 238, 0.4);
+  letter-spacing: 0.12em;
+  flex-shrink: 0;
+}
+
+.cp-cal-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(102, 255, 238, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cp-cal-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(102, 255, 238, 0.3), #66ffee);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.cp-cal-pct {
+  font-size: 10px;
+  color: #66ffee;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: right;
+}
+
+.cp-cal-hint {
+  font-size: 8px;
+  color: rgba(102, 255, 238, 0.35);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
 }
 
 /* Header */
@@ -345,6 +431,7 @@ const scienceBlurb = computed(() => {
 .cp-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .cp-btn-ack {
@@ -364,6 +451,20 @@ const scienceBlurb = computed(() => {
 .cp-btn-ack:hover {
   background: rgba(102, 255, 238, 0.2);
   border-color: rgba(102, 255, 238, 0.6);
+}
+
+.cp-btn-transmit {
+  padding: 10px 24px;
+  background: rgba(102, 255, 238, 0.04);
+  border: 1px solid rgba(102, 255, 238, 0.15);
+  border-radius: 6px;
+  color: rgba(102, 255, 238, 0.3);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Transition */

@@ -20,6 +20,10 @@ const FOV_MAX = 65
 const FOV_DEFAULT = 50
 const ZOOM_STEP = 3
 
+// --- Calibration ---
+/** SP needed for fully calibrated LIBS results */
+const FULL_CALIBRATION_SP = 250
+
 // --- Power ---
 const PULSE_POWER_W = 12
 const INTEGRATE_POWER_W = 3
@@ -54,6 +58,8 @@ export interface ChemCamReadout {
   timestamp: number
   /** Procedural spectrum peaks — [{wavelength, intensity, element}] */
   peaks: SpectrumPeak[]
+  /** 0–1 calibration at time of scan. Affects peak visibility & labels. */
+  calibration: number
   read: boolean
 }
 
@@ -81,6 +87,13 @@ export class ChemCamController extends InstrumentController {
   shotsMax = SHOTS_MAX
   /** External multiplier on sequence duration (thermal + player buffs). <1 = faster. */
   durationMultiplier = 1.0
+  /** Current total SP — set by view each frame for calibration curve */
+  currentSP = 0
+
+  /** 0–1 calibration level derived from accumulated SP */
+  get calibration(): number {
+    return Math.min(1, this.currentSP / FULL_CALIBRATION_SP)
+  }
 
   // --- Readout queue ---
   readouts: ChemCamReadout[] = []
@@ -310,8 +323,9 @@ export class ChemCamController extends InstrumentController {
     this.currentTarget.userData.chemcamAnalyzed = true
     this.currentTarget.userData.chemcamRockType = rockType
 
-    // Generate procedural spectrum
-    const peaks = generateSpectrum(rockType)
+    // Generate procedural spectrum — quality depends on calibration
+    const cal = this.calibration
+    const peaks = generateSpectrum(rockType, cal)
 
     const readout: ChemCamReadout = {
       id: `cc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -320,6 +334,7 @@ export class ChemCamController extends InstrumentController {
       rockLabel: label,
       timestamp: Date.now(),
       peaks,
+      calibration: cal,
       read: false,
     }
 
@@ -561,22 +576,67 @@ const ROCK_ELEMENT_PROFILES: Record<RockTypeId, { el: string; weight: number }[]
   ],
 }
 
-function generateSpectrum(rockType: RockTypeId): SpectrumPeak[] {
+/**
+ * Generate spectrum peaks with quality degraded by calibration level.
+ *
+ * cal 0.0 → only strongest 1-2 peaks visible, most labeled "??", high noise
+ * cal 0.4 → ~half peaks visible, some "??", moderate noise
+ * cal 0.7 → most peaks visible, rare "??", light noise
+ * cal 1.0 → full clean spectrum, all elements labeled
+ */
+function generateSpectrum(rockType: RockTypeId, cal: number): SpectrumPeak[] {
   const profile = ROCK_ELEMENT_PROFILES[rockType] ?? ROCK_ELEMENT_PROFILES.basalt
-  const peaks: SpectrumPeak[] = []
+  const allPeaks: { nm: number; intensity: number; element: string; weight: number }[] = []
 
   for (const { el, weight } of profile) {
     const templates = ELEMENT_PEAKS[el]
     if (!templates) continue
     for (const t of templates) {
-      // Jitter wavelength slightly per reading
       const nm = t.nm + (Math.random() - 0.5) * t.spread
       const intensity = weight * (0.7 + Math.random() * 0.3)
-      peaks.push({ wavelength: Math.round(nm * 10) / 10, intensity, element: el })
+      allPeaks.push({ nm, intensity, element: el, weight })
     }
   }
 
-  // Sort by wavelength
+  // Sort by weight (strongest first) to decide which are "visible"
+  allPeaks.sort((a, b) => b.weight - a.weight)
+
+  // How many peaks are resolved depends on calibration
+  // cal 0 → ~20% of peaks, cal 1 → 100%
+  const visibleFraction = 0.2 + cal * 0.8
+  const visibleCount = Math.max(1, Math.ceil(allPeaks.length * visibleFraction))
+
+  // Threshold below which element labels show as "??"
+  // cal 0 → only weight > 0.8 gets labeled, cal 1 → everything labeled
+  const labelThreshold = 1.0 - cal  // cal 0 → 1.0, cal 0.5 → 0.5, cal 1 → 0
+
+  // Noise added to intensity at low cal
+  const noiseMag = (1 - cal) * 0.25
+
+  const peaks: SpectrumPeak[] = []
+  for (let i = 0; i < allPeaks.length; i++) {
+    const p = allPeaks[i]
+    if (i >= visibleCount) continue
+
+    // Add noise to intensity
+    const noise = (Math.random() - 0.5) * 2 * noiseMag
+    const noisyIntensity = Math.max(0.05, Math.min(1, p.intensity + noise))
+
+    // Wavelength jitter increases at low calibration
+    const extraJitter = (1 - cal) * 8
+    const jitteredNm = p.nm + (Math.random() - 0.5) * extraJitter
+
+    // Label: "??" if below threshold
+    const labeled = p.weight >= labelThreshold
+    const element = labeled ? p.element : '??'
+
+    peaks.push({
+      wavelength: Math.round(jitteredNm * 10) / 10,
+      intensity: noisyIntensity,
+      element,
+    })
+  }
+
   peaks.sort((a, b) => a.wavelength - b.wavelength)
   return peaks
 }
