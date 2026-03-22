@@ -73,6 +73,8 @@
       :color="crosshairColor"
       :drilling="isDrilling"
       :progress="drillProgress"
+      :screen-x="crosshairX"
+      :screen-y="crosshairY"
     />
     <InventoryPanel
       :open="inventoryOpen"
@@ -180,6 +182,8 @@ const inventoryOpen = ref(false)
 const profileOpen = ref(false)
 const crosshairVisible = ref(false)
 const crosshairColor = ref<'green' | 'red'>('red')
+const crosshairX = ref(50)
+const crosshairY = ref(50)
 const drillProgress = ref(0)
 const isDrilling = ref(false)
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
@@ -453,6 +457,13 @@ onMounted(async () => {
       drillProgress.value = apxs.drillProgress
       isDrilling.value = apxs.isDrilling
       apxsDrilling = apxs.isDrilling
+
+      // Project 3D target position to screen for crosshair overlay
+      if (camera) {
+        const projected = apxs.targetWorldPos.clone().project(camera)
+        crosshairX.value = (projected.x * 0.5 + 0.5) * 100
+        crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
+      }
 
       if (apxs.lastCollected) {
         const s = apxs.lastCollected

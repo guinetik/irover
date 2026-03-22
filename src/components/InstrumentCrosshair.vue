@@ -1,6 +1,7 @@
 <template>
   <Teleport to="body">
-    <div v-if="visible" class="crosshair" :class="color">
+    <div v-if="visible" class="crosshair" :class="color"
+      :style="{ left: (screenX ?? 50) + '%', top: (screenY ?? 50) + '%' }">
       <div class="crosshair-dot" />
       <svg v-if="drilling" class="crosshair-ring" viewBox="0 0 40 40">
         <circle cx="20" cy="20" r="16" class="ring-track" />
@@ -19,6 +20,10 @@ const props = defineProps<{
   color: 'green' | 'red'
   drilling: boolean
   progress: number
+  /** Screen X position as percentage (0–100) */
+  screenX?: number
+  /** Screen Y position as percentage (0–100) */
+  screenY?: number
 }>()
 
 const circumference = 2 * Math.PI * 16

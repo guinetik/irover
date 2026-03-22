@@ -4,8 +4,34 @@ import { TerrainGenerator, type TerrainParams } from './terrain/TerrainGenerator
 import { DustParticles } from './DustParticles'
 import { MarsSky } from './MarsSky'
 import { RoverTrails } from './RoverTrails'
+import {
+  getTouchdownReleaseProgress,
+  getTouchdownTetherRetractProgress,
+  getTouchdownTetherTension,
+  isInTouchdownTetherWindow,
+} from './skyCraneTouchdown'
 
 const ROVER_SCALE = 0.5
+const TOUCHDOWN_STAGE_HEIGHT = 3.8
+const TOUCHDOWN_STAGE_FLYAWAY_RISE = 3.2
+const TOUCHDOWN_STAGE_FLYAWAY_DRIFT = new THREE.Vector3(-0.8, 0, -2.4)
+const TOUCHDOWN_TETHER_RADIUS = 0.022
+const TOUCHDOWN_TETHER_STAGE_ANCHORS = [
+  new THREE.Vector3(-0.6, -0.1, -0.6),
+  new THREE.Vector3(0.6, -0.1, -0.6),
+  new THREE.Vector3(-0.6, -0.1, 0.6),
+  new THREE.Vector3(0.6, -0.1, 0.6),
+]
+const TOUCHDOWN_TETHER_ROVER_ANCHORS = [
+  new THREE.Vector3(-1.1, 1.15, -1.0),
+  new THREE.Vector3(1.1, 1.15, -1.0),
+  new THREE.Vector3(-1.1, 1.15, 1.0),
+  new THREE.Vector3(1.1, 1.15, 1.0),
+]
+
+interface TouchdownTether {
+  mesh: THREE.Mesh
+}
 
 export interface RoverWheels {
   wheels: THREE.Object3D[]       // all 6 wheels for spin
@@ -48,10 +74,16 @@ export class SiteScene {
   private landingDust: THREE.Points | null = null
   private landingDustMaterial: THREE.ShaderMaterial | null = null
   private landingDustTime = 0
+  private touchdownRig: THREE.Group | null = null
+  private touchdownStage: THREE.Group | null = null
+  private touchdownTethers: TouchdownTether[] = []
+  private touchdownReleaseElapsed = 0
+  private touchdownReleaseActive = false
   private dustCover = 0.5
   private waterIceIndex = 0
   private featureType: TerrainParams['featureType'] = 'plain'
   private roverLight: THREE.PointLight | null = null
+  private roverFillLow: THREE.PointLight | null = null
   private sunRaycaster = new THREE.Raycaster()
   /** Whether the rover is currently in direct sunlight (not shadowed by terrain/rocks) */
   roverInSunlight = true
@@ -112,25 +144,37 @@ export class SiteScene {
   update(elapsed: number, delta: number, cameraPosition: THREE.Vector3) {
     // Sky crane descent
     if (this.roverState === 'descending' && this.rover) {
-      this.descentTime += delta
-      const t = Math.min(1, this.descentTime / this.DESCENT_DURATION)
-      // Ease-in curve — starts slow, accelerates like gravity
-      const eased = t * t * (3 - 2 * t)
-      this.rover.position.y = this.descentStartY + (this.descentGroundY - this.descentStartY) * eased
+      if (!this.touchdownReleaseActive) {
+        this.descentTime += delta
+        const t = Math.min(1, this.descentTime / this.DESCENT_DURATION)
+        // Ease-in curve — starts slow, accelerates like gravity
+        const eased = t * t * (3 - 2 * t)
+        this.rover.position.y = this.descentStartY + (this.descentGroundY - this.descentStartY) * eased
 
-      // Subtle sway during descent
-      this.rover.rotation.z = Math.sin(this.descentTime * 2.5) * 0.015 * (1 - t)
-      this.rover.rotation.x = Math.cos(this.descentTime * 1.8) * 0.01 * (1 - t)
+        // Subtle sway during descent
+        this.rover.rotation.z = Math.sin(this.descentTime * 2.5) * 0.015 * (1 - t)
+        this.rover.rotation.x = Math.cos(this.descentTime * 1.8) * 0.01 * (1 - t)
+        this.updateTouchdownRig(t, 0)
 
-      if (t >= 1) {
+        if (t >= 1) {
+          this.rover.position.y = this.descentGroundY
+          this.touchdownReleaseActive = true
+          this.touchdownReleaseElapsed = 0
+          this.spawnLandingDust()
+        }
+      } else {
+        this.touchdownReleaseElapsed += delta
         this.rover.position.y = this.descentGroundY
         this.rover.rotation.z = 0
         this.rover.rotation.x = 0
-        this.roverState = 'deploying'
-        // Spawn landing dust cloud
-        this.spawnLandingDust()
-        // Start the deployment animation
-        this.deployAction?.play()
+        this.updateTouchdownRig(1, this.touchdownReleaseElapsed)
+
+        if (getTouchdownTetherRetractProgress(this.touchdownReleaseElapsed) >= 1) {
+          this.hideTouchdownRig()
+          this.touchdownReleaseActive = false
+          this.roverState = 'deploying'
+          this.deployAction?.play()
+        }
       }
     }
 
@@ -171,6 +215,32 @@ export class SiteScene {
       this.roverInSunlight = hits.length === 0
     } else {
       this.roverInSunlight = false // night = no sunlight
+    }
+
+    // Modulate rover fill lights by time of day:
+    // Day — sun is key light, fills stay low so material colors read clearly
+    // Night — fills rise to keep the rover visible without the sun
+    if (this.sky && this.roverLight && this.roverFillLow) {
+      const night = this.sky.nightFactor          // 0 = full day, 1 = full night
+      const sunUp = Math.max(0, this.sky.sunDirection.y)
+
+      // Main overhead: low during day (0.6), rises at night (2.5)
+      this.roverLight.intensity = 0.6 + night * 1.9
+      // Shift color cooler at night (moonlight feel)
+      this.roverLight.color.setRGB(
+        1.0 - night * 0.25,   // less red at night
+        0.94 - night * 0.12,
+        0.88 + night * 0.12,  // bluer at night
+      )
+
+      // Low fill: subtle during day (0.3), moderate at night (1.2)
+      this.roverFillLow.intensity = 0.3 + night * 0.9
+      // At high noon, drop fill even further so sun contrast pops
+      if (sunUp > 0.5) {
+        const noonDim = (sunUp - 0.5) * 2.0 // 0..1 as sun climbs to zenith
+        this.roverLight.intensity *= (1.0 - noonDim * 0.4)
+        this.roverFillLow.intensity *= (1.0 - noonDim * 0.5)
+      }
     }
 
     // Update fog color to match sky time of day, shifted by site type
@@ -254,17 +324,19 @@ export class SiteScene {
     this.roverState = 'descending'
     this.rover.position.set(sx, this.descentStartY, sz)
     this.scene.add(this.rover)
+    this.createTouchdownRig()
 
-    // Fill lights attached to rover so it's always visible
-    // Main overhead fill — warm, wide range
-    this.roverLight = new THREE.PointLight(0xffe0c0, 10.0, 40, 0.6)
-    this.roverLight.position.set(0, 6, 0)
+    // Fill lights attached to rover — kept subtle so the sun is the key light.
+    // Intensities are modulated by time of day in update().
+    // Main overhead fill — neutral warm, softens top shadows
+    this.roverLight = new THREE.PointLight(0xfff0e0, 1.5, 30, 1.0)
+    this.roverLight.position.set(0, 5, 0)
     this.rover.add(this.roverLight)
 
-    // Secondary low fill — cooler, reduces harsh shadows underneath
-    const lowFill = new THREE.PointLight(0xc0d0e0, 4.0, 20, 0.5)
-    lowFill.position.set(0, 2, 2)
-    this.rover.add(lowFill)
+    // Secondary low fill — cool bounce, lifts shadow detail underneath
+    this.roverFillLow = new THREE.PointLight(0xd0dce8, 0.8, 15, 1.0)
+    this.roverFillLow.position.set(0, 1.5, 2)
+    this.rover.add(this.roverFillLow)
   }
 
   private spawnLandingDust(): void {
@@ -386,6 +458,160 @@ export class SiteScene {
     this.scene.add(this.landingDust)
   }
 
+  /**
+   * Builds the temporary descent-stage rig used only during the final touchdown beat.
+   */
+  private createTouchdownRig(): void {
+    if (this.touchdownRig) return
+
+    const rig = new THREE.Group()
+    rig.visible = false
+
+    const stage = new THREE.Group()
+    const stageMaterial = new THREE.MeshStandardMaterial({
+      color: 0x5d6771,
+      roughness: 0.85,
+      metalness: 0.25,
+      emissive: new THREE.Color(0x110804),
+      emissiveIntensity: 0.08,
+    })
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 1.5), stageMaterial)
+    stage.add(body)
+
+    for (const [x, z] of [[0, -0.85], [0, 0.85], [-0.85, 0], [0.85, 0]] as const) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.7), stageMaterial)
+      beam.position.set(x, 0.02, z)
+      if (x !== 0) beam.rotation.y = Math.PI / 2
+      stage.add(beam)
+
+      const thruster = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.16, 0.3, 8), stageMaterial)
+      thruster.position.set(x * 0.95, -0.22, z * 0.95)
+      stage.add(thruster)
+    }
+
+    rig.add(stage)
+
+    const tetherMaterial = new THREE.MeshStandardMaterial({
+      color: 0x161a1f,
+      roughness: 0.85,
+      metalness: 0.08,
+      emissive: new THREE.Color(0x050607),
+      transparent: true,
+      opacity: 0.95,
+    })
+    const tetherGeometry = new THREE.CylinderGeometry(
+      TOUCHDOWN_TETHER_RADIUS,
+      TOUCHDOWN_TETHER_RADIUS,
+      1,
+      10,
+      1,
+      false,
+    )
+
+    this.touchdownTethers = TOUCHDOWN_TETHER_STAGE_ANCHORS.map(() => {
+      const mesh = new THREE.Mesh(tetherGeometry, tetherMaterial)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      rig.add(mesh)
+      return { mesh }
+    })
+
+    this.touchdownRig = rig
+    this.touchdownStage = stage
+    this.scene.add(rig)
+  }
+
+  /**
+   * Updates the temporary descent stage and tether meshes during descent and release.
+   */
+  private updateTouchdownRig(descentProgress: number, releaseElapsed: number): void {
+    if (!this.rover || !this.touchdownRig || !this.touchdownStage) return
+
+    const showRig = isInTouchdownTetherWindow(descentProgress) || releaseElapsed > 0
+    this.touchdownRig.visible = showRig
+    if (!showRig) return
+
+    const releaseProgress = getTouchdownReleaseProgress(releaseElapsed)
+    const retractProgress = getTouchdownTetherRetractProgress(releaseElapsed)
+    const tension = getTouchdownTetherTension(releaseElapsed)
+    const stageFlightProgress = Math.min(1, releaseProgress * 0.35 + retractProgress * 0.65)
+    const flyaway = TOUCHDOWN_STAGE_FLYAWAY_DRIFT.clone().multiplyScalar(stageFlightProgress)
+    const swayScale = 1 - stageFlightProgress
+
+    this.touchdownStage.position.set(
+      this.rover.position.x + Math.sin(this.descentTime * 1.4) * 0.1 * swayScale + flyaway.x,
+      this.rover.position.y + TOUCHDOWN_STAGE_HEIGHT + TOUCHDOWN_STAGE_FLYAWAY_RISE * stageFlightProgress * stageFlightProgress,
+      this.rover.position.z + Math.cos(this.descentTime * 1.1) * 0.08 * swayScale + flyaway.z,
+    )
+    this.touchdownStage.rotation.x = this.rover.rotation.x * 0.45
+    this.touchdownStage.rotation.z = this.rover.rotation.z * 0.45 - stageFlightProgress * 0.18
+    this.touchdownStage.rotation.y = stageFlightProgress * 0.35
+
+    const material = this.touchdownTethers[0]?.mesh.material
+    if (material instanceof THREE.MeshStandardMaterial) {
+      material.opacity = Math.max(0.1, 1 - retractProgress * 0.9)
+      material.emissiveIntensity = 0.03 + retractProgress * 0.03
+    }
+
+    for (let i = 0; i < this.touchdownTethers.length; i++) {
+      const start = this.touchdownStage.localToWorld(TOUCHDOWN_TETHER_STAGE_ANCHORS[i].clone())
+      const end = this.rover.localToWorld(TOUCHDOWN_TETHER_ROVER_ANCHORS[i].clone())
+      this.updateTouchdownTetherMesh(this.touchdownTethers[i], start, end, tension, releaseProgress, retractProgress)
+    }
+  }
+
+  /**
+   * Updates a single tether mesh so it reads as a thick physical cable.
+   */
+  private updateTouchdownTetherMesh(
+    tether: TouchdownTether,
+    start: THREE.Vector3,
+    end: THREE.Vector3,
+    tension: number,
+    releaseProgress: number,
+    retractProgress: number,
+  ): void {
+    const offsetEnd = end.clone()
+    offsetEnd.y -= releaseProgress * 0.18
+    offsetEnd.z -= releaseProgress * 0.2
+    const retractTarget = start.clone()
+    retractTarget.y -= 0.15
+    retractTarget.z -= 0.1
+    offsetEnd.lerp(retractTarget, retractProgress)
+
+    const direction = offsetEnd.clone().sub(start)
+    const length = direction.length()
+    if (length <= 0.001) {
+      tether.mesh.visible = false
+      return
+    }
+
+    const midpoint = start.clone().addScaledVector(direction, 0.5)
+    tether.mesh.position.copy(midpoint)
+    tether.mesh.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      direction.clone().normalize(),
+    )
+    tether.mesh.scale.setScalar(1)
+    tether.mesh.scale.y = length
+
+    const material = tether.mesh.material as THREE.MeshStandardMaterial
+    material.opacity = Math.max(0.1, 1 - retractProgress * 0.9)
+    tether.mesh.visible = retractProgress < 0.995 && (tension > 0.01 || retractProgress > 0)
+  }
+
+  /**
+   * Hides the temporary touchdown rig after the descent stage flyaway is complete.
+   */
+  private hideTouchdownRig(): void {
+    if (!this.touchdownRig) return
+    this.touchdownRig.visible = false
+    for (const tether of this.touchdownTethers) {
+      tether.mesh.visible = false
+    }
+  }
+
   private extractWheelNodes(): void {
     if (!this.rover) return
     const wheelNames = [
@@ -446,6 +672,20 @@ export class SiteScene {
   }
 
   dispose() {
+    if (this.touchdownRig) {
+      this.scene.remove(this.touchdownRig)
+      this.touchdownRig.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh
+          mesh.geometry.dispose()
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m) => m.dispose())
+          } else {
+            mesh.material.dispose()
+          }
+        }
+      })
+    }
     this.terrain.dispose()
     this.sky?.dispose()
     this.dust?.dispose()

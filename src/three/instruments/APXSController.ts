@@ -35,9 +35,14 @@ export class APXSController extends InstrumentController {
 
   targeting: RockTargeting | null = null
   private drill: LaserDrill | null = null
-  private camera: THREE.PerspectiveCamera | null = null
   private drilling = false  // E key held
   private currentTarget: TargetResult | null = null
+
+  // 3D target indicator
+  private targetDot: THREE.Mesh | null = null
+  private targetDotMat: THREE.MeshBasicMaterial | null = null
+  /** World position of current target point — read by view for screen projection */
+  readonly targetWorldPos = new THREE.Vector3()
 
   private inventory = useInventory()
 
@@ -68,11 +73,23 @@ export class APXSController extends InstrumentController {
     if (!this.drillNode) console.warn('[APXS] Drill node not found')
   }
 
-  initGameplay(scene: THREE.Scene, camera: THREE.PerspectiveCamera, rocks: THREE.Mesh[]): void {
-    this.camera = camera
+  initGameplay(scene: THREE.Scene, _camera: THREE.PerspectiveCamera, rocks: THREE.Mesh[]): void {
     this.targeting = new RockTargeting()
     this.targeting.setRocks(rocks)
     this.drill = new LaserDrill(scene)
+
+    // 3D target dot
+    this.targetDotMat = new THREE.MeshBasicMaterial({
+      color: 0xe05030,
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false,
+    })
+    const dotGeo = new THREE.SphereGeometry(0.03, 8, 8)
+    this.targetDot = new THREE.Mesh(dotGeo, this.targetDotMat)
+    this.targetDot.visible = false
+    this.targetDot.renderOrder = 999
+    scene.add(this.targetDot)
   }
 
   override handleInput(keys: Set<string>, delta: number): void {
@@ -111,8 +128,24 @@ export class APXSController extends InstrumentController {
       this.elbow.quaternion.copy(this.elbowBaseQuat).multiply(extendDelta)
     }
 
-    if (this.targeting && this.camera) {
-      this.currentTarget = this.targeting.cast(this.camera)
+    if (this.targeting) {
+      const drillPos = this.getDrillWorldPosition()
+      this.currentTarget = this.targeting.castFromDrillHead(drillPos)
+    }
+
+    // Update 3D target dot
+    if (this.targetDot && this.targetDotMat) {
+      if (this.currentTarget) {
+        this.targetDot.visible = true
+        this.targetDot.position.copy(this.currentTarget.point)
+        this.targetWorldPos.copy(this.currentTarget.point)
+        const canDrill = !this.inventory.isFull.value
+        this.targetDotMat.color.setHex(canDrill ? 0x5dc9a5 : 0xe05030)
+      } else {
+        this.targetDot.visible = false
+        // Place at drill head when no target
+        this.targetWorldPos.copy(this.getDrillWorldPosition())
+      }
     }
 
     if (this.drill) {
@@ -159,5 +192,9 @@ export class APXSController extends InstrumentController {
   override dispose(): void {
     this.drill?.dispose()
     this.targeting?.dispose()
+    if (this.targetDot) {
+      this.targetDot.geometry.dispose()
+      this.targetDotMat?.dispose()
+    }
   }
 }
