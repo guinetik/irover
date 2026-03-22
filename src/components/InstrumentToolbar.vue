@@ -10,6 +10,7 @@
       <span class="slot-key">{{ inst.slot }}</span>
       <span class="slot-icon">{{ inst.icon }}</span>
       <span class="slot-name">{{ inst.name }}</span>
+      <span v-if="inst.slot === 2 && (chemCamUnread ?? 0) > 0" class="badge-dot">{{ chemCamUnread }}</span>
     </button>
 
     <div class="toolbar-divider" />
@@ -30,6 +31,7 @@
 const props = defineProps<{
   activeSlot: number | null
   inventoryOpen?: boolean
+  chemCamUnread?: number
 }>()
 
 const emit = defineEmits<{
@@ -138,6 +140,24 @@ function handleClick(slot: number) {
 
 .instrument-slot.active .slot-name {
   color: rgba(196, 149, 106, 0.7);
+}
+
+.badge-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  background: #66ffee;
+  color: #0a0502;
+  border-radius: 7px;
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  font-weight: bold;
+  line-height: 14px;
+  text-align: center;
+  box-shadow: 0 0 6px rgba(102, 255, 238, 0.5);
 }
 
 .toolbar-divider {

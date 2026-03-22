@@ -47,6 +47,23 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
+      <div v-if="isInstrumentActive && activeInstrumentSlot === 2" class="chemcam-hud">
+        <div class="cc-strip">
+          <span class="cc-label">CHEMCAM</span>
+          <span class="cc-divider">|</span>
+          <span class="cc-shots">{{ chemcamShotsRemaining }}/{{ chemcamShotsMax }} SHOTS</span>
+          <span class="cc-divider">|</span>
+          <span class="cc-phase" :class="chemcamPhase.toLowerCase()">{{ chemcamPhaseLabel }}</span>
+          <span class="cc-divider">|</span>
+          <span class="cc-hint">A/D pan · W/S tilt · Scroll zoom · E fire</span>
+        </div>
+        <div v-if="chemcamPhase === 'PULSE_TRAIN' || chemcamPhase === 'INTEGRATING'" class="cc-progress-bar">
+          <div class="cc-progress-fill" :class="chemcamPhase.toLowerCase().replace('_','-')" :style="{ width: chemcamProgressPct + '%' }" />
+          <span class="cc-progress-label">{{ chemcamPhase === 'PULSE_TRAIN' ? 'FIRING...' : 'INTEGRATING...' }}</span>
+        </div>
+      </div>
+    </Transition>
+    <Transition name="deploy-fade">
       <div v-if="isInstrumentActive && activeInstrumentSlot === 1" class="mastcam-hud">
         <div class="mc-strip">
           <span class="mc-label">MASTCAM</span>
@@ -71,6 +88,7 @@
         v-if="!deploying && !descending"
         :active-slot="activeInstrumentSlot"
         :inventory-open="inventoryOpen"
+        :chem-cam-unread="chemCamUnreadCount"
         @select="(slot: number) => { if (!isSleeping) controller?.activateInstrument(slot) }"
         @deselect="controller?.activateInstrument(null)"
         @toggle-inventory="inventoryOpen = !inventoryOpen"
@@ -82,7 +100,16 @@
       :can-activate="controller?.activeInstrument?.canActivate ?? false"
       :is-active-mode="isInstrumentActive"
       :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
+      :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
+      :chem-cam-unread="chemCamUnreadCount"
       @activate="handleActivate()"
+      @see-results="showChemCamResults = true"
+    />
+    <ChemCamExperimentPanel
+      :readout="activeChemCamReadout"
+      :sol="marsSol"
+      @close="showChemCamResults = false"
+      @acknowledge="handleChemCamAck"
     />
     <InstrumentCrosshair
       :visible="crosshairVisible"
@@ -157,7 +184,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
@@ -171,6 +198,7 @@ import type { GeologicalFeature } from '@/types/landmark'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
+import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SampleToast from '@/components/SampleToast.vue'
@@ -205,6 +233,40 @@ const isDrilling = ref(false)
 const mastcamFilterLabel = ref('ALL TYPES')
 const mastcamScanning = ref(false)
 const mastcamScanProgress = ref(0)
+const chemCamUnreadCount = ref(0)
+const showChemCamResults = ref(false)
+const chemcamPhase = ref<string>('ARMED')
+const chemcamShotsRemaining = ref(10)
+const chemcamShotsMax = ref(10)
+const chemcamProgressPct = ref(0)
+const activeChemCamReadout = computed(() => {
+  if (!showChemCamResults.value) return null
+  const cc = controller?.instruments.find(i => i.id === 'chemcam')
+  if (cc instanceof ChemCamController) {
+    return cc.getLatestUnread() ?? (cc.readouts.length > 0 ? cc.readouts[cc.readouts.length - 1] : null)
+  }
+  return null
+})
+
+function handleChemCamAck(readoutId: string) {
+  const cc = controller?.instruments.find(i => i.id === 'chemcam')
+  if (cc instanceof ChemCamController) {
+    cc.markRead(readoutId)
+    chemCamUnreadCount.value = cc.unreadCount
+  }
+  showChemCamResults.value = false
+}
+
+const chemcamPhaseLabel = computed(() => {
+  switch (chemcamPhase.value) {
+    case 'PULSE_TRAIN': return 'FIRING'
+    case 'INTEGRATING': return 'PROCESSING'
+    case 'READY': return 'READY'
+    case 'COOLDOWN': return 'COOLDOWN'
+    case 'IDLE': return 'IDLE'
+    default: return 'ARMED'
+  }
+})
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const marsSol = ref(1)
 const marsTimeOfDay = ref(0)
@@ -513,16 +575,20 @@ onMounted(async () => {
       heaterInst.zone = thermalZone.value
     }
 
-    // Compute active instrument power draw (MastCam, etc.)
-    const mcActive = controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController
-      ? (controller.activeInstrument as MastCamController).powerDrawW : 0
+    // Compute active instrument power draw (MastCam, ChemCam, etc.)
+    let instrumentW = 0
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
+      instrumentW = (controller.activeInstrument as MastCamController).powerDrawW
+    } else if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
+      instrumentW = (controller.activeInstrument as ChemCamController).powerDrawW
+    }
 
     tickPower(delta, {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       roverInSunlight: siteScene.roverInSunlight,
       moving: controller?.isMoving ?? false,
       apxsDrilling,
-      instrumentW: mcActive,
+      instrumentW,
       heaterW: heaterW.value,
     })
 
@@ -567,6 +633,13 @@ onMounted(async () => {
         }
         mc.initSurvey(siteScene.scene, siteScene.terrain.getSmallRocks(), sceneMeshes)
       }
+      const cc = controller?.instruments.find(i => i.id === 'chemcam')
+      if (cc instanceof ChemCamController && cc.attached && !cc['scene']) {
+        cc.initTargeting(siteScene.scene, siteScene.terrain.getSmallRocks())
+        cc.onReady = (readout) => {
+          sampleToastRef.value?.showChemCam(readout.rockType, readout.rockLabel)
+        }
+      }
     }
 
     // Enter survey mode when MastCam is active
@@ -609,6 +682,32 @@ onMounted(async () => {
       }
     } else {
       mastcamScanning.value = false
+    }
+
+    // ChemCam HUD state + crosshair + badge
+    const ccInst = controller?.instruments.find(i => i.id === 'chemcam')
+    if (ccInst instanceof ChemCamController) {
+      chemCamUnreadCount.value = ccInst.unreadCount
+    }
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
+      const cc = controller.activeInstrument
+      chemcamPhase.value = cc.phase
+      chemcamShotsRemaining.value = cc.shotsRemaining
+      chemcamShotsMax.value = cc.shotsMax
+      chemcamProgressPct.value = cc.phase === 'PULSE_TRAIN'
+        ? cc.pulseProgress * 100
+        : cc.integrateProgress * 100
+
+      crosshairVisible.value = true
+      crosshairColor.value = cc.targetValid ? 'green' : 'red'
+      isDrilling.value = cc.phase === 'PULSE_TRAIN'
+      drillProgress.value = cc.pulseProgress
+
+      if (camera) {
+        const projected = cc.targetWorldPos.clone().project(camera)
+        crosshairX.value = (projected.x * 0.5 + 0.5) * 100
+        crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
+      }
     }
 
     if (siteScene.rover && siteScene.trails) {
@@ -1034,6 +1133,111 @@ onUnmounted(() => {
   font-size: 8px;
   color: #5dc9a5;
   letter-spacing: 0.15em;
+}
+
+/* ChemCam HUD */
+.chemcam-hud {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 42;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.cc-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 5, 2, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(100, 200, 230, 0.3);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.cc-label {
+  color: #66ffee;
+  font-weight: bold;
+}
+
+.cc-divider {
+  color: rgba(100, 200, 230, 0.25);
+}
+
+.cc-shots {
+  color: #e8c8a0;
+  font-variant-numeric: tabular-nums;
+}
+
+.cc-phase {
+  color: #66ffee;
+  font-weight: bold;
+}
+
+.cc-phase.pulse_train,
+.cc-phase.pulse-train {
+  color: #ff6644;
+  animation: cc-blink 0.15s infinite alternate;
+}
+
+.cc-phase.integrating {
+  color: #ffcc44;
+}
+
+.cc-phase.ready {
+  color: #44ff88;
+}
+
+.cc-hint {
+  color: rgba(100, 200, 230, 0.4);
+  font-size: 8px;
+}
+
+.cc-progress-bar {
+  width: 200px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cc-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.cc-progress-fill.pulse-train {
+  background: linear-gradient(90deg, #ff6644, #ff4422);
+}
+
+.cc-progress-fill.integrating {
+  background: linear-gradient(90deg, #ffcc44, #66ffee);
+}
+
+.cc-progress-label {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  color: #66ffee;
+  letter-spacing: 0.15em;
+}
+
+@keyframes cc-blink {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
 }
 
 /* Sleep mode overlay */

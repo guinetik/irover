@@ -7,8 +7,8 @@
         class="sample-toast"
       >
         <span class="toast-dot" :style="{ color: item.color }">&#x25CF;</span>
-        <span class="toast-label">+ {{ item.label }}</span>
-        <span class="toast-weight">{{ item.weight }} kg</span>
+        <span class="toast-label">{{ item.prefix }} {{ item.label }}</span>
+        <span v-if="item.weight" class="toast-weight">{{ item.weight }} kg</span>
       </div>
     </TransitionGroup>
   </Teleport>
@@ -20,6 +20,7 @@ import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
 
 interface ToastItem {
   id: string
+  prefix: string
   label: string
   weight: string
   color: string
@@ -35,7 +36,7 @@ const DURATION_MS = 2500
 function show(type: RockTypeId, label: string, weightKg: number): void {
   const id = `toast-${Date.now()}-${Math.random()}`
   const color = ROCK_TYPES[type]?.color ?? '#c4753a'
-  const item: ToastItem = { id, label, weight: weightKg.toFixed(2), color }
+  const item: ToastItem = { id, prefix: '+', label, weight: weightKg.toFixed(2), color }
 
   visible.value.push(item)
 
@@ -45,7 +46,23 @@ function show(type: RockTypeId, label: string, weightKg: number): void {
   }, DURATION_MS)
 }
 
-defineExpose({ show })
+/**
+ * Shows a ChemCam analysis toast (no weight).
+ */
+function showChemCam(type: RockTypeId, rockLabel: string): void {
+  const id = `toast-${Date.now()}-${Math.random()}`
+  const color = '#66ffee'
+  const item: ToastItem = { id, prefix: 'CHEMCAM', label: rockLabel, weight: '', color }
+
+  visible.value.push(item)
+
+  setTimeout(() => {
+    const idx = visible.value.findIndex(t => t.id === id)
+    if (idx >= 0) visible.value.splice(idx, 1)
+  }, DURATION_MS)
+}
+
+defineExpose({ show, showChemCam })
 </script>
 
 <style scoped>

@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController, MastCamController } from './instruments'
+import { RTGController, MastCamController, ChemCamController } from './instruments'
 
 const CAMERA_DISTANCE_DEFAULT = 8
 const CAMERA_DISTANCE_MIN = 4
@@ -134,6 +134,8 @@ export class RoverController {
     e.preventDefault()
     if (this.mode === 'active' && this.activeInstrument instanceof MastCamController) {
       this.activeInstrument.handleWheel(e.deltaY)
+    } else if (this.mode === 'active' && this.activeInstrument instanceof ChemCamController) {
+      this.activeInstrument.handleWheel(e.deltaY)
     } else if (this.mode === 'instrument') {
       this.instrumentCameraDistance = Math.max(
         INSTRUMENT_CAMERA_DISTANCE_MIN,
@@ -188,6 +190,17 @@ export class RoverController {
           this.activeInstrument = null
           return
         }
+        if (this.activeInstrument instanceof ChemCamController) {
+          const cc = this.activeInstrument
+          this.orbitAngle = this.heading + cc.panAngle + Math.PI
+          this.orbitPitch = Math.max(0.1, cc.tiltAngle + 0.3)
+          cc.deactivate()
+          this.camera.fov = 50
+          this.camera.updateProjectionMatrix()
+          this.mode = 'driving'
+          this.activeInstrument = null
+          return
+        }
         this.mode = 'instrument'
         return
       }
@@ -219,6 +232,12 @@ export class RoverController {
   activateInstrument(slot: number | null): void {
     // Deactivate MastCam if leaving it
     if (this.activeInstrument instanceof MastCamController && (slot === null || slot !== this.activeInstrument.slot)) {
+      this.activeInstrument.deactivate()
+      this.camera.fov = 50
+      this.camera.updateProjectionMatrix()
+    }
+    // Deactivate ChemCam if leaving it
+    if (this.activeInstrument instanceof ChemCamController && (slot === null || slot !== this.activeInstrument.slot)) {
       this.activeInstrument.deactivate()
       this.camera.fov = 50
       this.camera.updateProjectionMatrix()
@@ -419,6 +438,17 @@ export class RoverController {
       desiredPos = mc.mastWorldPos.clone()
       desiredTarget = mc.mastWorldPos.clone().add(mc.mastLookDir.clone().multiplyScalar(10))
       this.camera.fov = mc.fov
+      this.camera.updateProjectionMatrix()
+    } else if (
+      this.mode === 'active' &&
+      this.activeInstrument instanceof ChemCamController
+    ) {
+      // ChemCam first-person: same mast camera, different instrument
+      const cc = this.activeInstrument
+      cc.update(_delta)
+      desiredPos = cc.mastWorldPos.clone()
+      desiredTarget = cc.mastWorldPos.clone().add(cc.mastLookDir.clone().multiplyScalar(10))
+      this.camera.fov = cc.fov
       this.camera.updateProjectionMatrix()
     } else if (
       (this.mode === 'instrument' || this.mode === 'active') &&

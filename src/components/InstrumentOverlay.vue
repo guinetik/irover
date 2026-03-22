@@ -55,6 +55,19 @@
         <!-- Temperature warning -->
         <div v-if="instrument.temp" class="ov-temp">{{ instrument.temp }}</div>
 
+        <!-- ChemCam shots + See Results -->
+        <div v-if="activeSlot === 2" class="ov-chemcam-status">
+          <div class="ov-stat">
+            <div class="ov-stat-label">SHOTS</div>
+            <div class="ov-stat-value" style="color: #66ffee">{{ chemCamShots }}</div>
+          </div>
+          <button
+            v-if="chemCamUnread > 0"
+            class="ov-btn-see-results"
+            @click="$emit('seeResults')"
+          >SEE RESULTS <span class="ov-results-badge">{{ chemCamUnread }}</span></button>
+        </div>
+
         <!-- Buttons -->
         <div class="ov-buttons">
           <button
@@ -188,6 +201,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
 defineEmits<{
   activate: []
   repair: []
+  seeResults: []
 }>()
 
 export interface ThermalDisplay {
@@ -203,11 +217,15 @@ const props = withDefaults(
     canActivate?: boolean
     isActiveMode?: boolean
     thermal?: ThermalDisplay | null
+    chemCamShots?: string
+    chemCamUnread?: number
   }>(),
   {
     canActivate: true,
     isActiveMode: false,
     thermal: null,
+    chemCamShots: '10/10',
+    chemCamUnread: 0,
   },
 )
 
@@ -493,6 +511,56 @@ const thermalZoneBg = computed(() =>
 .overlay-slide-leave-to {
   transform: translateY(-50%) translateX(30px);
   opacity: 0;
+}
+
+/* ChemCam status + See Results */
+.ov-chemcam-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ov-chemcam-status .ov-stat {
+  flex-shrink: 0;
+}
+
+.ov-btn-see-results {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(102, 255, 238, 0.12);
+  border: 1px solid rgba(102, 255, 238, 0.4);
+  border-radius: 6px;
+  color: #66ffee;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ov-btn-see-results:hover {
+  background: rgba(102, 255, 238, 0.2);
+  border-color: rgba(102, 255, 238, 0.6);
+}
+
+.ov-results-badge {
+  display: inline-block;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  background: #66ffee;
+  color: #0a0502;
+  border-radius: 7px;
+  font-size: 8px;
+  font-weight: bold;
+  line-height: 14px;
+  text-align: center;
 }
 
 .ov-btn-primary.disabled {
