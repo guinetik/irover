@@ -1,24 +1,24 @@
 <template>
-  <div class="power-hud">
-    <div class="ph-block">
-      <div class="ph-label">PWR</div>
-      <div class="ph-bar-track">
-        <div
-          class="ph-bar-fill"
-          :class="{ low: fillPct < 25, mid: fillPct >= 25 && fillPct < 60 }"
-          :style="{ height: Math.min(100, fillPct) + '%' }"
-        />
-      </div>
-      <div class="ph-wh">{{ whDisplay }} / {{ capDisplay }} Wh</div>
-      <div class="ph-net" :class="netPositive ? 'charge' : 'drain'">
-        {{ netPositive ? '+' : '' }}{{ netW.toFixed(0) }}W
-      </div>
+  <div class="power-panel" :class="{ 'low-soc': socPct < 20 }">
+    <div class="pp-label">PWR</div>
+    <div class="pp-bar-track">
+      <div
+        class="pp-bar-fill"
+        :class="barClass"
+        :style="{ height: Math.min(100, socPct) + '%' }"
+      />
     </div>
-    <div class="ph-divider" />
-    <div class="ph-sol">
-      <div class="ph-sol-num">Sol {{ sol }}</div>
-      <div class="ph-time">{{ marsTime }}</div>
+    <div class="pp-wh-main">{{ whDisplay }}</div>
+    <div class="pp-wh-cap">/{{ capDisplay }}Wh</div>
+    <div class="pp-divider" />
+    <div class="pp-net" :class="netPositive ? 'charge' : 'drain'">
+      {{ netPositive ? '+' : '' }}{{ netW.toFixed(0) }}W
     </div>
+    <div class="pp-detail"><span class="pp-detail-val">{{ generationW.toFixed(0) }}</span>W gen</div>
+    <div class="pp-detail"><span class="pp-detail-val">{{ consumptionW.toFixed(0) }}</span>W use</div>
+    <div class="pp-divider" />
+    <div class="pp-source-icons">{{ solarIcons }}</div>
+    <div class="pp-source-label">&#x25C9; RTG</div>
   </div>
 </template>
 
@@ -28,127 +28,149 @@ import { computed } from 'vue'
 const props = defineProps<{
   batteryWh: number
   capacityWh: number
+  generationW: number
+  consumptionW: number
   netW: number
-  sol: number
-  /** 0..1 from MarsSky.timeOfDay */
-  timeOfDay: number
+  socPct: number
+  nightFactor?: number
 }>()
 
-const MARS_DAY_MINUTES = 24 * 60 + 37
-
-const fillPct = computed(() =>
-  props.capacityWh > 0 ? (props.batteryWh / props.capacityWh) * 100 : 0,
-)
-const whDisplay = computed(() => props.batteryWh.toFixed(0))
-const capDisplay = computed(() => props.capacityWh.toFixed(0))
+const whDisplay = computed(() => Math.round(props.batteryWh).toString())
+const capDisplay = computed(() => Math.round(props.capacityWh).toString())
 const netPositive = computed(() => props.netW >= 0)
 
-const marsTime = computed(() => {
-  const totalMin = (props.timeOfDay % 1) * MARS_DAY_MINUTES
-  const h = Math.floor(totalMin / 60)
-  const m = Math.floor(totalMin % 60)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+const barClass = computed(() => {
+  if (props.socPct < 20) return 'red'
+  if (props.socPct < 50) return 'amber'
+  return 'green'
+})
+
+const solarIcons = computed(() => {
+  const solar = props.generationW - 15 // approx RTG subtracted
+  if (solar > 30) return '\u2600\u2600'
+  if (solar > 10) return '\u2600\u2591'
+  if (solar > 0) return '\u2591\u2591'
+  return '  '
 })
 </script>
 
 <style scoped>
-.power-hud {
+.power-panel {
   position: fixed;
-  left: 12px;
+  left: 8px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 42;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  background: rgba(10, 5, 2, 0.88);
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  width: 62px;
+  background: rgba(10, 5, 2, 0.8);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(196, 117, 58, 0.35);
+  border: 1px solid rgba(196, 117, 58, 0.2);
   border-radius: 8px;
   font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
   pointer-events: none;
-  min-width: 88px;
+  transition: border-color 0.5s ease;
 }
 
-.ph-label {
-  font-size: 9px;
-  letter-spacing: 0.2em;
-  color: #c4753a;
-  margin-bottom: 4px;
+.power-panel.low-soc {
+  border-color: rgba(224, 80, 48, 0.5);
 }
 
-.ph-bar-track {
-  width: 8px;
-  height: 56px;
-  margin: 0 auto 6px;
-  background: rgba(255, 255, 255, 0.06);
+.pp-label {
+  font-size: 8px;
+  color: #6b4a30;
+  letter-spacing: 0.15em;
+}
+
+.pp-bar-track {
+  width: 26px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(196, 117, 58, 0.2);
   border-radius: 3px;
   overflow: hidden;
   display: flex;
   flex-direction: column-reverse;
+  position: relative;
 }
 
-.ph-bar-fill {
+.pp-bar-fill {
   width: 100%;
-  background: linear-gradient(180deg, #5dc9a5, #3a9a7a);
   border-radius: 2px;
-  transition: height 0.2s ease;
+  transition: height 0.5s ease, background 0.5s ease;
 }
 
-.ph-bar-fill.mid {
-  background: linear-gradient(180deg, #ef9f27, #c4753a);
+.pp-bar-fill.green {
+  background: linear-gradient(180deg, #5dc9a5, #3d9975);
 }
 
-.ph-bar-fill.low {
+.pp-bar-fill.amber {
+  background: linear-gradient(180deg, #ef9f27, #ba7517);
+}
+
+.pp-bar-fill.red {
   background: linear-gradient(180deg, #e05030, #a03020);
 }
 
-.ph-wh {
-  font-size: 9px;
-  color: rgba(196, 149, 106, 0.85);
-  text-align: center;
-  letter-spacing: 0.04em;
-  font-variant-numeric: tabular-nums;
-}
-
-.ph-net {
+.pp-wh-main {
   font-size: 10px;
   font-weight: bold;
-  text-align: center;
-  margin-top: 4px;
+  color: #e8a060;
   font-variant-numeric: tabular-nums;
 }
 
-.ph-net.charge {
-  color: #5dc9a5;
+.pp-wh-cap {
+  font-size: 8px;
+  color: #6b4a30;
+  font-variant-numeric: tabular-nums;
 }
 
-.ph-net.drain {
-  color: #e05030;
-}
-
-.ph-divider {
+.pp-divider {
   height: 1px;
-  background: rgba(196, 117, 58, 0.2);
+  width: 80%;
+  background: rgba(196, 117, 58, 0.15);
   margin: 2px 0;
 }
 
-.ph-sol {
-  text-align: center;
-}
-
-.ph-sol-num {
-  font-size: 9px;
-  color: rgba(196, 117, 58, 0.55);
-  letter-spacing: 0.12em;
-}
-
-.ph-time {
-  font-size: 11px;
-  color: #e8a060;
-  letter-spacing: 0.08em;
+.pp-net {
+  font-size: 10px;
+  font-weight: bold;
   font-variant-numeric: tabular-nums;
-  margin-top: 2px;
+  transition: color 0.3s ease;
+}
+
+.pp-net.charge {
+  color: #5dc9a5;
+}
+
+.pp-net.drain {
+  color: #e05030;
+}
+
+.pp-detail {
+  font-size: 7px;
+  color: #6b4a30;
+}
+
+.pp-detail-val {
+  color: #6b4a30;
+  font-weight: bold;
+}
+
+.pp-source-icons {
+  font-size: 10px;
+  letter-spacing: 2px;
+  opacity: 0.9;
+}
+
+.pp-source-label {
+  font-size: 7px;
+  color: #6b4a30;
 }
 </style>

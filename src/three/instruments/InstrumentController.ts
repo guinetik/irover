@@ -1,5 +1,16 @@
 import * as THREE from 'three'
 
+// --- TODO: Instrument durability & modifier system ---
+// Every instrument should support:
+//  - Durability (0–100%): degrades with use. Lower durability = reduced efficiency
+//    (not binary — a 50% durable laser is slower, not dead). At 0% = fully broken.
+//  - Repair: costs mined resources. Some instruments harder to fix than others
+//    (e.g. SAM internals vs MastCam lens). Repair difficulty as a per-instrument constant.
+//  - Upgrades: permanent efficiency boosts (e.g. APXS precision module, heater insulation).
+//  - Player class buffs/nerfs: percentage multipliers from RoverPowerProfile applied to
+//    power draw, analysis speed, output quality, etc.
+// Final effective value = base * durabilityFactor * upgradeMult * classMult
+
 export abstract class InstrumentController {
   abstract readonly id: string
   abstract readonly name: string

@@ -16,6 +16,8 @@ export class LaserDrill {
   progress = 0
   isDrilling = false
   isComplete = false
+  /** External multiplier on drill duration (e.g. 1.25 in COLD zone) */
+  durationMultiplier = 1.0
 
   private graceTimer = 0
   private drillOrigin = new THREE.Vector3()
@@ -68,7 +70,7 @@ export class LaserDrill {
       this.graceTimer = 0
     }
 
-    this.progress += delta / DRILL_DURATION
+    this.progress += delta / (DRILL_DURATION * this.durationMultiplier)
 
     if (this.sparks) {
       const positions = this.sparks.geometry.getAttribute('position') as THREE.BufferAttribute

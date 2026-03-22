@@ -49,6 +49,11 @@ export class APXSController extends InstrumentController {
   get hasTarget(): boolean { return this.currentTarget !== null }
   get isInventoryFull(): boolean { return this.inventory.isFull.value }
 
+  /** Set drill duration multiplier (e.g. 1.25 in COLD thermal zone) */
+  set drillDurationMultiplier(v: number) {
+    if (this.drill) this.drill.durationMultiplier = v
+  }
+
   override attach(rover: THREE.Group): void {
     super.attach(rover)
     this.shoulder = rover.getObjectByName('arm_01001') ?? null

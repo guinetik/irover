@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
+import { usePlayerProfile } from './usePlayerProfile'
 
 export interface Sample {
   id: string
@@ -8,19 +9,20 @@ export interface Sample {
   weightKg: number
 }
 
-const CAPACITY_KG = 5
+const BASE_CAPACITY_KG = 5
 let sampleCounter = 0
 
 const samples = ref<Sample[]>([])
+const { mod } = usePlayerProfile()
 
 export function useInventory() {
+  const capacityKg = computed(() => BASE_CAPACITY_KG * mod('inventorySpace'))
+
   const currentWeightKg = computed(() =>
     samples.value.reduce((sum, s) => sum + s.weightKg, 0)
   )
 
-  const isFull = computed(() => currentWeightKg.value >= CAPACITY_KG)
-
-  const capacityKg = CAPACITY_KG
+  const isFull = computed(() => currentWeightKg.value >= capacityKg.value)
 
   /**
    * Collects a sample of the given rock type into the inventory.
@@ -31,7 +33,7 @@ export function useInventory() {
     const rockType = ROCK_TYPES[type]
     const [minW, maxW] = rockType.weightRange
     const weight = minW + Math.random() * (maxW - minW)
-    if (currentWeightKg.value + weight > CAPACITY_KG) return null
+    if (currentWeightKg.value + weight > capacityKg.value) return null
 
     sampleCounter++
     const sample: Sample = {

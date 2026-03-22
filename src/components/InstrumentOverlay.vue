@@ -15,8 +15,26 @@
         <!-- Description -->
         <div class="ov-desc">{{ instrument.desc }}</div>
 
-        <!-- Stats -->
-        <div class="ov-stats">
+        <!-- Stats (thermal override for heater) -->
+        <div v-if="activeSlot === 9 && thermal" class="ov-stats ov-stats-thermal">
+          <div class="ov-stat">
+            <div class="ov-stat-label">ROVER</div>
+            <div class="ov-stat-value" :style="{ color: thermalZoneColor }">{{ thermal.internalTempC >= 0 ? '+' : '' }}{{ Math.round(thermal.internalTempC) }}&deg;C</div>
+          </div>
+          <div class="ov-stat">
+            <div class="ov-stat-label">AMBIENT</div>
+            <div class="ov-stat-value" style="color: #6b4a30">{{ Math.round(thermal.ambientC) }}&deg;C</div>
+          </div>
+          <div class="ov-stat">
+            <div class="ov-stat-label">HEATER</div>
+            <div class="ov-stat-value" :style="{ color: thermal.heaterW > 0 ? '#ef9f27' : 'rgba(196,117,58,0.4)' }">{{ thermal.heaterW > 0 ? '\u2668 ' + thermal.heaterW.toFixed(0) + 'W' : 'OFF' }}</div>
+          </div>
+          <div class="ov-stat ov-stat-zone" :style="{ background: thermalZoneBg }">
+            <div class="ov-stat-label">ZONE</div>
+            <div class="ov-stat-value" :style="{ color: thermalZoneColor }">{{ thermal.zone }}</div>
+          </div>
+        </div>
+        <div v-else class="ov-stats">
           <div class="ov-stat">
             <div class="ov-stat-label">POWER</div>
             <div class="ov-stat-value" :style="{ color: instrument.powerColor }">{{ instrument.power }}</div>
@@ -157,6 +175,14 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     temp: '',
     upgName: 'PARTICLE SPECTROMETER', upgDesc: 'Identifies individual isotopes in cosmic ray flux. Better storm prediction.', upgReq: 'Requires: Deep Space Package drop',
   },
+  9: {
+    slot: 9, icon: '\u2668', name: 'HEATER', type: 'THERMAL MANAGEMENT',
+    desc: 'Warm Electronics Box heating system. Keeps internal rover temperature above survival thresholds. Draws from the main power bus \u2014 competes with science instruments for watts.',
+    power: '0\u201312W', powerColor: '#ef9f27', status: 'AUTO', statusColor: '#5dc9a5', health: '100%',
+    hint: 'Automatic thermostat. Heater kicks in below -10\u00B0C, shuts off above +5\u00B0C. Colder sites = more power to survive = less for science.',
+    temp: '',
+    upgName: 'INSULATION UPGRADE', upgDesc: 'Reduces heat loss rate by 30%. Less heater draw at cold sites.', upgReq: 'Requires: Engineering Package drop',
+  },
 }
 
 defineEmits<{
@@ -164,15 +190,24 @@ defineEmits<{
   repair: []
 }>()
 
+export interface ThermalDisplay {
+  internalTempC: number
+  ambientC: number
+  heaterW: number
+  zone: string
+}
+
 const props = withDefaults(
   defineProps<{
     activeSlot: number | null
     canActivate?: boolean
     isActiveMode?: boolean
+    thermal?: ThermalDisplay | null
   }>(),
   {
     canActivate: true,
     isActiveMode: false,
+    thermal: null,
   },
 )
 
@@ -195,6 +230,27 @@ const healthColor = computed(() => {
   if (val > 60) return '#ef9f27'
   return '#e05030'
 })
+
+const ZONE_COLORS: Record<string, string> = {
+  OPTIMAL: '#5dc9a5',
+  COLD: '#ef9f27',
+  FRIGID: '#e05030',
+  CRITICAL: '#64a0e0',
+}
+
+const ZONE_BGS: Record<string, string> = {
+  OPTIMAL: 'rgba(93,201,165,0.15)',
+  COLD: 'rgba(239,159,39,0.15)',
+  FRIGID: 'rgba(224,80,48,0.15)',
+  CRITICAL: 'rgba(100,160,224,0.15)',
+}
+
+const thermalZoneColor = computed(() =>
+  ZONE_COLORS[props.thermal?.zone ?? 'OPTIMAL'] ?? '#5dc9a5',
+)
+const thermalZoneBg = computed(() =>
+  ZONE_BGS[props.thermal?.zone ?? 'OPTIMAL'] ?? 'rgba(0,0,0,0.3)',
+)
 </script>
 
 <style scoped>
@@ -442,5 +498,16 @@ const healthColor = computed(() => {
 .ov-btn-primary.disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* Thermal stats grid */
+.ov-stats-thermal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.ov-stat-zone {
+  grid-column: 1 / -1;
 }
 </style>

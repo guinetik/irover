@@ -56,7 +56,7 @@
         v-if="!deploying && !descending"
         :active-slot="activeInstrumentSlot"
         :inventory-open="inventoryOpen"
-        @select="(slot: number) => controller?.activateInstrument(slot)"
+        @select="(slot: number) => { if (!isSleeping) controller?.activateInstrument(slot) }"
         @deselect="controller?.activateInstrument(null)"
         @toggle-inventory="inventoryOpen = !inventoryOpen"
       />
@@ -65,6 +65,7 @@
       :active-slot="activeInstrumentSlot"
       :can-activate="controller?.activeInstrument?.canActivate ?? false"
       :is-active-mode="isInstrumentActive"
+      :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
       @activate="handleActivate()"
     />
     <InstrumentCrosshair
@@ -81,6 +82,7 @@
       :is-full="isFull"
       @dump="removeSample"
     />
+    <ProfilePanel :open="profileOpen" />
     <SampleToast ref="sampleToastRef" />
     <Teleport to="body">
       <Transition name="deploy-fade">
@@ -102,13 +104,36 @@
         </div>
       </Transition>
     </Teleport>
+    <Transition name="deploy-fade">
+      <div v-if="isSleeping && !deploying && !descending" class="sleep-overlay">
+        <div class="sleep-content">
+          <div class="sleep-icon">&#x26A0;</div>
+          <div class="sleep-title">CRITICAL POWER</div>
+          <div class="sleep-desc">Battery below 15% &mdash; rover entering sleep mode.</div>
+          <div class="sleep-desc">Systems will resume at 50% charge.</div>
+          <div class="sleep-bar-track">
+            <div class="sleep-bar-fill" :style="{ width: socPct + '%' }" />
+            <div class="sleep-bar-target" />
+          </div>
+          <div class="sleep-pct">{{ socPct.toFixed(0) }}% / 50%</div>
+          <div class="sleep-hint">Recharging from {{ netW >= 0 ? 'RTG + solar' : 'RTG' }}&hellip;</div>
+        </div>
+      </div>
+    </Transition>
+    <SolClock
+      v-if="!deploying && !descending"
+      :sol="marsSol"
+      :time-of-day="marsTimeOfDay"
+      :night-factor="currentNightFactor"
+    />
     <PowerHud
       v-if="!deploying && !descending"
       :battery-wh="batteryWh"
       :capacity-wh="capacityWh"
+      :generation-w="generationW"
+      :consumption-w="consumptionW"
       :net-w="netW"
-      :sol="marsSol"
-      :time-of-day="marsTimeOfDay"
+      :soc-pct="socPct"
     />
   </div>
 </template>
@@ -132,9 +157,13 @@ import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SampleToast from '@/components/SampleToast.vue'
 import PowerHud from '@/components/PowerHud.vue'
+import SolClock from '@/components/SolClock.vue'
+import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory } from '@/composables/useInventory'
 import { useMarsPower } from '@/composables/useMarsPower'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, REMSController, RADController } from '@/three/instruments'
+import { useMarsThermal } from '@/composables/useMarsThermal'
+import { usePlayerProfile } from '@/composables/usePlayerProfile'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController } from '@/three/instruments'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -145,9 +174,10 @@ const deploying = ref(false)
 const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
 const isInstrumentActive = ref(false)
-const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown'>('idle')
+const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const inventoryOpen = ref(false)
+const profileOpen = ref(false)
 const crosshairVisible = ref(false)
 const crosshairColor = ref<'green' | 'red'>('red')
 const drillProgress = ref(0)
@@ -155,8 +185,11 @@ const isDrilling = ref(false)
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const marsSol = ref(1)
 const marsTimeOfDay = ref(0)
+const currentNightFactor = ref(0)
 const { samples, currentWeightKg, isFull, capacityKg, removeSample } = useInventory()
-const { batteryWh, capacityWh, netW, tickPower } = useMarsPower()
+const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower } = useMarsPower()
+const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
+const { mod: playerMod } = usePlayerProfile()
 const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
@@ -164,7 +197,7 @@ let lastSkyTimeOfDay = -1
 const showOverdriveConfirm = ref(false)
 
 function handleActivate() {
-  if (!controller) return
+  if (!controller || isSleeping.value) return
   if (controller.activeInstrument instanceof RTGController) {
     showOverdriveConfirm.value = true
   } else {
@@ -193,8 +226,12 @@ function onGlobalKeyDown(e: KeyboardEvent) {
     e.preventDefault()
     inventoryOpen.value = !inventoryOpen.value
   }
+  if (e.code === 'Digit0' || e.code === 'Backquote') {
+    profileOpen.value = !profileOpen.value
+  }
 }
 
+let siteTerrainParams: TerrainParams | null = null
 let renderer: THREE.WebGLRenderer | null = null
 let camera: THREE.PerspectiveCamera | null = null
 let composer: EffectComposer | null = null
@@ -270,6 +307,7 @@ onMounted(async () => {
 
   await loadLandmarks()
   const terrainParams = getTerrainParams()
+  siteTerrainParams = terrainParams
 
   siteScene = new SiteScene()
   await siteScene.init(terrainParams)
@@ -294,6 +332,7 @@ onMounted(async () => {
     new DANController(),
     new SAMController(),
     new RTGController(),
+    new HeaterController(),
     new REMSController(),
     new RADController(),
   ]
@@ -317,13 +356,21 @@ onMounted(async () => {
     const delta = clock.getDelta()
     const elapsed = clock.getElapsedTime()
 
-    // Night penalty — halve speed when dark. RTG overdrive doubles speed.
-    if (controller && siteScene.sky) {
+    // Sleep mode — kill movement + force-deactivate instruments
+    if (isSleeping.value && controller) {
+      if (controller.activeInstrument) {
+        controller.activateInstrument(null)
+      }
+      controller.config.moveSpeed = 0
+      controller.config.turnSpeed = 0
+    } else if (controller && siteScene.sky) {
+      // Night penalty — halve speed when dark. RTG overdrive doubles speed.
       const nightPenalty = 1.0 - siteScene.sky.nightFactor * 0.5
       const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
       const rtgBoost = rtg?.speedMultiplier ?? 1.0
-      controller.config.moveSpeed = 1.2 * nightPenalty * rtgBoost
-      controller.config.turnSpeed = 0.5 * nightPenalty * rtgBoost
+      const speedMult = playerMod('movementSpeed')
+      controller.config.moveSpeed = 1.2 * nightPenalty * rtgBoost * speedMult
+      controller.config.turnSpeed = 0.5 * nightPenalty * rtgBoost * speedMult
     }
 
     controller?.update(delta)
@@ -366,8 +413,26 @@ onMounted(async () => {
       }
     }
 
+    // Sleep mode visual — slow red pulse on entire rover
+    if (siteScene.rover) {
+      siteScene.rover.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+          if (!mat.emissive) return
+          if (isSleeping.value) {
+            mat.emissive.setHex(0xff1100)
+            mat.emissiveIntensity = 0.08 + Math.sin(elapsed * 1.5) * 0.06
+          } else if (rtgPhase.value === 'idle' && mat.emissiveIntensity > 0) {
+            // Fade out only if RTG isn't also glowing
+            mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - delta * 0.3)
+          }
+        }
+      })
+    }
+
     if (siteScene.sky) {
       marsTimeOfDay.value = siteScene.sky.timeOfDay
+      currentNightFactor.value = siteScene.sky.nightFactor
       if (lastSkyTimeOfDay >= 0 && siteScene.sky.timeOfDay < lastSkyTimeOfDay - 0.25) {
         marsSol.value++
       }
@@ -377,6 +442,11 @@ onMounted(async () => {
     let apxsDrilling = false
     if (controller?.mode === 'active' && controller.activeInstrument instanceof APXSController) {
       const apxs = controller.activeInstrument
+      // Thermal effect + player analysisSpeed buff/nerf
+      // analysisSpeed > 1 = faster analysis = lower duration multiplier
+      const z = thermalZone.value
+      const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
+      apxs.drillDurationMultiplier = thermalMult / playerMod('analysisSpeed')
       apxs.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
       crosshairColor.value = apxs.hasTarget && !apxs.isInventoryFull ? 'green' : 'red'
@@ -395,11 +465,30 @@ onMounted(async () => {
       drillProgress.value = 0
     }
 
+    // Thermal tick (before power so heaterW is current)
+    if (siteTerrainParams) {
+      tickThermal(delta, {
+        timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
+        temperatureMinK: siteTerrainParams.temperatureMinK,
+        temperatureMaxK: siteTerrainParams.temperatureMaxK,
+      })
+    }
+
+    // Update HeaterController state for overlay display
+    const heaterInst = controller?.instruments.find(i => i.id === 'heater') as HeaterController | undefined
+    if (heaterInst) {
+      heaterInst.internalTempC = internalTempC.value
+      heaterInst.ambientC = ambientEffectiveC.value
+      heaterInst.heaterW = heaterW.value
+      heaterInst.zone = thermalZone.value
+    }
+
     tickPower(delta, {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       roverInSunlight: siteScene.roverInSunlight,
       moving: controller?.isMoving ?? false,
       apxsDrilling,
+      heaterW: heaterW.value,
     })
 
     // Track descent → deployment → ready states
@@ -780,5 +869,97 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid rgba(196, 117, 58, 0.3);
   color: #a08060;
+}
+
+/* Sleep mode overlay */
+.sleep-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.sleep-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 36px;
+  background: rgba(10, 5, 2, 0.9);
+  border: 1px solid rgba(224, 80, 48, 0.4);
+  border-radius: 10px;
+  font-family: 'Courier New', monospace;
+  min-width: 280px;
+}
+
+.sleep-icon {
+  font-size: 28px;
+  animation: sleep-pulse 2s ease-in-out infinite;
+}
+
+.sleep-title {
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.25em;
+  color: #e05030;
+}
+
+.sleep-desc {
+  font-size: 10px;
+  color: rgba(224, 80, 48, 0.6);
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.sleep-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+  position: relative;
+}
+
+.sleep-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e05030, #ef9f27);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.sleep-bar-target {
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+}
+
+.sleep-pct {
+  font-size: 11px;
+  color: #e05030;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sleep-hint {
+  font-size: 9px;
+  color: rgba(196, 117, 58, 0.4);
+  letter-spacing: 0.1em;
+  animation: sleep-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sleep-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 </style>
