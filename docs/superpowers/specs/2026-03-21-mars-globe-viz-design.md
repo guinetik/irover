@@ -56,8 +56,6 @@ mars/
 │   │       └── atmosphere.frag.glsl
 │   ├── types/
 │   │   └── landmark.ts
-│   ├── router/
-│   │   └── index.ts
 │   ├── views/
 │   │   └── HomeView.vue
 │   ├── App.vue
@@ -129,12 +127,13 @@ Each layer implements a common interface:
 ```typescript
 interface SceneLayer {
   readonly root: THREE.Object3D
-  update(elapsed: number, delta: number): void
+  init(): Promise<void>       // async setup (e.g., tile fetching)
+  update(elapsed: number): void
   dispose(): void
 }
 ```
 
-`MarsScene` is a thin orchestrator: creates the `THREE.Scene`, instantiates layers, adds each layer's `root` to the scene, and calls `update()` on each per frame. Owns the `THREE.Clock`.
+`MarsScene` is a thin assembler: creates the `THREE.Scene`, instantiates layers, adds each layer's `root` to the scene. It does NOT own the clock or render loop — those belong to `useThreeScene`, which calls `MarsScene.update(elapsed)` each frame, and `MarsScene` delegates to each layer. The `init()` method supports async initialization (e.g., `MarsGlobe` must fetch tiles before display). `MarsCanvas.vue` awaits `MarsScene.init()` before emitting `ready`.
 
 ### MarsGlobe
 
@@ -150,6 +149,7 @@ interface SceneLayer {
   - Grazing angles: orange-red glow (`vec3(0.8, 0.35, 0.1)` to `vec3(1.0, 0.6, 0.2)`)
   - Fresnel power: ~3.5
 - Additive blending, no depth write, back-face culling
+- Vertex shader passes `vNormal` (world-space normal) and `vWorldPosition` to the fragment shader; fragment computes `viewDirection = normalize(cameraPosition - vWorldPosition)` for the Fresnel dot product
 
 ### MarsLandmarks
 
@@ -157,8 +157,8 @@ interface SceneLayer {
 - For each landmark: converts `(lat, lon)` to 3D position via `areography/coordinates.ts`
 - Creates small marker meshes (pins/rings) on the surface
 - `CSS2DObject` labels for crisp text at any zoom
-- Raycaster-based hit testing each frame for hover/click detection
-- Exposes `flyTo(landmarkId)` which emits target position + zoom distance
+- Raycaster-based hit testing, throttled to ~20 Hz (every 3 frames at 60fps) to avoid unnecessary work
+- Resolves landmark IDs to `(position: Vector3, distance: number)` pairs via `getLandmarkTarget(id)`. Does NOT perform camera animation — that responsibility belongs to `useThreeScene.flyTo()`. The chain: user clicks → `MarsLandmarks` emits landmark → `MarsCanvas` calls `useThreeScene().flyTo(position, distance)`
 
 ### BackgroundStars
 
@@ -183,16 +183,20 @@ interface SceneLayer {
 
 **Base layer (startup):** Fetch all tiles at zoom level 2 (8 columns x 4 rows = 32 tiles). Composite onto a single offscreen canvas (4096x2048 pixels). Apply as `CanvasTexture` on the globe's `MeshStandardMaterial.map`. This provides immediate full-globe coverage at good quality.
 
-**Detail layer (on zoom):** When the camera moves close enough to a region, fetch higher-resolution tiles (zoom 4-5) for the visible area and update the corresponding region of the canvas texture. Progressive enhancement — base layer always visible underneath.
+**Detail layer (on zoom):** When the camera moves close enough to a region, fetch higher-resolution tiles (zoom 4-5) for the visible area and update the corresponding region of the canvas texture. Set `canvasTexture.needsUpdate = true` after painting to trigger GPU re-upload. Progressive enhancement — base layer always visible underneath.
+
+### CORS & Error Handling
+
+The ArcGIS tile endpoint serves CORS headers (`Access-Control-Allow-Origin: *`). Tile fetching uses `Promise.allSettled` so individual tile failures don't break the entire load. Failed tiles are left transparent (base layer shows through for detail tiles) or retried once. `LoadingOverlay` is shown on mount, tracks tile fetch progress (e.g., "Loading Mars surface... 24/32"), and dismisses when the base canvas texture is composited and applied.
 
 ### Tile Math
 
-The equirectangular projection maps directly to standard spherical UV coordinates — no Mercator reprojection needed. `lib/areography/tiles.ts` handles:
+The equirectangular projection maps closely to standard spherical UV coordinates — no Mercator reprojection needed. However, UV alignment between the ArcGIS tile grid and `THREE.SphereGeometry` must be verified during implementation: the tile origin is (-180, 90) (top-left), while Three.js `SphereGeometry` has `u=0` at the seam and `v=0` at the south pole. A horizontal offset or V-flip may be needed. `lib/areography/tiles.ts` handles:
 
-- `tileUrl(z, y, x)` — builds the full URL
+- `tileUrl(z, y, x)` — builds the full URL with `?blankTile=false`
 - `tileGridSize(zoom)` — columns and rows at a zoom level
 - `latLonToTile(lat, lon, zoom)` — which tile contains a coordinate
-- `compositeToCanvas(zoom)` — fetches all tiles in parallel, paints to offscreen canvas, returns `CanvasTexture`
+- `compositeToCanvas(zoom)` — fetches all tiles in parallel, paints to offscreen canvas, returns `Promise<HTMLCanvasElement>`. The caller wraps the result in `new THREE.CanvasTexture(canvas)` and sets `texture.needsUpdate = true` when updating regions for progressive detail loading
 
 ## Lighting
 
@@ -223,6 +227,10 @@ On landmark click:
 
 Exposed as `flyTo(position: Vector3, distance: number): Promise<void>` on the `useThreeScene` composable.
 
+### CSS2DRenderer
+
+`useThreeScene` initializes a `CSS2DRenderer` alongside the `WebGLRenderer`. The CSS2D overlay DOM element is created inside `MarsCanvas.vue`'s template (a `<div>` sibling to the `<canvas>`, absolutely positioned to cover it). The CSS2DRenderer is sized to match the canvas on init and resize. Each frame, after `renderer.render()`, `css2dRenderer.render()` is called to update label positions. `MarsLandmarks` creates `CSS2DObject` instances which are added to its `root` group — the CSS2DRenderer handles projecting them to screen coordinates automatically.
+
 ### Reactive State
 
 - `currentZoom: Ref<number>` — normalized 0-1 (far to close)
@@ -248,6 +256,12 @@ App.vue
 2. **Hover** → emits `{ landmark, screenX, screenY }` up through `MarsCanvas` → `HomeView` shows `LandmarkTooltip`
 3. **Click** → emits `{ landmark }` → `HomeView` shows `LandmarkInfoCard` + calls `useThreeScene().flyTo()` to animate camera
 4. **Click elsewhere / Escape** → dismisses card, camera stays at current position
+
+### Mobile Behavior
+
+- `OrbitControls` handles touch (drag to orbit, pinch to zoom) natively
+- No hover on touch devices: `LandmarkTooltip` is skipped; tapping a landmark directly shows `LandmarkInfoCard`
+- Mobile detection via `window.matchMedia('(pointer: coarse)')` (same pattern as galaxies)
 
 ### MarsCanvas.vue
 
@@ -282,7 +296,9 @@ CAMERA_DEFAULT_DISTANCE = GLOBE_RADIUS * 2.8
 ATMOSPHERE_COLOR = [0.8, 0.35, 0.1]
 ATMOSPHERE_FRESNEL_POWER = 3.5
 
-// Landmark accent colors
+// Default accent colors by feature type
+// Used to populate `accent` in landmarks.json during data authoring.
+// At runtime, each landmark's `accent` field is authoritative.
 LANDMARK_COLORS = {
   'landing-site': '#4fc3f7',
   volcano: '#ff7043',
@@ -291,6 +307,8 @@ LANDMARK_COLORS = {
   plain: '#ffca28',
   'polar-cap': '#e0e0e0',
 }
+// Color lookup: for LandingSite, use LANDMARK_COLORS['landing-site'].
+// For GeologicalFeature, use LANDMARK_COLORS[feature.featureType].
 ```
 
 ## Areography Math Layer
@@ -323,6 +341,6 @@ LANDMARK_COLORS = {
 - Day/night terminator based on real solar position
 - Terrain bump mapping / displacement
 - Dust storm overlays
-- Multiple routes/views (start with single HomeView)
+- Vue Router (single view, no routing needed; add later if views grow)
 - i18n (can be added later following galaxies' pattern)
 - Analytics
