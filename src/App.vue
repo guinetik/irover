@@ -1,8 +1,9 @@
 <template>
-  <div class="w-full h-full">
-    <p class="text-white p-4">Mars Globe — scaffolding works</p>
-  </div>
+  <AppHeader />
+  <HomeView />
 </template>
 
 <script setup lang="ts">
+import AppHeader from '@/components/AppHeader.vue'
+import HomeView from '@/views/HomeView.vue'
 </script>
