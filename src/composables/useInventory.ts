@@ -112,7 +112,7 @@ export function useInventory() {
   function addComponent(itemId: string, quantity: number): AddComponentResult {
     if (quantity <= 0) return { ok: false, message: 'Invalid quantity.' }
     const def = INVENTORY_CATALOG[itemId]
-    if (!def || (def.category !== 'component' && def.category !== 'trace') || def.weightPerUnit == null || def.maxStack == null) {
+    if (!def || (def.category !== 'component' && def.category !== 'trace' && def.category !== 'refined') || def.weightPerUnit == null || def.maxStack == null) {
       return { ok: false, message: 'Unknown component.' }
     }
     const addWeight = def.weightPerUnit * quantity
@@ -236,6 +236,93 @@ export function useInventory() {
     removeStack,
     consumeItem,
   }
+}
+
+/**
+ * Attempts to merge one unit of a catalog item into cargo, ignoring capacity and stack limits
+ * only where they would block a normal single-unit grant (dev helper).
+ */
+function tryMergeOneDevItem(itemId: string): boolean {
+  const def = INVENTORY_CATALOG[itemId]
+  if (!def) return false
+
+  if (def.category === 'rock' && def.weightRange) {
+    const [minW, maxW] = def.weightRange
+    const weight = minW + Math.random() * (maxW - minW)
+    const rounded = Math.round(weight * 100) / 100
+    const next = [...stacks.value]
+    const i = next.findIndex((s) => s.itemId === itemId)
+    if (i >= 0) {
+      const s = next[i]
+      next[i] = {
+        itemId: s.itemId,
+        quantity: s.quantity + 1,
+        totalWeightKg: Math.round((s.totalWeightKg + rounded) * 100) / 100,
+      }
+    } else {
+      next.push({
+        itemId,
+        quantity: 1,
+        totalWeightKg: rounded,
+      })
+    }
+    stacks.value = next
+    return true
+  }
+
+  if (
+    (def.category === 'component' || def.category === 'trace' || def.category === 'refined') &&
+    def.weightPerUnit != null &&
+    def.maxStack != null
+  ) {
+    const quantity = 1
+    const addWeight = def.weightPerUnit * quantity
+    const next = [...stacks.value]
+    const i = next.findIndex((s) => s.itemId === itemId)
+    if (i >= 0) {
+      const s = next[i]
+      const newQty = s.quantity + quantity
+      if (newQty > def.maxStack) return false
+      next[i] = {
+        itemId: s.itemId,
+        quantity: newQty,
+        totalWeightKg: Math.round((s.totalWeightKg + addWeight) * 100) / 100,
+      }
+    } else {
+      if (quantity > def.maxStack) return false
+      next.push({
+        itemId,
+        quantity,
+        totalWeightKg: Math.round(addWeight * 100) / 100,
+      })
+    }
+    stacks.value = next
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Development helper: merges up to `count` distinct random catalog items into cargo, ignoring capacity.
+ * Skips ids that cannot accept another unit (e.g. at max stack) until the shuffled list is exhausted.
+ *
+ * @param count - Number of distinct item types to add (default 3).
+ * @returns Item ids that were merged or newly stacked.
+ */
+export function devSpawnRandomInventoryItems(count = 3): string[] {
+  const allIds = Object.keys(INVENTORY_CATALOG)
+  const shuffled = [...allIds]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  const added: string[] = []
+  for (const itemId of shuffled) {
+    if (added.length >= count) break
+    if (tryMergeOneDevItem(itemId)) added.push(itemId)
+  }
+  return added
 }
 
 /**
