@@ -1185,13 +1185,11 @@ onMounted(async () => {
       danTotalSamples.value = danInst.totalSamples
       danHitAvailable.value = danInst.pendingHit !== null && !danInst.hitConsumed
 
-      // VFX: only when DAN slot selected
+      // VFX: always tick so dots hide when deselected
       danInst.vfxVisible = controller?.activeInstrument?.id === 'dan'
-      if (danInst.vfxVisible && siteScene.terrain) {
-        const rp = siteScene.rover?.position
-        const groundY = rp ? siteScene.terrain.heightAt(rp.x, rp.z) : 0
-        danInst.updateVFX(sceneDelta, groundY)
-      }
+      const rp = siteScene.rover?.position
+      const groundY = rp && siteScene.terrain ? siteScene.terrain.heightAt(rp.x, rp.z) : 0
+      danInst.updateVFX(sceneDelta, groundY)
 
       // Hit detection → toast + SP
       if (danInst.pendingHit && !danInst.hitConsumed) {
