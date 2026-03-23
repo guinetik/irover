@@ -4,6 +4,7 @@ import {
   INVENTORY_CATALOG,
   maxRockSampleKg,
   type CollectedRockSample,
+  type DevSpawnInventoryItemResult,
   type InventoryStack,
 } from '@/types/inventory'
 import { usePlayerProfile } from './usePlayerProfile'
@@ -323,6 +324,60 @@ export function devSpawnRandomInventoryItems(count = 3): string[] {
     if (tryMergeOneDevItem(itemId)) added.push(itemId)
   }
   return added
+}
+
+/**
+ * Development helper: merges catalog items by id into cargo, ignoring capacity (still enforces maxStack).
+ *
+ * @param itemId - Key in {@link INVENTORY_CATALOG}.
+ * @param quantity - Rock: number of separate samples (each random mass). Component/trace/refined: unit count.
+ */
+export function devSpawnInventoryItem(itemId: string, quantity = 1): DevSpawnInventoryItemResult {
+  const def = INVENTORY_CATALOG[itemId]
+  if (!def) return { ok: false, message: `Unknown item id: ${itemId}` }
+
+  const q = Math.floor(quantity)
+  if (!Number.isFinite(q) || q < 1) return { ok: false, message: 'Invalid quantity.' }
+
+  if (def.category === 'rock' && def.weightRange) {
+    for (let i = 0; i < q; i++) {
+      if (!tryMergeOneDevItem(itemId)) {
+        return { ok: false, message: 'Failed to merge rock sample.' }
+      }
+    }
+    return { ok: true }
+  }
+
+  if (
+    (def.category === 'component' || def.category === 'trace' || def.category === 'refined') &&
+    def.weightPerUnit != null &&
+    def.maxStack != null
+  ) {
+    const addWeight = def.weightPerUnit * q
+    const next = [...stacks.value]
+    const idx = next.findIndex((s) => s.itemId === itemId)
+    if (idx >= 0) {
+      const s = next[idx]
+      const newQty = s.quantity + q
+      if (newQty > def.maxStack) return { ok: false, message: 'Stack limit reached.' }
+      next[idx] = {
+        itemId: s.itemId,
+        quantity: newQty,
+        totalWeightKg: Math.round((s.totalWeightKg + addWeight) * 100) / 100,
+      }
+    } else {
+      if (q > def.maxStack) return { ok: false, message: 'Stack limit reached.' }
+      next.push({
+        itemId,
+        quantity: q,
+        totalWeightKg: Math.round(addWeight * 100) / 100,
+      })
+    }
+    stacks.value = next
+    return { ok: true }
+  }
+
+  return { ok: false, message: 'Unsupported item category.' }
 }
 
 /**

@@ -1,7 +1,9 @@
 import type { MarsDevDebugApi } from '@/types/marsDev'
+import type { DevSpawnInventoryItemResult } from '@/types/inventory'
 
 export interface InstallMarsDevDebugApiOptions {
   spawnRandomInventoryItems: (count?: number) => string[]
+  spawnInventoryItemById: (itemId: string, quantity?: number) => DevSpawnInventoryItemResult
 }
 
 declare global {
@@ -19,6 +21,9 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
     inventory: {
       spawnRandom(count = 3) {
         return options.spawnRandomInventoryItems(count)
+      },
+      spawnById(itemId, quantity = 1) {
+        return options.spawnInventoryItemById(itemId, quantity)
       },
     },
   }

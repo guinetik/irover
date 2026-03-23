@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useInventory, resetInventoryForTests, devSpawnRandomInventoryItems } from '../useInventory'
+import {
+  useInventory,
+  resetInventoryForTests,
+  devSpawnRandomInventoryItems,
+  devSpawnInventoryItem,
+} from '../useInventory'
 
 describe('useInventory batch component grants', () => {
   beforeEach(() => {
@@ -64,5 +69,20 @@ describe('devSpawnRandomInventoryItems', () => {
     for (const id of ids) {
       expect(stacks.value.some((s) => s.itemId === id)).toBe(true)
     }
+  })
+
+  it('spawnById adds a known component stack', () => {
+    const r = devSpawnInventoryItem('ice', 5)
+    expect(r).toEqual({ ok: true })
+    const { stacks } = useInventory()
+    const ice = stacks.value.find((s) => s.itemId === 'ice')
+    expect(ice?.quantity).toBe(5)
+    expect(ice?.totalWeightKg).toBe(0.5)
+  })
+
+  it('spawnById rejects unknown ids', () => {
+    const r = devSpawnInventoryItem('not-a-real-item')
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.message).toContain('Unknown')
   })
 })

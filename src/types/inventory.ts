@@ -47,6 +47,11 @@ export interface InventoryStack {
   totalWeightKg: number
 }
 
+/** Result of dev-only inventory spawn by id (`devSpawnInventoryItem`). */
+export type DevSpawnInventoryItemResult =
+  | { ok: true }
+  | { ok: false; message: string }
+
 /** Payload after a successful arm drill rock collection (for UI + science scoring). */
 export interface CollectedRockSample {
   rockMeshUuid: string
