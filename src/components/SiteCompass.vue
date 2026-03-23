@@ -153,14 +153,12 @@ function poiMarkerStyle(m: {
 
 <style scoped>
 .compass-strip {
-  position: fixed;
-  top: 56px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
   width: 320px;
-  height: 36px;
+  max-width: min(320px, 42vw);
+  height: 34px;
   overflow: hidden;
-  z-index: 30;
+  z-index: 1;
   pointer-events: none;
   background: rgba(10, 5, 2, 0.5);
   backdrop-filter: blur(6px);

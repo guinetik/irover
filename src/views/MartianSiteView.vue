@@ -2,8 +2,13 @@
   <div class="w-full h-full">
     <canvas ref="canvasRef" class="block w-full h-full" />
     <div class="site-hud">
-      <button class="back-btn" @click="$router.push('/globe')">BACK</button>
-      <h2 class="site-name">{{ siteId }}</h2>
+      <div class="site-hud-left">
+        <button class="back-btn" @click="$router.push('/globe')">BACK</button>
+        <h2 class="site-name">{{ siteId }}</h2>
+      </div>
+      <div class="site-hud-center">
+        <SiteCompass :heading="roverHeading" :pois="siteCompassPois" />
+      </div>
       <div class="hud-actions">
         <div class="sp-counter">
           <span class="sp-icon">&#x2726;</span>
@@ -18,7 +23,6 @@
         >SCIENCE</button>
       </div>
     </div>
-    <SiteCompass :heading="roverHeading" :pois="siteCompassPois" />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <Transition name="deploy-fade">
       <div v-if="descending" class="deploy-overlay" key="descent">
@@ -1569,17 +1573,32 @@ onUnmounted(() => {
   right: 0;
   z-index: 40;
   height: 48px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 16px;
+  column-gap: 12px;
   padding: 0 16px;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.site-hud-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.site-hud-center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .hud-actions {
-  margin-left: auto;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2176,7 +2195,7 @@ onUnmounted(() => {
   letter-spacing: 0.15em;
 }
 
-/* ChemCam HUD — above InstrumentToolbar (toolbar bottom: 24px, ~4.5rem tall); keep clear of compass at top */
+/* ChemCam HUD — above InstrumentToolbar (toolbar bottom: 24px, ~4.5rem tall) */
 .chemcam-hud {
   position: fixed;
   bottom: calc(24px + 4.5rem + 10px);
