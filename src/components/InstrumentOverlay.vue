@@ -196,6 +196,22 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     temp: '',
     upgName: 'INSULATION UPGRADE', upgDesc: 'Reduces heat loss rate by 30%. Less heater draw at cold sites.', upgReq: 'Requires: Engineering Package drop',
   },
+  10: {
+    slot: 10, icon: '\uD83D\uDCE1', name: 'LGA', type: 'LOW-GAIN ANTENNA',
+    desc: 'Omnidirectional low-gain antenna for direct-to-Earth communication. Slow but reliable \u2014 works regardless of rover orientation. Primary command uplink.',
+    power: '5W', powerColor: '#5dc9a5', status: 'CONNECTED', statusColor: '#5dc9a5', health: '99%',
+    hint: 'Passive \u2014 always transmitting. Low data rate (0.5 kbps). Use for command uplink and emergency beacon.',
+    temp: '',
+    upgName: 'SIGNAL AMPLIFIER', upgDesc: 'Doubles direct-to-Earth data rate. Better for sending compressed science.', upgReq: 'Requires: Comms Package drop',
+  },
+  11: {
+    slot: 11, icon: '\uD83D\uDCF6', name: 'UHF', type: 'UHF RELAY ANTENNA',
+    desc: 'High-bandwidth UHF antenna for relay communication via overhead orbiters (MRO, MAVEN). Fast data bursts during orbital passes \u2014 primary science downlink.',
+    power: '8W', powerColor: '#5dc9a5', status: 'RELAY LOCK', statusColor: '#5dc9a5', health: '97%',
+    hint: 'Passive \u2014 relays data during orbiter passes. 128 kbps burst rate. Next pass shown in status.',
+    temp: '',
+    upgName: 'DUAL-BAND MODULE', upgDesc: 'Enables simultaneous uplink/downlink during passes. Halves transfer time.', upgReq: 'Requires: Comms Package drop',
+  },
 }
 
 defineEmits<{

@@ -39,8 +39,10 @@ export interface RoverConfig {
   moveSpeed: number
   turnSpeed: number
   /**
-   * Seconds to wait before moving the camera to the instrument orbit after selection.
-   * Set to 0 for immediate zoom (legacy behavior). Activatable instruments can press E to skip.
+   * Seconds to wait before moving the camera to the instrument orbit after selection
+   * from driving only. Switching between instruments (or from active back to another slot)
+   * snaps immediately. Set to 0 for immediate zoom from driving too. Activatable
+   * instruments can press E to skip the delay.
    */
   instrumentZoomDelaySeconds?: number
 }
@@ -252,9 +254,11 @@ export class RoverController {
       }
     }
 
+    // Map keys to instrument slots: Digit1-9, R=10, T=11
+    const LETTER_SLOTS: Record<string, number> = { KeyR: 10, KeyT: 11 }
     const slotMatch = e.code.match(/^Digit([1-9])$/)
-    if (slotMatch) {
-      const slot = parseInt(slotMatch[1])
+    const slot = slotMatch ? parseInt(slotMatch[1]) : LETTER_SLOTS[e.code]
+    if (slot !== undefined) {
       const instrument = this.instruments.find(i => i.slot === slot)
       if (!instrument || instrument === this.activeInstrument) return
 
@@ -314,12 +318,14 @@ export class RoverController {
   }
 
   private setInstrument(instrument: InstrumentController): void {
+    // Zoom delay only when opening an instrument from driving; switching slots snaps immediately.
+    const fromDriving = this.mode === 'driving'
     this.mode = 'instrument'
     this.activeInstrument = instrument
     this.instrumentCameraDistance = INSTRUMENT_CAMERA_DISTANCE_DEFAULT
     this.instrumentZoomElapsed = 0
     const delaySec = this.config.instrumentZoomDelaySeconds ?? 0
-    if (delaySec > 0) {
+    if (delaySec > 0 && fromDriving) {
       this.instrumentZoomPending = true
       // Keep current chase orbit until delay elapses or user activates / UI zoom completes
     } else {

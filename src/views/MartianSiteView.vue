@@ -178,6 +178,12 @@
       :time-of-day="marsTimeOfDay"
       :night-factor="currentNightFactor"
     />
+    <CommToolbar
+      v-if="!deploying && !descending"
+      :active-slot="activeInstrumentSlot"
+      @select="(slot: number) => controller?.activateInstrument(slot)"
+      @deselect="controller?.activateInstrument(null)"
+    />
     <MastTelemetry
       v-if="isInstrumentActive && (activeInstrumentSlot === 1 || activeInstrumentSlot === 2)"
       :base-lat="siteLat"
@@ -213,6 +219,7 @@ import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
+import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { useMarsData } from '@/composables/useMarsData'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { GeologicalFeature } from '@/types/landmark'
@@ -236,7 +243,8 @@ import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, type InstrumentController } from '@/three/instruments'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, type InstrumentController } from '@/three/instruments'
+import CommToolbar from '@/components/CommToolbar.vue'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -501,17 +509,20 @@ onMounted(async () => {
     new HeaterController(),
     new REMSController(),
     new RADController(),
+    new AntennaLGController(),
+    new AntennaUHFController(),
   ]
   if (controller) {
     controller.instruments = instrumentControllers
   }
 
-  // Post-processing
-  composer = new EffectComposer(renderer)
-  composer.addPass(new RenderPass(siteScene.scene, camera))
-
-  dustPass = createDustAtmospherePass(terrainParams.dustCover)
-  composer.addPass(dustPass)
+  // Post-processing (dust-atmosphere / “drone feed” pass); optional via URL, env, or localStorage
+  if (isSitePostProcessingEnabled()) {
+    composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(siteScene.scene, camera))
+    dustPass = createDustAtmospherePass(terrainParams.dustCover)
+    composer.addPass(dustPass)
+  }
 
   clock = new THREE.Clock()
 
@@ -520,7 +531,7 @@ onMounted(async () => {
 
   function animate() {
     animationId = requestAnimationFrame(animate)
-    if (!camera || !clock || !siteScene || !composer) return
+    if (!camera || !clock || !siteScene || !renderer) return
 
     const rawDelta = clock.getDelta()
     const sceneDelta = gameClock.getSceneDelta(rawDelta)
@@ -865,7 +876,11 @@ onMounted(async () => {
       dustPass.uniforms.uTime.value = simulationTime
     }
 
-    composer.render()
+    if (composer) {
+      composer.render()
+    } else {
+      renderer.render(siteScene.scene, camera)
+    }
   }
   animate()
 
@@ -875,11 +890,11 @@ onMounted(async () => {
 
 function onResize() {
   const canvas = canvasRef.value
-  if (!canvas || !renderer || !camera || !composer) return
+  if (!canvas || !renderer || !camera) return
   camera.aspect = canvas.clientWidth / canvas.clientHeight
   camera.updateProjectionMatrix()
   renderer.setSize(canvas.clientWidth, canvas.clientHeight, false)
-  composer.setSize(canvas.clientWidth, canvas.clientHeight)
+  composer?.setSize(canvas.clientWidth, canvas.clientHeight)
   if (dustPass) {
     dustPass.uniforms.uResolution.value.set(canvas.clientWidth, canvas.clientHeight)
   }
