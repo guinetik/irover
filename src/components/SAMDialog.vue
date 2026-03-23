@@ -35,8 +35,9 @@
               @back="currentStep = 1"
               @sample-selected="onSampleSelected"
             />
-            <SAMMiniGameStub
+            <component
               v-if="currentStep === 3 && selectedModeId && selectedSampleId"
+              :is="miniGameComponent"
               :mode-id="selectedModeId"
               :sample-id="selectedSampleId"
               @complete="onMiniGameComplete"
@@ -62,6 +63,7 @@ import { useSamExperiments } from '@/composables/useSamExperiments'
 import SAMStepInstrument from '@/components/SAMStepInstrument.vue'
 import SAMStepReagents from '@/components/SAMStepReagents.vue'
 import SAMMiniGameStub from '@/components/SAMMiniGameStub.vue'
+import SAMPyrolysis from '@/components/SAMPyrolysis.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -85,6 +87,13 @@ const selectedSampleId = ref<string | null>(null)
 const selectedMode = computed(() =>
   samExp.modes.value.find(m => m.id === selectedModeId.value) ?? null,
 )
+
+const miniGameComponent = computed(() => {
+  switch (selectedModeId.value) {
+    case 'pyrolysis': return SAMPyrolysis
+    default: return SAMMiniGameStub
+  }
+})
 
 const currentDiscoveries = computed(() => {
   if (!selectedModeId.value || !selectedSampleId.value) return []
