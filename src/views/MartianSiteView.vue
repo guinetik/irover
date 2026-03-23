@@ -1066,8 +1066,9 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
 }
 
 onMounted(async () => {
-  siteHandle.value = createMarsSiteViewController(buildMarsSiteViewContext())
-  await siteHandle.value.mount()
+  const handle = createMarsSiteViewController(buildMarsSiteViewContext())
+  await handle.mount()
+  siteHandle.value = handle
 })
 
 onUnmounted(() => {

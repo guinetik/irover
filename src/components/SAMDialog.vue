@@ -64,6 +64,7 @@ import SAMStepInstrument from '@/components/SAMStepInstrument.vue'
 import SAMStepReagents from '@/components/SAMStepReagents.vue'
 import SAMMiniGameStub from '@/components/SAMMiniGameStub.vue'
 import SAMPyrolysis from '@/components/SAMPyrolysis.vue'
+import SAMWetChemistry from '@/components/SAMWetChemistry.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -91,6 +92,7 @@ const selectedMode = computed(() =>
 const miniGameComponent = computed(() => {
   switch (selectedModeId.value) {
     case 'pyrolysis': return SAMPyrolysis
+    case 'wet-chemistry': return SAMWetChemistry
     default: return SAMMiniGameStub
   }
 })

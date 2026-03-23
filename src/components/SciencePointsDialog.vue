@@ -59,6 +59,7 @@ const SOURCE_HEADLINE: Record<SPSource, string> = {
   dan: 'DAN',
   sam: 'SAM',
   survival: 'Mars survival',
+  dev: 'Dev console',
 }
 
 /**
@@ -77,6 +78,7 @@ function showBonusNote(e: SPLedgerEntry): boolean {
   return (
     e.source !== 'dan' &&
     e.source !== 'survival' &&
+    e.source !== 'dev' &&
     e.source !== 'chemcam-ack' &&
     e.bonusMult !== 1
   )
