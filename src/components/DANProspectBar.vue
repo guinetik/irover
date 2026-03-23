@@ -34,7 +34,7 @@ const fillPct = computed(() => {
 <style scoped>
 .dan-prospect-bar {
   position: fixed;
-  top: 52px;
+  bottom: calc(24px + 4.5rem + 10px);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -47,6 +47,7 @@ const fillPct = computed(() => {
   border-radius: 6px;
   z-index: 45;
   font-family: var(--font-ui);
+  pointer-events: none;
 }
 .dpb-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: rgba(68, 170, 255, 0.8); white-space: nowrap; }
 .dpb-track { width: 120px; height: 4px; background: rgba(68, 170, 255, 0.1); border-radius: 2px; overflow: hidden; }
