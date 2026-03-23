@@ -136,28 +136,35 @@ export class DANController extends InstrumentController {
     return Math.random() < chance
   }
 
-  // --- VFX ---
+  // --- VFX: sequential pulse train ---
+  // A series of dots fired one-at-a-time from the emitter downward to the ground.
+  // Each dot travels straight down; when it hits ground it despawns and the next fires.
   private particles: THREE.Points | null = null
   private particlePositions: Float32Array | null = null
-  private particleSpeeds: Float32Array | null = null
+  private particleAlive: boolean[] = []
   private sceneRef: THREE.Scene | null = null
-  private readonly PARTICLE_COUNT = 32
+  /** Total dots in the pulse train */
+  private readonly PULSE_COUNT = 6
+  /** Seconds between sequential dot launches */
+  private readonly PULSE_INTERVAL = 0.12
+  /** Fall speed (scene units / sec) */
+  private readonly FALL_SPEED = 4.0
+  private pulseTimer = 0
+  private nextPulseIdx = 0
   vfxVisible = false
-  private groundY = 0
 
   initVFX(scene: THREE.Scene): void {
     this.sceneRef = scene
-    const count = this.PARTICLE_COUNT
-    this.particlePositions = new Float32Array(count * 3)
-    this.particleSpeeds = new Float32Array(count)
+    const n = this.PULSE_COUNT
+    this.particlePositions = new Float32Array(n * 3)
+    this.particleAlive = new Array(n).fill(false)
 
-    // Seed particles spread across the column so they don't all start at one spot
-    for (let i = 0; i < count; i++) {
-      this.particleSpeeds[i] = 2.0 + Math.random() * 3.0
+    // All start hidden off-screen
+    for (let i = 0; i < n; i++) {
       const i3 = i * 3
-      this.particlePositions[i3] = (Math.random() - 0.5) * 0.1
-      this.particlePositions[i3 + 1] = -Math.random() * 1.0  // spread down from 0
-      this.particlePositions[i3 + 2] = (Math.random() - 0.5) * 0.1
+      this.particlePositions[i3] = 0
+      this.particlePositions[i3 + 1] = -999
+      this.particlePositions[i3 + 2] = 0
     }
 
     const geo = new THREE.BufferGeometry()
@@ -165,9 +172,9 @@ export class DANController extends InstrumentController {
 
     const mat = new THREE.PointsMaterial({
       color: 0x44aaff,
-      size: 0.12,
+      size: 0.08,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.85,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
@@ -178,24 +185,12 @@ export class DANController extends InstrumentController {
     scene.add(this.particles)
   }
 
-  private resetParticle(i: number, startY: number, endY: number): void {
-    if (!this.particlePositions || !this.particleSpeeds) return
-    const i3 = i * 3
-    // Random XZ offset from center (0,0) — particles live in local space
-    this.particlePositions[i3] = (Math.random() - 0.5) * 0.1
-    // Random Y between source and ground so they don't all spawn at top
-    this.particlePositions[i3 + 1] = startY - Math.random() * (startY - endY)
-    this.particlePositions[i3 + 2] = (Math.random() - 0.5) * 0.1
-    this.particleSpeeds[i] = 2.0 + Math.random() * 3.0
-  }
-
   updateVFX(delta: number, groundY: number): void {
-    if (!this.particles || !this.particlePositions || !this.particleSpeeds || !this.node) return
-    this.groundY = groundY
+    if (!this.particles || !this.particlePositions || !this.node) return
     this.particles.visible = this.vfxVisible && this.passiveSubsystemEnabled
     if (!this.particles.visible) return
 
-    // Attach particles to DAN node so they follow the rover
+    // Position the Points mesh at the DAN emitter so dots are in local space
     const wp = new THREE.Vector3()
     this.node.getWorldPosition(wp)
     this.particles.position.set(wp.x, 0, wp.z)
@@ -203,17 +198,30 @@ export class DANController extends InstrumentController {
     const sourceY = wp.y
     const endY = groundY
 
+    // Fire next dot on interval
+    this.pulseTimer += delta
+    if (this.pulseTimer >= this.PULSE_INTERVAL) {
+      this.pulseTimer = 0
+      const idx = this.nextPulseIdx
+      const i3 = idx * 3
+      // Spawn at emitter (local: x=0, y=sourceY, z=0)
+      this.particlePositions[i3] = 0
+      this.particlePositions[i3 + 1] = sourceY
+      this.particlePositions[i3 + 2] = 0
+      this.particleAlive[idx] = true
+      this.nextPulseIdx = (this.nextPulseIdx + 1) % this.PULSE_COUNT
+    }
+
+    // Advance all alive dots downward
     const positions = this.particles.geometry.getAttribute('position') as THREE.BufferAttribute
-    for (let i = 0; i < this.PARTICLE_COUNT; i++) {
+    for (let i = 0; i < this.PULSE_COUNT; i++) {
+      if (!this.particleAlive[i]) continue
       const i3 = i * 3
-      // Fall straight down
-      this.particlePositions[i3 + 1] -= this.particleSpeeds[i] * delta
-      // Tiny XZ jitter for visual interest
-      this.particlePositions[i3] += (Math.random() - 0.5) * 0.02 * delta
-      this.particlePositions[i3 + 2] += (Math.random() - 0.5) * 0.02 * delta
-      // Reset when hitting ground
+      this.particlePositions[i3 + 1] -= this.FALL_SPEED * delta
+      // Despawn on ground hit
       if (this.particlePositions[i3 + 1] <= endY) {
-        this.resetParticle(i, sourceY, endY)
+        this.particleAlive[i] = false
+        this.particlePositions[i3 + 1] = -999 // hide off-screen
       }
     }
     positions.needsUpdate = true
