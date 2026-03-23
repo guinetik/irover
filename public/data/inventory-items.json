@@ -189,7 +189,7 @@
       "category": "component",
       "label": "Subsurface Ice",
       "description": "Water ice extracted from DAN-confirmed drill sites. Used as a reagent in SAM wet chemistry analysis.",
-      "image": "/inventory/ice.svg",
+      "image": "/ice.jpg",
       "weightPerUnit": 0.1,
       "maxStack": 100
     }
