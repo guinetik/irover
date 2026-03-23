@@ -43,6 +43,7 @@ export class DANController extends InstrumentController {
   readonly viewAngle = Math.PI * 0.5
   readonly viewPitch = 0.15
   readonly selectionIdlePowerW = 10
+  override readonly selectionHighlightColor = 0x44ccff  // blue highlight on DAN emitter node
 
   // --- Sampling state ---
   private sampleTimer = 0
@@ -137,13 +138,13 @@ export class DANController extends InstrumentController {
   }
 
   // --- VFX: sequential pulse dots (Mesh-based) ---
-  // Dots fire from the DAN emitter along its aim direction toward the ground.
+  // Dots fire from the DAN emitter diagonally toward the ground.
   private pulseDots: THREE.Mesh[] = []
   private pulseDotAlive: boolean[] = []
   private pulseDotVelocities: THREE.Vector3[] = []
   private sceneRef: THREE.Scene | null = null
-  private readonly PULSE_COUNT = 6
-  private readonly PULSE_INTERVAL = 0.12
+  private readonly PULSE_COUNT = 12
+  private readonly PULSE_INTERVAL = 0.07
   private readonly PULSE_SPEED = 0.8
   private pulseTimer = 0
   private nextPulseIdx = 0
@@ -151,7 +152,7 @@ export class DANController extends InstrumentController {
 
   initVFX(scene: THREE.Scene): void {
     this.sceneRef = scene
-    const dotGeo = new THREE.SphereGeometry(0.02, 6, 6)
+    const dotGeo = new THREE.SphereGeometry(0.008, 4, 4)
     const dotMat = new THREE.MeshBasicMaterial({
       color: 0x44ccff,
       transparent: true,
@@ -176,18 +177,18 @@ export class DANController extends InstrumentController {
       return
     }
 
-    // Get emitter world position and aim direction
     const wp = new THREE.Vector3()
     this.node.getWorldPosition(wp)
 
-    // Get the node's local -Y in world space (the emitter shoots "down" in its local frame)
-    const aimDir = new THREE.Vector3(0, -1, 0)
-    const wq = new THREE.Quaternion()
-    this.node.getWorldQuaternion(wq)
-    aimDir.applyQuaternion(wq).normalize()
-
-    // If aim direction somehow points up, fall back to straight down
-    if (aimDir.y > -0.1) aimDir.set(0, -1, 0)
+    // Compute aim direction: rover's local backward (-Z) + down (-Y), rotated by rover heading.
+    // The DAN emitter points backward-and-down from under the rover body.
+    const rover = this.node.parent
+    if (rover) {
+      const aimLocal = new THREE.Vector3(0, -0.7, -0.7).normalize()
+      const roverQuat = new THREE.Quaternion()
+      rover.getWorldQuaternion(roverQuat)
+      this._aimDir.copy(aimLocal).applyQuaternion(roverQuat)
+    }
 
     // Fire next dot on interval
     this.pulseTimer += delta
@@ -198,7 +199,7 @@ export class DANController extends InstrumentController {
       dot.position.copy(wp)
       dot.visible = true
       this.pulseDotAlive[idx] = true
-      this.pulseDotVelocities[idx].copy(aimDir).multiplyScalar(this.PULSE_SPEED)
+      this.pulseDotVelocities[idx].copy(this._aimDir).multiplyScalar(this.PULSE_SPEED)
       this.nextPulseIdx = (this.nextPulseIdx + 1) % this.PULSE_COUNT
     }
 
@@ -207,13 +208,13 @@ export class DANController extends InstrumentController {
       if (!this.pulseDotAlive[i]) continue
       const dot = this.pulseDots[i]
       dot.position.addScaledVector(this.pulseDotVelocities[i], delta)
-      // Despawn on ground hit
       if (dot.position.y <= groundY) {
         dot.visible = false
         this.pulseDotAlive[i] = false
       }
     }
   }
+  private _aimDir = new THREE.Vector3(0, -0.7, -0.7).normalize()
 
   override dispose(): void {
     if (this.sceneRef) {
