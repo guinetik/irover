@@ -178,6 +178,7 @@
     <ScienceLogDialog
       :open="scienceLogOpen"
       :spectra="chemCamArchivedSpectra"
+      :dan-prospects="danArchivedProspects"
       @close="scienceLogOpen = false"
     />
     <InstrumentCrosshair
@@ -378,6 +379,7 @@ import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
+import { useDanArchive } from '@/composables/useDanArchive'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
 import {
   MastCamController,
@@ -403,8 +405,9 @@ import CommToolbar from '@/components/CommToolbar.vue'
 const route = useRoute()
 const siteId = route.params.siteId as string
 const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra } = useChemCamArchive()
+const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects } = useDanArchive()
 const scienceLogOpen = ref(false)
-const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0)
+const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
 /** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
@@ -1290,6 +1293,22 @@ onMounted(async () => {
             } else {
               sampleToastRef.value?.showDAN('Analysis inconclusive — hydrogen likely mineral-bound')
             }
+
+            // Archive to science log
+            archiveDanProspect({
+              capturedSol: marsSol.value,
+              siteId,
+              siteLatDeg: siteLat.value,
+              siteLonDeg: siteLon.value,
+              roverWorldX: roverWorldX.value,
+              roverWorldZ: roverWorldZ.value,
+              roverSpawnX: roverSpawnXZ.value.x,
+              roverSpawnZ: roverSpawnXZ.value.z,
+              signalStrength: danInst.prospectStrength,
+              quality: DANController.qualityLabel(danInst.prospectStrength) as 'Weak' | 'Moderate' | 'Strong',
+              waterConfirmed: hasWater,
+              reservoirQuality: danInst.prospectStrength,
+            })
 
             // Keep disc as a completed site marker (hidden by default, shown when DAN selected)
             if (danDiscMesh) {
