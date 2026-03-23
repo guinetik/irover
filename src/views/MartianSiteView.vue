@@ -19,6 +19,7 @@
       </div>
     </div>
     <SiteCompass :heading="roverHeading" :pois="siteCompassPois" />
+    <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <Transition name="deploy-fade">
       <div v-if="descending" class="deploy-overlay" key="descent">
         <div class="deploy-content">
@@ -131,6 +132,7 @@
         :active-slot="activeInstrumentSlot"
         :inventory-open="inventoryOpen"
         :chem-cam-unread="chemCamUnreadCount"
+        :dan-scanning="!!(controller?.instruments.find(i => i.id === 'dan') as DANController | undefined)?.passiveSubsystemEnabled"
         @select="(slot: number) => { if (!isSleeping) controller?.activateInstrument(slot) }"
         @deselect="controller?.activateInstrument(null)"
         @toggle-inventory="inventoryOpen = !inventoryOpen"
@@ -160,6 +162,9 @@
       @rtg-overdrive="showOverdriveConfirm = true"
       @rtg-conservation="openConservationConfirm()"
       @repair="handleInstrumentRepair"
+      :dan-hit-available="danHitAvailable"
+      :dan-prospect-phase="danProspectPhase"
+      @dan-prospect="handleDanProspect"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -189,6 +194,15 @@
     />
     <ProfilePanel :open="profileOpen" />
     <SAMDialog :visible="samDialogVisible" />
+    <DANDialog
+      :visible="danDialogVisible"
+      :signal-strength="danSignalStrength"
+      :water-ice-index="siteTerrainParams?.waterIceIndex ?? 0.1"
+      :total-samples="danTotalSamples"
+      :prospect-phase="danProspectPhase"
+      :water-confirmed="danWaterResult"
+      @close="danDialogVisible = false"
+    />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
     <Teleport to="body">
@@ -321,7 +335,7 @@ import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { MARS_TIME_OF_DAY_06_00 } from '@/three/MarsSky'
+import { MARS_TIME_OF_DAY_06_00, SOL_DURATION, MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
 import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
@@ -348,6 +362,8 @@ import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SampleToast from '@/components/SampleToast.vue'
 import SAMDialog from '@/components/SAMDialog.vue'
+import DANDialog from '@/components/DANDialog.vue'
+import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
@@ -428,6 +444,20 @@ const passiveOverlayPatch = computed(() => {
 
 const isInstrumentActive = ref(false)
 const samDialogVisible = ref(false)
+
+// --- DAN state ---
+const danHitAvailable = ref(false)
+const danProspectPhase = ref<string>('idle')
+const danProspectProgress = ref(0)
+const danDialogVisible = ref(false)
+const danSignalStrength = ref(0)
+const danTotalSamples = ref(0)
+const danWaterResult = ref<boolean | null>(null)
+let danDiscMesh: THREE.Mesh | null = null
+let danConeMesh: THREE.Mesh | null = null
+const INITIATE_DURATION = 4
+const PROSPECT_DURATION_MARS_HOURS = 2
+
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const rtgConservationMode = ref<RTGConservationState>('off')
@@ -628,7 +658,7 @@ const heaterHudButtonTitle = computed(() =>
     : 'Thermal / heater [H]',
 )
 const { mod: playerMod } = usePlayerProfile()
-const { totalSP, award: awardSP, awardAck } = useSciencePoints()
+const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN } = useSciencePoints()
 const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
@@ -743,6 +773,35 @@ function confirmConservation() {
 
 function cancelConservation() {
   showConservationConfirm.value = false
+}
+
+function handleDanProspect(): void {
+  const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
+  if (!danInst?.pendingHit) return
+
+  const hit = danInst.pendingHit
+
+  if (!danDiscMesh) {
+    const geo = new THREE.CircleGeometry(5, 32)
+    geo.rotateX(-Math.PI / 2)
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x44aaff, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false,
+    })
+    danDiscMesh = new THREE.Mesh(geo, mat)
+    siteScene?.scene.add(danDiscMesh)
+  }
+  const groundY = siteScene?.terrain
+    ? siteScene.terrain.heightAt(hit.worldPosition.x, hit.worldPosition.z)
+    : hit.worldPosition.y
+  danDiscMesh.position.set(hit.worldPosition.x, groundY + 0.05, hit.worldPosition.z)
+  danDiscMesh.visible = true
+
+  danInst.prospectStrength = hit.signalStrength
+  danInst.prospectPhase = 'drive-to-zone'
+  danProspectPhase.value = 'drive-to-zone'
+  danProspectProgress.value = 0
+  danWaterResult.value = null
+  danDialogVisible.value = true
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {
@@ -1110,6 +1169,128 @@ onMounted(async () => {
       heaterInst.zone = thermalZone.value
     }
 
+    // --- DAN frame update ---
+    const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
+    if (danInst && siteScene.roverState === 'ready') {
+      danInst.setRoverState(
+        siteScene.rover?.position ?? new THREE.Vector3(),
+        controller?.isMoving ?? false,
+      )
+      if (siteTerrainParams) {
+        danInst.waterIceIndex = siteTerrainParams.waterIceIndex ?? 0.1
+        danInst.featureType = siteTerrainParams.featureType ?? 'plain'
+      }
+      danInst.update(sceneDelta)
+
+      danTotalSamples.value = danInst.totalSamples
+      danHitAvailable.value = danInst.pendingHit !== null && !danInst.hitConsumed
+
+      // VFX: only when DAN slot selected
+      danInst.vfxVisible = controller?.activeInstrument?.id === 'dan'
+      if (danInst.vfxVisible && siteScene.terrain) {
+        const rp = siteScene.rover?.position
+        const groundY = rp ? siteScene.terrain.heightAt(rp.x, rp.z) : 0
+        danInst.updateVFX(sceneDelta, groundY)
+      }
+
+      // Hit detection → toast + SP
+      if (danInst.pendingHit && !danInst.hitConsumed) {
+        if (danHitAvailable.value) {
+          sampleToastRef.value?.showDAN('New hydrogen signal — previous marker updated')
+        }
+        const hit = danInst.pendingHit
+        const qual = DANController.qualityLabel(hit.signalStrength)
+        sampleToastRef.value?.showDAN(`Hydrogen signal — ${qual} (${Math.round(hit.signalStrength * 100)}%)`)
+        const gain = awardDAN('DAN signal hit')
+        if (gain) sampleToastRef.value?.showSP(gain.amount, 'DAN SIGNAL', gain.bonus)
+        danSignalStrength.value = hit.signalStrength
+        danInst.hitConsumed = true
+        danHitAvailable.value = true
+      }
+
+      // Sleep mode safety
+      if (isSleeping.value && danInst.passiveSubsystemEnabled) {
+        danInst.forceOff()
+        sampleToastRef.value?.showDAN('Prospect interrupted — insufficient power')
+        if (danDiscMesh) danDiscMesh.visible = false
+        danProspectPhase.value = 'idle'
+        danProspectProgress.value = 0
+        passiveUiRevision.value++
+      }
+    }
+
+    // --- DAN prospect phase tick ---
+    if (danInst && danInst.prospectPhase !== 'idle' && danInst.prospectPhase !== 'complete') {
+      const rp = siteScene?.rover?.position
+      const hitPos = danDiscMesh?.position
+      if (rp && hitPos) {
+        const distToZone = new THREE.Vector2(rp.x - hitPos.x, rp.z - hitPos.z).length()
+
+        if (danInst.prospectPhase === 'drive-to-zone') {
+          if (distToZone < 5) {
+            danInst.prospectPhase = 'initiating'
+            danProspectPhase.value = 'initiating'
+            danProspectProgress.value = 0
+          }
+        } else if (danInst.prospectPhase === 'initiating') {
+          if (distToZone >= 5) {
+            danInst.prospectPhase = 'drive-to-zone'
+            danProspectPhase.value = 'drive-to-zone'
+            danProspectProgress.value = 0
+          } else {
+            danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / INITIATE_DURATION)
+            danInst.prospectProgress = danProspectProgress.value
+            if (danProspectProgress.value >= 1) {
+              danInst.prospectPhase = 'prospecting'
+              danProspectPhase.value = 'prospecting'
+              danProspectProgress.value = 0
+              if (controller) controller.config.moveSpeed = 0
+            }
+          }
+        } else if (danInst.prospectPhase === 'prospecting') {
+          const prospectDurationSec = (PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION
+          danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / prospectDurationSec)
+          danInst.prospectProgress = danProspectProgress.value
+
+          if (danProspectProgress.value >= 1) {
+            danInst.prospectPhase = 'complete'
+            danProspectPhase.value = 'complete'
+            danInst.prospectComplete = true
+
+            const gain = awardDAN('DAN prospect complete')
+            if (gain) sampleToastRef.value?.showSP(gain.amount, 'DAN PROSPECT', gain.bonus)
+
+            const hasWater = danInst.rollWater()
+            danInst.waterConfirmed = hasWater
+            danWaterResult.value = hasWater
+
+            if (hasWater) {
+              sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
+              const bonusGain = awardDAN('DAN water confirmed')
+              if (bonusGain) sampleToastRef.value?.showSP(bonusGain.amount, 'WATER CONFIRMED', bonusGain.bonus)
+
+              const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
+              const coneGeo = new THREE.ConeGeometry(0.15, 0.3, 8)
+              const coneMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8 })
+              danConeMesh = new THREE.Mesh(coneGeo, coneMat)
+              danConeMesh.position.copy(conePos)
+              danConeMesh.position.y += 0.15
+              siteScene?.scene.add(danConeMesh)
+              danInst.drillSitePosition = conePos.clone()
+              danInst.reservoirQuality = danInst.prospectStrength
+            } else {
+              sampleToastRef.value?.showDAN('Analysis inconclusive — hydrogen likely mineral-bound')
+            }
+
+            if (danDiscMesh) danDiscMesh.visible = false
+            danInst.pendingHit = null
+            danHitAvailable.value = false
+            if (controller) controller.config.moveSpeed = 5
+          }
+        }
+      }
+    }
+
     const instrumentLines = buildInstrumentPowerLines(
       controller,
       siteScene.roverState === 'ready',
@@ -1200,6 +1381,8 @@ onMounted(async () => {
           if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         }
       }
+      const danInit = controller.instruments.find(i => i.id === 'dan') as DANController | undefined
+      if (danInit && siteScene) danInit.initVFX(siteScene.scene)
     }
 
     // Enter survey mode when MastCam is active
