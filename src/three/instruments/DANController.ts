@@ -38,8 +38,8 @@ export class DANController extends InstrumentController {
   readonly canActivate = true
   readonly billsPassiveBackgroundPower = true
   readonly passiveSubsystemOnly = true
-  readonly focusNodeName = 'DAN_R'       // emitter boxes (highlighted)
-  readonly altNodeNames = ['DAN_L']      // fallback to panel if DAN_R missing
+  readonly focusNodeName = 'DAN_L'        // DAN detector panel on rover body
+  readonly altNodeNames = ['DAN_R']
   readonly focusOffset = new THREE.Vector3(0.0, 0.3, 0.0)
   readonly viewAngle = Math.PI * 0.5
   readonly viewPitch = 0.15
@@ -181,15 +181,8 @@ export class DANController extends InstrumentController {
     const wp = new THREE.Vector3()
     this.node.getWorldPosition(wp)
 
-    // Compute aim direction: rover's local backward (-Z) + down (-Y), rotated by rover heading.
-    // The DAN emitter points backward-and-down from under the rover body.
-    const rover = this.node.parent
-    if (rover) {
-      const aimLocal = new THREE.Vector3(0, -0.7, 0.7).normalize()
-      const roverQuat = new THREE.Quaternion()
-      rover.getWorldQuaternion(roverQuat)
-      this._aimDir.copy(aimLocal).applyQuaternion(roverQuat)
-    }
+    // DAN fires neutrons straight down through the rover belly into the soil
+    this._aimDir.set(0, -1, 0)
 
     // Fire next dot on interval
     this.pulseTimer += delta
@@ -215,7 +208,7 @@ export class DANController extends InstrumentController {
       }
     }
   }
-  private _aimDir = new THREE.Vector3(0, -0.7, 0.7).normalize()
+  private _aimDir = new THREE.Vector3(0, -1, 0)
 
   override dispose(): void {
     if (this.sceneRef) {
