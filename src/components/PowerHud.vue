@@ -29,7 +29,7 @@
       </div>
     </HudCursorTooltip>
     <HudCursorTooltip title="Consumption" :body="tipConsumption" as="div">
-      <div class="pp-detail">
+      <div class="pp-detail pp-use" :class="useLevelClass">
         <span class="pp-detail-val">{{ consumptionW.toFixed(0) }}</span>W use
       </div>
     </HudCursorTooltip>
@@ -68,6 +68,17 @@ const barClass = computed(() => {
   if (props.socPct < 20) return 'red'
   if (props.socPct < 50) return 'amber'
   return 'green'
+})
+
+/**
+ * Consumption line color by draw (W): fine → heavy (matches core ~5W through drill/ChemCam spikes).
+ */
+const useLevelClass = computed(() => {
+  const w = props.consumptionW
+  if (w < 12) return 'pp-use-fine'
+  if (w < 30) return 'pp-use-ok'
+  if (w < 65) return 'pp-use-mid'
+  return 'pp-use-high'
 })
 
 /**
@@ -276,11 +287,36 @@ const tipRtg = computed(() => {
   width: 100%;
 }
 
+.pp-detail.pp-use {
+  transition: color 0.35s ease;
+}
+
+.pp-detail.pp-use .pp-detail-val {
+  color: inherit;
+}
+
 .pp-detail-val {
   font-family: var(--font-instrument);
   font-variant-numeric: tabular-nums;
   color: #6b4a30;
   font-weight: bold;
+}
+
+/* Consumption tier — low draw → high draw */
+.pp-use-fine {
+  color: #6eb0d8;
+}
+
+.pp-use-ok {
+  color: #5dc9a5;
+}
+
+.pp-use-mid {
+  color: #e8c94a;
+}
+
+.pp-use-high {
+  color: #ef9f27;
 }
 
 .pp-source-icons {
