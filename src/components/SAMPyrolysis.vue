@@ -18,7 +18,7 @@
     <div class="pyro-temp-readout font-instrument">{{ Math.round(temperature) }}°C</div>
 
     <!-- Target hint -->
-    <div class="pyro-target-hint">TARGET: {{ phases[phase].target }}°C ±{{ phases[phase].range }}</div>
+    <div v-if="currentPhase" class="pyro-target-hint">TARGET: {{ currentPhase.target }}°C ±{{ currentPhase.range }}</div>
 
     <!-- Hint -->
     <div class="pyro-hint">MOUSE Y to control oven temperature</div>
@@ -49,7 +49,8 @@ const phases = [
 ]
 
 const phase = ref(0)
-const phaseName = computed(() => phases[Math.min(phase.value, 3)].name)
+const currentPhase = computed(() => phases[Math.min(phase.value, 3)] ?? null)
+const phaseName = computed(() => currentPhase.value?.name ?? 'COMPLETE')
 const temperature = ref(100)
 const quality = ref(50)
 const gameTime = ref(0)
