@@ -18,7 +18,7 @@
         >SCIENCE</button>
       </div>
     </div>
-    <SiteCompass :heading="roverHeading" />
+    <SiteCompass :heading="roverHeading" :pois="siteCompassPois" />
     <Transition name="deploy-fade">
       <div v-if="descending" class="deploy-overlay" key="descent">
         <div class="deploy-content">
@@ -308,7 +308,13 @@ import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLi
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
+import {
+  roverHeadingRadToCompassDeg,
+  signedRelativeBearingDeg,
+  worldBearingDegToPoi,
+} from '@/lib/sitePoiBearing'
 import { useMarsData } from '@/composables/useMarsData'
+import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { GeologicalFeature } from '@/types/landmark'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
@@ -472,6 +478,39 @@ const roverSpawnXZ = ref({ x: 0, z: 0 })
 let roverSpawnCaptured = false
 const roverWorldX = ref(0)
 const roverWorldZ = ref(0)
+
+const {
+  pois: missionPois,
+  focusPoiId,
+  loadPoisForSite,
+  clearPois,
+} = useSiteMissionPois()
+
+/** Mission POIs as compass-relative bearings (updates with rover position and heading). */
+const siteCompassPois = computed(() => {
+  const rx = roverWorldX.value
+  const rz = roverWorldZ.value
+  const hDeg = roverHeadingRadToCompassDeg(roverHeading.value)
+  const fid = focusPoiId.value
+  return missionPois.value.map((p) => ({
+    id: p.id,
+    label: p.label,
+    relativeDeg: signedRelativeBearingDeg(
+      hDeg,
+      worldBearingDegToPoi(rx, rz, p.x, p.z),
+    ),
+    focused: p.id === fid,
+    color: p.color,
+  }))
+})
+
+watch(
+  () => route.params.siteId as string,
+  (id) => {
+    if (id) void loadPoisForSite(id)
+  },
+  { immediate: true },
+)
 const mastPan = ref(0)
 const mastTilt = ref(0)
 const mastFov = ref(50)
@@ -1160,6 +1199,7 @@ function onResize() {
 }
 
 onUnmounted(() => {
+  clearPois()
   if (animationId) cancelAnimationFrame(animationId)
   window.removeEventListener('keydown', onGlobalKeyDown)
   controller?.dispose()

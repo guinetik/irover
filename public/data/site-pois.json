@@ -1,0 +1,13 @@
+{
+  "sites": {
+    "pathfinder": [
+      {
+        "id": "ares-outcrop",
+        "label": "Survey: layered outcrop",
+        "x": 95,
+        "z": -55,
+        "color": "#5eb8ff"
+      }
+    ]
+  }
+}
