@@ -75,70 +75,188 @@
     "3": 3.0
   },
   "discoveries": [
-    { "id": "C01", "name": "Volcanic glass", "rarity": "common", "sp": 15, "mode": "pyrolysis", "rockTypes": ["basalt"], "description": "Amorphous silicate formed during rapid lava cooling. Common on volcanic plains.", "sideProduct": null },
-    { "id": "C02", "name": "Iron(III) oxide", "rarity": "common", "sp": 12, "mode": "wet-chemistry", "rockTypes": ["hematite"], "description": "Fe₂O₃ — the compound that makes Mars red. Abundant everywhere.", "sideProduct": { "itemId": "purified-iron-oxide", "quantity": 1 } },
-    { "id": "C03", "name": "Forsterite", "rarity": "common", "sp": 18, "mode": "wet-chemistry", "rockTypes": ["olivine"], "description": "Mg₂SiO₄ crystal. Deep mantle mineral that reached the surface through volcanic uplift.", "sideProduct": null },
-    { "id": "C04", "name": "Calcium sulfate", "rarity": "common", "sp": 15, "mode": "pyrolysis", "rockTypes": ["sulfate"], "description": "Anhydrite/gypsum. Precipitated from ancient evaporating water bodies.", "sideProduct": { "itemId": "sulfur-distillate", "quantity": 1 } },
-    { "id": "C05", "name": "Montmorillonite clay", "rarity": "common", "sp": 20, "mode": "wet-chemistry", "rockTypes": ["mudstone"], "description": "Smectite clay formed by chemical weathering in the presence of water.", "sideProduct": { "itemId": "clay-mineral-sample", "quantity": 1 } },
-    { "id": "C06", "name": "Kamacite", "rarity": "common", "sp": 25, "mode": "wet-chemistry", "rockTypes": ["iron-meteorite"], "description": "Iron-nickel alloy. The backbone of iron meteorites. Not from Mars.", "sideProduct": { "itemId": "meteoritic-alloy", "quantity": 1 } },
-    { "id": "C07", "name": "Adsorbed water", "rarity": "common", "sp": 10, "mode": "pyrolysis", "rockTypes": ["basalt", "hematite", "olivine", "sulfate", "mudstone", "iron-meteorite"], "description": "Trace water molecules clinging to mineral surfaces. Mars isn't completely dry.", "sideProduct": null },
-    { "id": "C08", "name": "Geological carbon", "rarity": "common", "sp": 12, "mode": "isotope-analysis", "rockTypes": ["basalt", "hematite", "olivine", "sulfate", "mudstone", "iron-meteorite"], "description": "Standard C12/C13 ratio. Volcanic outgassing carbon — no biological origin.", "sideProduct": null },
+    { "id": "C01", "name": "Volcanic glass", "rarity": "common", "sp": 15, "mode": "pyrolysis", "rockTypes": ["basalt"], "description": "Amorphous silicate formed during rapid lava cooling. Common on volcanic plains.", "sideProducts": [{ "itemId": "trace-Si", "quantity": 2 }] },
+    { "id": "C02", "name": "Iron(III) oxide", "rarity": "common", "sp": 12, "mode": "wet-chemistry", "rockTypes": ["hematite"], "description": "Fe₂O₃ — the compound that makes Mars red. Abundant everywhere.", "sideProducts": [{ "itemId": "purified-iron-oxide", "quantity": 1 }, { "itemId": "trace-Fe", "quantity": 2 }] },
+    { "id": "C03", "name": "Forsterite", "rarity": "common", "sp": 18, "mode": "wet-chemistry", "rockTypes": ["olivine"], "description": "Mg₂SiO₄ crystal. Deep mantle mineral that reached the surface through volcanic uplift.", "sideProducts": [{ "itemId": "trace-Mg", "quantity": 2 }] },
+    { "id": "C04", "name": "Calcium sulfate", "rarity": "common", "sp": 15, "mode": "pyrolysis", "rockTypes": ["sulfate"], "description": "Anhydrite/gypsum. Precipitated from ancient evaporating water bodies.", "sideProducts": [{ "itemId": "sulfur-distillate", "quantity": 1 }, { "itemId": "trace-S", "quantity": 2 }] },
+    { "id": "C05", "name": "Montmorillonite clay", "rarity": "common", "sp": 20, "mode": "wet-chemistry", "rockTypes": ["mudstone"], "description": "Smectite clay formed by chemical weathering in the presence of water.", "sideProducts": [{ "itemId": "clay-mineral-sample", "quantity": 1 }, { "itemId": "trace-Al", "quantity": 1 }] },
+    { "id": "C06", "name": "Kamacite", "rarity": "common", "sp": 25, "mode": "wet-chemistry", "rockTypes": ["iron-meteorite"], "description": "Iron-nickel alloy. The backbone of iron meteorites. Not from Mars.", "sideProducts": [{ "itemId": "meteoritic-alloy", "quantity": 1 }, { "itemId": "trace-Ni", "quantity": 2 }] },
+    { "id": "C07", "name": "Adsorbed water", "rarity": "common", "sp": 10, "mode": "pyrolysis", "rockTypes": ["basalt", "hematite", "olivine", "sulfate", "mudstone", "iron-meteorite"], "description": "Trace water molecules clinging to mineral surfaces. Mars isn't completely dry.", "sideProducts": [] },
+    { "id": "C08", "name": "Geological carbon", "rarity": "common", "sp": 12, "mode": "isotope-analysis", "rockTypes": ["basalt", "hematite", "olivine", "sulfate", "mudstone", "iron-meteorite"], "description": "Standard C12/C13 ratio. Volcanic outgassing carbon — no biological origin.", "sideProducts": [] },
 
-    { "id": "U01", "name": "Manganese oxide", "rarity": "uncommon", "sp": 50, "mode": "wet-chemistry", "rockTypes": ["hematite"], "description": "MnO₂ — on Earth, often produced by microbial activity. On Mars... unclear.", "sideProduct": { "itemId": "purified-iron-oxide", "quantity": 3 } },
-    { "id": "U02", "name": "Serpentinization evidence", "rarity": "uncommon", "sp": 60, "mode": "wet-chemistry", "rockTypes": ["olivine"], "description": "Olivine + water → serpentine + hydrogen. The hydrogen could feed microbial life.", "sideProduct": { "itemId": "clay-mineral-sample", "quantity": 2 } },
-    { "id": "U03", "name": "Chlorinated compounds", "rarity": "uncommon", "sp": 55, "mode": "pyrolysis", "rockTypes": ["sulfate"], "description": "Chloromethane and dichloromethane. Could be contamination. Could be Martian. Controversial.", "sideProduct": { "itemId": "sulfur-distillate", "quantity": 2 } },
-    { "id": "U04", "name": "Organic volatiles", "rarity": "uncommon", "sp": 70, "mode": "pyrolysis", "rockTypes": ["mudstone"], "description": "Low-temperature carbon compounds released during gentle heating. The first hint.", "sideProduct": { "itemId": "organic-extract", "quantity": 2 } },
-    { "id": "U05", "name": "Platinum group metals", "rarity": "uncommon", "sp": 65, "mode": "wet-chemistry", "rockTypes": ["iron-meteorite"], "description": "Iridium, platinum, osmium. Concentrated in meteorites.", "sideProduct": { "itemId": "meteoritic-alloy", "quantity": 2 } },
-    { "id": "U06", "name": "Ancient water signature", "rarity": "uncommon", "sp": 45, "mode": "isotope-analysis", "rockTypes": ["basalt", "hematite", "olivine", "sulfate", "mudstone", "iron-meteorite"], "description": "D/H ratio indicates this rock interacted with liquid water billions of years ago.", "sideProduct": { "itemId": "noble-gas-vial", "quantity": 1 } },
-    { "id": "U07", "name": "Phyllosilicate", "rarity": "uncommon", "sp": 55, "mode": "wet-chemistry", "rockTypes": ["mudstone"], "description": "Layered clay mineral — forms only in sustained liquid water. Habitable environment indicator.", "sideProduct": { "itemId": "clay-mineral-sample", "quantity": 3 } },
-    { "id": "U08", "name": "Perchlorate chemistry", "rarity": "uncommon", "sp": 40, "mode": "wet-chemistry", "rockTypes": ["sulfate"], "description": "ClO₄⁻ salts. Toxic to humans but fascinating chemistry.", "sideProduct": { "itemId": "brine-concentrate", "quantity": 1 } },
+    { "id": "U01", "name": "Manganese oxide", "rarity": "uncommon", "sp": 50, "mode": "wet-chemistry", "rockTypes": ["hematite"], "description": "MnO₂ — on Earth, often produced by microbial activity. On Mars... unclear.", "sideProducts": [{ "itemId": "purified-iron-oxide", "quantity": 3 }, { "itemId": "trace-Mn", "quantity": 3 }] },
+    { "id": "U02", "name": "Serpentinization evidence", "rarity": "uncommon", "sp": 60, "mode": "wet-chemistry", "rockTypes": ["olivine"], "description": "Olivine + water → serpentine + hydrogen. The hydrogen could feed microbial life.", "sideProducts": [{ "itemId": "clay-mineral-sample", "quantity": 2 }, { "itemId": "trace-Mg", "quantity": 3 }] },
+    { "id": "U03", "name": "Chlorinated compounds", "rarity": "uncommon", "sp": 55, "mode": "pyrolysis", "rockTypes": ["sulfate"], "description": "Chloromethane and dichloromethane. Could be contamination. Could be Martian. Controversial.", "sideProducts": [{ "itemId": "sulfur-distillate", "quantity": 2 }] },
+    { "id": "U04", "name": "Organic volatiles", "rarity": "uncommon", "sp": 70, "mode": "pyrolysis", "rockTypes": ["mudstone"], "description": "Low-temperature carbon compounds released during gentle heating. The first hint.", "sideProducts": [{ "itemId": "organic-extract", "quantity": 2 }] },
+    { "id": "U05", "name": "Platinum group metals", "rarity": "uncommon", "sp": 65, "mode": "wet-chemistry", "rockTypes": ["iron-meteorite"], "description": "Iridium, platinum, osmium. Concentrated in meteorites.", "sideProducts": [{ "itemId": "meteoritic-alloy", "quantity": 2 }, { "itemId": "trace-Ni", "quantity": 3 }] },
+    { "id": "U06", "name": "Ancient water signature", "rarity": "uncommon", "sp": 45, "mode": "isotope-analysis", "rockTypes": ["basalt", "hematite", "olivine", "sulfate", "mudstone", "iron-meteorite"], "description": "D/H ratio indicates this rock interacted with liquid water billions of years ago.", "sideProducts": [{ "itemId": "noble-gas-vial", "quantity": 1 }] },
+    { "id": "U07", "name": "Phyllosilicate", "rarity": "uncommon", "sp": 55, "mode": "wet-chemistry", "rockTypes": ["mudstone"], "description": "Layered clay mineral — forms only in sustained liquid water. Habitable environment indicator.", "sideProducts": [{ "itemId": "clay-mineral-sample", "quantity": 3 }, { "itemId": "trace-Ca", "quantity": 2 }] },
+    { "id": "U08", "name": "Perchlorate chemistry", "rarity": "uncommon", "sp": 40, "mode": "wet-chemistry", "rockTypes": ["sulfate"], "description": "ClO₄⁻ salts. Toxic to humans but fascinating chemistry.", "sideProducts": [{ "itemId": "brine-concentrate", "quantity": 1 }, { "itemId": "trace-Na", "quantity": 2 }] },
 
-    { "id": "R01", "name": "Thiophenic compounds", "rarity": "rare", "sp": 150, "mode": "pyrolysis", "rockTypes": ["mudstone"], "description": "Sulfur-bearing organics. Found by the real Curiosity at Gale Crater. Consistent with ancient biology.", "sideProduct": { "itemId": "organic-extract", "quantity": 5 } },
-    { "id": "R02", "name": "Nickel anomaly", "rarity": "rare", "sp": 120, "mode": "wet-chemistry", "rockTypes": ["hematite"], "description": "Nickel concentration far above Martian background. Meteoritic input to the sediment?", "sideProduct": { "itemId": "meteoritic-alloy", "quantity": 3 } },
-    { "id": "R03", "name": "Ancient brine chemistry", "rarity": "rare", "sp": 130, "mode": "wet-chemistry", "rockTypes": ["sulfate"], "description": "Halite and perchlorate ratios that reconstruct the salinity of a vanished Martian lake.", "sideProduct": { "itemId": "brine-concentrate", "quantity": 3 } },
-    { "id": "R04", "name": "Presolar grains", "rarity": "rare", "sp": 180, "mode": "pyrolysis", "rockTypes": ["iron-meteorite"], "description": "Mineral grains older than the solar system. Formed in a dying star before our Sun existed.", "sideProduct": { "itemId": "noble-gas-vial", "quantity": 3 } },
-    { "id": "R05", "name": "Biological sulfur ratio", "rarity": "rare", "sp": 140, "mode": "isotope-analysis", "rockTypes": ["sulfate"], "description": "S32/S34 ratio showing mass-independent fractionation — a potential biosignature.", "sideProduct": { "itemId": "sulfur-distillate", "quantity": 4 } },
-    { "id": "R06", "name": "Biosignature candidate", "rarity": "rare", "sp": 200, "mode": "isotope-analysis", "rockTypes": ["mudstone"], "description": "C12-enriched carbon. Biology preferentially uses lighter isotopes. This is the signal.", "sideProduct": { "itemId": "organic-extract", "quantity": 3 } },
-    { "id": "R07", "name": "Deep mantle signature", "rarity": "rare", "sp": 110, "mode": "isotope-analysis", "rockTypes": ["olivine"], "description": "Noble gas ratios from deep within Mars. A window into the planet's interior.", "sideProduct": { "itemId": "noble-gas-vial", "quantity": 4 } },
-    { "id": "R08", "name": "Widmanstätten pattern", "rarity": "rare", "sp": 160, "mode": "wet-chemistry", "rockTypes": ["iron-meteorite"], "description": "Nickel-iron crystal structure that takes millions of years to form. This rock is ancient.", "sideProduct": { "itemId": "meteoritic-alloy", "quantity": 5 } },
+    { "id": "R01", "name": "Thiophenic compounds", "rarity": "rare", "sp": 150, "mode": "pyrolysis", "rockTypes": ["mudstone"], "description": "Sulfur-bearing organics. Found by the real Curiosity at Gale Crater. Consistent with ancient biology.", "sideProducts": [{ "itemId": "organic-extract", "quantity": 5 }, { "itemId": "trace-S", "quantity": 5 }] },
+    { "id": "R02", "name": "Nickel anomaly", "rarity": "rare", "sp": 120, "mode": "wet-chemistry", "rockTypes": ["hematite"], "description": "Nickel concentration far above Martian background. Meteoritic input to the sediment?", "sideProducts": [{ "itemId": "meteoritic-alloy", "quantity": 3 }, { "itemId": "trace-Ni", "quantity": 5 }] },
+    { "id": "R03", "name": "Ancient brine chemistry", "rarity": "rare", "sp": 130, "mode": "wet-chemistry", "rockTypes": ["sulfate"], "description": "Halite and perchlorate ratios that reconstruct the salinity of a vanished Martian lake.", "sideProducts": [{ "itemId": "brine-concentrate", "quantity": 3 }] },
+    { "id": "R04", "name": "Presolar grains", "rarity": "rare", "sp": 180, "mode": "pyrolysis", "rockTypes": ["iron-meteorite"], "description": "Mineral grains older than the solar system. Formed in a dying star before our Sun existed.", "sideProducts": [{ "itemId": "noble-gas-vial", "quantity": 3 }] },
+    { "id": "R05", "name": "Biological sulfur ratio", "rarity": "rare", "sp": 140, "mode": "isotope-analysis", "rockTypes": ["sulfate"], "description": "S32/S34 ratio showing mass-independent fractionation — a potential biosignature.", "sideProducts": [{ "itemId": "sulfur-distillate", "quantity": 4 }, { "itemId": "trace-S", "quantity": 4 }] },
+    { "id": "R06", "name": "Biosignature candidate", "rarity": "rare", "sp": 200, "mode": "isotope-analysis", "rockTypes": ["mudstone"], "description": "C12-enriched carbon. Biology preferentially uses lighter isotopes. This is the signal.", "sideProducts": [{ "itemId": "organic-extract", "quantity": 3 }] },
+    { "id": "R07", "name": "Deep mantle signature", "rarity": "rare", "sp": 110, "mode": "isotope-analysis", "rockTypes": ["olivine"], "description": "Noble gas ratios from deep within Mars. A window into the planet's interior.", "sideProducts": [{ "itemId": "noble-gas-vial", "quantity": 4 }, { "itemId": "trace-Mg", "quantity": 5 }] },
+    { "id": "R08", "name": "Widmanstätten pattern", "rarity": "rare", "sp": 160, "mode": "wet-chemistry", "rockTypes": ["iron-meteorite"], "description": "Nickel-iron crystal structure that takes millions of years to form. This rock is ancient.", "sideProducts": [{ "itemId": "meteoritic-alloy", "quantity": 5 }, { "itemId": "trace-Fe", "quantity": 5 }] },
 
-    { "id": "L01", "name": "Aromatic organics", "rarity": "legendary", "sp": 400, "mode": "pyrolysis", "rockTypes": ["mudstone"], "description": "Benzene, toluene, and chlorobenzene. Complex carbon chemistry in ancient lakebed sediment. The headline discovery.", "sideProduct": { "itemId": "organic-extract", "quantity": 10 } },
-    { "id": "L02", "name": "Confirmed biosignature", "rarity": "legendary", "sp": 500, "mode": "isotope-analysis", "rockTypes": ["mudstone"], "description": "C12/C13 ratio combined with organic compounds produces a statistically significant biological signature. This is the one.", "sideProduct": { "itemId": "biosignature-sample", "quantity": 1 } },
-    { "id": "L03", "name": "Lipid biomarker", "rarity": "legendary", "sp": 350, "mode": "wet-chemistry", "rockTypes": ["mudstone"], "description": "Long-chain fatty acids preserved in clay matrix. On Earth, these are always biological in origin.", "sideProduct": { "itemId": "biosignature-sample", "quantity": 1 } },
-    { "id": "L04", "name": "Extraterrestrial organic", "rarity": "legendary", "sp": 300, "mode": "pyrolysis", "rockTypes": ["iron-meteorite"], "description": "Amino acids and nucleobases embedded in the meteorite matrix. Life's building blocks, delivered from space.", "sideProduct": { "itemId": "organic-extract", "quantity": 8 } },
-    { "id": "L05", "name": "Extrasolar isotope", "rarity": "legendary", "sp": 450, "mode": "isotope-analysis", "rockTypes": ["iron-meteorite"], "description": "Isotope ratios that don't match any known solar system source. This grain came from another star.", "sideProduct": { "itemId": "noble-gas-vial", "quantity": 8 } },
-    { "id": "L06", "name": "Chlorinated organic", "rarity": "legendary", "sp": 350, "mode": "pyrolysis", "rockTypes": ["sulfate"], "description": "Complex chlorinated hydrocarbon in evaporite deposit. Not contamination. Martian.", "sideProduct": { "itemId": "sulfur-distillate", "quantity": 8 } }
+    { "id": "L01", "name": "Aromatic organics", "rarity": "legendary", "sp": 400, "mode": "pyrolysis", "rockTypes": ["mudstone"], "description": "Benzene, toluene, and chlorobenzene. Complex carbon chemistry in ancient lakebed sediment. The headline discovery.", "sideProducts": [{ "itemId": "organic-extract", "quantity": 10 }] },
+    { "id": "L02", "name": "Confirmed biosignature", "rarity": "legendary", "sp": 500, "mode": "isotope-analysis", "rockTypes": ["mudstone"], "description": "C12/C13 ratio combined with organic compounds produces a statistically significant biological signature. This is the one.", "sideProducts": [{ "itemId": "biosignature-sample", "quantity": 1 }] },
+    { "id": "L03", "name": "Lipid biomarker", "rarity": "legendary", "sp": 350, "mode": "wet-chemistry", "rockTypes": ["mudstone"], "description": "Long-chain fatty acids preserved in clay matrix. On Earth, these are always biological in origin.", "sideProducts": [{ "itemId": "biosignature-sample", "quantity": 1 }] },
+    { "id": "L04", "name": "Extraterrestrial organic", "rarity": "legendary", "sp": 300, "mode": "pyrolysis", "rockTypes": ["iron-meteorite"], "description": "Amino acids and nucleobases embedded in the meteorite matrix. Life's building blocks, delivered from space.", "sideProducts": [{ "itemId": "organic-extract", "quantity": 8 }, { "itemId": "trace-Ni", "quantity": 8 }] },
+    { "id": "L05", "name": "Extrasolar isotope", "rarity": "legendary", "sp": 450, "mode": "isotope-analysis", "rockTypes": ["iron-meteorite"], "description": "Isotope ratios that don't match any known solar system source. This grain came from another star.", "sideProducts": [{ "itemId": "noble-gas-vial", "quantity": 8 }] },
+    { "id": "L06", "name": "Chlorinated organic", "rarity": "legendary", "sp": 350, "mode": "pyrolysis", "rockTypes": ["sulfate"], "description": "Complex chlorinated hydrocarbon in evaporite deposit. Not contamination. Martian.", "sideProducts": [{ "itemId": "sulfur-distillate", "quantity": 8 }, { "itemId": "trace-S", "quantity": 8 }] },
+
+    { "id": "T01", "name": "Iron isotope fractionation", "rarity": "uncommon", "sp": 55, "mode": "isotope-analysis", "rockTypes": ["trace-Fe"], "description": "Fe⁵⁶/Fe⁵⁴ ratio reveals whether this iron was processed by water or magma. Aqueous fractionation detected.", "sideProducts": [{ "itemId": "purified-iron-oxide", "quantity": 2 }] },
+    { "id": "T02", "name": "Sulfur volatilization profile", "rarity": "uncommon", "sp": 50, "mode": "pyrolysis", "rockTypes": ["trace-S"], "description": "Temperature-staged sulfur release. SO₂ at 400°C, then H₂S at 600°C — classic evaporite signature.", "sideProducts": [{ "itemId": "sulfur-distillate", "quantity": 3 }] },
+    { "id": "T03", "name": "Nickel provenance", "rarity": "rare", "sp": 130, "mode": "isotope-analysis", "rockTypes": ["trace-Ni"], "description": "Ni⁶⁰/Ni⁵⁸ ratio confirms meteoritic origin. This nickel came from the core of a differentiated asteroid.", "sideProducts": [{ "itemId": "meteoritic-alloy", "quantity": 3 }] },
+    { "id": "T04", "name": "Manganese redox state", "rarity": "uncommon", "sp": 60, "mode": "wet-chemistry", "rockTypes": ["trace-Mn"], "description": "Dissolved Mn shows +4 oxidation state. On Earth this requires either oxygen or microbial mediation.", "sideProducts": [{ "itemId": "purified-iron-oxide", "quantity": 1 }] },
+    { "id": "T05", "name": "Silicon polymorph ID", "rarity": "common", "sp": 20, "mode": "pyrolysis", "rockTypes": ["trace-Si"], "description": "Thermal expansion signature identifies cristobalite — a high-temperature SiO₂ polymorph from volcanic activity.", "sideProducts": [] },
+    { "id": "T06", "name": "Magnesium carbonate", "rarity": "uncommon", "sp": 65, "mode": "wet-chemistry", "rockTypes": ["trace-Mg"], "description": "MgCO₃ dissolved from the trace sample. Magnesite forms in the presence of CO₂-saturated water.", "sideProducts": [{ "itemId": "clay-mineral-sample", "quantity": 2 }] },
+    { "id": "T07", "name": "Calcium isotope anomaly", "rarity": "rare", "sp": 140, "mode": "isotope-analysis", "rockTypes": ["trace-Ca"], "description": "Ca⁴⁴/Ca⁴⁰ excess. This calcium was fractionated in an ancient hydrothermal system.", "sideProducts": [{ "itemId": "brine-concentrate", "quantity": 2 }] },
+    { "id": "T08", "name": "Sodium chloride crystal", "rarity": "common", "sp": 15, "mode": "wet-chemistry", "rockTypes": ["trace-Na"], "description": "NaCl precipitated from dissolution. Halite — the simplest evidence that briny water once existed here.", "sideProducts": [{ "itemId": "brine-concentrate", "quantity": 1 }] },
+    { "id": "T09", "name": "Titanium oxide phase", "rarity": "uncommon", "sp": 45, "mode": "pyrolysis", "rockTypes": ["trace-Ti"], "description": "Anatase-to-rutile transition at 600°C. The phase change fingerprints volcanic temperature history.", "sideProducts": [] },
+    { "id": "T10", "name": "Aluminum phyllosilicate", "rarity": "uncommon", "sp": 50, "mode": "wet-chemistry", "rockTypes": ["trace-Al"], "description": "Kaolinite detected in dissolution — aluminum clay that forms only through prolonged water contact.", "sideProducts": [{ "itemId": "clay-mineral-sample", "quantity": 2 }] },
+    { "id": "T11", "name": "Biological iron reduction", "rarity": "legendary", "sp": 320, "mode": "isotope-analysis", "rockTypes": ["trace-Fe"], "description": "Fe⁵⁶ depletion pattern consistent with dissimilatory iron reduction — a metabolism used by anaerobic microbes on Earth.", "sideProducts": [{ "itemId": "biosignature-sample", "quantity": 1 }] },
+    { "id": "T12", "name": "Biogenic sulfur fractionation", "rarity": "legendary", "sp": 380, "mode": "isotope-analysis", "rockTypes": ["trace-S"], "description": "Mass-independent S³³ anomaly in trace sulfur. On Earth, this signature is exclusively biological.", "sideProducts": [{ "itemId": "biosignature-sample", "quantity": 1 }] }
   ],
   "yieldTable": {
     "basalt": {
-      "pyrolysis":         { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
-      "wet-chemistry":     { "common": 85, "uncommon": 12, "rare": 3, "legendary": 0 },
-      "isotope-analysis":  { "common": 90, "uncommon": 8,  "rare": 2, "legendary": 0 }
+      "pyrolysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
+      "wet-chemistry": {
+        "common": 85,
+        "uncommon": 12,
+        "rare": 3,
+        "legendary": 0
+      },
+      "isotope-analysis": {
+        "common": 90,
+        "uncommon": 8,
+        "rare": 2,
+        "legendary": 0
+      }
     },
     "hematite": {
-      "pyrolysis":         { "common": 75, "uncommon": 20, "rare": 5, "legendary": 0 },
-      "wet-chemistry":     { "common": 70, "uncommon": 20, "rare": 8, "legendary": 2 },
-      "isotope-analysis":  { "common": 85, "uncommon": 12, "rare": 3, "legendary": 0 }
+      "pyrolysis": { "common": 75, "uncommon": 20, "rare": 5, "legendary": 0 },
+      "wet-chemistry": {
+        "common": 70,
+        "uncommon": 20,
+        "rare": 8,
+        "legendary": 2
+      },
+      "isotope-analysis": {
+        "common": 85,
+        "uncommon": 12,
+        "rare": 3,
+        "legendary": 0
+      }
     },
     "olivine": {
-      "pyrolysis":         { "common": 85, "uncommon": 12, "rare": 3, "legendary": 0 },
-      "wet-chemistry":     { "common": 75, "uncommon": 18, "rare": 7, "legendary": 0 },
-      "isotope-analysis":  { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 }
+      "pyrolysis": { "common": 85, "uncommon": 12, "rare": 3, "legendary": 0 },
+      "wet-chemistry": {
+        "common": 75,
+        "uncommon": 18,
+        "rare": 7,
+        "legendary": 0
+      },
+      "isotope-analysis": {
+        "common": 80,
+        "uncommon": 15,
+        "rare": 5,
+        "legendary": 0
+      }
     },
     "sulfate": {
-      "pyrolysis":         { "common": 60, "uncommon": 25, "rare": 10, "legendary": 5 },
-      "wet-chemistry":     { "common": 70, "uncommon": 20, "rare": 10, "legendary": 0 },
-      "isotope-analysis":  { "common": 75, "uncommon": 18, "rare": 7, "legendary": 0 }
+      "pyrolysis": { "common": 60, "uncommon": 25, "rare": 10, "legendary": 5 },
+      "wet-chemistry": {
+        "common": 70,
+        "uncommon": 20,
+        "rare": 10,
+        "legendary": 0
+      },
+      "isotope-analysis": {
+        "common": 75,
+        "uncommon": 18,
+        "rare": 7,
+        "legendary": 0
+      }
     },
     "mudstone": {
-      "pyrolysis":         { "common": 50, "uncommon": 25, "rare": 15, "legendary": 10 },
-      "wet-chemistry":     { "common": 65, "uncommon": 20, "rare": 12, "legendary": 3 },
-      "isotope-analysis":  { "common": 60, "uncommon": 20, "rare": 12, "legendary": 8 }
+      "pyrolysis": {
+        "common": 50,
+        "uncommon": 25,
+        "rare": 15,
+        "legendary": 10
+      },
+      "wet-chemistry": {
+        "common": 65,
+        "uncommon": 20,
+        "rare": 12,
+        "legendary": 3
+      },
+      "isotope-analysis": {
+        "common": 60,
+        "uncommon": 20,
+        "rare": 12,
+        "legendary": 8
+      }
     },
     "iron-meteorite": {
-      "pyrolysis":         { "common": 70, "uncommon": 20, "rare": 8,  "legendary": 2 },
-      "wet-chemistry":     { "common": 60, "uncommon": 25, "rare": 10, "legendary": 5 },
-      "isotope-analysis":  { "common": 70, "uncommon": 20, "rare": 8,  "legendary": 2 }
+      "pyrolysis": { "common": 70, "uncommon": 20, "rare": 8, "legendary": 2 },
+      "wet-chemistry": { "common": 60, "uncommon": 25, "rare": 10, "legendary": 5 },
+      "isotope-analysis": { "common": 70, "uncommon": 20, "rare": 8, "legendary": 2 }
+    },
+    "trace-Fe": {
+      "pyrolysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
+      "wet-chemistry": { "common": 75, "uncommon": 20, "rare": 5, "legendary": 0 },
+      "isotope-analysis": { "common": 60, "uncommon": 25, "rare": 12, "legendary": 3 }
+    },
+    "trace-Si": {
+      "pyrolysis": { "common": 70, "uncommon": 25, "rare": 5, "legendary": 0 },
+      "wet-chemistry": { "common": 85, "uncommon": 12, "rare": 3, "legendary": 0 },
+      "isotope-analysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 }
+    },
+    "trace-Mn": {
+      "pyrolysis": { "common": 75, "uncommon": 20, "rare": 5, "legendary": 0 },
+      "wet-chemistry": { "common": 60, "uncommon": 30, "rare": 10, "legendary": 0 },
+      "isotope-analysis": { "common": 70, "uncommon": 22, "rare": 8, "legendary": 0 }
+    },
+    "trace-Mg": {
+      "pyrolysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
+      "wet-chemistry": { "common": 65, "uncommon": 25, "rare": 10, "legendary": 0 },
+      "isotope-analysis": { "common": 75, "uncommon": 18, "rare": 7, "legendary": 0 }
+    },
+    "trace-Al": {
+      "pyrolysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
+      "wet-chemistry": { "common": 65, "uncommon": 28, "rare": 7, "legendary": 0 },
+      "isotope-analysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 }
+    },
+    "trace-Ca": {
+      "pyrolysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
+      "wet-chemistry": { "common": 70, "uncommon": 22, "rare": 8, "legendary": 0 },
+      "isotope-analysis": { "common": 60, "uncommon": 25, "rare": 12, "legendary": 3 }
+    },
+    "trace-Na": {
+      "pyrolysis": { "common": 85, "uncommon": 12, "rare": 3, "legendary": 0 },
+      "wet-chemistry": { "common": 65, "uncommon": 28, "rare": 7, "legendary": 0 },
+      "isotope-analysis": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 }
+    },
+    "trace-Ti": {
+      "pyrolysis": { "common": 65, "uncommon": 28, "rare": 7, "legendary": 0 },
+      "wet-chemistry": { "common": 80, "uncommon": 15, "rare": 5, "legendary": 0 },
+      "isotope-analysis": { "common": 75, "uncommon": 20, "rare": 5, "legendary": 0 }
+    },
+    "trace-S": {
+      "pyrolysis": { "common": 60, "uncommon": 28, "rare": 10, "legendary": 2 },
+      "wet-chemistry": { "common": 70, "uncommon": 22, "rare": 8, "legendary": 0 },
+      "isotope-analysis": { "common": 55, "uncommon": 28, "rare": 12, "legendary": 5 }
+    },
+    "trace-Ni": {
+      "pyrolysis": { "common": 75, "uncommon": 18, "rare": 7, "legendary": 0 },
+      "wet-chemistry": { "common": 65, "uncommon": 25, "rare": 10, "legendary": 0 },
+      "isotope-analysis": { "common": 55, "uncommon": 28, "rare": 14, "legendary": 3 }
     }
   }
 }

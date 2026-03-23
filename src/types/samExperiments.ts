@@ -33,8 +33,8 @@ export interface SAMDiscovery {
   /** Which rock types can yield this discovery */
   rockTypes: string[]
   description: string
-  /** Byproduct dropped into inventory on discovery (null = knowledge only) */
-  sideProduct: { itemId: string; quantity: number } | null
+  /** Byproducts dropped into inventory on discovery (empty = knowledge only) */
+  sideProducts: { itemId: string; quantity: number }[]
 }
 
 /** Rarity probability distribution for a rock type × mode combo (percentages, should sum to ~100) */
