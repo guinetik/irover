@@ -40,5 +40,31 @@
       "description": "Spectrometer fully calibrated. All emission lines resolved — maximum scientific yield.",
       "type": "LIBS CALIBRATION"
     }
+  ],
+  "dan-prospecting": [
+    {
+      "id": "dan-first-signal",
+      "event": "first-hit",
+      "icon": "📡",
+      "title": "HYDROGEN TRACE",
+      "description": "DAN detected a subsurface hydrogen anomaly. Neutron albedo shift confirmed — something is down there.",
+      "type": "DAN PROSPECTING"
+    },
+    {
+      "id": "dan-first-prospect",
+      "event": "first-prospect",
+      "icon": "⛏",
+      "title": "FIRST PROSPECT",
+      "description": "Neutron survey complete. Subsurface composition analyzed — drill site assessment pending.",
+      "type": "DAN PROSPECTING"
+    },
+    {
+      "id": "dan-water-confirmed",
+      "event": "water-confirmed",
+      "icon": "💧",
+      "title": "WATER ON MARS",
+      "description": "Subsurface ice deposit confirmed. Drill marker placed — extraction hardware will follow.",
+      "type": "DAN PROSPECTING"
+    }
   ]
 }

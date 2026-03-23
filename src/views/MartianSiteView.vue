@@ -716,17 +716,30 @@ function buildInstrumentPowerLines(
   return lines
 }
 
-// --- LIBS calibration achievements ---
-interface LibsAchievement { id: string; sp: number; icon: string; title: string; description: string; type: string }
+// --- Achievements ---
+interface Achievement { id: string; icon: string; title: string; description: string; type: string }
+interface LibsAchievement extends Achievement { sp: number }
+interface DanAchievement extends Achievement { event: string }
 const libsAchievements = ref<LibsAchievement[]>([])
+const danAchievements = ref<DanAchievement[]>([])
 const triggeredAchievements = new Set<string>()
 
 fetch('/data/achievements.json')
   .then(r => r.json())
-  .then((data: { 'libs-calibration': LibsAchievement[] }) => {
+  .then((data: { 'libs-calibration'?: LibsAchievement[]; 'dan-prospecting'?: DanAchievement[] }) => {
     libsAchievements.value = data['libs-calibration'] ?? []
+    danAchievements.value = data['dan-prospecting'] ?? []
   })
   .catch(() => {})
+
+function triggerDanAchievement(event: string): void {
+  for (const ach of danAchievements.value) {
+    if (ach.event === event && !triggeredAchievements.has(ach.id)) {
+      triggeredAchievements.add(ach.id)
+      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+    }
+  }
+}
 
 watch(totalSP, (sp) => {
   for (const ach of libsAchievements.value) {
@@ -1217,6 +1230,7 @@ onMounted(async () => {
         danSignalStrength.value = hit.signalStrength
         danInst.hitConsumed = true
         danHitAvailable.value = true
+        triggerDanAchievement('first-hit')
       }
 
       // Sleep mode safety
@@ -1267,6 +1281,7 @@ onMounted(async () => {
             danInst.prospectPhase = 'complete'
             danProspectPhase.value = 'complete'
             danInst.prospectComplete = true
+            triggerDanAchievement('first-prospect')
 
             const gain = awardDAN('DAN prospect complete')
             if (gain) sampleToastRef.value?.showSP(gain.amount, 'DAN PROSPECT', gain.bonus)
@@ -1288,6 +1303,7 @@ onMounted(async () => {
 
             if (hasWater) {
               sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
+              triggerDanAchievement('water-confirmed')
               const bonusGain = awardDAN('DAN water confirmed')
               if (bonusGain) sampleToastRef.value?.showSP(bonusGain.amount, 'WATER CONFIRMED', bonusGain.bonus)
             } else {
