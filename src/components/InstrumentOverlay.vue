@@ -104,6 +104,11 @@
               :disabled="!canActivate || isActiveMode"
               @click="canActivate && !isActiveMode && $emit('activate')"
             >{{ passiveSubsystemEnabled ? 'STANDBY' : 'ACTIVATE' }}</button>
+            <button
+              v-if="activeSlot === 5 && danHitAvailable && danProspectPhase === 'idle'"
+              class="ov-btn-see-results ov-btn-dan-prospect"
+              @click="$emit('danProspect')"
+            >PROSPECT</button>
           </template>
           <template v-else>
             <button
@@ -274,6 +279,7 @@ defineEmits<{
   seeResults: []
   rtgOverdrive: []
   rtgConservation: []
+  danProspect: []
 }>()
 
 export interface ThermalDisplay {
@@ -315,6 +321,8 @@ const props = withDefaults(
     passiveSubsystemEnabled?: boolean
     /** Live POWER + STATUS when a passive-toggle instrument card is open */
     passiveInstrumentHud?: { power: string; powerColor: string; status: string; statusColor: string } | null
+    danHitAvailable?: boolean
+    danProspectPhase?: string
   }>(),
   {
     canActivate: true,
@@ -333,6 +341,8 @@ const props = withDefaults(
     passiveSubsystemOnly: false,
     passiveSubsystemEnabled: false,
     passiveInstrumentHud: null,
+    danHitAvailable: false,
+    danProspectPhase: 'idle',
   },
 )
 
@@ -753,5 +763,24 @@ const thermalZoneBg = computed(() =>
 
 .ov-stat-zone {
   grid-column: 1 / -1;
+}
+
+.ov-btn-dan-prospect {
+  background: rgba(68, 170, 255, 0.1);
+  border: 1px solid rgba(68, 170, 255, 0.4);
+  border-radius: 4px;
+  color: #44aaff;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  padding: 6px 14px;
+  animation: dan-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dan-pulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(68, 170, 255, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(68, 170, 255, 0.5); }
 }
 </style>
