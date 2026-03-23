@@ -296,14 +296,18 @@
         </button>
         <button
           type="button"
-          class="wheels-hud-btn"
-          :class="{ active: activeInstrumentSlot === HEATER_SLOT, disabled: wheelsHudBlocked }"
+          class="wheels-hud-btn wheels-hud-btn--heater"
+          :class="{
+            active: activeInstrumentSlot === HEATER_SLOT,
+            disabled: wheelsHudBlocked,
+            'wheels-hud-btn--heater-on': heaterThermostatOn,
+          }"
           :disabled="wheelsHudBlocked"
-          title="Thermal / heater [H]"
+          :title="heaterHudButtonTitle"
           @click="toggleHeaterPanel"
         >
           <span class="wheels-hud-key font-instrument">H</span>
-          <span class="wheels-hud-icon">&#x2668;</span>
+          <span class="wheels-hud-icon wheels-hud-heater-icon" aria-hidden="true">&#x2668;</span>
           <span class="wheels-hud-name">HTR</span>
         </button>
       </div>
@@ -616,6 +620,13 @@ const {
   fillBatteryFull,
 } = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
+/** True when automatic thermostat is drawing bus power (heaterW from thermal tick). */
+const heaterThermostatOn = computed(() => heaterW.value > 0.5)
+const heaterHudButtonTitle = computed(() =>
+  heaterThermostatOn.value
+    ? `Thermal / heater [H] — heating ~${Math.round(heaterW.value)} W`
+    : 'Thermal / heater [H]',
+)
 const { mod: playerMod } = usePlayerProfile()
 const { totalSP, award: awardSP, awardAck } = useSciencePoints()
 const { landmarks, loadLandmarks } = useMarsData()
@@ -1467,6 +1478,32 @@ onUnmounted(() => {
 
 .wheels-hud-btn.active .wheels-hud-icon {
   color: rgba(196, 117, 58, 0.95);
+}
+
+/* HTR: ♨ reads “heater”; warm pulse only while thermostat is on (specificity ≥ .active .wheels-hud-icon) */
+.wheels-hud-btn.wheels-hud-btn--heater-on .wheels-hud-heater-icon {
+  color: #ef9f27;
+  animation: wheels-hud-heater-glow 1.5s ease-in-out infinite;
+}
+
+.wheels-hud-btn.active.wheels-hud-btn--heater-on .wheels-hud-heater-icon {
+  color: #f5b04a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheels-hud-btn.wheels-hud-btn--heater-on .wheels-hud-heater-icon {
+    animation: none;
+  }
+}
+
+@keyframes wheels-hud-heater-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 1px rgba(239, 159, 39, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(239, 159, 39, 0.85));
+  }
 }
 
 .wheels-hud-name {
