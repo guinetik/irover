@@ -147,8 +147,8 @@ export class DANController extends InstrumentController {
   private readonly PULSE_COUNT = 6
   /** Seconds between sequential dot launches */
   private readonly PULSE_INTERVAL = 0.12
-  /** Fall speed (scene units / sec) */
-  private readonly FALL_SPEED = 4.0
+  /** Fall speed (scene units / sec) — tuned for ~0.5 unit source-to-ground gap */
+  private readonly FALL_SPEED = 0.5
   private pulseTimer = 0
   private nextPulseIdx = 0
   vfxVisible = false
@@ -171,13 +171,12 @@ export class DANController extends InstrumentController {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(this.particlePositions, 3))
 
     const mat = new THREE.PointsMaterial({
-      color: 0x44aaff,
-      size: 0.08,
+      color: 0x44ccff,
+      size: 8,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.9,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      sizeAttenuation: true,
+      sizeAttenuation: false,  // constant screen-space size so always visible
     })
 
     this.particles = new THREE.Points(geo, mat)
@@ -190,7 +189,7 @@ export class DANController extends InstrumentController {
     this.particles.visible = this.vfxVisible && this.passiveSubsystemEnabled
     if (!this.particles.visible) return
 
-    // Position the Points mesh at the DAN emitter so dots are in local space
+    // Position the Points mesh at the DAN emitter XZ; Y=0 so particle Y coords are world-space
     const wp = new THREE.Vector3()
     this.node.getWorldPosition(wp)
     this.particles.position.set(wp.x, 0, wp.z)
