@@ -192,6 +192,78 @@
       "image": "/ice.jpg",
       "weightPerUnit": 0.1,
       "maxStack": 100
+    },
+    {
+      "id": "purified-iron-oxide",
+      "category": "refined",
+      "label": "Purified Iron Oxide",
+      "description": "High-purity Fe₂O₃ separated via wet chemistry. Potential feedstock for in-situ metal production.",
+      "image": "/inventory/refined-iron-oxide.svg",
+      "weightPerUnit": 0.005,
+      "maxStack": 200
+    },
+    {
+      "id": "organic-extract",
+      "category": "refined",
+      "label": "Organic Extract",
+      "description": "Volatile organic compounds captured during pyrolysis. Handle with extreme care — possible biosignature material.",
+      "image": "/inventory/refined-organic.svg",
+      "weightPerUnit": 0.002,
+      "maxStack": 200
+    },
+    {
+      "id": "sulfur-distillate",
+      "category": "refined",
+      "label": "Sulfur Distillate",
+      "description": "Concentrated sulfur compounds from thermal decomposition. Pungent. Useful in chemical synthesis.",
+      "image": "/inventory/refined-sulfur.svg",
+      "weightPerUnit": 0.003,
+      "maxStack": 200
+    },
+    {
+      "id": "brine-concentrate",
+      "category": "refined",
+      "label": "Brine Concentrate",
+      "description": "Ancient Martian salt solution reconstituted during wet chemistry. Contains perchlorate traces.",
+      "image": "/inventory/refined-brine.svg",
+      "weightPerUnit": 0.008,
+      "maxStack": 100
+    },
+    {
+      "id": "noble-gas-vial",
+      "category": "refined",
+      "label": "Noble Gas Vial",
+      "description": "Sealed micro-vial of trapped noble gases released during isotope analysis. Argon, xenon, krypton.",
+      "image": "/inventory/refined-noble-gas.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 200
+    },
+    {
+      "id": "clay-mineral-sample",
+      "category": "refined",
+      "label": "Clay Mineral Sample",
+      "description": "Purified phyllosilicate fraction from mudstone dissolution. Layered structure preserved.",
+      "image": "/inventory/refined-clay.svg",
+      "weightPerUnit": 0.004,
+      "maxStack": 200
+    },
+    {
+      "id": "meteoritic-alloy",
+      "category": "refined",
+      "label": "Meteoritic Alloy",
+      "description": "Refined kamacite-taenite nickel-iron from meteorite wet chemistry. Extremely hard.",
+      "image": "/inventory/refined-meteoritic.svg",
+      "weightPerUnit": 0.01,
+      "maxStack": 100
+    },
+    {
+      "id": "biosignature-sample",
+      "category": "refined",
+      "label": "Biosignature Sample",
+      "description": "Sealed container of isotopically anomalous organic material. The most valuable substance on Mars.",
+      "image": "/inventory/refined-biosignature.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 50
     }
   ]
 }
