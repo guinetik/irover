@@ -80,6 +80,21 @@
           </div>
         </div>
 
+        <!-- SAM: experiment progress + See Results -->
+        <div v-if="activeSlot === 6" class="ov-sam-block">
+          <div v-if="samProcessing" class="ov-cc-sequence">
+            <div class="ov-cc-seq-label">{{ samProgressLabel }}</div>
+            <div class="ov-cc-seq-track">
+              <div class="ov-cc-seq-fill integrate" :style="{ width: samProgressPct + '%' }" />
+            </div>
+          </div>
+          <div v-if="(samUnread ?? 0) > 0" class="ov-chemcam-status">
+            <button class="ov-btn-see-results" @click="$emit('samSeeResults')">
+              SEE RESULTS <span class="ov-results-badge font-instrument">{{ samUnread }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Buttons -->
         <div class="ov-buttons">
           <template v-if="activeSlot === 7">
@@ -280,6 +295,7 @@ defineEmits<{
   rtgOverdrive: []
   rtgConservation: []
   danProspect: []
+  samSeeResults: []
 }>()
 
 export interface ThermalDisplay {
@@ -323,6 +339,10 @@ const props = withDefaults(
     passiveInstrumentHud?: { power: string; powerColor: string; status: string; statusColor: string } | null
     danHitAvailable?: boolean
     danProspectPhase?: string
+    samProcessing?: boolean
+    samProgressPct?: number
+    samProgressLabel?: string
+    samUnread?: number
   }>(),
   {
     canActivate: true,
@@ -343,6 +363,10 @@ const props = withDefaults(
     passiveInstrumentHud: null,
     danHitAvailable: false,
     danProspectPhase: 'idle',
+    samProcessing: false,
+    samProgressPct: 0,
+    samProgressLabel: '',
+    samUnread: 0,
   },
 )
 
@@ -782,5 +806,9 @@ const thermalZoneBg = computed(() =>
 @keyframes dan-pulse {
   0%, 100% { box-shadow: 0 0 4px rgba(68, 170, 255, 0.2); }
   50% { box-shadow: 0 0 12px rgba(68, 170, 255, 0.5); }
+}
+
+.ov-sam-block {
+  padding: 0 16px 8px;
 }
 </style>
