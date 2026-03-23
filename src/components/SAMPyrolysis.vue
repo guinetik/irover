@@ -90,12 +90,12 @@ function resize() {
 }
 
 function update(dt: number) {
-  // Heating: mouse Y controls heater power (0 at bottom, 850W at top)
+  // Heating: mouse Y controls heater power (0 at bottom, 850 at top)
   const heaterPower = mouseY * 850
-  // Heat gain from heater (stronger when far from target)
-  temperature.value += (heaterPower - temperature.value) * 0.025
-  // Passive heat loss — always cools toward ambient (20°C)
-  const heatLoss = (temperature.value - 20) * 0.008
+  // Heat gain — lerp toward heater target
+  temperature.value += (heaterPower - temperature.value) * 0.035
+  // Mild passive heat loss toward ambient
+  const heatLoss = (temperature.value - 20) * 0.003
   temperature.value -= heatLoss
   temperature.value = Math.max(20, Math.min(830, temperature.value))
 
