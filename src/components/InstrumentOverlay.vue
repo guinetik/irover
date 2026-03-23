@@ -241,6 +241,14 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     temp: '',
     upgName: 'DUAL-BAND MODULE', upgDesc: 'Enables simultaneous uplink/downlink during passes. Halves transfer time.', upgReq: 'Requires: Comms Package drop',
   },
+  12: {
+    slot: 12, icon: '\u25CB', name: 'WHLS', type: 'MOBILITY / DRIVE',
+    desc: 'Rocker-bogie wheel motors and steering actuators. Load appears on the main bus only while the chassis translates (same line as power HUD "Rover wheels"). Future wear can reduce efficiency or strand the rover until repaired.',
+    power: '0\u20135W', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '100%',
+    hint: 'Select with [B]. WASD to drive. REPAIR restores traction hardware. UPGRADE track reserved for drive efficiency / tread packages.',
+    temp: '',
+    upgName: 'EFFICIENCY MOTORS', upgDesc: 'Lower draw per meter; same top speed.', upgReq: 'Requires: Engineering Package drop',
+  },
 }
 
 defineEmits<{
@@ -258,11 +266,19 @@ export interface ThermalDisplay {
   zone: string
 }
 
+/** Live fields merged onto the static wheels card (slot 12). */
+export interface WheelsHudDisplay {
+  powerStr: string
+  statusStr: string
+  healthPct: number
+}
+
 const props = withDefaults(
   defineProps<{
     activeSlot: number | null
     canActivate?: boolean
     isActiveMode?: boolean
+    wheelsHud?: WheelsHudDisplay | null
     thermal?: ThermalDisplay | null
     chemCamShots?: string
     chemCamUnread?: number
@@ -281,6 +297,7 @@ const props = withDefaults(
   {
     canActivate: true,
     isActiveMode: false,
+    wheelsHud: null,
     thermal: null,
     chemCamShots: '10/10',
     chemCamUnread: 0,
@@ -303,7 +320,21 @@ watch(() => props.activeSlot, () => {
 
 const instrument = computed(() => {
   if (props.activeSlot === null) return null
-  return INSTRUMENTS[props.activeSlot] ?? null
+  const base = INSTRUMENTS[props.activeSlot]
+  if (!base) return null
+  const wh = props.wheelsHud
+  if (props.activeSlot === 12 && wh) {
+    const offline = wh.statusStr === 'OFFLINE'
+    return {
+      ...base,
+      power: wh.powerStr,
+      status: wh.statusStr,
+      health: `${Math.round(wh.healthPct)}%`,
+      statusColor: offline ? '#e05030' : wh.statusStr === 'DRIVING' ? '#ef9f27' : '#5dc9a5',
+      powerColor: wh.powerStr.startsWith('0 W') ? '#6b4a30' : '#ef9f27',
+    }
+  }
+  return base
 })
 
 const healthColor = computed(() => {

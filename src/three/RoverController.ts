@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController, MastCamController, ChemCamController, SAMController } from './instruments'
+import { RTGController, MastCamController, ChemCamController, SAMController, RoverWheelsController } from './instruments'
 import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
@@ -255,7 +255,7 @@ export class RoverController {
     }
 
     // Map keys to instrument slots: Digit1-9, R=10, T=11
-    const LETTER_SLOTS: Record<string, number> = { KeyR: 10, KeyT: 11 }
+    const LETTER_SLOTS: Record<string, number> = { KeyR: 10, KeyT: 11, KeyB: 12 }
     const slotMatch = e.code.match(/^Digit([1-9])$/)
     const slot = slotMatch ? parseInt(slotMatch[1]) : LETTER_SLOTS[e.code]
     if (slot !== undefined) {
@@ -402,13 +402,15 @@ export class RoverController {
 
     const rtgCtrl = rtgInst instanceof RTGController ? rtgInst : null
     const drivingDisengaged = rtgCtrl?.isDrivingDisengaged ?? false
+    const wheelsCtrl = this.instruments.find((i): i is RoverWheelsController => i instanceof RoverWheelsController)
+    const wheelsMobilityDead = wheelsCtrl != null && !wheelsCtrl.operational
 
-    // Keyboard turn + translation (WASD) — disabled during RTG power shunt
+    // Keyboard turn + translation (WASD) — disabled during RTG power shunt or broken wheels
     let driveSign = 0
     let steerSign = 0
     let moveDir = new THREE.Vector3()
 
-    if (!drivingDisengaged) {
+    if (!drivingDisengaged && !wheelsMobilityDead) {
       if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
         this.heading += this.config.turnSpeed * delta
       }

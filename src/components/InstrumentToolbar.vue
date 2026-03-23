@@ -40,7 +40,14 @@ const emit = defineEmits<{
   toggleInventory: []
 }>()
 
-const instruments = [
+interface ToolbarInstrument {
+  slot: number
+  id: string
+  name: string
+  icon: string
+}
+
+const instruments: ToolbarInstrument[] = [
   { slot: 1, id: 'mastcam', name: 'MCAM', icon: '\u25A3' },
   { slot: 2, id: 'chemcam', name: 'CHEM', icon: '\u2316' },
   { slot: 3, id: 'apxs',    name: 'APXS', icon: '\u25CE' },

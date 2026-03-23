@@ -141,6 +141,7 @@
       :active-slot="activeInstrumentSlot"
       :can-activate="controller?.activeInstrument?.canActivate ?? false"
       :is-active-mode="isInstrumentActive"
+      :wheels-hud="activeInstrumentSlot === 12 ? wheelsOverlayHud : null"
       :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
       :chem-cam-unread="chemCamUnreadCount"
@@ -155,6 +156,7 @@
       @see-results="showChemCamResults = true"
       @rtg-overdrive="showOverdriveConfirm = true"
       @rtg-conservation="openConservationConfirm()"
+      @repair="handleInstrumentRepair"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -267,15 +269,29 @@
       :heading="roverHeading"
       :target-range="mastTargetRange"
     />
-    <PowerHud
-      v-if="!deploying && !descending"
-      :battery-wh="batteryWh"
-      :capacity-wh="capacityWh"
-      :generation-w="generationW"
-      :consumption-w="consumptionW"
-      :net-w="netW"
-      :soc-pct="socPct"
-    />
+    <div v-if="!deploying && !descending" class="power-hud-stack">
+      <PowerHud
+        :battery-wh="batteryWh"
+        :capacity-wh="capacityWh"
+        :generation-w="generationW"
+        :consumption-w="consumptionW"
+        :net-w="netW"
+        :soc-pct="socPct"
+      />
+      <button
+        v-if="!isSleeping"
+        type="button"
+        class="wheels-hud-btn"
+        :class="{ active: activeInstrumentSlot === 12, disabled: wheelsHudBlocked }"
+        :disabled="wheelsHudBlocked"
+        title="Mobility / drive [B]"
+        @click="toggleWheelsPanel"
+      >
+        <span class="wheels-hud-key font-instrument">B</span>
+        <span class="wheels-hud-icon">&#x25EF;</span>
+        <span class="wheels-hud-name">WHLS</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -317,7 +333,7 @@ import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, type InstrumentController, type RTGConservationState } from '@/three/instruments'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, RoverWheelsController, type InstrumentController, type RTGConservationState } from '@/three/instruments'
 import CommToolbar from '@/components/CommToolbar.vue'
 
 const route = useRoute()
@@ -342,6 +358,11 @@ const rtgConservationCooldownTitle = ref('')
 /** 0–1 elapsed for active shunt or shunt cooldown (for banner bars). */
 const rtgConservationProgress01 = ref(0)
 const rtgConservationCdLabel = ref('')
+
+/** WHLS control under power HUD — disabled while RTG locks other instruments (same as [B]). */
+const wheelsHudBlocked = computed(
+  () => rtgPhase.value === 'overdrive' || rtgPhase.value === 'cooldown',
+)
 
 function formatRtgShuntCooldownLabel(seconds: number): string {
   if (seconds <= 0) return ''
@@ -378,6 +399,32 @@ const activeChemCamReadout = computed(() => {
   }
   return null
 })
+
+/**
+ * Live mobility stats for the wheels instrument card (slot 12).
+ * Depends on `roverHeading` so values refresh while the chassis moves.
+ */
+const wheelsOverlayHud = computed(() => {
+  roverHeading.value
+  const w = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+  if (!w) return { powerStr: '—', statusStr: '—', healthPct: 100 }
+  const moving = controller?.isMoving ?? false
+  const draw = w.getDrivePowerW()
+  const powerStr = moving ? `${draw.toFixed(0)} W` : `0 W (nom. ${w.baseDriveW.toFixed(0)} W)`
+  const statusStr = !w.operational ? 'OFFLINE' : moving ? 'DRIVING' : 'READY'
+  return { powerStr, statusStr, healthPct: w.durabilityPct }
+})
+
+function handleInstrumentRepair() {
+  const w = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+  if (activeInstrumentSlot.value === 12 && w) w.repair()
+}
+
+function toggleWheelsPanel() {
+  if (!controller || isSleeping.value || wheelsHudBlocked.value) return
+  if (activeInstrumentSlot.value === 12) controller.activateInstrument(null)
+  else controller.activateInstrument(12)
+}
 
 function handleChemCamAck(readoutId: string) {
   const cc = controller?.instruments.find(i => i.id === 'chemcam')
@@ -440,7 +487,18 @@ const {
   removeStack: removeInventoryStack,
 } = useInventory()
 const gameClock = useMarsGameClock()
-const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower, fillBatteryFull } = useMarsPower()
+const {
+  profile,
+  batteryWh,
+  capacityWh,
+  generationW,
+  consumptionW,
+  netW,
+  socPct,
+  isSleeping,
+  tickPower,
+  fillBatteryFull,
+} = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
 const { mod: playerMod } = usePlayerProfile()
 const { totalSP, award: awardSP, awardAck } = useSciencePoints()
@@ -639,6 +697,7 @@ onMounted(async () => {
     new HeaterController(),
     new REMSController(),
     new RADController(),
+    new RoverWheelsController(),
     new AntennaLGController(),
     new AntennaUHFController(),
   ]
@@ -688,6 +747,8 @@ onMounted(async () => {
 
     controller?.update(sceneDelta)
     roverHeading.value = controller?.heading ?? 0
+    const wheelsInst = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+    if (wheelsInst) wheelsInst.baseDriveW = profile.baseDriveW
     if (siteScene?.rover) {
       roverWorldX.value = siteScene.rover.position.x
       roverWorldZ.value = siteScene.rover.position.z
@@ -869,11 +930,17 @@ onMounted(async () => {
     const rtgForPower = controller?.instruments.find(i => i.id === 'rtg')
     const powerLoadFactor = rtgForPower instanceof RTGController ? rtgForPower.powerLoadFactor : 1
 
+    const wheelsForPower = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+    const driveMotorW =
+      wheelsForPower && (controller?.isMoving ?? false) ? wheelsForPower.getDrivePowerW() : 0
+
     tickPower(sceneDelta, {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       roverInSunlight: siteScene.roverInSunlight,
       moving: controller?.isMoving ?? false,
       apxsDrilling,
+      driveMotorW,
+      driveMotorHudLabel: 'Rover wheels',
       instrumentW,
       instrumentHudLabel,
       heaterW: heaterW.value,
@@ -1131,6 +1198,97 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Power HUD + mobility strip — left column, vertically centered */
+.power-hud-stack {
+  position: fixed;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 42;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: max-content;
+  max-width: 120px;
+  pointer-events: none;
+}
+
+.wheels-hud-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: rgba(10, 5, 2, 0.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(196, 117, 58, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  font-family: var(--font-ui);
+}
+
+.wheels-hud-btn:hover:not(:disabled) {
+  background: rgba(196, 117, 58, 0.12);
+  border-color: rgba(196, 117, 58, 0.35);
+}
+
+.wheels-hud-btn.active {
+  background: rgba(196, 117, 58, 0.15);
+  border-color: rgba(196, 117, 58, 0.55);
+  box-shadow: 0 0 8px rgba(196, 117, 58, 0.2);
+}
+
+.wheels-hud-btn:disabled,
+.wheels-hud-btn.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wheels-hud-key {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(196, 149, 106, 0.45);
+  letter-spacing: 0;
+}
+
+.wheels-hud-btn.active .wheels-hud-key {
+  color: rgba(196, 117, 58, 0.85);
+}
+
+.wheels-hud-icon {
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.wheels-hud-btn.active .wheels-hud-icon {
+  color: rgba(196, 117, 58, 0.95);
+}
+
+.wheels-hud-name {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.28);
+  text-transform: uppercase;
+}
+
+.wheels-hud-btn.active .wheels-hud-name {
+  color: rgba(196, 149, 106, 0.75);
 }
 
 .sp-counter {

@@ -141,10 +141,7 @@ const tipRtg = computed(() => {
 
 <style scoped>
 .power-panel {
-  position: fixed;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  position: relative;
   z-index: 42;
   display: flex;
   flex-direction: column;

@@ -140,6 +140,13 @@ export interface PowerTickInput {
   moving: boolean
   /** True while APXS drill is firing. */
   apxsDrilling: boolean
+  /**
+   * Wheel motor draw (W) while translating — from {@link RoverWheelsController};
+   * replaces adding `baseDriveW` inside the composable when non-zero.
+   */
+  driveMotorW?: number
+  /** HUD label for the drive consumption line. */
+  driveMotorHudLabel?: string
   /** Extra instrument draw (W) — MastCam, ChemCam, etc. */
   instrumentW?: number
   /** HUD label for `instrumentW` when non-zero (e.g. "MastCam", "ChemCam"). */
@@ -198,7 +205,7 @@ export function useMarsPower() {
       heaterBusW = heaterRaw * SLEEP_HEATER_BUS_FRACTION
     } else {
       baseUse = profile.baseCoreW
-      if (input.moving) baseUse += profile.baseDriveW
+      baseUse += input.driveMotorW ?? 0
       if (input.apxsDrilling) baseUse += APXS_DRILL_BASE_W
       baseUse += (input.instrumentW ?? 0)
       heaterBusW = heaterRaw
@@ -231,11 +238,12 @@ export function useMarsPower() {
         label: 'Core avionics',
         w: profile.baseCoreW * consMod * loadFactor,
       })
-      if (input.moving) {
+      const driveW = input.driveMotorW ?? 0
+      if (driveW > 1e-6) {
         lines.push({
           id: 'drive',
-          label: 'Wheel drive',
-          w: profile.baseDriveW * consMod * loadFactor,
+          label: input.driveMotorHudLabel ?? 'Wheel drive',
+          w: driveW * consMod * loadFactor,
         })
       }
       if (input.apxsDrilling) {
