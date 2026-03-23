@@ -13,7 +13,7 @@ export class SAMController extends InstrumentController {
   readonly viewAngle = 0.1
   readonly viewPitch = 1.1
   override readonly canActivate = true
-  override readonly selectionIdlePowerW = 10
+  override readonly selectionIdlePowerW = 0  // no idle draw — power only when experiments run
 
   // Cover animation
   private covers: THREE.Object3D[] = []
@@ -87,7 +87,9 @@ export class SAMController extends InstrumentController {
     this.closeCovers()
   }
 
-  override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
-    return phase === 'active' ? 25 : this.selectionIdlePowerW
+  /** SAM draws power only during active experiments — not from card view or activate. */
+  experimentRunning = false
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return this.experimentRunning ? 25 : 0
   }
 }
