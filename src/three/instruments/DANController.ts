@@ -136,13 +136,15 @@ export class DANController extends InstrumentController {
     return Math.random() < chance
   }
 
-  // --- VFX: sequential pulse dots (Mesh-based, not Points) ---
+  // --- VFX: sequential pulse dots (Mesh-based) ---
+  // Dots fire from the DAN emitter along its aim direction toward the ground.
   private pulseDots: THREE.Mesh[] = []
   private pulseDotAlive: boolean[] = []
+  private pulseDotVelocities: THREE.Vector3[] = []
   private sceneRef: THREE.Scene | null = null
   private readonly PULSE_COUNT = 6
   private readonly PULSE_INTERVAL = 0.12
-  private readonly FALL_SPEED = 0.5
+  private readonly PULSE_SPEED = 0.8
   private pulseTimer = 0
   private nextPulseIdx = 0
   vfxVisible = false
@@ -162,6 +164,7 @@ export class DANController extends InstrumentController {
       scene.add(dot)
       this.pulseDots.push(dot)
       this.pulseDotAlive.push(false)
+      this.pulseDotVelocities.push(new THREE.Vector3())
     }
   }
 
@@ -173,8 +176,18 @@ export class DANController extends InstrumentController {
       return
     }
 
+    // Get emitter world position and aim direction
     const wp = new THREE.Vector3()
     this.node.getWorldPosition(wp)
+
+    // Get the node's local -Y in world space (the emitter shoots "down" in its local frame)
+    const aimDir = new THREE.Vector3(0, -1, 0)
+    const wq = new THREE.Quaternion()
+    this.node.getWorldQuaternion(wq)
+    aimDir.applyQuaternion(wq).normalize()
+
+    // If aim direction somehow points up, fall back to straight down
+    if (aimDir.y > -0.1) aimDir.set(0, -1, 0)
 
     // Fire next dot on interval
     this.pulseTimer += delta
@@ -182,17 +195,18 @@ export class DANController extends InstrumentController {
       this.pulseTimer = 0
       const idx = this.nextPulseIdx
       const dot = this.pulseDots[idx]
-      dot.position.set(wp.x, wp.y, wp.z)
+      dot.position.copy(wp)
       dot.visible = true
       this.pulseDotAlive[idx] = true
+      this.pulseDotVelocities[idx].copy(aimDir).multiplyScalar(this.PULSE_SPEED)
       this.nextPulseIdx = (this.nextPulseIdx + 1) % this.PULSE_COUNT
     }
 
-    // Advance all alive dots straight down
+    // Advance all alive dots along their velocity
     for (let i = 0; i < this.PULSE_COUNT; i++) {
       if (!this.pulseDotAlive[i]) continue
       const dot = this.pulseDots[i]
-      dot.position.y -= this.FALL_SPEED * delta
+      dot.position.addScaledVector(this.pulseDotVelocities[i], delta)
       // Despawn on ground hit
       if (dot.position.y <= groundY) {
         dot.visible = false
