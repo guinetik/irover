@@ -11,6 +11,7 @@
       <span class="slot-icon">{{ inst.icon }}</span>
       <span class="slot-name">{{ inst.name }}</span>
       <span v-if="inst.slot === 2 && (chemCamUnread ?? 0) > 0" class="badge-dot font-instrument">{{ chemCamUnread }}</span>
+      <span v-if="inst.slot === 5 && (danScanning ?? false)" class="badge-dan">&#x2022;</span>
     </button>
 
     <div class="toolbar-divider" />
@@ -32,6 +33,7 @@ const props = defineProps<{
   activeSlot: number | null
   inventoryOpen?: boolean
   chemCamUnread?: number
+  danScanning?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -172,5 +174,24 @@ function handleClick(slot: number) {
   align-self: stretch;
   margin: 4px 2px;
   background: rgba(196, 117, 58, 0.15);
+}
+
+.badge-dan {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: #44aaff;
+  font-size: 16px;
+  line-height: 10px;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(68, 170, 255, 0.8);
+  animation: dan-badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dan-badge-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1.0; }
 }
 </style>
