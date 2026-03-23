@@ -58,6 +58,16 @@
         <span class="rtg-banner-text">RTG COOLDOWN &mdash; INSTRUMENTS LOCKED</span>
         <div class="rtg-banner-bar"><div class="rtg-banner-fill cooldown" :style="{ width: (1 - rtgPhaseProgress) * 100 + '%' }" /></div>
       </div>
+      <div v-else-if="rtgConservationMode === 'active'" class="rtg-banner conservation" key="rtg-shunt">
+        <span class="rtg-banner-icon">&#x26AB;</span>
+        <span class="rtg-banner-text">POWER SHUNT &mdash; DRIVE OFFLINE &middot; &minus;50% LOAD</span>
+        <div class="rtg-banner-bar"><div class="rtg-banner-fill conservation" :style="{ width: (1 - rtgConservationProgress01) * 100 + '%' }" /></div>
+      </div>
+      <div v-else-if="rtgConservationMode === 'cooldown'" class="rtg-banner shunt-cooldown" key="rtg-shunt-cd">
+        <span class="rtg-banner-icon">&#x23F3;</span>
+        <span class="rtg-banner-text">SHUNT RECHARGE &mdash; {{ rtgConservationCdLabel }}</span>
+        <div class="rtg-banner-bar"><div class="rtg-banner-fill shunt-cd" :style="{ width: (1 - rtgConservationProgress01) * 100 + '%' }" /></div>
+      </div>
     </Transition>
     <Transition name="deploy-fade">
       <div v-if="isInstrumentActive && activeInstrumentSlot === 2" class="chemcam-hud">
@@ -68,7 +78,7 @@
           <span class="cc-divider">|</span>
           <span class="cc-phase" :class="chemcamPhase.toLowerCase()">{{ chemcamPhaseLabel }}</span>
           <span class="cc-divider">|</span>
-          <span class="cc-hint">A/D pan · W/S tilt · Scroll zoom · E fire</span>
+          <span class="cc-hint">A/D pan · W/S tilt · Scroll zoom · hold E fire</span>
         </div>
         <div v-if="chemcamPhase === 'PULSE_TRAIN' || chemcamPhase === 'INTEGRATING'" class="cc-progress-bar">
           <div class="cc-progress-fill" :class="chemcamPhase.toLowerCase().replace('_','-')" :style="{ width: chemcamProgressPct + '%' }" />
@@ -102,8 +112,17 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
-      <div v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle'" class="controls-hint">
+      <div
+        v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle' && rtgConservationMode !== 'active'"
+        class="controls-hint"
+      >
         WASD to drive &middot; Drag to orbit &middot; 1&ndash;9 instruments &middot; E quick-activates when selected
+      </div>
+      <div
+        v-else-if="!deploying && !descending && activeInstrumentSlot === null && rtgConservationMode === 'active'"
+        class="controls-hint controls-hint-shunt"
+      >
+        Power shunt: driving offline &middot; &minus;50% instrument load &middot; Drag to orbit
       </div>
     </Transition>
     <Transition name="deploy-fade">
@@ -129,8 +148,13 @@
       :chem-cam-sequence-progress="chemCamOverlaySequenceProgress"
       :chem-cam-sequence-label="chemCamOverlaySequenceLabel"
       :chem-cam-sequence-pulse="chemCamOverlaySequencePulse"
+      :rtg-overdrive-ready="rtgOverdriveReady"
+      :rtg-conservation-ready="rtgConservationReady"
+      :rtg-conservation-cooldown-title="rtgConservationCooldownTitle"
       @activate="handleActivate()"
       @see-results="showChemCamResults = true"
+      @rtg-overdrive="showOverdriveConfirm = true"
+      @rtg-conservation="openConservationConfirm()"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -164,7 +188,7 @@
     <AchievementBanner ref="achievementRef" />
     <Teleport to="body">
       <Transition name="deploy-fade">
-        <div v-if="showOverdriveConfirm" class="overdrive-confirm-overlay">
+        <div v-if="showOverdriveConfirm" key="overdrive-confirm" class="overdrive-confirm-overlay">
           <div class="overdrive-confirm">
             <div class="overdrive-icon">&#x26A1;</div>
             <div class="overdrive-title">EMERGENCY OVERDRIVE</div>
@@ -181,20 +205,41 @@
           </div>
         </div>
       </Transition>
+      <Transition name="deploy-fade">
+        <div v-if="showConservationConfirm" key="conservation-confirm" class="overdrive-confirm-overlay">
+          <div class="overdrive-confirm conservation-dialog">
+            <div class="overdrive-icon conservation-icon">&#x26AB;</div>
+            <div class="overdrive-title">POWER SHUNT</div>
+            <div class="overdrive-desc">
+              Stow drive motors and dump reserve thermal headroom into the main bus. Your battery fills immediately and all modeled loads run at half power for about three hours (mission time).
+            </div>
+            <div class="overdrive-warning">
+              You cannot drive or steer with WASD until the shunt ends. Science instruments stay available. Afterward, the shunt cannot be used again for about one sol.
+            </div>
+            <div class="overdrive-buttons">
+              <button class="overdrive-btn confirm conservation-confirm" @click="confirmConservation()">ENGAGE SHUNT</button>
+              <button class="overdrive-btn cancel" @click="cancelConservation()">CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
     <Transition name="deploy-fade">
       <div v-if="isSleeping && !deploying && !descending" class="sleep-overlay">
         <div class="sleep-content">
           <div class="sleep-icon">&#x26A0;</div>
           <div class="sleep-title">CRITICAL POWER</div>
-          <div class="sleep-desc">Battery below 15% &mdash; rover entering sleep mode.</div>
+          <div class="sleep-desc">Battery below {{ POWER_SLEEP_THRESHOLD_PCT }}% &mdash; rover entering sleep mode.</div>
           <div class="sleep-desc">Systems will resume at 50% charge.</div>
           <div class="sleep-bar-track">
             <div class="sleep-bar-fill" :style="{ width: socPct + '%' }" />
             <div class="sleep-bar-target" />
           </div>
           <div class="sleep-pct font-instrument">{{ socPct.toFixed(0) }}% / 50%</div>
-          <div class="sleep-hint">Recharging from {{ netW >= 0 ? 'RTG + solar' : 'RTG' }}&hellip;</div>
+          <div class="sleep-hint" :class="{ 'sleep-hint-warn': netW <= 0 }">
+            <template v-if="netW > 0">Recharging &mdash; net +{{ netW.toFixed(1) }} W</template>
+            <template v-else>No charge gain (net {{ netW.toFixed(1) }} W). Wait for more sun or lower thermal load.</template>
+          </div>
         </div>
       </div>
     </Transition>
@@ -266,13 +311,13 @@ import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory } from '@/composables/useInventory'
 import { useMarsGameClock } from '@/composables/useMarsGameClock'
-import { useMarsPower } from '@/composables/useMarsPower'
+import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, type InstrumentController } from '@/three/instruments'
+import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, type InstrumentController, type RTGConservationState } from '@/three/instruments'
 import CommToolbar from '@/components/CommToolbar.vue'
 
 const route = useRoute()
@@ -290,6 +335,19 @@ const isInstrumentActive = ref(false)
 const samDialogVisible = ref(false)
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
+const rtgConservationMode = ref<RTGConservationState>('off')
+const rtgOverdriveReady = ref(false)
+const rtgConservationReady = ref(false)
+const rtgConservationCooldownTitle = ref('')
+/** 0–1 elapsed for active shunt or shunt cooldown (for banner bars). */
+const rtgConservationProgress01 = ref(0)
+const rtgConservationCdLabel = ref('')
+
+function formatRtgShuntCooldownLabel(seconds: number): string {
+  if (seconds <= 0) return ''
+  const m = Math.ceil(seconds / 60)
+  return m >= 2 ? `~${m} min until shunt ready` : `${Math.max(1, Math.ceil(seconds))}s until shunt ready`
+}
 const inventoryOpen = ref(false)
 const profileOpen = ref(false)
 const crosshairVisible = ref(false)
@@ -382,7 +440,7 @@ const {
   removeStack: removeInventoryStack,
 } = useInventory()
 const gameClock = useMarsGameClock()
-const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower } = useMarsPower()
+const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower, fillBatteryFull } = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
 const { mod: playerMod } = usePlayerProfile()
 const { totalSP, award: awardSP, awardAck } = useSciencePoints()
@@ -412,6 +470,7 @@ watch(totalSP, (sp) => {
 })
 
 const showOverdriveConfirm = ref(false)
+const showConservationConfirm = ref(false)
 
 function handleActivate() {
   if (!controller || isSleeping.value) return
@@ -434,6 +493,25 @@ function confirmOverdrive() {
 
 function cancelOverdrive() {
   showOverdriveConfirm.value = false
+}
+
+function openConservationConfirm() {
+  if (!controller || isSleeping.value) return
+  showConservationConfirm.value = true
+}
+
+function confirmConservation() {
+  showConservationConfirm.value = false
+  if (!controller || isSleeping.value) return
+  const rtg = controller.instruments.find(i => i.id === 'rtg')
+  if (rtg instanceof RTGController && rtg.activateConservation()) {
+    fillBatteryFull()
+    controller.activateInstrument(null)
+  }
+}
+
+function cancelConservation() {
+  showConservationConfirm.value = false
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {
@@ -588,6 +666,7 @@ onMounted(async () => {
     const rawDelta = clock.getDelta()
     const sceneDelta = gameClock.getSceneDelta(rawDelta)
     const skyDelta = gameClock.getSkyDelta(rawDelta)
+    gameClock.missionCooldowns.tick(sceneDelta)
     simulationTime += sceneDelta
 
     // Sleep mode — kill movement + force-deactivate instruments
@@ -642,25 +721,27 @@ onMounted(async () => {
     if (rtg) {
       rtgPhase.value = rtg.phase
       rtgPhaseProgress.value = rtg.phaseProgress
+      rtgConservationMode.value = rtg.conservationMode
+      rtgConservationProgress01.value = rtg.conservationProgress01
+      rtgOverdriveReady.value = rtg.canActivateOverdrive
+      rtgConservationReady.value = rtg.canActivateConservation
+      rtgConservationCdLabel.value = formatRtgShuntCooldownLabel(rtg.conservationCooldownRemainingSec)
+      rtgConservationCooldownTitle.value = rtg.conservationMode === 'cooldown'
+        ? `Shunt recharging — ${formatRtgShuntCooldownLabel(rtg.conservationCooldownRemainingSec)}`
+        : ''
 
-      // Glow effect on RTG node
-      if (rtg.node && rtg.phase !== 'idle') {
+      // Glow on RTG mesh only while overdrive is active (materials cloned in RTGController.attach).
+      // Cooldown / recharge use UI banners — no chassis emissive so we do not tint the whole rover.
+      if (rtg.node && rtg.phase === 'overdrive') {
         rtg.node.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh
-            const mat = mesh.material as THREE.MeshStandardMaterial
-            if (rtg.phase === 'overdrive') {
-              mat.emissive = mat.emissive || new THREE.Color()
-              mat.emissive.setHex(0xff6600)
-              mat.emissiveIntensity = 0.3 + Math.sin(simulationTime * 4) * 0.15
-            } else {
-              mat.emissive = mat.emissive || new THREE.Color()
-              mat.emissive.setHex(0xff2200)
-              mat.emissiveIntensity = 0.1 + Math.sin(simulationTime * 2) * 0.05
-            }
+            const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+            mat.emissive = mat.emissive || new THREE.Color()
+            mat.emissive.setHex(0xff6600)
+            mat.emissiveIntensity = 0.3 + Math.sin(simulationTime * 4) * 0.15
           }
         })
-      } else if (rtg.node && rtg.phase === 'idle') {
+      } else if (rtg.node) {
         rtg.node.traverse((child) => {
           if ((child as THREE.Mesh).isMesh) {
             const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
@@ -768,11 +849,25 @@ onMounted(async () => {
 
     // Compute active instrument power draw (MastCam, ChemCam, etc.)
     let instrumentW = 0
+    let instrumentHudLabel: string | undefined
+    const chemCamIsDrivingView =
+      controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
       instrumentW = (controller.activeInstrument as MastCamController).powerDrawW
-    } else if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
+      instrumentHudLabel = 'MastCam'
+    } else if (chemCamIsDrivingView && controller) {
       instrumentW = (controller.activeInstrument as ChemCamController).powerDrawW
+      instrumentHudLabel = 'ChemCam'
     }
+    // ChemCam can finish pulse/integration while another instrument card is open — still bill power
+    const ccForPower = controller?.instruments.find(i => i.id === 'chemcam')
+    if (!chemCamIsDrivingView && ccForPower instanceof ChemCamController && ccForPower.isSequenceAdvancing) {
+      instrumentW += ccForPower.powerDrawW
+      instrumentHudLabel = instrumentHudLabel ? `${instrumentHudLabel} + ChemCam` : 'ChemCam'
+    }
+
+    const rtgForPower = controller?.instruments.find(i => i.id === 'rtg')
+    const powerLoadFactor = rtgForPower instanceof RTGController ? rtgForPower.powerLoadFactor : 1
 
     tickPower(sceneDelta, {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
@@ -780,7 +875,9 @@ onMounted(async () => {
       moving: controller?.isMoving ?? false,
       apxsDrilling,
       instrumentW,
+      instrumentHudLabel,
       heaterW: heaterW.value,
+      powerLoadFactor,
     })
 
     // Track descent → deployment → ready states
@@ -1288,6 +1385,48 @@ onUnmounted(() => {
   background: rgba(224, 80, 48, 0.7);
 }
 
+.rtg-banner.conservation {
+  border: 1px solid rgba(72, 188, 168, 0.5);
+}
+
+.rtg-banner.conservation .rtg-banner-text {
+  color: #6ed4c4;
+}
+
+.rtg-banner-fill.conservation {
+  background: rgba(72, 200, 175, 0.9);
+}
+
+.rtg-banner.shunt-cooldown {
+  border: 1px solid rgba(100, 140, 135, 0.4);
+}
+
+.rtg-banner.shunt-cooldown .rtg-banner-text {
+  color: rgba(160, 210, 200, 0.95);
+  font-size: 11px;
+}
+
+.rtg-banner-fill.shunt-cd {
+  background: rgba(100, 170, 160, 0.6);
+}
+
+.controls-hint-shunt {
+  color: rgba(110, 212, 196, 0.95);
+}
+
+.conservation-dialog {
+  border: 1px solid rgba(72, 188, 168, 0.25);
+}
+
+.conservation-icon {
+  color: #5dc9b8 !important;
+}
+
+.overdrive-btn.confirm.conservation-confirm {
+  background: linear-gradient(90deg, #1a5c52, #2a9a82);
+  color: #eafaf7;
+}
+
 /* Overdrive confirm dialog */
 .overdrive-confirm-overlay {
   position: fixed;
@@ -1691,6 +1830,10 @@ onUnmounted(() => {
   color: rgba(196, 117, 58, 0.4);
   letter-spacing: 0.1em;
   animation: sleep-pulse 2s ease-in-out infinite;
+}
+
+.sleep-hint-warn {
+  color: rgba(224, 100, 80, 0.85);
 }
 
 @keyframes sleep-pulse {

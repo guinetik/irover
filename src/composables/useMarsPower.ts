@@ -58,6 +58,7 @@ export const APXS_DRILL_BASE_W = 118
 /**
  * Scales Wh integration so battery changes are visible with an accelerated sol.
  * Linked to MarsSky.SOL_DURATION — if sol length changes, retune this.
+ * Mission-timed effects (RTG, etc.) should use `src/lib/missionTime.ts` + `missionCooldowns`, not parallel magic seconds.
  * See docs/superpowers/specs/gdd-power-simulation-mvp-design.md
  */
 const ECONOMY_WH_PER_W_SEC = 1 / 35
@@ -95,6 +96,41 @@ const socPct = computed(() =>
 /** Sleep mode: rover shuts down at SLEEP_THRESHOLD%, wakes at WAKE_THRESHOLD% */
 const isSleeping = ref(false)
 
+/** Last-tick generation split (for HUD tooltips). */
+const powerGenerationDetail = reactive<PowerGenerationDetail>({
+  rtgW: 0,
+  solarW: 0,
+  daylight01: 0,
+  arraysUnshadowed: true,
+  solarShadeMul: 1,
+})
+
+/** Last-tick consumption lines summing to billed load (for HUD tooltips). */
+const powerConsumptionLines = ref<PowerConsumptionLine[]>([])
+
+/** Last `powerLoadFactor` from tick (1 = normal; below 1 = RTG conservation, etc.). */
+const powerBusLoadFactor = ref(1)
+
+/** One line item on the power HUD (effective billed watts after multipliers). */
+export interface PowerConsumptionLine {
+  id: string
+  label: string
+  /** Watts after profile / player mods and bus load factor */
+  w: number
+}
+
+/** Generation split matching the last `tickPower` (display = model). */
+export interface PowerGenerationDetail {
+  rtgW: number
+  solarW: number
+  /** 1 − nightFactor from sky */
+  daylight01: number
+  /** `PowerTickInput.roverInSunlight` — false means arrays use shadow factor */
+  arraysUnshadowed: boolean
+  /** Effective multiplier on solar (1 or `profile.shadowFactor`) */
+  solarShadeMul: number
+}
+
 export interface PowerTickInput {
   /** MarsSky.nightFactor — 1 = full night. */
   nightFactor: number
@@ -106,6 +142,8 @@ export interface PowerTickInput {
   apxsDrilling: boolean
   /** Extra instrument draw (W) — MastCam, ChemCam, etc. */
   instrumentW?: number
+  /** HUD label for `instrumentW` when non-zero (e.g. "MastCam", "ChemCam"). */
+  instrumentHudLabel?: string
   /** Heater draw from thermal system (W, 0–12). Added to consumption. */
   heaterW?: number
   /**
@@ -142,6 +180,14 @@ export function useMarsPower() {
     const solarW = profile.baseSolarPeakW * daylight * shadow
     generationW.value = (profile.baseRtgW + solarW) * profile.generationMult
 
+    const rtgWFinal = profile.baseRtgW * profile.generationMult
+    const solarWFinal = solarW * profile.generationMult
+    powerGenerationDetail.rtgW = rtgWFinal
+    powerGenerationDetail.solarW = solarWFinal
+    powerGenerationDetail.daylight01 = daylight
+    powerGenerationDetail.arraysUnshadowed = input.roverInSunlight
+    powerGenerationDetail.solarShadeMul = shadow
+
     // --- Consumption (apply consumptionMult to every load) ---
     const heaterRaw = (input.heaterW ?? 0) * mod('heaterDraw')
     let baseUse: number
@@ -159,7 +205,63 @@ export function useMarsPower() {
     }
     // Stack rover class mult * player profile mult on non-heater bus loads
     const loadFactor = input.powerLoadFactor ?? 1
-    consumptionW.value = (baseUse * profile.consumptionMult * mod('powerConsumption') + heaterBusW) * loadFactor
+    const consMod = profile.consumptionMult * mod('powerConsumption')
+    consumptionW.value = (baseUse * consMod + heaterBusW) * loadFactor
+    powerBusLoadFactor.value = loadFactor
+
+    /** Build HUD lines (effective W after consMod and loadFactor). */
+    const lines: PowerConsumptionLine[] = []
+    if (isSleeping.value) {
+      lines.push({
+        id: 'hibernation',
+        label: 'Sleep / hibernation bus',
+        w: SLEEP_HIBERNATION_CORE_W * consMod * loadFactor,
+      })
+      const heatSleep = heaterBusW * loadFactor
+      if (heatSleep > 1e-6) {
+        lines.push({
+          id: 'heater',
+          label: 'Battery heater (reduced while asleep)',
+          w: heatSleep,
+        })
+      }
+    } else {
+      lines.push({
+        id: 'core',
+        label: 'Core avionics',
+        w: profile.baseCoreW * consMod * loadFactor,
+      })
+      if (input.moving) {
+        lines.push({
+          id: 'drive',
+          label: 'Wheel drive',
+          w: profile.baseDriveW * consMod * loadFactor,
+        })
+      }
+      if (input.apxsDrilling) {
+        lines.push({
+          id: 'apxs',
+          label: 'APXS drill',
+          w: APXS_DRILL_BASE_W * consMod * loadFactor,
+        })
+      }
+      const inst = input.instrumentW ?? 0
+      if (inst > 1e-6) {
+        lines.push({
+          id: 'instruments',
+          label: input.instrumentHudLabel?.trim() || 'Active instruments',
+          w: inst * consMod * loadFactor,
+        })
+      }
+      if (heaterBusW > 1e-6) {
+        lines.push({
+          id: 'heater',
+          label: 'Battery heater',
+          w: heaterBusW * loadFactor,
+        })
+      }
+    }
+    powerConsumptionLines.value = lines
 
     // --- Integrate battery ---
     const net = generationW.value - consumptionW.value
@@ -186,6 +288,9 @@ export function useMarsPower() {
     netW,
     socPct,
     isSleeping,
+    powerGenerationDetail,
+    powerConsumptionLines,
+    powerBusLoadFactor,
     tickPower,
     setProfile,
     fillBatteryFull,

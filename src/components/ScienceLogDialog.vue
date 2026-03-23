@@ -254,6 +254,11 @@ function formatLatLon(lat: number, lon: number): string {
   border-radius: 10px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
   overflow: hidden;
+  /* Teal-tinted scrollbars for accordion + detail (inherits to scrollable children; Firefox + WebKit) */
+  --scrollbar-track: rgba(4, 14, 12, 0.9);
+  --scrollbar-thumb: rgba(102, 255, 238, 0.22);
+  --scrollbar-thumb-hover: rgba(102, 255, 238, 0.42);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .science-head {

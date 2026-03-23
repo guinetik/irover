@@ -82,12 +82,29 @@
 
         <!-- Buttons -->
         <div class="ov-buttons">
-          <button
-            class="ov-btn-primary"
-            :class="{ disabled: !canActivate || isActiveMode }"
-            :disabled="!canActivate || isActiveMode"
-            @click="canActivate && !isActiveMode && $emit('activate')"
-          >ACTIVATE</button>
+          <template v-if="activeSlot === 6">
+            <button
+              class="ov-btn-primary ov-btn-rtg-overdrive"
+              :class="{ disabled: !rtgOverdriveReady || isActiveMode }"
+              :disabled="!rtgOverdriveReady || isActiveMode"
+              @click="rtgOverdriveReady && !isActiveMode && $emit('rtgOverdrive')"
+            >OVERDRIVE</button>
+            <button
+              class="ov-btn-primary ov-btn-rtg-shunt"
+              :class="{ disabled: !rtgConservationReady || isActiveMode }"
+              :disabled="!rtgConservationReady || isActiveMode"
+              :title="rtgConservationCooldownTitle"
+              @click="rtgConservationReady && !isActiveMode && $emit('rtgConservation')"
+            >POWER SHUNT</button>
+          </template>
+          <template v-else>
+            <button
+              class="ov-btn-primary"
+              :class="{ disabled: !canActivate || isActiveMode }"
+              :disabled="!canActivate || isActiveMode"
+              @click="canActivate && !isActiveMode && $emit('activate')"
+            >ACTIVATE</button>
+          </template>
           <div class="ov-btn-row">
             <button class="ov-btn-secondary" @click="$emit('repair')">REPAIR</button>
             <button
@@ -139,7 +156,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
   1: {
     slot: 1, icon: 'CAM', name: 'MASTCAM', type: 'SURVEY CAMERA',
     desc: 'Twin mast cameras for wide-area survey (visible + optional IR). Filter by rock type — matches show as wireframe-style highlights. Fix a target with a scan to tag it on the compass before you spend laser or drill time.',
-    power: '3W', powerColor: '#5dc9a5', status: 'READY', statusColor: '#5dc9a5', health: '92%',
+    power: '4–31W', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '92%',
     hint: 'Set survey filter, pan the mast. Hold [E] on a rock to scan and tag. Scroll to zoom.',
     temp: '',
     upgName: 'INFRARED / MULTISPECTRAL', upgDesc: 'Stronger mineral contrast in the passive survey view — still no laser.', upgReq: 'Requires: Science Pack Alpha drop',
@@ -147,15 +164,15 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
   2: {
     slot: 2, icon: 'LZR', name: 'CHEMCAM', type: 'LASER SPECTROGRAPH',
     desc: 'Standoff laser spectroscopy: vaporizes a pin spot and reads elemental composition. Use after MastCam to judge if a rock is worth SAM or contact science — get chemistry before you drill.',
-    power: '12W', powerColor: '#ef9f27', status: '8/10 SHOTS', statusColor: '#ef9f27', health: '87%',
-    hint: 'MastCam-tagged rock in range. [E] fires pulses; ~few s to ready — same toast as samples, CHEM badge, then SEE RESULTS for spectrum. Saved for SAM.',
+    power: '6–111W', powerColor: '#ef9f27', status: '8/10 SHOTS', statusColor: '#ef9f27', health: '87%',
+    hint: 'MastCam-tagged rock in range. Hold [E] to fire IR; release to stop. Full pulse then integration — CHEM badge, SEE RESULTS for spectrum. Saved for SAM.',
     temp: 'Cold penalty \u2014 range reduced 20%',
     upgName: 'MULTI-SHOT BURST', upgDesc: '3 shots on different spots for averaged reading. Better accuracy.', upgReq: 'Requires: Science Pack Alpha drop',
   },
   3: {
     slot: 3, icon: 'ARM', name: 'APXS', type: 'CONTACT SPECTROMETER',
     desc: 'Sensor on the robotic arm tip. Pressed against rock for high-precision elemental chemistry. Reveals water alteration and trace elements.',
-    power: '6W', powerColor: '#5dc9a5', status: 'READY', statusColor: '#5dc9a5', health: '95%',
+    power: '6W / 118W drill', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '95%',
     hint: 'Drive within 1.5m of target. Position the arm head with mouse. Hold [E] to analyze.',
     temp: '',
     upgName: 'PRECISION MODULE', upgDesc: 'Detects trace elements below 0.1% concentration.', upgReq: 'Requires: Deep Analysis Kit drop',
@@ -180,7 +197,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     slot: 6, icon: '\u26A1', name: 'RTG', type: 'POWER GENERATOR',
     desc: 'Radioisotope Thermoelectric Generator. Converts plutonium-238 decay heat into electrical power. The rover\u2019s only power source.',
     power: '110W', powerColor: '#5dc9a5', status: '87W', statusColor: '#5dc9a5', health: '94%',
-    hint: 'ACTIVATE to overdrive emergency power. 2x movement speed for 1 sol, but all instruments are locked during cooldown.',
+    hint: 'OVERDRIVE: 2× speed, then instrument lockout. POWER SHUNT: fills battery, −50% load ~3h, no driving — 24h cooldown.',
     temp: '',
     upgName: 'HEAT EXCHANGER', upgDesc: 'Improves thermal efficiency. Faster charge rate.', upgReq: 'Requires: Engineering Package drop',
   },
@@ -230,6 +247,8 @@ defineEmits<{
   activate: []
   repair: []
   seeResults: []
+  rtgOverdrive: []
+  rtgConservation: []
 }>()
 
 export interface ThermalDisplay {
@@ -252,6 +271,12 @@ const props = withDefaults(
     chemCamSequenceProgress?: number
     chemCamSequenceLabel?: string
     chemCamSequencePulse?: boolean
+    /** RTG card: overdrive (idle, not in shunt cooldown) */
+    rtgOverdriveReady?: boolean
+    /** RTG card: power shunt available */
+    rtgConservationReady?: boolean
+    /** Tooltip when shunt on cooldown */
+    rtgConservationCooldownTitle?: string
   }>(),
   {
     canActivate: true,
@@ -263,6 +288,9 @@ const props = withDefaults(
     chemCamSequenceProgress: 0,
     chemCamSequenceLabel: '',
     chemCamSequencePulse: false,
+    rtgOverdriveReady: false,
+    rtgConservationReady: false,
+    rtgConservationCooldownTitle: '',
   },
 )
 
@@ -459,6 +487,15 @@ const thermalZoneBg = computed(() =>
 
 .ov-btn-primary:hover {
   opacity: 0.85;
+}
+
+.ov-btn-rtg-shunt {
+  background: linear-gradient(90deg, #1e5c52 0%, #2f8f7a 100%);
+  color: #e8faf6;
+}
+
+.ov-btn-rtg-shunt:hover {
+  opacity: 0.92;
 }
 
 .ov-btn-row {

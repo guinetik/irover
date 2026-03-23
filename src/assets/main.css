@@ -5,6 +5,19 @@
   --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", "Consolas", monospace;
   /** Numeric / instrumentation readouts — [Datatype](https://fonts.google.com/specimen/Datatype) on Google Fonts */
   --font-instrument: "Datatype", ui-monospace, "Courier New", monospace;
+
+  /** Dark scrollbars — warm HUD default; override on a parent (e.g. `.science-dialog`) for teal science UI */
+  --scrollbar-size: 9px;
+  --scrollbar-track: rgba(12, 8, 5, 0.92);
+  --scrollbar-thumb: rgba(196, 117, 58, 0.4);
+  --scrollbar-thumb-hover: rgba(196, 145, 100, 0.65);
+  --scrollbar-corner: transparent;
+
+  /**
+   * Sol clock + comm antenna strip (fixed left stack) — same width so a third comm slot fits.
+   * 3 equal slots + gaps + padding ≈ 168px; change here only.
+   */
+  --site-left-stack-width: 168px;
 }
 
 /**
@@ -15,6 +28,39 @@
   font-family: var(--font-instrument);
   font-weight: var(--font-instrument-weight, 500);
   font-variant-numeric: tabular-nums;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/**
+ * Chromium / WebKit scrollbars. `var(--scrollbar-*)` inherits so panels can retheme (science log, etc.).
+ */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover);
 }
 
 html,

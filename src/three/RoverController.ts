@@ -357,6 +357,9 @@ export class RoverController {
       return
     }
 
+    // Mast power: one frame flag — MastCam/ChemCam set in handleInput when pan/tilt keys held
+    mastState.actuatorKeysHeld = false
+
     // Always tick RTG (overdrive/cooldown/recharge run regardless of mode)
     const rtgInst = this.instruments.find(i => i.id === 'rtg')
     if (rtgInst) rtgInst.update(delta)
@@ -397,41 +400,42 @@ export class RoverController {
       return
     }
 
-    // Keyboard turn (A/D or Arrow keys)
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
-      this.heading += this.config.turnSpeed * delta
-    }
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) {
-      this.heading -= this.config.turnSpeed * delta
-    }
+    const rtgCtrl = rtgInst instanceof RTGController ? rtgInst : null
+    const drivingDisengaged = rtgCtrl?.isDrivingDisengaged ?? false
 
-    // Movement direction based on heading
-    const forward = new THREE.Vector3(
-      -Math.sin(this.heading),
-      0,
-      -Math.cos(this.heading),
-    )
-
-    const moveDir = new THREE.Vector3()
-
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) {
-      moveDir.sub(forward)
-    }
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) {
-      moveDir.add(forward)
-    }
-
-    this.isMoving = moveDir.lengthSq() > 0
-
-    // Determine drive direction: +1 forward, -1 reverse, 0 stopped
+    // Keyboard turn + translation (WASD) — disabled during RTG power shunt
     let driveSign = 0
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) driveSign += 1
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) driveSign -= 1
-
-    // Determine steering direction: +1 left, -1 right, 0 straight
     let steerSign = 0
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) steerSign += 1
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) steerSign -= 1
+    let moveDir = new THREE.Vector3()
+
+    if (!drivingDisengaged) {
+      if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
+        this.heading += this.config.turnSpeed * delta
+      }
+      if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) {
+        this.heading -= this.config.turnSpeed * delta
+      }
+
+      const forward = new THREE.Vector3(
+        -Math.sin(this.heading),
+        0,
+        -Math.cos(this.heading),
+      )
+
+      if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) {
+        moveDir.sub(forward)
+      }
+      if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) {
+        moveDir.add(forward)
+      }
+
+      if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) driveSign += 1
+      if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) driveSign -= 1
+      if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) steerSign += 1
+      if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) steerSign -= 1
+    }
+
+    this.isMoving = !drivingDisengaged && moveDir.lengthSq() > 0
 
     if (this.isMoving) {
       moveDir.normalize()
