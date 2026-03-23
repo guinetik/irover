@@ -68,23 +68,22 @@ class MissionCooldownStore {
 
   /**
    * Advance all timers. Prefer **`sceneDelta` from `useMarsGameClock().getSceneDelta`**.
+   * Completed entries are removed before `onComplete` runs so callbacks can safely start new timers.
    */
   tick(deltaSeconds: number): void {
     if (deltaSeconds <= 0) return
-    const completed: string[] = []
+    const callbacks: Array<() => void> = []
     for (const [id, t] of this.timers) {
       t.remaining -= deltaSeconds
       if (t.remaining <= 0) {
         t.remaining = 0
-        try {
-          t.onComplete?.()
-        } finally {
-          completed.push(id)
-        }
+        const cb = t.onComplete
+        this.timers.delete(id)
+        if (cb) callbacks.push(cb)
       }
     }
-    for (const id of completed) {
-      this.timers.delete(id)
+    for (const cb of callbacks) {
+      cb()
     }
   }
 }

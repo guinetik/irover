@@ -33,12 +33,17 @@ export interface RoverPowerProfile {
   capacityMult: number
 }
 
-/** Default "Curiosity-class" damaged rover per GDD */
+/**
+ * Default "Curiosity-class" damaged rover — small pack + weak gen so mining/ChemCam
+ * hurt and the pack does not snap back to full (tick uses accelerated scene time).
+ */
 export const CURIOSITY_PROFILE: RoverPowerProfile = {
   name: 'Curiosity',
-  baseCapacityWh: 220,
-  baseRtgW: 15,
-  baseSolarPeakW: 30,
+  baseCapacityWh: 50,
+  /** Low baseline — feels starved vs loads; upgrade missions can raise via profile swap */
+  baseRtgW: 9,
+  /** Reduced peak — noon should not erase a heavy instrument spike in seconds */
+  baseSolarPeakW: 16,
   baseCoreW: 8,
   baseDriveW: 5,
   shadowFactor: 0.28,
@@ -47,8 +52,8 @@ export const CURIOSITY_PROFILE: RoverPowerProfile = {
   capacityMult: 1.0,
 }
 
-/** APXS laser drill sustained draw (W). Base value before profile mult. */
-export const APXS_DRILL_BASE_W = 22
+/** APXS laser drill sustained draw (W) while E held. Base value before profile mult. */
+export const APXS_DRILL_BASE_W = 118
 
 /**
  * Scales Wh integration so battery changes are visible with an accelerated sol.
@@ -58,8 +63,17 @@ export const APXS_DRILL_BASE_W = 22
 const ECONOMY_WH_PER_W_SEC = 1 / 35
 
 // --- sleep mode thresholds (SOC %) ---
-const SLEEP_THRESHOLD = 15
+/** SOC at or below which the rover enters sleep — exported for HUD copy */
+export const POWER_SLEEP_THRESHOLD_PCT = 5
+const SLEEP_THRESHOLD = POWER_SLEEP_THRESHOLD_PCT
 const WAKE_THRESHOLD = 50
+/**
+ * While sleeping, full `baseCoreW` + max heater can exceed RTG (+ night solar), so the pack
+ * stays clamped at 0% and never reaches `WAKE_THRESHOLD`. Hibernation uses a tiny bus draw
+ * and only part of the heater is billed — the rest is treated as RTG waste-heat budget.
+ */
+const SLEEP_HIBERNATION_CORE_W = 2
+const SLEEP_HEATER_BUS_FRACTION = 0.35
 
 // --- singleton state ---
 const profile = reactive<RoverPowerProfile>({ ...CURIOSITY_PROFILE })
@@ -68,7 +82,9 @@ const { mod } = usePlayerProfile()
 /** Effective capacity after rover class + player profile multiplier */
 const capacityWh = computed(() => profile.baseCapacityWh * profile.capacityMult * mod('batteryCapacity'))
 
-const batteryWh = ref(CURIOSITY_PROFILE.baseCapacityWh * 0.72) // start ~72%
+/** Initial fill — stressed landing; not a topped-up endgame pack */
+const START_SOC_FRACTION = 0.52
+const batteryWh = ref(CURIOSITY_PROFILE.baseCapacityWh * START_SOC_FRACTION)
 const generationW = ref(0)
 const consumptionW = ref(0)
 const netW = computed(() => generationW.value - consumptionW.value)
@@ -92,6 +108,11 @@ export interface PowerTickInput {
   instrumentW?: number
   /** Heater draw from thermal system (W, 0–12). Added to consumption. */
   heaterW?: number
+  /**
+   * Multiplier on modeled bus consumption after profile + modifiers (e.g. RTG power shunt = 0.5).
+   * Default 1 — does not affect generation.
+   */
+  powerLoadFactor?: number
 }
 
 /**
@@ -109,6 +130,11 @@ export function useMarsPower() {
     batteryWh.value = Math.min(batteryWh.value, capacityWh.value)
   }
 
+  /** Sets stored energy to current effective capacity (RTG emergency shunt, etc.). */
+  function fillBatteryFull(): void {
+    batteryWh.value = capacityWh.value
+  }
+
   function tickPower(deltaSeconds: number, input: PowerTickInput): void {
     // --- Generation (apply generationMult) ---
     const daylight = 1 - input.nightFactor
@@ -117,17 +143,23 @@ export function useMarsPower() {
     generationW.value = (profile.baseRtgW + solarW) * profile.generationMult
 
     // --- Consumption (apply consumptionMult to every load) ---
-    // In sleep mode: only core draw + heater (life support), no instruments or drive
-    let baseUse = profile.baseCoreW
-    if (!isSleeping.value) {
+    const heaterRaw = (input.heaterW ?? 0) * mod('heaterDraw')
+    let baseUse: number
+    let heaterBusW: number
+
+    if (isSleeping.value) {
+      baseUse = SLEEP_HIBERNATION_CORE_W
+      heaterBusW = heaterRaw * SLEEP_HEATER_BUS_FRACTION
+    } else {
+      baseUse = profile.baseCoreW
       if (input.moving) baseUse += profile.baseDriveW
       if (input.apxsDrilling) baseUse += APXS_DRILL_BASE_W
       baseUse += (input.instrumentW ?? 0)
+      heaterBusW = heaterRaw
     }
-    // Heater always runs (survival), affected by heaterDraw player modifier only
-    const heater = (input.heaterW ?? 0) * mod('heaterDraw')
-    // Stack rover class mult * player profile mult on non-heater loads
-    consumptionW.value = baseUse * profile.consumptionMult * mod('powerConsumption') + heater
+    // Stack rover class mult * player profile mult on non-heater bus loads
+    const loadFactor = input.powerLoadFactor ?? 1
+    consumptionW.value = (baseUse * profile.consumptionMult * mod('powerConsumption') + heaterBusW) * loadFactor
 
     // --- Integrate battery ---
     const net = generationW.value - consumptionW.value
@@ -156,6 +188,7 @@ export function useMarsPower() {
     isSleeping,
     tickPower,
     setProfile,
+    fillBatteryFull,
     APXS_DRILL_BASE_W,
   }
 }
