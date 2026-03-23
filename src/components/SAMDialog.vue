@@ -6,20 +6,47 @@
           <div class="sam-header">
             <span class="sam-icon">&#x2394;</span>
             <span class="sam-title">SAM — SAMPLE ANALYSIS AT MARS</span>
+            <div class="sam-steps">
+              <span
+                v-for="s in 3"
+                :key="s"
+                class="sam-step-dot"
+                :class="{ 'sam-step-dot--active': s === currentStep }"
+              >{{ s }}</span>
+            </div>
             <div class="sam-header-right">
-              <span class="sam-esc">[ESC] CLOSE</span>
+              <span class="sam-esc" @click="emit('close')">[ESC] CLOSE</span>
             </div>
           </div>
           <div class="sam-body">
-            <div class="sam-placeholder">
-              <div class="sam-placeholder-icon">&#x2699;</div>
-              <div class="sam-placeholder-text">ANALYSIS MODULE READY</div>
-              <div class="sam-placeholder-sub">Select a sample from inventory to begin</div>
-            </div>
+            <SAMStepInstrument
+              v-if="currentStep === 1"
+              :modes="samExp.unlockedModes(totalSP)"
+              :total-s-p="totalSP"
+              @select="onModeSelect"
+            />
+            <SAMStepReagents
+              v-if="currentStep === 2 && selectedMode"
+              :mode="selectedMode"
+              :stacks="stacks"
+              :sample-consumption-kg="sampleConsumptionKg"
+              :possible-discoveries="currentDiscoveries"
+              @confirm="onReagentConfirm"
+              @back="currentStep = 1"
+              @sample-selected="onSampleSelected"
+            />
+            <SAMMiniGameStub
+              v-if="currentStep === 3 && selectedModeId && selectedSampleId"
+              :mode-id="selectedModeId"
+              :sample-id="selectedSampleId"
+              @complete="onMiniGameComplete"
+            />
           </div>
           <div class="sam-footer">
             <span class="sam-footer-status">STANDBY</span>
-            <span class="sam-footer-power">0W</span>
+            <span class="sam-footer-power">
+              {{ selectedMode ? `${selectedMode.powerW}W` : '0W' }}
+            </span>
           </div>
         </div>
       </div>
@@ -28,9 +55,99 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { ref, computed, watch } from 'vue'
+import type { InventoryStack } from '@/types/inventory'
+import { INVENTORY_CATALOG } from '@/types/inventory'
+import { useSamExperiments } from '@/composables/useSamExperiments'
+import SAMStepInstrument from '@/components/SAMStepInstrument.vue'
+import SAMStepReagents from '@/components/SAMStepReagents.vue'
+import SAMMiniGameStub from '@/components/SAMMiniGameStub.vue'
+
+const props = defineProps<{
   visible: boolean
+  stacks: InventoryStack[]
+  totalSP: number
+  sampleConsumptionKg: number
 }>()
+
+const emit = defineEmits<{
+  close: []
+  enqueue: [entry: any]
+}>()
+
+const samExp = useSamExperiments()
+
+// Internal wizard state
+const currentStep = ref(1)
+const selectedModeId = ref<string | null>(null)
+const selectedSampleId = ref<string | null>(null)
+
+const selectedMode = computed(() =>
+  samExp.modes.value.find(m => m.id === selectedModeId.value) ?? null,
+)
+
+const currentDiscoveries = computed(() => {
+  if (!selectedModeId.value || !selectedSampleId.value) return []
+  return samExp.possibleDiscoveries(selectedModeId.value, selectedSampleId.value)
+})
+
+// Ensure data is loaded when dialog becomes visible
+watch(() => props.visible, (v) => {
+  if (v) samExp.ensureLoaded()
+})
+
+// Reset wizard when dialog closes
+watch(() => props.visible, (v) => {
+  if (!v) resetWizard()
+})
+
+function resetWizard() {
+  currentStep.value = 1
+  selectedModeId.value = null
+  selectedSampleId.value = null
+}
+
+function onModeSelect(modeId: string) {
+  selectedModeId.value = modeId
+  currentStep.value = 2
+}
+
+function onSampleSelected(sampleId: string) {
+  selectedSampleId.value = sampleId
+}
+
+function onReagentConfirm(sampleId: string) {
+  selectedSampleId.value = sampleId
+  currentStep.value = 3
+}
+
+function onMiniGameComplete(quality: number) {
+  const roll = samExp.rollDiscovery(selectedModeId.value!, selectedSampleId.value!, quality)
+  if (!roll) return
+
+  const mode = samExp.modes.value.find(m => m.id === selectedModeId.value)!
+  const sampleLabel = INVENTORY_CATALOG[selectedSampleId.value!]?.label ?? selectedSampleId.value!
+
+  emit('enqueue', {
+    modeId: selectedModeId.value!,
+    modeName: mode.name,
+    sampleId: selectedSampleId.value!,
+    sampleLabel,
+    quality,
+    discoveryId: roll.discovery.id,
+    discoveryName: roll.discovery.name,
+    discoveryRarity: roll.discovery.rarity,
+    discoveryDescription: roll.discovery.description,
+    spReward: roll.spReward,
+    sideProducts: roll.sideProducts,
+    remainingTimeSec: mode.baseDurationSec,
+    totalTimeSec: mode.baseDurationSec,
+    startedAtSol: 0,
+    powerW: mode.powerW,
+  })
+
+  resetWizard()
+}
 </script>
 
 <style scoped>
@@ -80,6 +197,26 @@ defineProps<{
   color: #e8a060;
 }
 
+.sam-steps {
+  display: flex;
+  gap: 8px;
+  margin-left: 24px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.sam-step-dot {
+  color: rgba(196, 117, 58, 0.25);
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.sam-step-dot--active {
+  color: #e8a060;
+  background: rgba(196, 117, 58, 0.15);
+}
+
 .sam-header-right {
   margin-left: auto;
 }
@@ -88,37 +225,20 @@ defineProps<{
   font-size: 10px;
   color: rgba(196, 117, 58, 0.3);
   letter-spacing: 0.1em;
+  cursor: pointer;
 }
 
 .sam-body {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: stretch;
   min-height: 0;
+  overflow: auto;
 }
 
-.sam-placeholder {
-  text-align: center;
-}
-
-.sam-placeholder-icon {
-  font-size: 48px;
-  color: rgba(196, 117, 58, 0.15);
-  margin-bottom: 16px;
-}
-
-.sam-placeholder-text {
-  font-size: 12px;
-  color: rgba(196, 117, 58, 0.5);
-  letter-spacing: 0.15em;
-  margin-bottom: 6px;
-}
-
-.sam-placeholder-sub {
-  font-size: 11px;
-  color: rgba(196, 117, 58, 0.25);
-  letter-spacing: 0.1em;
+.sam-body > * {
+  width: 100%;
 }
 
 .sam-footer {
