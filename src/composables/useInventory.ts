@@ -187,6 +187,42 @@ export function useInventory() {
     stacks.value = stacks.value.filter((s) => s.itemId !== itemId)
   }
 
+  /**
+   * Consumes quantity units (for components/traces/refined) or weightKg (for rocks) from a stack.
+   * Removes the stack entirely when it reaches zero.
+   */
+  function consumeItem(itemId: string, quantity: number, weightKg?: number): { ok: boolean; message?: string } {
+    const idx = stacks.value.findIndex(s => s.itemId === itemId)
+    if (idx < 0) return { ok: false, message: 'Item not in inventory.' }
+    const s = stacks.value[idx]
+    const def = INVENTORY_CATALOG[itemId]
+    if (!def) return { ok: false, message: 'Unknown item.' }
+
+    const next = [...stacks.value]
+    if (def.category === 'rock') {
+      const w = weightKg ?? 0
+      if (w <= 0) return { ok: false, message: 'Must specify weight for rock consumption.' }
+      if (s.totalWeightKg < w - 1e-9) return { ok: false, message: 'Insufficient sample weight.' }
+      const newWeight = Math.round((s.totalWeightKg - w) * 1000) / 1000
+      if (newWeight <= 0.001) {
+        next.splice(idx, 1)
+      } else {
+        next[idx] = { ...s, totalWeightKg: newWeight }
+      }
+    } else {
+      if (s.quantity < quantity) return { ok: false, message: 'Insufficient quantity.' }
+      const newQty = s.quantity - quantity
+      if (newQty <= 0) {
+        next.splice(idx, 1)
+      } else {
+        const unitW = def.weightPerUnit ?? 0
+        next[idx] = { ...s, quantity: newQty, totalWeightKg: Math.round(newQty * unitW * 1000) / 1000 }
+      }
+    }
+    stacks.value = next
+    return { ok: true }
+  }
+
   return {
     stacks,
     currentWeightKg,
@@ -198,6 +234,7 @@ export function useInventory() {
     addComponentsBatch,
     addTrace,
     removeStack,
+    consumeItem,
   }
 }
 
