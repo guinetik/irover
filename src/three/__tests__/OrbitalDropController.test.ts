@@ -43,4 +43,38 @@ describe('OrbitalDropController', () => {
     drop.dispose()
     expect(scene.children).not.toContain(drop.group)
   })
+
+  it('animates four thruster plumes during descent and hides them after landing', () => {
+    const scene = new THREE.Scene()
+    const drop = new OrbitalDropController(scene, {
+      id: 'drop-c',
+      position: { x: 4, z: 6 },
+      heightAt: () => 0,
+    })
+
+    drop.start()
+    expect(drop.thrusterPlumeCount).toBe(4)
+
+    drop.update(1)
+    expect(drop.thrustersActive).toBe(true)
+
+    drop.update(10)
+    expect(drop.status).toBe('landed')
+    expect(drop.thrustersActive).toBe(false)
+  })
+
+  it('keeps the four tether meshes positioned between stage and payload', () => {
+    const scene = new THREE.Scene()
+    const drop = new OrbitalDropController(scene, {
+      id: 'drop-d',
+      position: { x: 12, z: -4 },
+      heightAt: () => 0,
+    })
+
+    drop.start()
+    drop.update(1)
+
+    expect(drop.visibleTetherCount).toBe(4)
+    expect(drop.maxVisibleTetherLocalOffset).toBeLessThan(3)
+  })
 })

@@ -372,6 +372,7 @@ import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
+import { resolveRandomOrbitalDropPosition } from '@/lib/orbitalDropSpawn'
 import {
   roverHeadingRadToCompassDeg,
   signedRelativeBearingDeg,
@@ -977,7 +978,15 @@ function spawnOrbitalDropItem(
 function spawnRandomOrbitalDrop(options?: { x?: number; z?: number; quantity?: number }): string {
   const itemIds = listOrbitalDropItemIds()
   const itemId = itemIds[Math.floor(Math.random() * itemIds.length)]
-  return spawnOrbitalDropItem(itemId, options)
+  const position = resolveRandomOrbitalDropPosition(
+    { x: roverWorldX.value, z: roverWorldZ.value },
+    { x: options?.x, z: options?.z },
+  )
+  return spawnOrbitalDropItem(itemId, {
+    ...options,
+    x: position.x,
+    z: position.z,
+  })
 }
 
 function getTerrainParams(): TerrainParams {
