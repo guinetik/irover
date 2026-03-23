@@ -133,6 +133,7 @@
       @dump="removeInventoryStack"
     />
     <ProfilePanel :open="profileOpen" />
+    <SAMDialog :visible="samDialogVisible" />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
     <Teleport to="body">
@@ -224,6 +225,7 @@ import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SampleToast from '@/components/SampleToast.vue'
+import SAMDialog from '@/components/SAMDialog.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
@@ -245,6 +247,7 @@ const deploying = ref(false)
 const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
 const isInstrumentActive = ref(false)
+const samDialogVisible = ref(false)
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const inventoryOpen = ref(false)
@@ -557,6 +560,7 @@ onMounted(async () => {
     }
 
     isInstrumentActive.value = controller?.mode === 'active'
+    samDialogVisible.value = controller?.mode === 'active' && controller?.activeInstrument instanceof SAMController
 
     // Track RTG overdrive state + glow effect
     const rtg = controller?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
@@ -713,7 +717,13 @@ onMounted(async () => {
 
     // Attach instruments once ready (idempotent — attach() checks its own flag)
     if (siteScene.roverState === 'ready' && siteScene.rover && controller && !controller.instruments[0]?.attached) {
-      controller.instruments.forEach(i => i.attach(siteScene!.rover!))
+      controller.instruments.forEach(i => {
+        if (i instanceof SAMController) {
+          i.attachWithBindPoses(siteScene!.rover!, siteScene!.coverBindQuats)
+        } else {
+          i.attach(siteScene!.rover!)
+        }
+      })
     }
 
     if (siteScene.roverState === 'ready' && siteScene.rover && camera) {

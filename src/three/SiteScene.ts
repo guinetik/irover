@@ -60,6 +60,8 @@ export class SiteScene {
   roverWheels: RoverWheels | null = null
   roverMast: RoverMast | null = null
   roverState: RoverState = 'descending'
+  /** Cover bind-pose quaternions (closed state), captured before deployment animation */
+  coverBindQuats: Map<string, THREE.Quaternion> = new Map()
 
   private mixer: THREE.AnimationMixer | null = null
   private deployAction: THREE.AnimationAction | null = null
@@ -288,6 +290,12 @@ export class SiteScene {
         child.receiveShadow = true
       }
     })
+
+    // Capture cover bind-pose quaternions (closed state) before animation touches them
+    for (const name of ['cover_01', 'cover_02', 'cover_03']) {
+      const node = this.rover.getObjectByName(name)
+      if (node) this.coverBindQuats.set(name, node.quaternion.clone())
+    }
 
     // Prepare deployment animation (will start after descent)
     if (gltf.animations.length > 0) {

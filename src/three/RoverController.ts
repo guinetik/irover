@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController, MastCamController, ChemCamController } from './instruments'
+import { RTGController, MastCamController, ChemCamController, SAMController } from './instruments'
 import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
@@ -237,6 +237,9 @@ export class RoverController {
           this.activeInstrument = null
           return
         }
+        if (this.activeInstrument instanceof SAMController) {
+          this.activeInstrument.deactivate()
+        }
         this.mode = 'instrument'
         return
       }
@@ -259,11 +262,13 @@ export class RoverController {
       const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
       if (rtg?.instrumentsLocked && instrument !== rtg) return
 
-      // Deactivate current mast instrument if switching away from active mode
+      // Deactivate current instrument if switching away from active mode
       if (this.mode === 'active') {
         if (this.activeInstrument instanceof MastCamController) {
           this.activeInstrument.deactivate()
         } else if (this.activeInstrument instanceof ChemCamController) {
+          this.activeInstrument.deactivate()
+        } else if (this.activeInstrument instanceof SAMController) {
           this.activeInstrument.deactivate()
         }
         this.camera.fov = 50
@@ -290,6 +295,10 @@ export class RoverController {
       this.activeInstrument.deactivate()
       this.camera.fov = 50
       this.camera.updateProjectionMatrix()
+    }
+    // Deactivate SAM if leaving it
+    if (this.activeInstrument instanceof SAMController && (slot === null || slot !== this.activeInstrument.slot)) {
+      this.activeInstrument.deactivate()
     }
     if (slot === null) {
       this.instrumentZoomPending = false
@@ -328,6 +337,11 @@ export class RoverController {
 
     this.instrumentZoomPending = false
     this.mode = 'active'
+
+    // Open SAM covers on activation
+    if (this.activeInstrument instanceof SAMController) {
+      this.activeInstrument.openCovers()
+    }
   }
 
   update(delta: number) {
@@ -340,6 +354,10 @@ export class RoverController {
     // Always tick RTG (overdrive/cooldown/recharge run regardless of mode)
     const rtgInst = this.instruments.find(i => i.id === 'rtg')
     if (rtgInst) rtgInst.update(delta)
+
+    // Always tick SAM (cover animation runs regardless of mode)
+    const samInst = this.instruments.find(i => i.id === 'sam')
+    if (samInst && samInst !== this.activeInstrument) samInst.update(delta)
 
     if (this.mode === 'instrument' && this.instrumentZoomPending && this.activeInstrument) {
       const delaySec = this.config.instrumentZoomDelaySeconds ?? 0
