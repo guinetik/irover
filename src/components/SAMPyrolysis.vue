@@ -103,13 +103,23 @@ function update(dt: number) {
   const maxLen = W - 80
   if (history.length > maxLen) history.shift()
 
-  // Quality
+  // Quality — in band: slow gain. Out of band: drain scales with distance
   const p = phases[Math.min(phase.value, 3)]
-  const inBand = Math.abs(temperature.value - p.target) < p.range
+  const dist = Math.abs(temperature.value - p.target)
+  const inBand = dist < p.range
   if (inBand) {
-    quality.value = Math.min(100, quality.value + dt * 12)
+    quality.value = Math.min(100, quality.value + dt * 10)
   } else {
-    quality.value = Math.max(0, quality.value - dt * 8)
+    // Further from target = faster drain
+    const penalty = 6 + (dist / 100) * 12
+    quality.value = Math.max(0, quality.value - dt * penalty)
+  }
+
+  // Quality hits 0 = experiment fails
+  if (quality.value <= 0) {
+    running = false
+    emit('complete', 0)
+    return
   }
 
   // Phase advancement
