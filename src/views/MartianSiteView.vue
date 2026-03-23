@@ -1262,20 +1262,21 @@ onMounted(async () => {
             danInst.waterConfirmed = hasWater
             danWaterResult.value = hasWater
 
+            // Place cone marker at prospect site
+            const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
+            const coneGeo = new THREE.ConeGeometry(0.2, 0.5, 8)
+            const coneMat = new THREE.MeshBasicMaterial({ color: hasWater ? 0x44aaff : 0xaaaaaa })
+            danConeMesh = new THREE.Mesh(coneGeo, coneMat)
+            danConeMesh.position.copy(conePos)
+            danConeMesh.position.y += 0.25
+            siteScene?.scene.add(danConeMesh)
+            danInst.drillSitePosition = conePos.clone()
+            danInst.reservoirQuality = danInst.prospectStrength
+
             if (hasWater) {
               sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
               const bonusGain = awardDAN('DAN water confirmed')
               if (bonusGain) sampleToastRef.value?.showSP(bonusGain.amount, 'WATER CONFIRMED', bonusGain.bonus)
-
-              const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
-              const coneGeo = new THREE.ConeGeometry(0.15, 0.3, 8)
-              const coneMat = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.8 })
-              danConeMesh = new THREE.Mesh(coneGeo, coneMat)
-              danConeMesh.position.copy(conePos)
-              danConeMesh.position.y += 0.15
-              siteScene?.scene.add(danConeMesh)
-              danInst.drillSitePosition = conePos.clone()
-              danInst.reservoirQuality = danInst.prospectStrength
             } else {
               sampleToastRef.value?.showDAN('Analysis inconclusive — hydrogen likely mineral-bound')
             }
