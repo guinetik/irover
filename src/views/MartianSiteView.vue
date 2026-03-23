@@ -144,8 +144,8 @@
       :passive-subsystem-enabled="passiveOverlayPatch.enabled"
       :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
-      :wheels-hud="activeInstrumentSlot === 13 ? wheelsOverlayHud : null"
-      :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
+      :wheels-hud="activeInstrumentSlot === WHLS_SLOT ? wheelsOverlayHud : null"
+      :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
       :chem-cam-unread="chemCamUnreadCount"
       :chem-cam-sequence-active="chemCamOverlaySequenceActive"
@@ -285,7 +285,7 @@
         <button
           type="button"
           class="wheels-hud-btn"
-          :class="{ active: activeInstrumentSlot === 13, disabled: wheelsHudBlocked }"
+          :class="{ active: activeInstrumentSlot === WHLS_SLOT, disabled: wheelsHudBlocked }"
           :disabled="wheelsHudBlocked"
           title="Mobility / drive [B]"
           @click="toggleWheelsPanel"
@@ -297,7 +297,7 @@
         <button
           type="button"
           class="wheels-hud-btn"
-          :class="{ active: activeInstrumentSlot === 10, disabled: wheelsHudBlocked }"
+          :class="{ active: activeInstrumentSlot === HEATER_SLOT, disabled: wheelsHudBlocked }"
           :disabled="wheelsHudBlocked"
           title="Thermal / heater [H]"
           @click="toggleHeaterPanel"
@@ -364,11 +364,13 @@ import {
   SAMController,
   RTGController,
   HeaterController,
+  HEATER_SLOT,
   REMSController,
   RADController,
   AntennaLGController,
   AntennaUHFController,
   RoverWheelsController,
+  WHLS_SLOT,
   instrumentSelectionEmissiveIntensity,
   type RTGConservationState,
 } from '@/three/instruments'
@@ -491,19 +493,19 @@ const wheelsOverlayHud = computed(() => {
 
 function handleInstrumentRepair() {
   const w = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
-  if (activeInstrumentSlot.value === 13 && w) w.repair()
+  if (activeInstrumentSlot.value === WHLS_SLOT && w) w.repair()
 }
 
 function toggleWheelsPanel() {
   if (!controller || isSleeping.value || wheelsHudBlocked.value) return
-  if (activeInstrumentSlot.value === 13) controller.activateInstrument(null)
-  else controller.activateInstrument(13)
+  if (activeInstrumentSlot.value === WHLS_SLOT) controller.activateInstrument(null)
+  else controller.activateInstrument(WHLS_SLOT)
 }
 
 function toggleHeaterPanel() {
   if (!controller || isSleeping.value || wheelsHudBlocked.value) return
-  if (activeInstrumentSlot.value === 10) controller.activateInstrument(null)
-  else controller.activateInstrument(10)
+  if (activeInstrumentSlot.value === HEATER_SLOT) controller.activateInstrument(null)
+  else controller.activateInstrument(HEATER_SLOT)
 }
 
 function handleChemCamAck(readoutId: string) {

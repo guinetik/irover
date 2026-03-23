@@ -1,6 +1,9 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 
+/** Toolbar / overlay slot for WHLS — use in Vue bindings instead of a magic number. */
+export const WHLS_SLOT = 13
+
 /**
  * Mobility / wheel motors — billed on the main bus while the chassis translates.
  * `baseDriveW` is synced from {@link useMarsPower} profile each frame; durability and
@@ -9,7 +12,7 @@ import { InstrumentController } from './InstrumentController'
 export class RoverWheelsController extends InstrumentController {
   readonly id = 'wheels'
   readonly name = 'WHLS'
-  readonly slot = 13
+  readonly slot = WHLS_SLOT
   /**
    * Left rocker-bogie root under `body` — arms, rods, steer pivots, and wheels (see GLTF:
    * `suspension_axel_L` → `suspension_arm_*`, `suspension_rod_*`, `wheel_*`). Selection glow

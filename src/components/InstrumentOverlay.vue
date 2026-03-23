@@ -16,7 +16,7 @@
         <div class="ov-desc">{{ instrument.desc }}</div>
 
         <!-- Stats (thermal override for heater) -->
-        <div v-if="activeSlot === 9 && thermal" class="ov-stats ov-stats-thermal">
+        <div v-if="activeSlot === HEATER_SLOT && thermal" class="ov-stats ov-stats-thermal">
           <div class="ov-stat">
             <div class="ov-stat-label">ROVER</div>
             <div class="ov-stat-value" :style="{ color: thermalZoneColor }">{{ thermal.internalTempC >= 0 ? '+' : '' }}{{ Math.round(thermal.internalTempC) }}&deg;C</div>
@@ -141,6 +141,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue'
+import { HEATER_SLOT, WHLS_SLOT } from '@/three/instruments'
 
 export interface InstrumentData {
   slot: number
@@ -347,7 +348,7 @@ const instrument = computed(() => {
   const base = INSTRUMENTS[props.activeSlot]
   if (!base) return null
   const wh = props.wheelsHud
-  if (props.activeSlot === 13 && wh) {
+  if (props.activeSlot === WHLS_SLOT && wh) {
     const offline = wh.statusStr === 'OFFLINE'
     return {
       ...base,
