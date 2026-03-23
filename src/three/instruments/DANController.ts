@@ -180,6 +180,7 @@ export class DANController extends InstrumentController {
     })
 
     this.particles = new THREE.Points(geo, mat)
+    this.particles.frustumCulled = false  // positions update dynamically; skip bounding-sphere check
     this.particles.visible = false
     scene.add(this.particles)
   }
