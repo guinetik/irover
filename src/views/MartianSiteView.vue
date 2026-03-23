@@ -1183,7 +1183,7 @@ onMounted(async () => {
       danInst.update(sceneDelta)
 
       danTotalSamples.value = danInst.totalSamples
-      danHitAvailable.value = danInst.pendingHit !== null && !danInst.hitConsumed
+      danHitAvailable.value = danInst.pendingHit !== null
 
       // VFX: always tick so dots hide when deselected
       danInst.vfxVisible = controller?.activeInstrument?.id === 'dan'
