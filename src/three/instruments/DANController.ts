@@ -139,22 +139,25 @@ export class DANController extends InstrumentController {
   // --- VFX ---
   private particles: THREE.Points | null = null
   private particlePositions: Float32Array | null = null
-  private particleVelocities: Float32Array | null = null
   private particleSpeeds: Float32Array | null = null
   private sceneRef: THREE.Scene | null = null
-  private readonly PARTICLE_COUNT = 24
+  private readonly PARTICLE_COUNT = 32
   vfxVisible = false
+  private groundY = 0
 
   initVFX(scene: THREE.Scene): void {
     this.sceneRef = scene
     const count = this.PARTICLE_COUNT
     this.particlePositions = new Float32Array(count * 3)
-    this.particleVelocities = new Float32Array(count * 3)
     this.particleSpeeds = new Float32Array(count)
 
+    // Seed particles spread across the column so they don't all start at one spot
     for (let i = 0; i < count; i++) {
-      this.particleSpeeds[i] = 0.8 + Math.random() * 1.2
-      this.resetParticle(i)
+      this.particleSpeeds[i] = 2.0 + Math.random() * 3.0
+      const i3 = i * 3
+      this.particlePositions[i3] = (Math.random() - 0.5) * 0.1
+      this.particlePositions[i3 + 1] = -Math.random() * 1.0  // spread down from 0
+      this.particlePositions[i3 + 2] = (Math.random() - 0.5) * 0.1
     }
 
     const geo = new THREE.BufferGeometry()
@@ -162,9 +165,9 @@ export class DANController extends InstrumentController {
 
     const mat = new THREE.PointsMaterial({
       color: 0x44aaff,
-      size: 0.04,
+      size: 0.12,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.6,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
@@ -175,32 +178,43 @@ export class DANController extends InstrumentController {
     scene.add(this.particles)
   }
 
-  private resetParticle(i: number): void {
-    if (!this.particlePositions || !this.particleVelocities || !this.node) return
-    const wp = new THREE.Vector3()
-    this.node.getWorldPosition(wp)
+  private resetParticle(i: number, startY: number, endY: number): void {
+    if (!this.particlePositions || !this.particleSpeeds) return
     const i3 = i * 3
-    this.particlePositions[i3] = wp.x + (Math.random() - 0.5) * 0.08
-    this.particlePositions[i3 + 1] = wp.y
-    this.particlePositions[i3 + 2] = wp.z + (Math.random() - 0.5) * 0.08
-    this.particleVelocities[i3] = (Math.random() - 0.5) * 0.1
-    this.particleVelocities[i3 + 1] = -1
-    this.particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.1
+    // Random XZ offset from center (0,0) — particles live in local space
+    this.particlePositions[i3] = (Math.random() - 0.5) * 0.1
+    // Random Y between source and ground so they don't all spawn at top
+    this.particlePositions[i3 + 1] = startY - Math.random() * (startY - endY)
+    this.particlePositions[i3 + 2] = (Math.random() - 0.5) * 0.1
+    this.particleSpeeds[i] = 2.0 + Math.random() * 3.0
   }
 
   updateVFX(delta: number, groundY: number): void {
-    if (!this.particles || !this.particlePositions || !this.particleVelocities || !this.particleSpeeds) return
+    if (!this.particles || !this.particlePositions || !this.particleSpeeds || !this.node) return
+    this.groundY = groundY
     this.particles.visible = this.vfxVisible && this.passiveSubsystemEnabled
     if (!this.particles.visible) return
+
+    // Attach particles to DAN node so they follow the rover
+    const wp = new THREE.Vector3()
+    this.node.getWorldPosition(wp)
+    this.particles.position.set(wp.x, 0, wp.z)
+
+    const sourceY = wp.y
+    const endY = groundY
 
     const positions = this.particles.geometry.getAttribute('position') as THREE.BufferAttribute
     for (let i = 0; i < this.PARTICLE_COUNT; i++) {
       const i3 = i * 3
-      const speed = this.particleSpeeds[i]
-      this.particlePositions[i3] += this.particleVelocities[i3] * speed * delta
-      this.particlePositions[i3 + 1] += this.particleVelocities[i3 + 1] * speed * delta
-      this.particlePositions[i3 + 2] += this.particleVelocities[i3 + 2] * speed * delta
-      if (this.particlePositions[i3 + 1] <= groundY) this.resetParticle(i)
+      // Fall straight down
+      this.particlePositions[i3 + 1] -= this.particleSpeeds[i] * delta
+      // Tiny XZ jitter for visual interest
+      this.particlePositions[i3] += (Math.random() - 0.5) * 0.02 * delta
+      this.particlePositions[i3 + 2] += (Math.random() - 0.5) * 0.02 * delta
+      // Reset when hitting ground
+      if (this.particlePositions[i3 + 1] <= endY) {
+        this.resetParticle(i, sourceY, endY)
+      }
     }
     positions.needsUpdate = true
   }
