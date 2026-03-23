@@ -7,7 +7,7 @@ const COVER_NAMES = ['cover_01', 'cover_02', 'cover_03']
 export class SAMController extends InstrumentController {
   readonly id = 'sam'
   readonly name = 'SAM'
-  readonly slot = 5
+  readonly slot = 6
   readonly focusNodeName = 'SAM'
   readonly focusOffset = new THREE.Vector3(0.0, 0.1, 0.1)
   readonly viewAngle = 0.1

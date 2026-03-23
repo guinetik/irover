@@ -5,7 +5,7 @@ import type { ThermalZone } from '@/composables/useMarsThermal'
 export class HeaterController extends InstrumentController {
   readonly id = 'heater'
   readonly name = 'HTR'
-  readonly slot = 9
+  readonly slot = 10
   readonly focusNodeName = 'radiators'
   override readonly altNodeNames = ['body001', 'Chassis']
   readonly focusOffset = new THREE.Vector3(0, 0.2, 0.1)

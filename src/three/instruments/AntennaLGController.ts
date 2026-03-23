@@ -8,7 +8,7 @@ import { InstrumentController } from './InstrumentController'
 export class AntennaLGController extends InstrumentController {
   readonly id = 'antenna-lg'
   readonly name = 'LGA'
-  readonly slot = 10
+  readonly slot = 11
   override readonly canActivate = true
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true

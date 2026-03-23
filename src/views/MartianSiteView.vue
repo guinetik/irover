@@ -113,10 +113,10 @@
     </Transition>
     <Transition name="deploy-fade">
       <div
-        v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle' && rtgConservationMode !== 'active'"
+        v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle' && rtgConservationMode !== 'active' && !controlsHintDismissed"
         class="controls-hint"
       >
-        WASD to drive &middot; Drag to orbit &middot; 1&ndash;9 instruments &middot; E quick-activates when selected
+        WASD drive &middot; drag orbit &middot; 1&ndash;9 TOOLS
       </div>
       <div
         v-else-if="!deploying && !descending && activeInstrumentSlot === null && rtgConservationMode === 'active'"
@@ -144,7 +144,7 @@
       :passive-subsystem-enabled="passiveOverlayPatch.enabled"
       :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
-      :wheels-hud="activeInstrumentSlot === 12 ? wheelsOverlayHud : null"
+      :wheels-hud="activeInstrumentSlot === 13 ? wheelsOverlayHud : null"
       :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
       :chem-cam-unread="chemCamUnreadCount"
@@ -281,19 +281,32 @@
         :net-w="netW"
         :soc-pct="socPct"
       />
-      <button
-        v-if="!isSleeping"
-        type="button"
-        class="wheels-hud-btn"
-        :class="{ active: activeInstrumentSlot === 12, disabled: wheelsHudBlocked }"
-        :disabled="wheelsHudBlocked"
-        title="Mobility / drive [B]"
-        @click="toggleWheelsPanel"
-      >
-        <span class="wheels-hud-key font-instrument">B</span>
-        <span class="wheels-hud-icon">&#x25EF;</span>
-        <span class="wheels-hud-name">WHLS</span>
-      </button>
+      <div v-if="!isSleeping" class="power-hud-side-controls">
+        <button
+          type="button"
+          class="wheels-hud-btn"
+          :class="{ active: activeInstrumentSlot === 13, disabled: wheelsHudBlocked }"
+          :disabled="wheelsHudBlocked"
+          title="Mobility / drive [B]"
+          @click="toggleWheelsPanel"
+        >
+          <span class="wheels-hud-key font-instrument">B</span>
+          <span class="wheels-hud-icon">&#x25EF;</span>
+          <span class="wheels-hud-name">WHLS</span>
+        </button>
+        <button
+          type="button"
+          class="wheels-hud-btn"
+          :class="{ active: activeInstrumentSlot === 10, disabled: wheelsHudBlocked }"
+          :disabled="wheelsHudBlocked"
+          title="Thermal / heater [H]"
+          @click="toggleHeaterPanel"
+        >
+          <span class="wheels-hud-key font-instrument">H</span>
+          <span class="wheels-hud-icon">&#x2668;</span>
+          <span class="wheels-hud-name">HTR</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -346,6 +359,7 @@ import {
   MastCamController,
   ChemCamController,
   DrillController,
+  APXSController,
   DANController,
   SAMController,
   RTGController,
@@ -369,6 +383,8 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
 /** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
 const roverIsMoving = ref(false)
+/** After first W/S drive while deployed, hide the centered driving tips (per session). */
+const controlsHintDismissed = ref(false)
 const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
@@ -416,7 +432,7 @@ const rtgConservationCooldownTitle = ref('')
 const rtgConservationProgress01 = ref(0)
 const rtgConservationCdLabel = ref('')
 
-/** WHLS control under power HUD — disabled while RTG locks other instruments (same as [B]). */
+/** WHLS + HTR controls beside power HUD — disabled while RTG locks other instruments ([B]/[H]). */
 const wheelsHudBlocked = computed(
   () => rtgPhase.value === 'overdrive' || rtgPhase.value === 'cooldown',
 )
@@ -458,7 +474,7 @@ const activeChemCamReadout = computed(() => {
 })
 
 /**
- * Live mobility stats for the wheels instrument card (slot 12).
+ * Live mobility stats for the wheels instrument card (slot 13).
  * Depends on `roverHeading` and `roverIsMoving` (synced from the controller each frame).
  */
 const wheelsOverlayHud = computed(() => {
@@ -475,13 +491,19 @@ const wheelsOverlayHud = computed(() => {
 
 function handleInstrumentRepair() {
   const w = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
-  if (activeInstrumentSlot.value === 12 && w) w.repair()
+  if (activeInstrumentSlot.value === 13 && w) w.repair()
 }
 
 function toggleWheelsPanel() {
   if (!controller || isSleeping.value || wheelsHudBlocked.value) return
-  if (activeInstrumentSlot.value === 12) controller.activateInstrument(null)
-  else controller.activateInstrument(12)
+  if (activeInstrumentSlot.value === 13) controller.activateInstrument(null)
+  else controller.activateInstrument(13)
+}
+
+function toggleHeaterPanel() {
+  if (!controller || isSleeping.value || wheelsHudBlocked.value) return
+  if (activeInstrumentSlot.value === 10) controller.activateInstrument(null)
+  else controller.activateInstrument(10)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -559,6 +581,7 @@ const siteCompassPois = computed(() => {
 watch(
   () => route.params.siteId as string,
   (id) => {
+    controlsHintDismissed.value = false
     if (id) void loadPoisForSite(id)
   },
   { immediate: true },
@@ -828,6 +851,7 @@ onMounted(async () => {
     new MastCamController(),
     new ChemCamController(),
     new DrillController(),
+    new APXSController(),
     new DANController(),
     new SAMController(),
     new RTGController(),
@@ -888,6 +912,7 @@ onMounted(async () => {
       const moving =
         siteScene.roverState === 'ready' && controller ? (controller.isMoving ?? false) : false
       if (moving !== roverIsMoving.value) roverIsMoving.value = moving
+      if (moving) controlsHintDismissed.value = true
     }
     const wheelsInst = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
     if (wheelsInst) wheelsInst.baseDriveW = profile.baseDriveW
@@ -981,6 +1006,7 @@ onMounted(async () => {
     for (const inst of controller?.instruments ?? []) {
       const hex = inst.selectionHighlightColor
       if (hex == null || !inst.node) continue
+      if (inst instanceof RTGController && inst.phase === 'overdrive') continue
       const focused =
         instrumentViewActive && activeInst === inst && !isSleeping.value
       inst.node.traverse((child) => {
@@ -1366,6 +1392,18 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+/** WHLS + HTR column — stacked under the power readout */
+.power-hud-side-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.power-hud-side-controls .wheels-hud-btn {
+  pointer-events: auto;
+}
+
 .wheels-hud-btn {
   position: relative;
   display: flex;
@@ -1520,19 +1558,24 @@ onUnmounted(() => {
 
 .controls-hint {
   position: fixed;
-  bottom: 32px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  padding: 8px 24px;
+  transform: translate(-50%, -50%);
+  z-index: 35;
+  padding: 10px 28px;
+  max-width: min(90vw, 520px);
+  text-align: center;
+  line-height: 1.55;
   font-size: 11px;
   font-weight: 400;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
   pointer-events: none;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
 /* Deployment overlay */

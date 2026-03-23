@@ -6,6 +6,7 @@ export {
 export { MastCamController } from './MastCamController'
 export { ChemCamController } from './ChemCamController'
 export { DrillController } from './DrillController'
+export { APXSController } from './APXSController'
 export { DANController } from './DANController'
 export { SAMController } from './SAMController'
 export { RTGController, type RTGConservationState } from './RTGController'

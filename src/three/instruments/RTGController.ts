@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { InstrumentController } from './InstrumentController'
+import { InstrumentController, INSTRUMENT_SELECTION_GLOW_HEX } from './InstrumentController'
 import { getRtgPhaseSceneSeconds } from '@/lib/missionTime'
 import { MISSION_COOLDOWN_ID, missionCooldowns } from '@/lib/missionCooldowns'
 
@@ -10,14 +10,17 @@ export type RTGConservationState = 'off' | 'active' | 'cooldown'
 export class RTGController extends InstrumentController {
   readonly id = 'rtg'
   readonly name = 'RTG'
-  readonly slot = 6
+  readonly slot = 7
   readonly focusNodeName = 'RTG'
-  readonly focusOffset = new THREE.Vector3(-0.2, 0.2, -0.3)
-  readonly viewAngle = Math.PI
-  readonly viewPitch = 0.25
+  /** Nudge orbit target slightly up/inboard so the rear RTG reads from a front-quarter angle. */
+  readonly focusOffset = new THREE.Vector3(0.05, 0.12, 0.12)
+  /** Same hemisphere as MastCam/ChemCam — camera stays forward of the rover looking back toward the RTG. */
+  readonly viewAngle = 0.2
+  /** Match ChemCam orbit pitch (~deck hardware) instead of a low rear close-up. */
+  readonly viewPitch = 0.4
   override readonly canActivate = true
-  /** Overdrive uses the same subtree — avoid cyan selection fighting orange burst VFX. */
-  override readonly selectionHighlightColor = null
+  /** Cyan selection glow; site render loop skips it during `phase === 'overdrive'` so orange burst VFX wins. */
+  override readonly selectionHighlightColor: number | null = INSTRUMENT_SELECTION_GLOW_HEX
   /** RTG management UI / telemetry — not the RTG thermal output (that is generation). */
   override readonly selectionIdlePowerW = 2
 

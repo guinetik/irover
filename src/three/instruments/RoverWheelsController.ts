@@ -9,7 +9,7 @@ import { InstrumentController } from './InstrumentController'
 export class RoverWheelsController extends InstrumentController {
   readonly id = 'wheels'
   readonly name = 'WHLS'
-  readonly slot = 12
+  readonly slot = 13
   /**
    * Left rocker-bogie root under `body` — arms, rods, steer pivots, and wheels (see GLTF:
    * `suspension_axel_L` → `suspension_arm_*`, `suspension_rod_*`, `wheel_*`). Selection glow

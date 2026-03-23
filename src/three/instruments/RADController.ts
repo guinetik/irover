@@ -4,7 +4,7 @@ import { InstrumentController } from './InstrumentController'
 export class RADController extends InstrumentController {
   readonly id = 'rad'
   readonly name = 'RAD'
-  readonly slot = 8
+  readonly slot = 9
   override readonly canActivate = true
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true

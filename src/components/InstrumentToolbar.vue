@@ -51,12 +51,12 @@ const instruments: ToolbarInstrument[] = [
   { slot: 1, id: 'mastcam', name: 'MCAM', icon: '\u25A3' },
   { slot: 2, id: 'chemcam', name: 'CHEM', icon: '\u2316' },
   { slot: 3, id: 'drill',   name: 'DRIL', icon: '\u25CE' },
-  { slot: 4, id: 'dan',     name: 'DAN',  icon: '\u2261' },
-  { slot: 5, id: 'sam',     name: 'SAM',  icon: '\u2394' },
-  { slot: 6, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },
-  { slot: 7, id: 'rems',    name: 'REMS', icon: '\u2602' },
-  { slot: 8, id: 'rad',     name: 'RAD',  icon: '\u2622' },
-  { slot: 9, id: 'heater',  name: 'HTR',  icon: '\u2668' },
+  { slot: 4, id: 'apxs',    name: 'APXS', icon: '\u2295' },
+  { slot: 5, id: 'dan',     name: 'DAN',  icon: '\u2261' },
+  { slot: 6, id: 'sam',     name: 'SAM',  icon: '\u2394' },
+  { slot: 7, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },
+  { slot: 8, id: 'rems',    name: 'REMS', icon: '\u2602' },
+  { slot: 9, id: 'rad',     name: 'RAD',  icon: '\u2622' },
 ]
 
 function handleClick(slot: number) {

@@ -5,9 +5,14 @@ import { RTGController, MastCamController, ChemCamController, SAMController, Rov
 import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
-const CAMERA_DISTANCE_MIN = 4
+/** Closest chase-cam radius (smaller = tighter on the rover; too low clips the hull). */
+const CAMERA_DISTANCE_MIN = 2.2
 const CAMERA_DISTANCE_MAX = 18
-const ZOOM_SENSITIVITY = 0.8
+/**
+ * Orbit zoom: distance change per wheel `deltaY` unit. Lower = finer steps (more “zoom levels”
+ * between min and max). Typical notch ~100 → ~0.32 units at 0.0032.
+ */
+const CAMERA_WHEEL_ZOOM_FACTOR = 0.0032
 const CAMERA_HEIGHT_OFFSET = 3
 const CAMERA_LOOK_HEIGHT_OFFSET = 1
 const CAMERA_LERP = 0.08
@@ -16,8 +21,12 @@ const TILT_LERP = 0.1
 const ORBIT_SENSITIVITY = 0.005
 const TERRAIN_BOUNDARY = 380
 
-const ORBIT_PITCH_MIN = -0.3 // look up at sky
-const ORBIT_PITCH_MAX = 1.3  // look down at ground
+/** Pitch limits when zoomed out (large radius) — tighter to limit horizon / under-terrain glimpses. */
+const ORBIT_PITCH_MIN_FAR = -0.3
+const ORBIT_PITCH_MAX_FAR = 1.3
+/** Pitch limits when zoomed in (small radius) — wider arc; small radius keeps the lens higher above ground. */
+const ORBIT_PITCH_MIN_NEAR = -0.52
+const ORBIT_PITCH_MAX_NEAR = 1.58
 
 const WHEEL_SPIN_SPEED = 8       // radians per second at full speed
 const STEER_ANGLE_MAX = 0.4      // max steering angle in radians (~23°)
@@ -110,6 +119,12 @@ export class RoverController {
   private instrumentZoomPending = false
   private instrumentZoomElapsed = 0
 
+  /**
+   * Post-deploy we ease chase distance toward the default (8); once the player scroll-zooms the
+   * chase cam (driving or instrument zoom-pending), stop so wheel input is not overwritten.
+   */
+  private chaseZoomUserOverride = false
+
   constructor(
     rover: THREE.Group,
     camera: THREE.PerspectiveCamera,
@@ -156,22 +171,25 @@ export class RoverController {
       this.activeInstrument.handleWheel(e.deltaY)
     } else if (this.mode === 'instrument') {
       if (this.instrumentZoomPending) {
+        this.chaseZoomUserOverride = true
         this.cameraDistance = Math.max(
           CAMERA_DISTANCE_MIN,
-          Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+          Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * CAMERA_WHEEL_ZOOM_FACTOR),
         )
       } else {
         this.instrumentCameraDistance = Math.max(
           INSTRUMENT_CAMERA_DISTANCE_MIN,
-          Math.min(INSTRUMENT_CAMERA_DISTANCE_MAX, this.instrumentCameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+          Math.min(INSTRUMENT_CAMERA_DISTANCE_MAX, this.instrumentCameraDistance + e.deltaY * CAMERA_WHEEL_ZOOM_FACTOR),
         )
       }
     } else {
+      this.chaseZoomUserOverride = true
       this.cameraDistance = Math.max(
         CAMERA_DISTANCE_MIN,
-        Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * 0.01 * ZOOM_SENSITIVITY),
+        Math.min(CAMERA_DISTANCE_MAX, this.cameraDistance + e.deltaY * CAMERA_WHEEL_ZOOM_FACTOR),
       )
     }
+    this.clampOrbitPitch()
   }
 
   private onMouseDown(e: MouseEvent) {
@@ -192,7 +210,53 @@ export class RoverController {
     this.lastMouseY = e.clientY
 
     this.orbitAngle -= dx * ORBIT_SENSITIVITY
-    this.orbitPitch = Math.max(ORBIT_PITCH_MIN, Math.min(ORBIT_PITCH_MAX, this.orbitPitch + dy * ORBIT_SENSITIVITY))
+    this.orbitPitch += dy * ORBIT_SENSITIVITY
+    this.clampOrbitPitch()
+  }
+
+  /**
+   * True when orbit radius for pitch clamping follows {@link instrumentCameraDistance} (vs chase {@link cameraDistance}).
+   */
+  private usingInstrumentOrbitRadius(): boolean {
+    if (this.mode === 'instrument' && !this.instrumentZoomPending && this.activeInstrument?.node) {
+      return true
+    }
+    if (
+      this.mode === 'active'
+      && this.activeInstrument?.node
+      && !(this.activeInstrument instanceof MastCamController)
+      && !(this.activeInstrument instanceof ChemCamController)
+    ) {
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Vertical orbit bounds: wide when zoomed in, narrow when zoomed out so “underground” guard scales with radius.
+   */
+  private getOrbitPitchLimits(): { min: number; max: number } {
+    let t: number
+    if (this.usingInstrumentOrbitRadius()) {
+      const span = INSTRUMENT_CAMERA_DISTANCE_MAX - INSTRUMENT_CAMERA_DISTANCE_MIN
+      t = span > 1e-6
+        ? (this.instrumentCameraDistance - INSTRUMENT_CAMERA_DISTANCE_MIN) / span
+        : 1
+    } else {
+      const span = CAMERA_DISTANCE_MAX - CAMERA_DISTANCE_MIN
+      t = span > 1e-6 ? (this.cameraDistance - CAMERA_DISTANCE_MIN) / span : 1
+    }
+    t = Math.max(0, Math.min(1, t))
+    return {
+      min: THREE.MathUtils.lerp(ORBIT_PITCH_MIN_NEAR, ORBIT_PITCH_MIN_FAR, t),
+      max: THREE.MathUtils.lerp(ORBIT_PITCH_MAX_NEAR, ORBIT_PITCH_MAX_FAR, t),
+    }
+  }
+
+  /** Keeps {@link orbitPitch} inside zoom-dependent bounds (call after drag, wheel zoom, or instrument snap). */
+  private clampOrbitPitch(): void {
+    const { min, max } = this.getOrbitPitchLimits()
+    this.orbitPitch = Math.max(min, Math.min(max, this.orbitPitch))
   }
 
   private onKeyDown(e: KeyboardEvent) {
@@ -254,8 +318,13 @@ export class RoverController {
       }
     }
 
-    // Map keys to instrument slots: Digit1-9, R=10, T=11
-    const LETTER_SLOTS: Record<string, number> = { KeyR: 10, KeyT: 11, KeyB: 12 }
+    // Map keys: Digit1–9 → slots 1–9; H=heater(10); R/T/B = LGA/UHF/WHLS
+    const LETTER_SLOTS: Record<string, number> = {
+      KeyH: 10,
+      KeyR: 11,
+      KeyT: 12,
+      KeyB: 13,
+    }
     const slotMatch = e.code.match(/^Digit([1-9])$/)
     const slot = slotMatch ? parseInt(slotMatch[1]) : LETTER_SLOTS[e.code]
     if (slot !== undefined) {
@@ -332,6 +401,7 @@ export class RoverController {
       this.instrumentZoomPending = false
       this.orbitAngle = instrument.viewAngle + this.heading
       this.orbitPitch = instrument.viewPitch
+      this.clampOrbitPitch()
     }
   }
 
@@ -394,6 +464,7 @@ export class RoverController {
           this.instrumentZoomPending = false
           this.orbitAngle = this.activeInstrument.viewAngle + this.heading
           this.orbitPitch = this.activeInstrument.viewPitch
+          this.clampOrbitPitch()
         }
       }
       this.activeInstrument.update(delta)
@@ -541,10 +612,17 @@ export class RoverController {
   }
 
   private updateCamera(_delta: number) {
-    // Smoothly zoom out to default distance after deployment
-    if (this.siteScene.roverState === 'ready' && this.mode === 'driving' && this.cameraDistance < CAMERA_DISTANCE_DEFAULT) {
+    // Ease chase cam to default distance after touchdown — disabled after player wheel zoom
+    if (
+      !this.chaseZoomUserOverride
+      && this.siteScene.roverState === 'ready'
+      && this.mode === 'driving'
+      && this.cameraDistance < CAMERA_DISTANCE_DEFAULT
+    ) {
       this.cameraDistance += (CAMERA_DISTANCE_DEFAULT - this.cameraDistance) * 0.02
     }
+
+    this.clampOrbitPitch()
 
     let desiredPos: THREE.Vector3
     let desiredTarget: THREE.Vector3

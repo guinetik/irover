@@ -4,7 +4,7 @@ import { InstrumentController } from './InstrumentController'
 export class REMSController extends InstrumentController {
   readonly id = 'rems'
   readonly name = 'REMS'
-  readonly slot = 7
+  readonly slot = 8
   override readonly canActivate = true
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true

@@ -4,7 +4,7 @@ import { InstrumentController } from './InstrumentController'
 export class AntennaUHFController extends InstrumentController {
   readonly id = 'antenna-uhf'
   readonly name = 'UHF'
-  readonly slot = 11
+  readonly slot = 12
   override readonly canActivate = true
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true

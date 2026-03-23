@@ -25,8 +25,8 @@ const emit = defineEmits<{
 }>()
 
 const comms = [
-  { slot: 10, key: 'R', id: 'antenna-lg',  name: 'LGA',  icon: '\uD83D\uDCE1' },
-  { slot: 11, key: 'T', id: 'antenna-uhf', name: 'UHF',  icon: '\uD83D\uDCF6' },
+  { slot: 11, key: 'R', id: 'antenna-lg',  name: 'LGA',  icon: '\uD83D\uDCE1' },
+  { slot: 12, key: 'T', id: 'antenna-uhf', name: 'UHF',  icon: '\uD83D\uDCF6' },
 ]
 
 function handleClick(slot: number) {

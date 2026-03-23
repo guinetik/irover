@@ -15,7 +15,7 @@ const ARM_LERP = 0.1
 
 /**
  * Arm-mounted powder drill (slot 3): laser VFX and sampling use the GLTF `Drill` node.
- * Real Curiosity also carries APXS on the turret; that can be a separate instrument later.
+ * Shares the arm with APXS (slot 4) on the real rover; here APXS is a separate tool.
  */
 export class DrillController extends InstrumentController {
   readonly id = 'drill'

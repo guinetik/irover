@@ -82,7 +82,7 @@
 
         <!-- Buttons -->
         <div class="ov-buttons">
-          <template v-if="activeSlot === 6">
+          <template v-if="activeSlot === 7">
             <button
               class="ov-btn-primary ov-btn-rtg-overdrive"
               :class="{ disabled: !rtgOverdriveReady || isActiveMode }"
@@ -179,81 +179,89 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
   },
   3: {
     slot: 3, icon: 'ARM', name: 'DRILL', type: 'ARM POWDER SAMPLER',
-    desc: 'Rotary percussive bit on the arm turret: collects powdered rock for the lab after MastCam/ChemCam tell you what to hit. (Real Curiosity also has APXS on the same turret for contact X-ray / alpha spectroscopy — that can be its own tool later.)',
+    desc: 'Rotary percussive bit on the arm turret: collects powdered rock for the lab after MastCam/ChemCam tell you what to hit. Shares the arm with APXS on the real rover.',
     power: '6W / 118W drilling', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '95%',
     hint: 'Drive within 1.5m of target. Aim the arm with mouse. Hold [E] to drill and collect powder.',
     temp: '',
     upgName: 'BIT WEAR KIT', upgDesc: 'Reduces drill time on tagged rocks.', upgReq: 'Requires: Deep Analysis Kit drop',
   },
   4: {
-    slot: 4, icon: 'NEU', name: 'DAN', type: 'NEUTRON SCANNER',
+    slot: 4, icon: '\u2295', name: 'APXS', type: 'CONTACT SPECTROMETER',
+    desc: 'Alpha particle X-ray spectrometer on the arm turret: placed on rock or soil for bulk chemistry. Gameplay integration (integrations, light curves) is not wired yet — use ACTIVATE to model contact-science bus load and aim with WASD like the drill.',
+    power: '5W idle / 18W active', powerColor: '#ef9f27', status: 'STANDBY', statusColor: '#6b4a30', health: '96%',
+    hint: 'Orbit view ~5W. ACTIVATE for ~18W stub load. WASD aims shoulder/elbow; no sample yet.',
+    temp: '',
+    upgName: 'LONG INTEGRATION', upgDesc: 'Future: longer dwells, lower detection limits.', upgReq: 'Requires: Contact Science Package drop',
+  },
+  5: {
+    slot: 5, icon: 'NEU', name: 'DAN', type: 'NEUTRON SCANNER',
     desc: 'Fires neutrons into the ground, detects hydrogen. Maps subsurface water content while driving. Paints a heatmap trail on the terrain.',
     power: '10W', powerColor: '#e05030', status: 'SCANNING', statusColor: '#ef9f27', health: '78%',
     hint: 'Draws ~10W on the main bus while running (see power HUD). ACTIVATE / STANDBY or [E] toggles; when on, billed while you drive. Future: heatmap + anomalies.',
     temp: '',
     upgName: 'DEPTH EXTENDER', upgDesc: 'Scan depth from 0.5m to 1.0m below surface.', upgReq: 'Requires: Subsurface Package drop',
   },
-  5: {
-    slot: 5, icon: 'DRL', name: 'SAM', type: 'SAMPLE ANALYSIS SUITE',
+  6: {
+    slot: 6, icon: 'DRL', name: 'SAM', type: 'SAMPLE ANALYSIS SUITE',
     desc: 'The full chemistry lab inside the rover. Drills rock samples and runs mass spectrometry to detect organic molecules.',
     power: '25W', powerColor: '#e05030', status: '2/3 SAMPLES', statusColor: '#ef9f27', health: '81%',
     hint: 'Park at target. Drill with [E] \u2014 control pressure with mouse Y. Then wait for analysis.',
     temp: 'Cold \u2014 DRILL LOCKED below -20C',
     upgName: 'SENSITIVITY MODULE', upgDesc: 'Detects organics at 10x lower concentration.', upgReq: 'Requires: Full Science Suite drop',
   },
-  6: {
-    slot: 6, icon: '\u26A1', name: 'RTG', type: 'POWER GENERATOR',
+  7: {
+    slot: 7, icon: '\u26A1', name: 'RTG', type: 'POWER GENERATOR',
     desc: 'Radioisotope Thermoelectric Generator. Converts plutonium-238 decay heat into electrical power. The rover\u2019s only power source.',
     power: '110W', powerColor: '#5dc9a5', status: '87W', statusColor: '#5dc9a5', health: '94%',
     hint: 'OVERDRIVE: 2× speed, then instrument lockout. POWER SHUNT: fills battery, −50% load ~3h, no driving — 24h cooldown.',
     temp: '',
     upgName: 'HEAT EXCHANGER', upgDesc: 'Improves thermal efficiency. Faster charge rate.', upgReq: 'Requires: Engineering Package drop',
   },
-  7: {
-    slot: 7, icon: '\u2602', name: 'REMS', type: 'WEATHER STATION',
+  8: {
+    slot: 8, icon: '\u2602', name: 'REMS', type: 'WEATHER STATION',
     desc: 'Twin boom sensors on the mast measure temperature, wind, pressure, humidity, and UV radiation. Provides continuous environmental monitoring and alerts for weather events.',
     power: '1W', powerColor: '#5dc9a5', status: 'SURVEYING', statusColor: '#5dc9a5', health: '98%',
     hint: '~1W on the bus while surveying. ACTIVATE / STANDBY or [E] toggles (STANDBY saves power). +10% sample quality within 3m when on.',
     temp: '',
     upgName: 'DUST STORM PREDICTOR', upgDesc: 'Forecasts storms 2 sols ahead. Gives time to find shelter or stow instruments.', upgReq: 'Requires: Meteorology Package drop',
   },
-  8: {
-    slot: 8, icon: '\u2622', name: 'RAD', type: 'RADIATION DETECTOR',
+  9: {
+    slot: 9, icon: '\u2622', name: 'RAD', type: 'RADIATION DETECTOR',
     desc: 'Measures high-energy radiation on the Martian surface \u2014 protons, heavy ions, neutrons, and gamma rays. Monitors cumulative dose and alerts on solar particle events.',
     power: '2W', powerColor: '#5dc9a5', status: 'MONITORING', statusColor: '#5dc9a5', health: '96%',
     hint: '~2W on the bus while monitoring. ACTIVATE / STANDBY or [E] toggles. Tracks dose; storm alerts when on.',
     temp: '',
     upgName: 'PARTICLE SPECTROMETER', upgDesc: 'Identifies individual isotopes in cosmic ray flux. Better storm prediction.', upgReq: 'Requires: Deep Space Package drop',
   },
-  9: {
-    slot: 9, icon: '\u2668', name: 'HEATER', type: 'THERMAL MANAGEMENT',
+  10: {
+    slot: 10, icon: '\u2668', name: 'HEATER', type: 'THERMAL MANAGEMENT',
     desc: 'Warm Electronics Box heating system. Keeps internal rover temperature above survival thresholds. Draws from the main power bus \u2014 competes with science instruments for watts.',
     power: '0\u201312W', powerColor: '#ef9f27', status: 'AUTO', statusColor: '#5dc9a5', health: '100%',
-    hint: 'Automatic thermostat. Heater kicks in below -10\u00B0C, shuts off above +5\u00B0C. Colder sites = more power to survive = less for science.',
+    hint: 'Automatic thermostat. Heater kicks in below -10\u00B0C, shuts off above +5\u00B0C. Colder sites = more power to survive = less for science. [H] or the HTR control under WHLS beside the power HUD.',
     temp: '',
     upgName: 'INSULATION UPGRADE', upgDesc: 'Reduces heat loss rate by 30%. Less heater draw at cold sites.', upgReq: 'Requires: Engineering Package drop',
   },
-  10: {
-    slot: 10, icon: '\uD83D\uDCE1', name: 'LGA', type: 'LOW-GAIN ANTENNA',
+  11: {
+    slot: 11, icon: '\uD83D\uDCE1', name: 'LGA', type: 'LOW-GAIN ANTENNA',
     desc: 'Omnidirectional low-gain antenna for direct-to-Earth communication. Slow but reliable \u2014 works regardless of rover orientation. Primary command uplink.',
     power: '5W', powerColor: '#5dc9a5', status: 'CONNECTED', statusColor: '#5dc9a5', health: '99%',
     hint: '~5W on the bus while linked. ACTIVATE / STANDBY or [E] toggles. Low data rate (0.5 kbps) when on.',
     temp: '',
     upgName: 'SIGNAL AMPLIFIER', upgDesc: 'Doubles direct-to-Earth data rate. Better for sending compressed science.', upgReq: 'Requires: Comms Package drop',
   },
-  11: {
-    slot: 11, icon: '\uD83D\uDCF6', name: 'UHF', type: 'UHF RELAY ANTENNA',
+  12: {
+    slot: 12, icon: '\uD83D\uDCF6', name: 'UHF', type: 'UHF RELAY ANTENNA',
     desc: 'High-bandwidth UHF antenna for relay communication via overhead orbiters (MRO, MAVEN). Fast data bursts during orbital passes \u2014 primary science downlink.',
     power: '8W', powerColor: '#5dc9a5', status: 'RELAY LOCK', statusColor: '#5dc9a5', health: '97%',
     hint: '~8W on the bus while relay hardware is up. ACTIVATE / STANDBY or [E] toggles. 128 kbps burst when on.',
     temp: '',
     upgName: 'DUAL-BAND MODULE', upgDesc: 'Enables simultaneous uplink/downlink during passes. Halves transfer time.', upgReq: 'Requires: Comms Package drop',
   },
-  12: {
-    slot: 12, icon: '\u25CB', name: 'WHLS', type: 'MOBILITY / DRIVE',
+  13: {
+    slot: 13, icon: '\u25CB', name: 'WHLS', type: 'MOBILITY / DRIVE',
     desc: 'Rocker-bogie wheel motors and steering actuators. Load appears on the main bus only while the chassis translates (same line as power HUD "Rover wheels"). Future wear can reduce efficiency or strand the rover until repaired.',
     power: '0\u20135W', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '100%',
-    hint: 'Select with [B]. WASD to drive. REPAIR restores traction hardware. UPGRADE track reserved for drive efficiency / tread packages.',
+    hint: 'Select with [B] (slot 13). WASD to drive. REPAIR restores traction hardware. UPGRADE track reserved for drive efficiency / tread packages.',
     temp: '',
     upgName: 'EFFICIENCY MOTORS', upgDesc: 'Lower draw per meter; same top speed.', upgReq: 'Requires: Engineering Package drop',
   },
@@ -274,7 +282,7 @@ export interface ThermalDisplay {
   zone: string
 }
 
-/** Live fields merged onto the static wheels card (slot 12). */
+/** Live fields merged onto the static wheels card (slot 13). */
 export interface WheelsHudDisplay {
   powerStr: string
   statusStr: string
@@ -339,7 +347,7 @@ const instrument = computed(() => {
   const base = INSTRUMENTS[props.activeSlot]
   if (!base) return null
   const wh = props.wheelsHud
-  if (props.activeSlot === 12 && wh) {
+  if (props.activeSlot === 13 && wh) {
     const offline = wh.statusStr === 'OFFLINE'
     return {
       ...base,
