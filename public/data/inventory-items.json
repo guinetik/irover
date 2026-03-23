@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "basalt",
+      "category": "rock",
+      "label": "Basalt",
+      "description": "Fine-grained mafic volcanic rock; common in Martian plains.",
+      "image": "/basalt.jpg",
+      "weightRange": [0.4, 1.2]
+    },
+    {
+      "id": "hematite",
+      "category": "rock",
+      "label": "Hematite",
+      "description": "Iron oxide mineral; often forms in aqueous environments.",
+      "image": "/hermatite.jpg",
+      "weightRange": [0.3, 0.8]
+    },
+    {
+      "id": "olivine",
+      "category": "rock",
+      "label": "Olivine",
+      "description": "Magnesium-iron silicate; weathers slowly in dry climates.",
+      "image": "/olivine.jpg",
+      "weightRange": [0.3, 0.9]
+    },
+    {
+      "id": "sulfate",
+      "category": "rock",
+      "label": "Sulfate",
+      "description": "Evaporite mineral suite; marker of past brine activity.",
+      "image": "/sulfate.jpg",
+      "weightRange": [0.2, 0.7]
+    },
+    {
+      "id": "mudstone",
+      "category": "rock",
+      "label": "Mudstone",
+      "description": "Lithified mud; may preserve fine-scale sedimentary structure.",
+      "image": "/mudstone.jpg",
+      "weightRange": [0.3, 1.0]
+    },
+    {
+      "id": "iron-meteorite",
+      "category": "rock",
+      "label": "Iron meteorite",
+      "description": "Metallic meteoritic iron-nickel alloy fragment.",
+      "image": "/iron.jpg",
+      "weightRange": [0.5, 1.5]
+    },
+    {
+      "id": "engineering-components",
+      "category": "component",
+      "label": "Engineering components (EC)",
+      "description": "Standard engineering parts kit. Used for repairs on engineering systems.",
+      "image": "/inventory/ec.svg",
+      "weightPerUnit": 0.25,
+      "maxStack": 500
+    },
+    {
+      "id": "science-components",
+      "category": "component",
+      "label": "Science components (SC)",
+      "description": "Sensors, optics, and lab subassemblies. Used for repairs on science instruments.",
+      "image": "/inventory/sc.svg",
+      "weightPerUnit": 0.25,
+      "maxStack": 500
+    },
+    {
+      "id": "mechatronics-components",
+      "category": "component",
+      "label": "Mechatronics components (MC)",
+      "description": "Actuators, harnesses, and mechanisms. Used for crafting buildables.",
+      "image": "/inventory/mc.svg",
+      "weightPerUnit": 0.25,
+      "maxStack": 500
+    },
+    {
+      "id": "digital-components",
+      "category": "component",
+      "label": "Digital components (DC)",
+      "description": "High-reliability compute and comms modules. Used for digital subsystems.",
+      "image": "/inventory/dc.svg",
+      "weightPerUnit": 0.25,
+      "maxStack": 500
+    },
+    {
+      "id": "welding-wire",
+      "category": "component",
+      "label": "Welding wire",
+      "description": "Consumable filler for structural repairs in the field.",
+      "image": "/inventory/welding-wire.svg",
+      "weightPerUnit": 0.25,
+      "maxStack": 500
+    }
+  ]
+}

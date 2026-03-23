@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" fill="#1a1510"/>
+  <path d="M12 20h40v24H12z" fill="none" stroke="#c4753a" stroke-width="2"/>
+  <text x="32" y="38" text-anchor="middle" fill="#e8a060" font-family="monospace" font-size="14" font-weight="bold">EC</text>
+</svg>

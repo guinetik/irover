@@ -45,6 +45,18 @@ function show(type: RockTypeId, label: string, weightKg: number): void {
   push({ id: uid(), prefix: '+', label, weight: weightKg.toFixed(2), color, variant: '' })
 }
 
+/** Brief error line (e.g. inventory full). */
+function showError(message: string): void {
+  push({
+    id: uid(),
+    prefix: '!',
+    label: message,
+    weight: '',
+    color: '#e05030',
+    variant: 'error',
+  })
+}
+
 function showChemCam(type: RockTypeId, rockLabel: string): void {
   push({ id: uid(), prefix: 'CHEMCAM', label: rockLabel, weight: '', color: '#66ffee', variant: 'chemcam' })
 }
@@ -65,7 +77,7 @@ function uid(): string {
   return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-defineExpose({ show, showChemCam, showSP })
+defineExpose({ show, showError, showChemCam, showSP })
 </script>
 
 <style scoped>
@@ -104,6 +116,17 @@ defineExpose({ show, showChemCam, showSP })
   background: rgba(5, 30, 35, 0.92);
   border-color: rgba(102, 255, 238, 0.45);
   box-shadow: 0 0 12px rgba(102, 255, 238, 0.15);
+}
+
+.sample-toast.error {
+  border-color: rgba(224, 80, 48, 0.55);
+  background: rgba(40, 12, 8, 0.92);
+}
+
+.sample-toast.error .toast-label {
+  color: rgba(255, 180, 160, 0.95);
+  white-space: normal;
+  max-width: 280px;
 }
 
 .toast-dot {

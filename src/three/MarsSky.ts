@@ -3,7 +3,15 @@ import skyVert from '@/three/shaders/mars-sky.vert.glsl?raw'
 import skyFrag from '@/three/shaders/mars-sky.frag.glsl?raw'
 
 // Full day cycle in seconds (accelerated — 3 real minutes = 1 sol)
-const SOL_DURATION = 180
+export const SOL_DURATION = 180
+
+/** Martian sol length in minutes — must match `SolClock` display math. */
+export const MARS_SOL_CLOCK_MINUTES = 24 * 60 + 37
+
+/**
+ * `timeOfDay` in 0..1 that corresponds to 06:00 on the HUD sol clock.
+ */
+export const MARS_TIME_OF_DAY_06_00 = (6 * 60) / MARS_SOL_CLOCK_MINUTES
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
@@ -28,7 +36,7 @@ export class MarsSky {
 
   // Exposed for other systems (terrain shader, dust)
   readonly sunDirection = new THREE.Vector3()
-  timeOfDay = 0.35 // start mid-morning
+  timeOfDay = MARS_TIME_OF_DAY_06_00
   /** 0 = full day, 1 = full night */
   nightFactor = 0
 

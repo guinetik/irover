@@ -141,7 +141,17 @@ export class SiteScene {
     await this.loadRover()
   }
 
-  update(elapsed: number, delta: number, cameraPosition: THREE.Vector3) {
+  /**
+   * @param simElapsed — Accumulated simulation time (freezes when game clock paused).
+   * @param delta — Scene / rover / deployment step (use 0 when paused).
+   * @param skyDelta — Sky / sol advance only (0 until rover ready, or 0 when paused).
+   */
+  update(
+    simElapsed: number,
+    delta: number,
+    cameraPosition: THREE.Vector3,
+    skyDelta: number,
+  ) {
     // Sky crane descent
     if (this.roverState === 'descending' && this.rover) {
       if (!this.touchdownReleaseActive) {
@@ -198,8 +208,8 @@ export class SiteScene {
     }
 
     const roverPos = this.rover?.position
-    this.sky?.update(delta, roverPos)
-    this.dust?.update(elapsed, cameraPosition)
+    this.sky?.update(skyDelta, roverPos)
+    this.dust?.update(simElapsed, cameraPosition)
 
     // Sync terrain shader sun direction with sky
     if (this.sky && this.terrain.terrainMaterial) {

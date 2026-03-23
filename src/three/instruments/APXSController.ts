@@ -3,6 +3,7 @@ import { InstrumentController } from './InstrumentController'
 import { RockTargeting, type TargetResult } from './RockTargeting'
 import { LaserDrill } from './LaserDrill'
 import { useInventory } from '@/composables/useInventory'
+import type { CollectedRockSample } from '@/types/inventory'
 import type { RockTypeId } from '@/three/terrain/RockTypes'
 
 const ARM_SWING_SPEED = 0.8
@@ -47,7 +48,12 @@ export class APXSController extends InstrumentController {
   private inventory = useInventory()
 
   /** Set after each successful sample collection; read + cleared by the view layer */
-  lastCollected: import('@/composables/useInventory').Sample | null = null
+  lastCollected: CollectedRockSample | null = null
+  /** Set when collection fails (e.g. cargo full); read + cleared by the view layer */
+  lastInventoryError: string | null = null
+
+  /** Updated each frame: pointed rock can still accept a worst-case mass sample */
+  canCollectCurrentTarget = false
 
   get drillProgress(): number { return this.drill?.progress ?? 0 }
   get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
@@ -133,14 +139,20 @@ export class APXSController extends InstrumentController {
       this.currentTarget = this.targeting.castFromDrillHead(drillPos)
     }
 
+    let canCollect = false
+    if (this.currentTarget) {
+      const rt = (this.currentTarget.rock.userData.rockType as RockTypeId) ?? 'basalt'
+      canCollect = this.inventory.canFitRockSampleMax(rt)
+    }
+    this.canCollectCurrentTarget = canCollect
+
     // Update 3D target dot
     if (this.targetDot && this.targetDotMat) {
       if (this.currentTarget) {
         this.targetDot.visible = true
         this.targetDot.position.copy(this.currentTarget.point)
         this.targetWorldPos.copy(this.currentTarget.point)
-        const canDrill = !this.inventory.isFull.value
-        this.targetDotMat.color.setHex(canDrill ? 0x5dc9a5 : 0xe05030)
+        this.targetDotMat.color.setHex(canCollect ? 0x5dc9a5 : 0xe05030)
       } else {
         this.targetDot.visible = false
         // Place at drill head when no target
@@ -148,19 +160,21 @@ export class APXSController extends InstrumentController {
       }
     }
 
+    const drillActive = Boolean(this.drilling && this.currentTarget && canCollect)
+
     if (this.drill) {
-      if (this.drilling && this.currentTarget && !this.inventory.isFull.value) {
+      if (drillActive) {
         const drillOrigin = this.getDrillWorldPosition()
         if (!this.drill.isDrilling) {
-          this.drill.startDrill(drillOrigin, this.currentTarget.point)
+          this.drill.startDrill(drillOrigin, this.currentTarget!.point)
         } else {
-          this.drill.updateTarget(drillOrigin, this.currentTarget.point)
+          this.drill.updateTarget(drillOrigin, this.currentTarget!.point)
         }
       } else if (this.drill.isDrilling && !this.drilling) {
         this.drill.cancelDrill()
       }
 
-      this.drill.update(delta, this.currentTarget !== null && this.drilling)
+      this.drill.update(delta, drillActive)
 
       if (this.drill.isComplete && this.currentTarget) {
         this.collectSample(this.currentTarget.rock)
@@ -178,10 +192,12 @@ export class APXSController extends InstrumentController {
 
   private collectSample(rock: THREE.Mesh): void {
     const rockType = (rock.userData.rockType as RockTypeId) ?? 'basalt'
-    const sample = this.inventory.addSample(rockType)
-    if (sample && this.targeting) {
-      this.targeting.depleteRock(rock)
-      this.lastCollected = sample
+    const res = this.inventory.addRockSample(rockType, rock.uuid)
+    if (res.ok) {
+      this.targeting?.depleteRock(rock)
+      this.lastCollected = res.payload
+    } else {
+      this.lastInventoryError = res.message
     }
   }
 

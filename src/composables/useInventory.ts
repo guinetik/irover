@@ -1,62 +1,137 @@
 import { ref, computed } from 'vue'
-import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
+import type { RockTypeId } from '@/three/terrain/RockTypes'
+import {
+  INVENTORY_CATALOG,
+  maxRockSampleKg,
+  type CollectedRockSample,
+  type InventoryStack,
+} from '@/types/inventory'
 import { usePlayerProfile } from './usePlayerProfile'
 
-export interface Sample {
-  id: string
-  type: RockTypeId
-  label: string
-  weightKg: number
-}
-
 const BASE_CAPACITY_KG = 5
-let sampleCounter = 0
 
-const samples = ref<Sample[]>([])
+const stacks = ref<InventoryStack[]>([])
 const { mod } = usePlayerProfile()
+
+export type AddRockSampleResult =
+  | { ok: true; payload: CollectedRockSample }
+  | { ok: false; message: string }
+
+export type AddComponentResult = { ok: true } | { ok: false; message: string }
 
 export function useInventory() {
   const capacityKg = computed(() => BASE_CAPACITY_KG * mod('inventorySpace'))
 
   const currentWeightKg = computed(() =>
-    samples.value.reduce((sum, s) => sum + s.weightKg, 0)
+    stacks.value.reduce((sum, s) => sum + s.totalWeightKg, 0),
   )
 
   const isFull = computed(() => currentWeightKg.value >= capacityKg.value)
 
   /**
-   * Collects a sample of the given rock type into the inventory.
-   * Weight is randomised within the type's weight range.
-   * Returns null if the sample would exceed capacity.
+   * True if a rock sample of this type could be added without exceeding capacity,
+   * assuming worst-case mass (max of weight range). Used to gate APXS drilling.
    */
-  function addSample(type: RockTypeId): Sample | null {
-    const rockType = ROCK_TYPES[type]
-    const [minW, maxW] = rockType.weightRange
-    const weight = minW + Math.random() * (maxW - minW)
-    if (currentWeightKg.value + weight > capacityKg.value) return null
-
-    sampleCounter++
-    const sample: Sample = {
-      id: `sample-${sampleCounter}`,
-      type,
-      label: `${rockType.label} #${sampleCounter}`,
-      weightKg: Math.round(weight * 100) / 100,
-    }
-    samples.value.push(sample)
-    return sample
+  function canFitRockSampleMax(rockType: RockTypeId): boolean {
+    const maxW = maxRockSampleKg(rockType)
+    return currentWeightKg.value + maxW <= capacityKg.value + 1e-9
   }
 
-  function removeSample(id: string): void {
-    const idx = samples.value.findIndex(s => s.id === id)
-    if (idx >= 0) samples.value.splice(idx, 1)
+  /**
+   * Merges one APXS rock sample into the stack for that lithology.
+   * Rolls mass from catalog weightRange. Does not deplete the rock mesh (caller handles that).
+   */
+  function addRockSample(rockType: RockTypeId, rockMeshUuid: string): AddRockSampleResult {
+    const def = INVENTORY_CATALOG[rockType]
+    if (!def || def.category !== 'rock' || !def.weightRange) {
+      return { ok: false, message: 'Unknown sample type.' }
+    }
+    const [minW, maxW] = def.weightRange
+    const weight = minW + Math.random() * (maxW - minW)
+    const rounded = Math.round(weight * 100) / 100
+    if (currentWeightKg.value + rounded > capacityKg.value + 1e-9) {
+      return { ok: false, message: 'Cargo full — cannot store sample.' }
+    }
+
+    const next = [...stacks.value]
+    const i = next.findIndex((s) => s.itemId === rockType)
+    if (i >= 0) {
+      const s = next[i]
+      next[i] = {
+        itemId: s.itemId,
+        quantity: s.quantity + 1,
+        totalWeightKg: Math.round((s.totalWeightKg + rounded) * 100) / 100,
+      }
+    } else {
+      next.push({
+        itemId: rockType,
+        quantity: 1,
+        totalWeightKg: rounded,
+      })
+    }
+    stacks.value = next
+
+    const payload: CollectedRockSample = {
+      rockMeshUuid,
+      rockType,
+      displayLabel: def.label,
+      weightKgThisSample: rounded,
+    }
+    return { ok: true, payload }
+  }
+
+  /**
+   * Adds crafting / repair components. Each unit is `weightPerUnit` kg; respects `maxStack`.
+   */
+  function addComponent(itemId: string, quantity: number): AddComponentResult {
+    if (quantity <= 0) return { ok: false, message: 'Invalid quantity.' }
+    const def = INVENTORY_CATALOG[itemId]
+    if (!def || def.category !== 'component' || def.weightPerUnit == null || def.maxStack == null) {
+      return { ok: false, message: 'Unknown component.' }
+    }
+    const addWeight = def.weightPerUnit * quantity
+    if (currentWeightKg.value + addWeight > capacityKg.value + 1e-9) {
+      return { ok: false, message: 'Cargo full.' }
+    }
+
+    const next = [...stacks.value]
+    const i = next.findIndex((s) => s.itemId === itemId)
+    if (i >= 0) {
+      const s = next[i]
+      const newQty = s.quantity + quantity
+      if (newQty > def.maxStack) return { ok: false, message: 'Stack limit reached.' }
+      next[i] = {
+        itemId: s.itemId,
+        quantity: newQty,
+        totalWeightKg: Math.round((s.totalWeightKg + addWeight) * 100) / 100,
+      }
+    } else {
+      if (quantity > def.maxStack) return { ok: false, message: 'Stack limit reached.' }
+      next.push({
+        itemId,
+        quantity,
+        totalWeightKg: Math.round(addWeight * 100) / 100,
+      })
+    }
+    stacks.value = next
+    return { ok: true }
+  }
+
+  /**
+   * Removes an entire stack (dump cargo slot).
+   */
+  function removeStack(itemId: string): void {
+    stacks.value = stacks.value.filter((s) => s.itemId !== itemId)
   }
 
   return {
-    samples,
+    stacks,
     currentWeightKg,
     isFull,
     capacityKg,
-    addSample,
-    removeSample,
+    canFitRockSampleMax,
+    addRockSample,
+    addComponent,
+    removeStack,
   }
 }

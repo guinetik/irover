@@ -126,11 +126,11 @@
     />
     <InventoryPanel
       :open="inventoryOpen"
-      :samples="samples"
+      :stacks="inventoryStacks"
       :current-weight-kg="currentWeightKg"
       :capacity-kg="capacityKg"
       :is-full="isFull"
-      @dump="removeSample"
+      @dump="removeInventoryStack"
     />
     <ProfilePanel :open="profileOpen" />
     <SampleToast ref="sampleToastRef" />
@@ -207,6 +207,7 @@ import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { MARS_TIME_OF_DAY_06_00 } from '@/three/MarsSky'
 import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
@@ -227,6 +228,7 @@ import PowerHud from '@/components/PowerHud.vue'
 import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory } from '@/composables/useInventory'
+import { useMarsGameClock } from '@/composables/useMarsGameClock'
 import { useMarsPower } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
@@ -307,9 +309,16 @@ const mastTilt = ref(0)
 const mastFov = ref(50)
 const mastTargetRange = ref(-1)
 const marsSol = ref(1)
-const marsTimeOfDay = ref(0)
+const marsTimeOfDay = ref(MARS_TIME_OF_DAY_06_00)
 const currentNightFactor = ref(0)
-const { samples, currentWeightKg, isFull, capacityKg, removeSample } = useInventory()
+const {
+  stacks: inventoryStacks,
+  currentWeightKg,
+  isFull,
+  capacityKg,
+  removeStack: removeInventoryStack,
+} = useInventory()
+const gameClock = useMarsGameClock()
 const { batteryWh, capacityWh, generationW, consumptionW, netW, socPct, isSleeping, tickPower } = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
 const { mod: playerMod } = usePlayerProfile()
@@ -503,12 +512,17 @@ onMounted(async () => {
 
   clock = new THREE.Clock()
 
+  /** Accumulated simulation time (stops when `gameClock` is paused). */
+  let simulationTime = 0
+
   function animate() {
     animationId = requestAnimationFrame(animate)
     if (!camera || !clock || !siteScene || !composer) return
 
-    const delta = clock.getDelta()
-    const elapsed = clock.getElapsedTime()
+    const rawDelta = clock.getDelta()
+    const sceneDelta = gameClock.getSceneDelta(rawDelta)
+    const skyDelta = gameClock.getSkyDelta(rawDelta)
+    simulationTime += sceneDelta
 
     // Sleep mode — kill movement + force-deactivate instruments
     if (isSleeping.value && controller) {
@@ -527,7 +541,7 @@ onMounted(async () => {
       controller.config.turnSpeed = 0.5 * nightPenalty * rtgBoost * speedMult
     }
 
-    controller?.update(delta)
+    controller?.update(sceneDelta)
     roverHeading.value = controller?.heading ?? 0
     if (siteScene?.rover) {
       roverWorldX.value = siteScene.rover.position.x
@@ -559,11 +573,11 @@ onMounted(async () => {
             if (rtg.phase === 'overdrive') {
               mat.emissive = mat.emissive || new THREE.Color()
               mat.emissive.setHex(0xff6600)
-              mat.emissiveIntensity = 0.3 + Math.sin(elapsed * 4) * 0.15
+              mat.emissiveIntensity = 0.3 + Math.sin(simulationTime * 4) * 0.15
             } else {
               mat.emissive = mat.emissive || new THREE.Color()
               mat.emissive.setHex(0xff2200)
-              mat.emissiveIntensity = 0.1 + Math.sin(elapsed * 2) * 0.05
+              mat.emissiveIntensity = 0.1 + Math.sin(simulationTime * 2) * 0.05
             }
           }
         })
@@ -572,7 +586,7 @@ onMounted(async () => {
           if ((child as THREE.Mesh).isMesh) {
             const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
             if (mat.emissiveIntensity > 0) {
-              mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - delta * 0.5)
+              mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - sceneDelta * 0.5)
             }
           }
         })
@@ -587,10 +601,10 @@ onMounted(async () => {
           if (!mat.emissive) return
           if (isSleeping.value) {
             mat.emissive.setHex(0xff1100)
-            mat.emissiveIntensity = 0.08 + Math.sin(elapsed * 1.5) * 0.06
+            mat.emissiveIntensity = 0.08 + Math.sin(simulationTime * 1.5) * 0.06
           } else if (rtgPhase.value === 'idle' && mat.emissiveIntensity > 0) {
             // Fade out only if RTG isn't also glowing
-            mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - delta * 0.3)
+            mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - sceneDelta * 0.3)
           }
         }
       })
@@ -615,7 +629,7 @@ onMounted(async () => {
       apxs.drillDurationMultiplier = thermalMult / playerMod('analysisSpeed')
       apxs.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
-      crosshairColor.value = apxs.hasTarget && !apxs.isInventoryFull ? 'green' : 'red'
+      crosshairColor.value = apxs.hasTarget && apxs.canCollectCurrentTarget ? 'green' : 'red'
       drillProgress.value = apxs.drillProgress
       isDrilling.value = apxs.isDrilling
       apxsDrilling = apxs.isDrilling
@@ -627,10 +641,14 @@ onMounted(async () => {
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
+      if (apxs.lastInventoryError) {
+        sampleToastRef.value?.showError(apxs.lastInventoryError)
+        apxs.lastInventoryError = null
+      }
       if (apxs.lastCollected) {
         const s = apxs.lastCollected
-        sampleToastRef.value?.show(s.type, s.label, s.weightKg)
-        const gain = awardSP('apxs', s.id, s.label)
+        sampleToastRef.value?.show(s.rockType, s.displayLabel, s.weightKgThisSample)
+        const gain = awardSP('apxs', s.rockMeshUuid, s.displayLabel)
         if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         apxs.lastCollected = null
       }
@@ -642,7 +660,7 @@ onMounted(async () => {
 
     // Thermal tick (before power so heaterW is current)
     if (siteTerrainParams) {
-      tickThermal(delta, {
+      tickThermal(sceneDelta, {
         timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
         temperatureMinK: siteTerrainParams.temperatureMinK,
         temperatureMaxK: siteTerrainParams.temperatureMaxK,
@@ -666,7 +684,7 @@ onMounted(async () => {
       instrumentW = (controller.activeInstrument as ChemCamController).powerDrawW
     }
 
-    tickPower(delta, {
+    tickPower(sceneDelta, {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       roverInSunlight: siteScene.roverInSunlight,
       moving: controller?.isMoving ?? false,
@@ -687,6 +705,10 @@ onMounted(async () => {
       descending.value = false
       deploying.value = false
       deployProgress.value = 1
+    }
+
+    if (siteScene.roverState === 'ready' && !gameClock.roverClockRunning.value) {
+      gameClock.notifyRoverReady()
     }
 
     // Attach instruments once ready (idempotent — attach() checks its own flag)
@@ -744,7 +766,7 @@ onMounted(async () => {
     // Animate MastCam tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
-      mcInst.updateTagMarkers(elapsed)
+      mcInst.updateTagMarkers(simulationTime)
     }
 
     // Track active instrument for toolbar
@@ -826,11 +848,11 @@ onMounted(async () => {
       siteScene.trails.update(siteScene.rover.position, controller?.heading ?? 0)
     }
 
-    siteScene.update(elapsed, delta, camera.position)
+    siteScene.update(simulationTime, sceneDelta, camera.position, skyDelta)
 
     // Update dust pass time
     if (dustPass) {
-      dustPass.uniforms.uTime.value = elapsed
+      dustPass.uniforms.uTime.value = simulationTime
     }
 
     composer.render()

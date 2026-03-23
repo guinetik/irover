@@ -9,6 +9,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
 
 const props = defineProps<{
   sol: number
@@ -18,10 +19,8 @@ const props = defineProps<{
   nightFactor?: number
 }>()
 
-const MARS_DAY_MINUTES = 24 * 60 + 37
-
 const marsTime = computed(() => {
-  const totalMin = (props.timeOfDay % 1) * MARS_DAY_MINUTES
+  const totalMin = (props.timeOfDay % 1) * MARS_SOL_CLOCK_MINUTES
   const h = Math.floor(totalMin / 60)
   const m = Math.floor(totalMin % 60)
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
