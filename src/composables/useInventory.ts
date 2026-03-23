@@ -13,11 +13,37 @@ const BASE_CAPACITY_KG = 5
 const stacks = ref<InventoryStack[]>([])
 const { mod } = usePlayerProfile()
 
+// Seed starter ice (1 kg = 10 units at 0.1 kg/unit) — placeholder until DAN cones produce it
+if (stacks.value.length === 0) {
+  stacks.value = [{ itemId: 'ice', quantity: 10, totalWeightKg: 1.0 }]
+}
+
 export type AddRockSampleResult =
   | { ok: true; payload: CollectedRockSample }
   | { ok: false; message: string }
 
 export type AddComponentResult = { ok: true } | { ok: false; message: string }
+
+export interface InventoryComponentGrant {
+  itemId: string
+  quantity: number
+}
+
+export interface InventoryBatchFailure extends InventoryComponentGrant {
+  message: string
+}
+
+export type AddComponentsBatchResult =
+  | {
+    ok: true
+    applied: InventoryComponentGrant[]
+    failed: InventoryBatchFailure[]
+  }
+  | {
+    ok: false
+    applied: InventoryComponentGrant[]
+    failed: InventoryBatchFailure[]
+  }
 
 export function useInventory() {
   const capacityKg = computed(() => BASE_CAPACITY_KG * mod('inventorySpace'))
@@ -125,6 +151,36 @@ export function useInventory() {
   }
 
   /**
+   * Applies multiple component grants in order, preserving partial success details.
+   */
+  function addComponentsBatch(grants: InventoryComponentGrant[]): AddComponentsBatchResult {
+    const applied: InventoryComponentGrant[] = []
+    const failed: InventoryBatchFailure[] = []
+
+    for (const grant of grants) {
+      const result = addComponent(grant.itemId, grant.quantity)
+      if (result.ok) {
+        applied.push({
+          itemId: grant.itemId,
+          quantity: grant.quantity,
+        })
+      } else {
+        failed.push({
+          itemId: grant.itemId,
+          quantity: grant.quantity,
+          message: result.message,
+        })
+      }
+    }
+
+    return {
+      ok: failed.length === 0,
+      applied,
+      failed,
+    }
+  }
+
+  /**
    * Removes an entire stack (dump cargo slot).
    */
   function removeStack(itemId: string): void {
@@ -139,7 +195,15 @@ export function useInventory() {
     canFitRockSampleMax,
     addRockSample,
     addComponent,
+    addComponentsBatch,
     addTrace,
     removeStack,
   }
+}
+
+/**
+ * Test-only reset for the singleton inventory state.
+ */
+export function resetInventoryForTests(): void {
+  stacks.value = []
 }

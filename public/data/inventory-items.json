@@ -183,6 +183,15 @@
       "image": "/inventory/welding-wire.svg",
       "weightPerUnit": 0.25,
       "maxStack": 500
+    },
+    {
+      "id": "ice",
+      "category": "component",
+      "label": "Subsurface Ice",
+      "description": "Water ice extracted from DAN-confirmed drill sites. Used as a reagent in SAM wet chemistry analysis.",
+      "image": "/inventory/ice.svg",
+      "weightPerUnit": 0.1,
+      "maxStack": 100
     }
   ]
 }
