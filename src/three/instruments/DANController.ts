@@ -135,4 +135,83 @@ export class DANController extends InstrumentController {
     const chance = DANController.waterChance(this.prospectStrength, this.waterIceIndex)
     return Math.random() < chance
   }
+
+  // --- VFX ---
+  private particles: THREE.Points | null = null
+  private particlePositions: Float32Array | null = null
+  private particleVelocities: Float32Array | null = null
+  private particleSpeeds: Float32Array | null = null
+  private sceneRef: THREE.Scene | null = null
+  private readonly PARTICLE_COUNT = 24
+  vfxVisible = false
+
+  initVFX(scene: THREE.Scene): void {
+    this.sceneRef = scene
+    const count = this.PARTICLE_COUNT
+    this.particlePositions = new Float32Array(count * 3)
+    this.particleVelocities = new Float32Array(count * 3)
+    this.particleSpeeds = new Float32Array(count)
+
+    for (let i = 0; i < count; i++) {
+      this.particleSpeeds[i] = 0.8 + Math.random() * 1.2
+      this.resetParticle(i)
+    }
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(this.particlePositions, 3))
+
+    const mat = new THREE.PointsMaterial({
+      color: 0x44aaff,
+      size: 0.04,
+      transparent: true,
+      opacity: 0.7,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    })
+
+    this.particles = new THREE.Points(geo, mat)
+    this.particles.visible = false
+    scene.add(this.particles)
+  }
+
+  private resetParticle(i: number): void {
+    if (!this.particlePositions || !this.particleVelocities || !this.node) return
+    const wp = new THREE.Vector3()
+    this.node.getWorldPosition(wp)
+    const i3 = i * 3
+    this.particlePositions[i3] = wp.x + (Math.random() - 0.5) * 0.08
+    this.particlePositions[i3 + 1] = wp.y
+    this.particlePositions[i3 + 2] = wp.z + (Math.random() - 0.5) * 0.08
+    this.particleVelocities[i3] = (Math.random() - 0.5) * 0.1
+    this.particleVelocities[i3 + 1] = -1
+    this.particleVelocities[i3 + 2] = (Math.random() - 0.5) * 0.1
+  }
+
+  updateVFX(delta: number, groundY: number): void {
+    if (!this.particles || !this.particlePositions || !this.particleVelocities || !this.particleSpeeds) return
+    this.particles.visible = this.vfxVisible && this.passiveSubsystemEnabled
+    if (!this.particles.visible) return
+
+    const positions = this.particles.geometry.getAttribute('position') as THREE.BufferAttribute
+    for (let i = 0; i < this.PARTICLE_COUNT; i++) {
+      const i3 = i * 3
+      const speed = this.particleSpeeds[i]
+      this.particlePositions[i3] += this.particleVelocities[i3] * speed * delta
+      this.particlePositions[i3 + 1] += this.particleVelocities[i3 + 1] * speed * delta
+      this.particlePositions[i3 + 2] += this.particleVelocities[i3 + 2] * speed * delta
+      if (this.particlePositions[i3 + 1] <= groundY) this.resetParticle(i)
+    }
+    positions.needsUpdate = true
+  }
+
+  override dispose(): void {
+    if (this.particles && this.sceneRef) {
+      this.sceneRef.remove(this.particles)
+      this.particles.geometry.dispose()
+      ;(this.particles.material as THREE.PointsMaterial).dispose()
+    }
+    this.particles = null
+    this.sceneRef = null
+  }
 }
