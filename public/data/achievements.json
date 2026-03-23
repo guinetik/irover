@@ -67,6 +67,48 @@
       "type": "DAN PROSPECTING"
     }
   ],
+  "sam-analysis": [
+    {
+      "id": "sam-first-analysis",
+      "event": "first-analysis",
+      "icon": "⚗",
+      "title": "FIRST ANALYSIS",
+      "description": "SAM's first experiment complete. The lab is operational.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-first-uncommon",
+      "event": "first-uncommon",
+      "icon": "🔬",
+      "title": "NOTABLE FINDING",
+      "description": "An uncommon discovery — the data is getting interesting.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-first-rare",
+      "event": "first-rare",
+      "icon": "💎",
+      "title": "RARE SPECIMEN",
+      "description": "A rare discovery. Mission Control will want to see this.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-first-legendary",
+      "event": "first-legendary",
+      "icon": "⭐",
+      "title": "BREAKTHROUGH",
+      "description": "A legendary discovery. This changes everything we know about Mars.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-triple-mode",
+      "event": "triple-mode",
+      "icon": "🧬",
+      "title": "TRIPLE ANALYSIS",
+      "description": "All three SAM modes run on a single rock type. Maximum scientific yield.",
+      "type": "SAM ANALYSIS"
+    }
+  ],
   "mars-survival": [
     {
       "id": "survive-1-sol",
