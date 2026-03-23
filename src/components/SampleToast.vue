@@ -91,11 +91,22 @@ function showTrace(element: string, label: string): void {
   })
 }
 
+function showDAN(message: string): void {
+  push({
+    id: uid(),
+    prefix: 'DAN',
+    label: message,
+    weight: '',
+    color: '#44aaff',
+    variant: 'dan',
+  })
+}
+
 function uid(): string {
   return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-defineExpose({ show, showError, showChemCam, showSP, showTrace })
+defineExpose({ show, showError, showChemCam, showSP, showTrace, showDAN })
 </script>
 
 <style scoped>
@@ -174,6 +185,15 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace })
 
 .sample-toast.trace .toast-weight {
   color: rgba(204, 136, 255, 0.5);
+}
+
+.sample-toast.dan {
+  background: rgba(5, 15, 35, 0.92);
+  border-color: rgba(68, 170, 255, 0.35);
+}
+
+.sample-toast.dan .toast-label {
+  color: rgba(68, 170, 255, 0.9);
 }
 
 .toast-weight {
