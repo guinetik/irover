@@ -66,5 +66,52 @@
       "description": "Subsurface ice deposit confirmed. Drill marker placed — extraction hardware will follow.",
       "type": "DAN PROSPECTING"
     }
+  ],
+  "mars-survival": [
+    {
+      "id": "survive-1-sol",
+      "minSol": 2,
+      "spReward": 25,
+      "icon": "☀",
+      "title": "FIRST SOL",
+      "description": "One full Martian day and night cycle completed. Mission clock still running.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-5-sol",
+      "minSol": 6,
+      "spReward": 90,
+      "icon": "🌅",
+      "title": "FIVE SOLS",
+      "description": "Five sols on the surface. Radiation and cold logged — crew still operational.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-10-sol",
+      "minSol": 11,
+      "spReward": 220,
+      "icon": "🌤",
+      "title": "TEN SOLS",
+      "description": "Double-digit sols. Long-baseline environmental data accumulating.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-50-sol",
+      "minSol": 51,
+      "spReward": 1800,
+      "icon": "🛰",
+      "title": "FIFTY SOLS",
+      "description": "Extended surface campaign. Mission endurance exceeds many design studies.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-100-sol",
+      "minSol": 101,
+      "spReward": 5000,
+      "icon": "⭐",
+      "title": "HUNDRED SOLS",
+      "description": "Century sol on Mars. Sustained science operations — a landmark in surface survival.",
+      "type": "MARS SURVIVAL"
+    }
   ]
 }

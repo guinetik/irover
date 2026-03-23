@@ -10,11 +10,29 @@
         <SiteCompass :heading="roverHeading" :pois="siteCompassPois" />
       </div>
       <div class="hud-actions">
-        <div class="sp-counter">
-          <span class="sp-icon">&#x2726;</span>
+        <button
+          type="button"
+          class="ach-counter"
+          aria-haspopup="dialog"
+          :aria-expanded="achievementsOpen"
+          aria-label="Achievements"
+          @click="achievementsOpen = true"
+        >
+          <span class="ach-trophy" aria-hidden="true">🏆</span>
+          <span class="ach-count font-instrument">{{ unlockedAchievementCount }}/{{ totalAchievementCount }}</span>
+        </button>
+        <button
+          type="button"
+          class="sp-counter"
+          aria-haspopup="dialog"
+          :aria-expanded="spLedgerOpen"
+          aria-label="Science points history"
+          @click="spLedgerOpen = true"
+        >
+          <span class="sp-icon" aria-hidden="true">&#x2726;</span>
           <span class="sp-value font-instrument">{{ totalSP }}</span>
           <span class="sp-label">SP</span>
-        </div>
+        </button>
         <button
           v-if="hasScienceDiscoveries && !deploying && !descending"
           type="button"
@@ -181,6 +199,17 @@
       :dan-prospects="danArchivedProspects"
       @close="scienceLogOpen = false"
     />
+    <SciencePointsDialog :open="spLedgerOpen" @close="spLedgerOpen = false" />
+    <AchievementsDialog
+      :open="achievementsOpen"
+      :libs="libsAchievements"
+      :dan="danAchievements"
+      :survival="survivalAchievements"
+      :unlocked-ids="unlockedAchievementIds"
+      :total-sp="totalSP"
+      :mission-sol="marsSol"
+      @close="achievementsOpen = false"
+    />
     <InstrumentCrosshair
       :visible="crosshairVisible"
       :color="crosshairColor"
@@ -335,7 +364,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
@@ -361,6 +390,8 @@ import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
 import ScienceLogDialog from '@/components/ScienceLogDialog.vue'
+import SciencePointsDialog from '@/components/SciencePointsDialog.vue'
+import AchievementsDialog from '@/components/AchievementsDialog.vue'
 import AchievementBanner from '@/components/AchievementBanner.vue'
 import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
@@ -407,6 +438,8 @@ const siteId = route.params.siteId as string
 const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra } = useChemCamArchive()
 const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects } = useDanArchive()
 const scienceLogOpen = ref(false)
+const spLedgerOpen = ref(false)
+const achievementsOpen = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
@@ -667,7 +700,7 @@ const heaterHudButtonTitle = computed(() =>
     : 'Thermal / heater [H]',
 )
 const { mod: playerMod } = usePlayerProfile()
-const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN } = useSciencePoints()
+const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSurvival } = useSciencePoints()
 const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
@@ -720,33 +753,66 @@ function buildInstrumentPowerLines(
 interface Achievement { id: string; icon: string; title: string; description: string; type: string }
 interface LibsAchievement extends Achievement { sp: number }
 interface DanAchievement extends Achievement { event: string }
+interface SurvivalAchievement extends Achievement { minSol: number; spReward: number }
 const libsAchievements = ref<LibsAchievement[]>([])
 const danAchievements = ref<DanAchievement[]>([])
-const triggeredAchievements = new Set<string>()
+const survivalAchievements = ref<SurvivalAchievement[]>([])
+/** Unlocked achievement ids this session (reactive so the HUD counter updates). */
+const unlockedAchievementIds = ref<string[]>([])
+
+const totalAchievementCount = computed(
+  () =>
+    libsAchievements.value.length +
+    danAchievements.value.length +
+    survivalAchievements.value.length,
+)
+const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
 
 fetch('/data/achievements.json')
   .then(r => r.json())
-  .then((data: { 'libs-calibration'?: LibsAchievement[]; 'dan-prospecting'?: DanAchievement[] }) => {
-    libsAchievements.value = data['libs-calibration'] ?? []
-    danAchievements.value = data['dan-prospecting'] ?? []
-  })
+  .then(
+    (data: {
+      'libs-calibration'?: LibsAchievement[]
+      'dan-prospecting'?: DanAchievement[]
+      'mars-survival'?: SurvivalAchievement[]
+    }) => {
+      libsAchievements.value = data['libs-calibration'] ?? []
+      danAchievements.value = data['dan-prospecting'] ?? []
+      survivalAchievements.value = data['mars-survival'] ?? []
+    },
+  )
   .catch(() => {})
 
 function triggerDanAchievement(event: string): void {
   for (const ach of danAchievements.value) {
-    if (ach.event === event && !triggeredAchievements.has(ach.id)) {
-      triggeredAchievements.add(ach.id)
+    if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
+      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
       achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
     }
   }
 }
 
-watch(totalSP, (sp) => {
+watchEffect(() => {
+  const sp = totalSP.value
   for (const ach of libsAchievements.value) {
-    if (sp >= ach.sp && !triggeredAchievements.has(ach.id)) {
-      triggeredAchievements.add(ach.id)
+    if (sp >= ach.sp && !unlockedAchievementIds.value.includes(ach.id)) {
+      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
       achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
     }
+  }
+})
+
+watchEffect(() => {
+  const sol = marsSol.value
+  void survivalAchievements.value
+  const pending = survivalAchievements.value
+    .filter((a) => sol >= a.minSol && !unlockedAchievementIds.value.includes(a.id))
+    .sort((a, b) => a.minSol - b.minSol)
+  for (const ach of pending) {
+    unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
+    const gain = awardSurvival(`Survival: ${ach.title}`, ach.spReward)
+    achievementRef.value?.show(ach.icon, ach.title, `${ach.description} (+${gain.amount} SP)`, ach.type)
+    sampleToastRef.value?.showSP(gain.amount, 'SURVIVAL', gain.bonus)
   }
 })
 
@@ -1639,6 +1705,44 @@ onUnmounted(() => {
   gap: 10px;
 }
 
+.ach-counter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+  background: rgba(196, 149, 106, 0.1);
+  border: 1px solid rgba(196, 149, 106, 0.35);
+  border-radius: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ach-counter:hover {
+  background: rgba(196, 149, 106, 0.16);
+  border-color: rgba(232, 176, 96, 0.45);
+}
+
+.ach-counter:focus {
+  outline: none;
+}
+
+.ach-counter:focus-visible {
+  box-shadow: 0 0 0 2px rgba(10, 6, 4, 0.95), 0 0 0 4px rgba(232, 176, 96, 0.45);
+}
+
+.ach-trophy {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ach-count {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  color: #e8b060;
+}
+
 /* Power HUD + mobility strip — left column, vertically centered */
 .power-hud-stack {
   position: fixed;
@@ -1773,9 +1877,25 @@ onUnmounted(() => {
   align-items: center;
   gap: 5px;
   padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
   background: rgba(102, 255, 238, 0.08);
   border: 1px solid rgba(102, 255, 238, 0.25);
   border-radius: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sp-counter:hover {
+  background: rgba(102, 255, 238, 0.12);
+  border-color: rgba(102, 255, 238, 0.4);
+}
+
+.sp-counter:focus {
+  outline: none;
+}
+
+.sp-counter:focus-visible {
+  box-shadow: 0 0 0 2px rgba(10, 6, 4, 0.95), 0 0 0 4px rgba(102, 255, 238, 0.55);
 }
 
 .science-hud-btn {

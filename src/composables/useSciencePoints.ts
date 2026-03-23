@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { usePlayerProfile } from './usePlayerProfile'
 
 const { mod } = usePlayerProfile()
@@ -41,7 +41,7 @@ const ACK_SP = { min: 5, max: 15 }
 /** Track acknowledged readouts to prevent double-count */
 const acknowledgedReadouts = new Set<string>()
 
-export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan'
+export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'survival'
 type InstrumentSource = 'mastcam' | 'chemcam' | 'drill'
 
 export interface SPGain {
@@ -51,8 +51,38 @@ export interface SPGain {
   bonus: number
 }
 
+/**
+ * One append-only row in the session Science Points ledger (newest first in {@link spLedger}).
+ */
+export interface SPLedgerEntry {
+  /** Stable key for list rendering */
+  id: string
+  /** Wall-clock ms when the gain was recorded */
+  atMs: number
+  amount: number
+  source: SPSource
+  /** Rock label, DAN reason string, etc. */
+  detail: string
+  /** Multi-instrument multiplier for instruments; 1 for ack/DAN */
+  bonusMult: number
+}
+
 /** Last gain — read once by the view for toast, then cleared */
 const lastGain = ref<SPGain | null>(null)
+
+/** Session ledger of SP gains, newest entries first */
+const spLedger = ref<SPLedgerEntry[]>([])
+
+function pushLedger(gain: SPGain): void {
+  spLedger.value.unshift({
+    id: crypto.randomUUID(),
+    atMs: Date.now(),
+    amount: gain.amount,
+    source: gain.source,
+    detail: gain.rockLabel,
+    bonusMult: gain.bonus,
+  })
+}
 
 export function useSciencePoints() {
   function award(source: InstrumentSource, rockId: string, rockLabel: string): SPGain | null {
@@ -71,6 +101,7 @@ export function useSciencePoints() {
 
     const gain: SPGain = { amount, source, rockLabel, bonus }
     lastGain.value = gain
+    pushLedger(gain)
     return gain
   }
 
@@ -88,6 +119,7 @@ export function useSciencePoints() {
 
     const gain: SPGain = { amount, source: 'chemcam-ack', rockLabel, bonus: 1 }
     lastGain.value = gain
+    pushLedger(gain)
     return gain
   }
 
@@ -100,6 +132,23 @@ export function useSciencePoints() {
     sessionSP.value += amount
     const gain: SPGain = { amount, source: 'dan', rockLabel: reason, bonus: 1.0 }
     lastGain.value = gain
+    pushLedger(gain)
+    return gain
+  }
+
+  /**
+   * Science points for Mars survival milestones (full sols survived). Scales with profile `spYield`.
+   * @param detail Ledger label (e.g. milestone title)
+   * @param baseSp Design-time SP before spYield multiplier
+   */
+  function awardSurvival(detail: string, baseSp: number): SPGain {
+    const spYieldMult = mod('spYield')
+    const amount = Math.round(baseSp * spYieldMult)
+    totalSP.value += amount
+    sessionSP.value += amount
+    const gain: SPGain = { amount, source: 'survival', rockLabel: detail, bonus: 1.0 }
+    lastGain.value = gain
+    pushLedger(gain)
     return gain
   }
 
@@ -113,9 +162,25 @@ export function useSciencePoints() {
     totalSP,
     sessionSP,
     lastGain,
+    spLedger,
     award,
     awardAck,
     awardDAN,
+    awardSurvival,
     consumeLastGain,
   }
+}
+
+/**
+ * Clears singleton SP state. Used by unit tests only; resets totals, idempotency sets, and ledger.
+ */
+export function resetSciencePointsForTests(): void {
+  totalSP.value = 0
+  sessionSP.value = 0
+  lastGain.value = null
+  spLedger.value = []
+  scored.mastcam.clear()
+  scored.chemcam.clear()
+  scored.drill.clear()
+  acknowledgedReadouts.clear()
 }
