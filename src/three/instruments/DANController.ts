@@ -136,18 +136,12 @@ export class DANController extends InstrumentController {
     return Math.random() < chance
   }
 
-  // --- VFX: sequential pulse train ---
-  // A series of dots fired one-at-a-time from the emitter downward to the ground.
-  // Each dot travels straight down; when it hits ground it despawns and the next fires.
-  private particles: THREE.Points | null = null
-  private particlePositions: Float32Array | null = null
-  private particleAlive: boolean[] = []
+  // --- VFX: sequential pulse dots (Mesh-based, not Points) ---
+  private pulseDots: THREE.Mesh[] = []
+  private pulseDotAlive: boolean[] = []
   private sceneRef: THREE.Scene | null = null
-  /** Total dots in the pulse train */
   private readonly PULSE_COUNT = 6
-  /** Seconds between sequential dot launches */
   private readonly PULSE_INTERVAL = 0.12
-  /** Fall speed (scene units / sec) — tuned for ~0.5 unit source-to-ground gap */
   private readonly FALL_SPEED = 0.5
   private pulseTimer = 0
   private nextPulseIdx = 0
@@ -155,85 +149,67 @@ export class DANController extends InstrumentController {
 
   initVFX(scene: THREE.Scene): void {
     this.sceneRef = scene
-    const n = this.PULSE_COUNT
-    this.particlePositions = new Float32Array(n * 3)
-    this.particleAlive = new Array(n).fill(false)
-
-    // All start hidden off-screen
-    for (let i = 0; i < n; i++) {
-      const i3 = i * 3
-      this.particlePositions[i3] = 0
-      this.particlePositions[i3 + 1] = -999
-      this.particlePositions[i3 + 2] = 0
-    }
-
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(this.particlePositions, 3))
-
-    const mat = new THREE.PointsMaterial({
+    const dotGeo = new THREE.SphereGeometry(0.02, 6, 6)
+    const dotMat = new THREE.MeshBasicMaterial({
       color: 0x44ccff,
-      size: 8,
       transparent: true,
       opacity: 0.9,
-      depthWrite: false,
-      sizeAttenuation: false,  // constant screen-space size so always visible
     })
 
-    this.particles = new THREE.Points(geo, mat)
-    this.particles.frustumCulled = false  // positions update dynamically; skip bounding-sphere check
-    this.particles.visible = false
-    scene.add(this.particles)
+    for (let i = 0; i < this.PULSE_COUNT; i++) {
+      const dot = new THREE.Mesh(dotGeo, dotMat)
+      dot.visible = false
+      scene.add(dot)
+      this.pulseDots.push(dot)
+      this.pulseDotAlive.push(false)
+    }
   }
 
   updateVFX(delta: number, groundY: number): void {
-    if (!this.particles || !this.particlePositions || !this.node) return
-    this.particles.visible = this.vfxVisible && this.passiveSubsystemEnabled
-    if (!this.particles.visible) return
+    if (this.pulseDots.length === 0 || !this.node) return
+    const show = this.vfxVisible && this.passiveSubsystemEnabled
+    if (!show) {
+      for (const dot of this.pulseDots) dot.visible = false
+      return
+    }
 
-    // Position the Points mesh at the DAN emitter XZ; Y=0 so particle Y coords are world-space
     const wp = new THREE.Vector3()
     this.node.getWorldPosition(wp)
-    this.particles.position.set(wp.x, 0, wp.z)
-
-    const sourceY = wp.y
-    const endY = groundY
 
     // Fire next dot on interval
     this.pulseTimer += delta
     if (this.pulseTimer >= this.PULSE_INTERVAL) {
       this.pulseTimer = 0
       const idx = this.nextPulseIdx
-      const i3 = idx * 3
-      // Spawn at emitter (local: x=0, y=sourceY, z=0)
-      this.particlePositions[i3] = 0
-      this.particlePositions[i3 + 1] = sourceY
-      this.particlePositions[i3 + 2] = 0
-      this.particleAlive[idx] = true
+      const dot = this.pulseDots[idx]
+      dot.position.set(wp.x, wp.y, wp.z)
+      dot.visible = true
+      this.pulseDotAlive[idx] = true
       this.nextPulseIdx = (this.nextPulseIdx + 1) % this.PULSE_COUNT
     }
 
-    // Advance all alive dots downward
-    const positions = this.particles.geometry.getAttribute('position') as THREE.BufferAttribute
+    // Advance all alive dots straight down
     for (let i = 0; i < this.PULSE_COUNT; i++) {
-      if (!this.particleAlive[i]) continue
-      const i3 = i * 3
-      this.particlePositions[i3 + 1] -= this.FALL_SPEED * delta
+      if (!this.pulseDotAlive[i]) continue
+      const dot = this.pulseDots[i]
+      dot.position.y -= this.FALL_SPEED * delta
       // Despawn on ground hit
-      if (this.particlePositions[i3 + 1] <= endY) {
-        this.particleAlive[i] = false
-        this.particlePositions[i3 + 1] = -999 // hide off-screen
+      if (dot.position.y <= groundY) {
+        dot.visible = false
+        this.pulseDotAlive[i] = false
       }
     }
-    positions.needsUpdate = true
   }
 
   override dispose(): void {
-    if (this.particles && this.sceneRef) {
-      this.sceneRef.remove(this.particles)
-      this.particles.geometry.dispose()
-      ;(this.particles.material as THREE.PointsMaterial).dispose()
+    if (this.sceneRef) {
+      for (const dot of this.pulseDots) {
+        this.sceneRef.remove(dot)
+        dot.geometry.dispose()
+        ;(dot.material as THREE.MeshBasicMaterial).dispose()
+      }
     }
-    this.particles = null
+    this.pulseDots = []
     this.sceneRef = null
   }
 }
