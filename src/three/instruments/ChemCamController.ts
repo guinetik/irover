@@ -73,6 +73,9 @@ export interface SpectrumPeak {
 }
 
 export class ChemCamController extends InstrumentController {
+  /** Minimum bus draw while ChemCam hardware is engaged (orbit, armed, or background sequence). */
+  static readonly BUS_IDLE_W = IDLE_POWER_W
+
   readonly id = 'chemcam'
   readonly name = 'ChemCam'
   readonly slot = 2
@@ -143,7 +146,7 @@ export class ChemCamController extends InstrumentController {
   // --- Callbacks (set by view) ---
   onReady: ((readout: ChemCamReadout) => void) | null = null
 
-  /** True while E is held — IR pulse train runs only while this is true (same idea as APXS drill). */
+  /** True while E is held — IR pulse train runs only while this is true (same idea as arm drill hold-to-fire). */
   private _eFireHeld = false
 
   override attach(rover: THREE.Group): void {
@@ -167,6 +170,10 @@ export class ChemCamController extends InstrumentController {
       case 'ARMED': return IDLE_POWER_W
       default: return 0
     }
+  }
+
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return Math.max(ChemCamController.BUS_IDLE_W, this.powerDrawW)
   }
 
   /**
@@ -198,7 +205,7 @@ export class ChemCamController extends InstrumentController {
     if (keys.has('KeyW') || keys.has('ArrowUp')) this.tiltAngle = Math.max(TILT_MIN, this.tiltAngle - TILT_SPEED * delta)
     if (keys.has('KeyS') || keys.has('ArrowDown')) this.tiltAngle = Math.min(TILT_MAX, this.tiltAngle + TILT_SPEED * delta)
 
-    // E hold to fire IR (release E aborts pulse train — mirrors APXS hold-to-drill)
+    // E hold to fire IR (release E aborts pulse train — mirrors arm drill hold-to-fire)
     this._eFireHeld = keys.has('KeyE')
 
     if (mastPanTiltKeysHeld(keys)) mastState.actuatorKeysHeld = true

@@ -13,6 +13,7 @@ export class SAMController extends InstrumentController {
   readonly viewAngle = 0.1
   readonly viewPitch = 1.1
   override readonly canActivate = true
+  override readonly selectionIdlePowerW = 10
 
   // Cover animation
   private covers: THREE.Object3D[] = []
@@ -84,5 +85,9 @@ export class SAMController extends InstrumentController {
 
   deactivate(): void {
     this.closeCovers()
+  }
+
+  override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
+    return phase === 'active' ? 25 : this.selectionIdlePowerW
   }
 }

@@ -1,7 +1,11 @@
-export { InstrumentController } from './InstrumentController'
+export {
+  InstrumentController,
+  INSTRUMENT_SELECTION_GLOW_HEX,
+  instrumentSelectionEmissiveIntensity,
+} from './InstrumentController'
 export { MastCamController } from './MastCamController'
 export { ChemCamController } from './ChemCamController'
-export { APXSController } from './APXSController'
+export { DrillController } from './DrillController'
 export { DANController } from './DANController'
 export { SAMController } from './SAMController'
 export { RTGController, type RTGConservationState } from './RTGController'

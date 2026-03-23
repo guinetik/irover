@@ -16,6 +16,10 @@ export class RTGController extends InstrumentController {
   readonly viewAngle = Math.PI
   readonly viewPitch = 0.25
   override readonly canActivate = true
+  /** Overdrive uses the same subtree — avoid cyan selection fighting orange burst VFX. */
+  override readonly selectionHighlightColor = null
+  /** RTG management UI / telemetry — not the RTG thermal output (that is generation). */
+  override readonly selectionIdlePowerW = 2
 
   // Fake power stats
   totalPowerW = 110

@@ -69,6 +69,10 @@ export class MastCamController extends InstrumentController {
     )
   }
 
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return this.powerDrawW
+  }
+
   // Camera state for RoverController to read
   /** World position of mast camera (offset forward for rendering) */
   readonly mastWorldPos = new THREE.Vector3()

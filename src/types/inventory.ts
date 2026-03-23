@@ -47,7 +47,7 @@ export interface InventoryStack {
   totalWeightKg: number
 }
 
-/** Payload after a successful APXS rock collection (for UI + science scoring). */
+/** Payload after a successful arm drill rock collection (for UI + science scoring). */
 export interface CollectedRockSample {
   rockMeshUuid: string
   rockType: RockTypeId

@@ -30,7 +30,7 @@ export function useInventory() {
 
   /**
    * True if a rock sample of this type could be added without exceeding capacity,
-   * assuming worst-case mass (max of weight range). Used to gate APXS drilling.
+   * assuming worst-case mass (max of weight range). Used to gate arm drill collection.
    */
   function canFitRockSampleMax(rockType: RockTypeId): boolean {
     const maxW = maxRockSampleKg(rockType)
@@ -38,7 +38,7 @@ export function useInventory() {
   }
 
   /**
-   * Merges one APXS rock sample into the stack for that lithology.
+   * Merges one drill rock sample into the stack for that lithology.
    * Rolls mass from catalog weightRange. Does not deplete the rock mesh (caller handles that).
    */
   function addRockSample(rockType: RockTypeId, rockMeshUuid: string, weightMult = 1.0): AddRockSampleResult {
@@ -118,7 +118,7 @@ export function useInventory() {
   }
 
   /**
-   * Adds trace element samples (from ChemCam-buffed APXS mining).
+   * Adds trace element samples (from ChemCam-buffed drill collection).
    */
   function addTrace(elementSymbol: string, quantity = 1): AddComponentResult {
     return addComponent(`trace-${elementSymbol}`, quantity)

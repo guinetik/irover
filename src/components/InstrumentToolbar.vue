@@ -50,7 +50,7 @@ interface ToolbarInstrument {
 const instruments: ToolbarInstrument[] = [
   { slot: 1, id: 'mastcam', name: 'MCAM', icon: '\u25A3' },
   { slot: 2, id: 'chemcam', name: 'CHEM', icon: '\u2316' },
-  { slot: 3, id: 'apxs',    name: 'APXS', icon: '\u25CE' },
+  { slot: 3, id: 'drill',   name: 'DRIL', icon: '\u25CE' },
   { slot: 4, id: 'dan',     name: 'DAN',  icon: '\u2261' },
   { slot: 5, id: 'sam',     name: 'SAM',  icon: '\u2394' },
   { slot: 6, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },

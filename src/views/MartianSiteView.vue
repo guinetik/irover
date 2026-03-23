@@ -139,7 +139,10 @@
     <InstrumentOverlay
       v-if="!isInstrumentActive"
       :active-slot="activeInstrumentSlot"
-      :can-activate="controller?.activeInstrument?.canActivate ?? false"
+      :can-activate="!isSleeping && (controller?.activeInstrument?.canActivate ?? false)"
+      :passive-subsystem-only="passiveOverlayPatch.only"
+      :passive-subsystem-enabled="passiveOverlayPatch.enabled"
+      :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
       :wheels-hud="activeInstrumentSlot === 12 ? wheelsOverlayHud : null"
       :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
@@ -333,13 +336,28 @@ import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory } from '@/composables/useInventory'
 import { useMarsGameClock } from '@/composables/useMarsGameClock'
-import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT } from '@/composables/useMarsPower'
+import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT, type InstrumentPowerLineInput } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
-import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, RoverWheelsController, type InstrumentController, type RTGConservationState } from '@/three/instruments'
+import {
+  MastCamController,
+  ChemCamController,
+  DrillController,
+  DANController,
+  SAMController,
+  RTGController,
+  HeaterController,
+  REMSController,
+  RADController,
+  AntennaLGController,
+  AntennaUHFController,
+  RoverWheelsController,
+  instrumentSelectionEmissiveIntensity,
+  type RTGConservationState,
+} from '@/three/instruments'
 import CommToolbar from '@/components/CommToolbar.vue'
 
 const route = useRoute()
@@ -353,6 +371,37 @@ const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
+/** Bumped when a passive instrument (DAN/REMS/RAD/comms) toggles STANDBY so the overlay re-reads bus state. */
+const passiveUiRevision = ref(0)
+
+const passiveOverlayPatch = computed(() => {
+  void passiveUiRevision.value
+  void activeInstrumentSlot.value
+  const i = controller?.activeInstrument
+  if (!i?.passiveSubsystemOnly) {
+    return { only: false as const, enabled: true, hud: null as null }
+  }
+  const w = i.selectionIdlePowerW
+  const on = i.passiveSubsystemEnabled
+  const statusOn: Record<string, string> = {
+    dan: 'SCANNING',
+    rems: 'SURVEYING',
+    rad: 'MONITORING',
+    'antenna-lg': 'CONNECTED',
+    'antenna-uhf': 'RELAY LOCK',
+  }
+  return {
+    only: true as const,
+    enabled: on,
+    hud: {
+      power: on ? `${w}W` : '0W',
+      powerColor: on ? '#5dc9a5' : '#6b4a30',
+      status: on ? (statusOn[i.id] ?? 'ON') : 'STANDBY',
+      statusColor: on ? '#5dc9a5' : '#6b4a30',
+    },
+  }
+})
+
 const isInstrumentActive = ref(false)
 const samDialogVisible = ref(false)
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
@@ -545,6 +594,50 @@ const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
 
+/** Main-bus instrument lines for the power tick: passive payloads while driving, focused slot, background ChemCam. */
+function buildInstrumentPowerLines(
+  roverCtl: RoverController | null,
+  roverReady: boolean,
+  roverAwake: boolean,
+): InstrumentPowerLineInput[] {
+  const lines: InstrumentPowerLineInput[] = []
+  if (!roverCtl) return lines
+
+  if (roverReady && roverAwake) {
+    for (const inst of roverCtl.instruments) {
+      if (!inst.billsPassiveBackgroundPower) continue
+      const w = inst.getPassiveBackgroundPowerW()
+      if (w > 1e-6) {
+        lines.push({ id: `${inst.id}-bg`, label: inst.name, w })
+      }
+    }
+  }
+
+  const mode = roverCtl.mode
+  const focused = roverCtl.activeInstrument
+  if ((mode === 'instrument' || mode === 'active') && focused && focused.id !== 'heater') {
+    const phase = mode === 'active' ? 'active' : 'instrument'
+    const w = focused.getInstrumentBusPowerW(phase)
+    if (w > 1e-6) {
+      lines.push({ id: focused.id, label: focused.name, w })
+    }
+  }
+
+  const cc = roverCtl.instruments.find((i): i is ChemCamController => i instanceof ChemCamController)
+  if (cc?.isSequenceAdvancing) {
+    const chemCamFocused =
+      focused?.id === 'chemcam' && (mode === 'instrument' || mode === 'active')
+    if (!chemCamFocused) {
+      const w = Math.max(ChemCamController.BUS_IDLE_W, cc.powerDrawW)
+      if (w > 1e-6) {
+        lines.push({ id: 'chemcam', label: 'ChemCam', w })
+      }
+    }
+  }
+
+  return lines
+}
+
 // --- LIBS calibration achievements ---
 interface LibsAchievement { id: string; sp: number; icon: string; title: string; description: string; type: string }
 const libsAchievements = ref<LibsAchievement[]>([])
@@ -574,7 +667,9 @@ function handleActivate() {
   if (controller.activeInstrument instanceof RTGController) {
     showOverdriveConfirm.value = true
   } else {
+    const passive = controller.activeInstrument?.passiveSubsystemOnly
     controller.enterActiveMode()
+    if (passive) passiveUiRevision.value++
   }
 }
 
@@ -729,7 +824,7 @@ onMounted(async () => {
   const instrumentControllers = [
     new MastCamController(),
     new ChemCamController(),
-    new APXSController(),
+    new DrillController(),
     new DANController(),
     new SAMController(),
     new RTGController(),
@@ -870,6 +965,27 @@ onMounted(async () => {
       })
     }
 
+    // Instrument focus — cyan emissive on each tool’s GLTF subtree while selected (see InstrumentController.selectionHighlightColor + clone in attach).
+    const activeInst = controller?.activeInstrument ?? null
+    const instrumentViewActive =
+      Boolean(controller && (controller.mode === 'instrument' || controller.mode === 'active'))
+    const glowIntensity = instrumentSelectionEmissiveIntensity(simulationTime)
+    for (const inst of controller?.instruments ?? []) {
+      const hex = inst.selectionHighlightColor
+      if (hex == null || !inst.node) continue
+      const focused =
+        instrumentViewActive && activeInst === inst && !isSleeping.value
+      inst.node.traverse((child) => {
+        if (!(child as THREE.Mesh).isMesh) return
+        const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+        if (!mat.emissive) return
+        if (focused) {
+          mat.emissive.setHex(hex)
+          mat.emissiveIntensity = glowIntensity
+        }
+      })
+    }
+
     if (siteScene.sky) {
       marsTimeOfDay.value = siteScene.sky.timeOfDay
       currentNightFactor.value = siteScene.sky.nightFactor
@@ -879,49 +995,49 @@ onMounted(async () => {
       lastSkyTimeOfDay = siteScene.sky.timeOfDay
     }
 
-    let apxsDrilling = false
-    if (controller?.mode === 'active' && controller.activeInstrument instanceof APXSController) {
-      const apxs = controller.activeInstrument
+    let rockDrilling = false
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof DrillController) {
+      const drill = controller.activeInstrument
       // Thermal effect + player analysisSpeed buff/nerf
       // analysisSpeed > 1 = faster analysis = lower duration multiplier
       const z = thermalZone.value
       const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
-      apxs.drillDurationMultiplier = thermalMult / playerMod('analysisSpeed')
-      apxs.setRoverPosition(siteScene.rover!.position)
+      drill.drillDurationMultiplier = thermalMult / playerMod('analysisSpeed')
+      drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
-      crosshairColor.value = apxs.hasTarget && apxs.canCollectCurrentTarget ? 'green' : 'red'
-      drillProgress.value = apxs.drillProgress
-      isDrilling.value = apxs.isDrilling
-      apxsDrilling = apxs.isDrilling
+      crosshairColor.value = drill.hasTarget && drill.canCollectCurrentTarget ? 'green' : 'red'
+      drillProgress.value = drill.drillProgress
+      isDrilling.value = drill.isDrilling
+      rockDrilling = drill.isDrilling
 
       // Project 3D target position to screen for crosshair overlay
       if (camera) {
-        const projected = apxs.targetWorldPos.clone().project(camera)
+        const projected = drill.targetWorldPos.clone().project(camera)
         crosshairX.value = (projected.x * 0.5 + 0.5) * 100
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
-      if (apxs.lastInventoryError) {
-        sampleToastRef.value?.showError(apxs.lastInventoryError)
-        apxs.lastInventoryError = null
+      if (drill.lastInventoryError) {
+        sampleToastRef.value?.showError(drill.lastInventoryError)
+        drill.lastInventoryError = null
       }
-      if (apxs.lastCollected) {
-        const s = apxs.lastCollected
+      if (drill.lastCollected) {
+        const s = drill.lastCollected
         sampleToastRef.value?.show(s.rockType, s.displayLabel, s.weightKgThisSample)
-        const gain = awardSP('apxs', s.rockMeshUuid, s.displayLabel)
+        const gain = awardSP('drill', s.rockMeshUuid, s.displayLabel)
         if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         // Trace element drops from ChemCam-buffed mining
-        if (apxs.lastTraceDrops) {
-          for (const drop of apxs.lastTraceDrops) {
+        if (drill.lastTraceDrops) {
+          for (const drop of drill.lastTraceDrops) {
             sampleToastRef.value?.showTrace(drop.element, drop.label)
           }
-          apxs.lastTraceDrops = null
+          drill.lastTraceDrops = null
         }
         const mcSurvey = controller?.instruments.find(i => i.id === 'mastcam')
         if (mcSurvey instanceof MastCamController && mcSurvey['overlayMeshes']?.length > 0) {
           mcSurvey.rebuildOverlays()
         }
-        apxs.lastCollected = null
+        drill.lastCollected = null
       }
     } else {
       crosshairVisible.value = false
@@ -947,24 +1063,11 @@ onMounted(async () => {
       heaterInst.zone = thermalZone.value
     }
 
-    // Compute active instrument power draw (MastCam, ChemCam, etc.)
-    let instrumentW = 0
-    let instrumentHudLabel: string | undefined
-    const chemCamIsDrivingView =
-      controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController
-    if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
-      instrumentW = (controller.activeInstrument as MastCamController).powerDrawW
-      instrumentHudLabel = 'MastCam'
-    } else if (chemCamIsDrivingView && controller) {
-      instrumentW = (controller.activeInstrument as ChemCamController).powerDrawW
-      instrumentHudLabel = 'ChemCam'
-    }
-    // ChemCam can finish pulse/integration while another instrument card is open — still bill power
-    const ccForPower = controller?.instruments.find(i => i.id === 'chemcam')
-    if (!chemCamIsDrivingView && ccForPower instanceof ChemCamController && ccForPower.isSequenceAdvancing) {
-      instrumentW += ccForPower.powerDrawW
-      instrumentHudLabel = instrumentHudLabel ? `${instrumentHudLabel} + ChemCam` : 'ChemCam'
-    }
+    const instrumentLines = buildInstrumentPowerLines(
+      controller,
+      siteScene.roverState === 'ready',
+      !isSleeping.value,
+    )
 
     const rtgForPower = controller?.instruments.find(i => i.id === 'rtg')
     const powerLoadFactor = rtgForPower instanceof RTGController ? rtgForPower.powerLoadFactor : 1
@@ -977,11 +1080,10 @@ onMounted(async () => {
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       roverInSunlight: siteScene.roverInSunlight,
       moving: controller?.isMoving ?? false,
-      apxsDrilling,
+      rockDrilling,
       driveMotorW,
       driveMotorHudLabel: 'Rover wheels',
-      instrumentW,
-      instrumentHudLabel,
+      instrumentLines,
       heaterW: heaterW.value,
       powerLoadFactor,
     })
@@ -1016,9 +1118,9 @@ onMounted(async () => {
     }
 
     if (siteScene.roverState === 'ready' && siteScene.rover && camera) {
-      const apxs = controller?.instruments.find(i => i.id === 'apxs')
-      if (apxs instanceof APXSController && apxs.attached && !apxs.targeting) {
-        apxs.initGameplay(siteScene.scene, camera, siteScene.terrain.getSmallRocks())
+      const drillInst = controller?.instruments.find(i => i.id === 'drill')
+      if (drillInst instanceof DrillController && drillInst.attached && !drillInst.targeting) {
+        drillInst.initGameplay(siteScene.scene, camera, siteScene.terrain.getSmallRocks())
       }
       const mc = controller?.instruments.find(i => i.id === 'mastcam')
       if (mc instanceof MastCamController && mc.attached && !mc['overlayScene']) {

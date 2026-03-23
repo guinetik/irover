@@ -37,11 +37,11 @@
         <div v-else class="ov-stats">
           <div class="ov-stat">
             <div class="ov-stat-label">POWER</div>
-            <div class="ov-stat-value" :style="{ color: instrument.powerColor }">{{ instrument.power }}</div>
+            <div class="ov-stat-value" :style="{ color: statPowerColor }">{{ statPower }}</div>
           </div>
           <div class="ov-stat">
             <div class="ov-stat-label">STATUS</div>
-            <div class="ov-stat-value" :style="{ color: instrument.statusColor }">{{ instrument.status }}</div>
+            <div class="ov-stat-value" :style="{ color: statStatusColor }">{{ statStatus }}</div>
           </div>
           <div class="ov-stat">
             <div class="ov-stat-label">HEALTH</div>
@@ -96,6 +96,14 @@
               :title="rtgConservationCooldownTitle"
               @click="rtgConservationReady && !isActiveMode && $emit('rtgConservation')"
             >POWER SHUNT</button>
+          </template>
+          <template v-else-if="passiveSubsystemOnly">
+            <button
+              class="ov-btn-primary"
+              :class="{ disabled: !canActivate || isActiveMode }"
+              :disabled="!canActivate || isActiveMode"
+              @click="canActivate && !isActiveMode && $emit('activate')"
+            >{{ passiveSubsystemEnabled ? 'STANDBY' : 'ACTIVATE' }}</button>
           </template>
           <template v-else>
             <button
@@ -170,18 +178,18 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     upgName: 'MULTI-SHOT BURST', upgDesc: '3 shots on different spots for averaged reading. Better accuracy.', upgReq: 'Requires: Science Pack Alpha drop',
   },
   3: {
-    slot: 3, icon: 'ARM', name: 'APXS', type: 'CONTACT SPECTROMETER',
-    desc: 'Sensor on the robotic arm tip. Pressed against rock for high-precision elemental chemistry. Reveals water alteration and trace elements.',
-    power: '6W / 118W drill', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '95%',
-    hint: 'Drive within 1.5m of target. Position the arm head with mouse. Hold [E] to analyze.',
+    slot: 3, icon: 'ARM', name: 'DRILL', type: 'ARM POWDER SAMPLER',
+    desc: 'Rotary percussive bit on the arm turret: collects powdered rock for the lab after MastCam/ChemCam tell you what to hit. (Real Curiosity also has APXS on the same turret for contact X-ray / alpha spectroscopy — that can be its own tool later.)',
+    power: '6W / 118W drilling', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '95%',
+    hint: 'Drive within 1.5m of target. Aim the arm with mouse. Hold [E] to drill and collect powder.',
     temp: '',
-    upgName: 'PRECISION MODULE', upgDesc: 'Detects trace elements below 0.1% concentration.', upgReq: 'Requires: Deep Analysis Kit drop',
+    upgName: 'BIT WEAR KIT', upgDesc: 'Reduces drill time on tagged rocks.', upgReq: 'Requires: Deep Analysis Kit drop',
   },
   4: {
     slot: 4, icon: 'NEU', name: 'DAN', type: 'NEUTRON SCANNER',
     desc: 'Fires neutrons into the ground, detects hydrogen. Maps subsurface water content while driving. Paints a heatmap trail on the terrain.',
     power: '10W', powerColor: '#e05030', status: 'SCANNING', statusColor: '#ef9f27', health: '78%',
-    hint: 'Toggle on, then drive. Blue = water signal. Ping rate shows intensity. Mark anomalies with [E].',
+    hint: 'Draws ~10W on the main bus while running (see power HUD). ACTIVATE / STANDBY or [E] toggles; when on, billed while you drive. Future: heatmap + anomalies.',
     temp: '',
     upgName: 'DEPTH EXTENDER', upgDesc: 'Scan depth from 0.5m to 1.0m below surface.', upgReq: 'Requires: Subsurface Package drop',
   },
@@ -205,7 +213,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     slot: 7, icon: '\u2602', name: 'REMS', type: 'WEATHER STATION',
     desc: 'Twin boom sensors on the mast measure temperature, wind, pressure, humidity, and UV radiation. Provides continuous environmental monitoring and alerts for weather events.',
     power: '1W', powerColor: '#5dc9a5', status: 'SURVEYING', statusColor: '#5dc9a5', health: '98%',
-    hint: 'Passive instrument \u2014 always active. Provides +10% sample quality within 3m radius. Weather alerts will warn of dust storms and thermal events.',
+    hint: '~1W on the bus while surveying. ACTIVATE / STANDBY or [E] toggles (STANDBY saves power). +10% sample quality within 3m when on.',
     temp: '',
     upgName: 'DUST STORM PREDICTOR', upgDesc: 'Forecasts storms 2 sols ahead. Gives time to find shelter or stow instruments.', upgReq: 'Requires: Meteorology Package drop',
   },
@@ -213,7 +221,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     slot: 8, icon: '\u2622', name: 'RAD', type: 'RADIATION DETECTOR',
     desc: 'Measures high-energy radiation on the Martian surface \u2014 protons, heavy ions, neutrons, and gamma rays. Monitors cumulative dose and alerts on solar particle events.',
     power: '2W', powerColor: '#5dc9a5', status: 'MONITORING', statusColor: '#5dc9a5', health: '96%',
-    hint: 'Passive instrument \u2014 always active. Tracks cumulative radiation exposure. Solar storm alerts trigger shelter warnings.',
+    hint: '~2W on the bus while monitoring. ACTIVATE / STANDBY or [E] toggles. Tracks dose; storm alerts when on.',
     temp: '',
     upgName: 'PARTICLE SPECTROMETER', upgDesc: 'Identifies individual isotopes in cosmic ray flux. Better storm prediction.', upgReq: 'Requires: Deep Space Package drop',
   },
@@ -229,7 +237,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     slot: 10, icon: '\uD83D\uDCE1', name: 'LGA', type: 'LOW-GAIN ANTENNA',
     desc: 'Omnidirectional low-gain antenna for direct-to-Earth communication. Slow but reliable \u2014 works regardless of rover orientation. Primary command uplink.',
     power: '5W', powerColor: '#5dc9a5', status: 'CONNECTED', statusColor: '#5dc9a5', health: '99%',
-    hint: 'Passive \u2014 always transmitting. Low data rate (0.5 kbps). Use for command uplink and emergency beacon.',
+    hint: '~5W on the bus while linked. ACTIVATE / STANDBY or [E] toggles. Low data rate (0.5 kbps) when on.',
     temp: '',
     upgName: 'SIGNAL AMPLIFIER', upgDesc: 'Doubles direct-to-Earth data rate. Better for sending compressed science.', upgReq: 'Requires: Comms Package drop',
   },
@@ -237,7 +245,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     slot: 11, icon: '\uD83D\uDCF6', name: 'UHF', type: 'UHF RELAY ANTENNA',
     desc: 'High-bandwidth UHF antenna for relay communication via overhead orbiters (MRO, MAVEN). Fast data bursts during orbital passes \u2014 primary science downlink.',
     power: '8W', powerColor: '#5dc9a5', status: 'RELAY LOCK', statusColor: '#5dc9a5', health: '97%',
-    hint: 'Passive \u2014 relays data during orbiter passes. 128 kbps burst rate. Next pass shown in status.',
+    hint: '~8W on the bus while relay hardware is up. ACTIVATE / STANDBY or [E] toggles. 128 kbps burst when on.',
     temp: '',
     upgName: 'DUAL-BAND MODULE', upgDesc: 'Enables simultaneous uplink/downlink during passes. Halves transfer time.', upgReq: 'Requires: Comms Package drop',
   },
@@ -293,6 +301,11 @@ const props = withDefaults(
     rtgConservationReady?: boolean
     /** Tooltip when shunt on cooldown */
     rtgConservationCooldownTitle?: string
+    /** DAN / REMS / RAD / comms: ACTIVATE only toggles bus power */
+    passiveSubsystemOnly?: boolean
+    passiveSubsystemEnabled?: boolean
+    /** Live POWER + STATUS when a passive-toggle instrument card is open */
+    passiveInstrumentHud?: { power: string; powerColor: string; status: string; statusColor: string } | null
   }>(),
   {
     canActivate: true,
@@ -308,6 +321,9 @@ const props = withDefaults(
     rtgOverdriveReady: false,
     rtgConservationReady: false,
     rtgConservationCooldownTitle: '',
+    passiveSubsystemOnly: false,
+    passiveSubsystemEnabled: false,
+    passiveInstrumentHud: null,
   },
 )
 
@@ -336,6 +352,11 @@ const instrument = computed(() => {
   }
   return base
 })
+
+const statPower = computed(() => props.passiveInstrumentHud?.power ?? instrument.value?.power ?? '')
+const statPowerColor = computed(() => props.passiveInstrumentHud?.powerColor ?? instrument.value?.powerColor ?? '#ef9f27')
+const statStatus = computed(() => props.passiveInstrumentHud?.status ?? instrument.value?.status ?? '')
+const statStatusColor = computed(() => props.passiveInstrumentHud?.statusColor ?? instrument.value?.statusColor ?? '#5dc9a5')
 
 const healthColor = computed(() => {
   if (!instrument.value) return '#5dc9a5'

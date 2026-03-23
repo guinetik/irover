@@ -23,6 +23,7 @@ export class RoverWheelsController extends InstrumentController {
    */
   readonly viewPitch = 0.1
   override readonly canActivate = false
+  override readonly selectionIdlePowerW = 1
 
   /**
    * Nominal motor draw (W) while moving — mirror `RoverPowerProfile.baseDriveW`;

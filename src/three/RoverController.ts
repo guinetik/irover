@@ -342,6 +342,13 @@ export class RoverController {
     if (rtg?.instrumentsLocked && this.activeInstrument !== rtg) return
 
     this.instrumentZoomPending = false
+
+    // Passive payloads (DAN, REMS, RAD, comms): ACTIVATE toggles bus power, stay in instrument UI
+    if (this.activeInstrument.passiveSubsystemOnly) {
+      this.activeInstrument.togglePassiveSubsystemEnabled()
+      return
+    }
+
     this.mode = 'active'
 
     // Open SAM covers on activation

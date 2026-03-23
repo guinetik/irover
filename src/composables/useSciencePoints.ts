@@ -11,14 +11,14 @@ const sessionSP = ref(0)
 const scored = {
   mastcam: new Set<string>(),
   chemcam: new Set<string>(),
-  apxs: new Set<string>(),
+  drill: new Set<string>(),
 }
 
 // --- SP yield ranges (from GDD spec) ---
 const YIELDS = {
   mastcam: { min: 5, max: 15 },
   chemcam: { min: 15, max: 40 },
-  apxs: { min: 30, max: 80 },
+  drill: { min: 30, max: 80 },
 } as const
 
 // --- Multi-instrument bonus ---
@@ -26,7 +26,7 @@ function multiBonus(rockId: string): number {
   let count = 0
   if (scored.mastcam.has(rockId)) count++
   if (scored.chemcam.has(rockId)) count++
-  if (scored.apxs.has(rockId)) count++
+  if (scored.drill.has(rockId)) count++
   if (count >= 3) return 3.0
   if (count >= 2) return 1.5
   return 1.0
@@ -41,8 +41,8 @@ const ACK_SP = { min: 5, max: 15 }
 /** Track acknowledged readouts to prevent double-count */
 const acknowledgedReadouts = new Set<string>()
 
-export type SPSource = 'mastcam' | 'chemcam' | 'apxs' | 'chemcam-ack'
-type InstrumentSource = 'mastcam' | 'chemcam' | 'apxs'
+export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack'
+type InstrumentSource = 'mastcam' | 'chemcam' | 'drill'
 
 export interface SPGain {
   amount: number

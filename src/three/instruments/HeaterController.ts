@@ -12,10 +12,15 @@ export class HeaterController extends InstrumentController {
   readonly viewAngle = -0.6
   readonly viewPitch = 0.4
   override readonly canActivate = false
+  override readonly selectionIdlePowerW = 0
 
   // Thermal state — updated from useMarsThermal each frame by the view
   internalTempC = 15
   ambientC = -10
   heaterW = 0
   zone: ThermalZone = 'OPTIMAL'
+
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return 0
+  }
 }

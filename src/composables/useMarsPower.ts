@@ -44,7 +44,7 @@ export const CURIOSITY_PROFILE: RoverPowerProfile = {
   baseRtgW: 9,
   /** Reduced peak — noon should not erase a heavy instrument spike in seconds */
   baseSolarPeakW: 16,
-  baseCoreW: 8,
+  baseCoreW: 5,
   baseDriveW: 5,
   shadowFactor: 0.28,
   consumptionMult: 1.0,
@@ -52,8 +52,8 @@ export const CURIOSITY_PROFILE: RoverPowerProfile = {
   capacityMult: 1.0,
 }
 
-/** APXS laser drill sustained draw (W) while E held. Base value before profile mult. */
-export const APXS_DRILL_BASE_W = 118
+/** Arm drill (powder sample) sustained draw (W) while E held. Base value before profile mult. */
+export const ROCK_DRILL_BASE_W = 118
 
 /**
  * Scales Wh integration so battery changes are visible with an accelerated sol.
@@ -119,6 +119,13 @@ export interface PowerConsumptionLine {
   w: number
 }
 
+/** Raw instrument line from the site view — `tickPower` applies consumption mult + bus load factor. */
+export interface InstrumentPowerLineInput {
+  id: string
+  label: string
+  w: number
+}
+
 /** Generation split matching the last `tickPower` (display = model). */
 export interface PowerGenerationDetail {
   rtgW: number
@@ -138,8 +145,8 @@ export interface PowerTickInput {
   roverInSunlight: boolean
   /** RoverController.isMoving */
   moving: boolean
-  /** True while APXS drill is firing. */
-  apxsDrilling: boolean
+  /** True while arm drill (slot 3) is firing. */
+  rockDrilling: boolean
   /**
    * Wheel motor draw (W) while translating — from {@link RoverWheelsController};
    * replaces adding `baseDriveW` inside the composable when non-zero.
@@ -147,9 +154,14 @@ export interface PowerTickInput {
   driveMotorW?: number
   /** HUD label for the drive consumption line. */
   driveMotorHudLabel?: string
-  /** Extra instrument draw (W) — MastCam, ChemCam, etc. */
+  /**
+   * Per-instrument main-bus lines (raw W before profile / bus factor) — preferred for HUD tooltips.
+   * When set, summed into consumption and rendered as separate tooltip lines.
+   */
+  instrumentLines?: InstrumentPowerLineInput[]
+  /** @deprecated Prefer `instrumentLines`; if `instrumentLines` is omitted, this single blob is used. */
   instrumentW?: number
-  /** HUD label for `instrumentW` when non-zero (e.g. "MastCam", "ChemCam"). */
+  /** @deprecated Prefer `instrumentLines` labels. */
   instrumentHudLabel?: string
   /** Heater draw from thermal system (W, 0–12). Added to consumption. */
   heaterW?: number
@@ -206,8 +218,13 @@ export function useMarsPower() {
     } else {
       baseUse = profile.baseCoreW
       baseUse += input.driveMotorW ?? 0
-      if (input.apxsDrilling) baseUse += APXS_DRILL_BASE_W
-      baseUse += (input.instrumentW ?? 0)
+      if (input.rockDrilling) baseUse += ROCK_DRILL_BASE_W
+      const instrumentLines = input.instrumentLines
+      const instrumentSum =
+        instrumentLines && instrumentLines.length > 0
+          ? instrumentLines.reduce((s, l) => s + l.w, 0)
+          : (input.instrumentW ?? 0)
+      baseUse += instrumentSum
       heaterBusW = heaterRaw
     }
     // Stack rover class mult * player profile mult on non-heater bus loads
@@ -246,20 +263,33 @@ export function useMarsPower() {
           w: driveW * consMod * loadFactor,
         })
       }
-      if (input.apxsDrilling) {
+      if (input.rockDrilling) {
         lines.push({
-          id: 'apxs',
-          label: 'APXS drill',
-          w: APXS_DRILL_BASE_W * consMod * loadFactor,
+          id: 'drill',
+          label: 'Rock drill',
+          w: ROCK_DRILL_BASE_W * consMod * loadFactor,
         })
       }
-      const inst = input.instrumentW ?? 0
-      if (inst > 1e-6) {
-        lines.push({
-          id: 'instruments',
-          label: input.instrumentHudLabel?.trim() || 'Active instruments',
-          w: inst * consMod * loadFactor,
-        })
+      const il = input.instrumentLines
+      if (il && il.length > 0) {
+        for (const row of il) {
+          if (row.w > 1e-6) {
+            lines.push({
+              id: row.id,
+              label: row.label,
+              w: row.w * consMod * loadFactor,
+            })
+          }
+        }
+      } else {
+        const inst = input.instrumentW ?? 0
+        if (inst > 1e-6) {
+          lines.push({
+            id: 'instruments',
+            label: input.instrumentHudLabel?.trim() || 'Active instruments',
+            w: inst * consMod * loadFactor,
+          })
+        }
       }
       if (heaterBusW > 1e-6) {
         lines.push({
@@ -302,6 +332,6 @@ export function useMarsPower() {
     tickPower,
     setProfile,
     fillBatteryFull,
-    APXS_DRILL_BASE_W,
+    ROCK_DRILL_BASE_W,
   }
 }
