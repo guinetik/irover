@@ -149,6 +149,7 @@
         :active-slot="activeInstrumentSlot"
         :inventory-open="inventoryOpen"
         :chem-cam-unread="chemCamUnreadCount"
+        :sam-unread="samUnread"
         :dan-scanning="!!(controller?.instruments.find(i => i.id === 'dan') as DANController | undefined)?.passiveSubsystemEnabled"
         @select="(slot: number) => { if (!isSleeping) controller?.activateInstrument(slot) }"
         @deselect="controller?.activateInstrument(null)"
@@ -182,6 +183,11 @@
       :dan-hit-available="danHitAvailable"
       :dan-prospect-phase="danProspectPhase"
       @dan-prospect="handleDanProspect"
+      :sam-processing="samIsProcessing"
+      :sam-progress-pct="samCurrentExperiment ? ((1 - samCurrentExperiment.remainingTimeSec / samCurrentExperiment.totalTimeSec) * 100) : 0"
+      :sam-progress-label="samCurrentExperiment ? samCurrentExperiment.modeName + ' — ' + Math.ceil(samCurrentExperiment.remainingTimeSec) + 's' : ''"
+      :sam-unread="samUnread"
+      @sam-see-results="samResultDialogEntry = samResults[0] ?? null"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -192,6 +198,7 @@
       :open="scienceLogOpen"
       :spectra="chemCamArchivedSpectra"
       :dan-prospects="danArchivedProspects"
+      :sam-results="samArchivedDiscoveries"
       @close="scienceLogOpen = false"
     />
     <SciencePointsDialog :open="spLedgerOpen" @close="spLedgerOpen = false" />
@@ -222,7 +229,19 @@
       @dump="removeInventoryStack"
     />
     <ProfilePanel :open="profileOpen" />
-    <SAMDialog :visible="samDialogVisible" />
+    <SAMDialog
+      :visible="samDialogVisible"
+      :stacks="inventoryStacks"
+      :total-s-p="totalSP"
+      :sample-consumption-kg="samExperiments.data.value?.sampleConsumptionKg ?? 0.002"
+      @close="samDialogVisible = false"
+      @enqueue="handleSamEnqueue"
+    />
+    <SAMResultDialog
+      :result="samResultDialogEntry"
+      @acknowledge="handleSamAcknowledge"
+      @close="samResultDialogEntry = null"
+    />
     <DANDialog
       :visible="danDialogVisible"
       :signal-strength="danSignalStrength"
@@ -395,12 +414,16 @@ import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
 import SampleToast from '@/components/SampleToast.vue'
 import SAMDialog from '@/components/SAMDialog.vue'
+import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory } from '@/composables/useInventory'
+import { useSamExperiments } from '@/composables/useSamExperiments'
+import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
+import { useSamArchive } from '@/composables/useSamArchive'
 import { useOrbitalDrops } from '@/composables/useOrbitalDrops'
 import { useMarsGameClock } from '@/composables/useMarsGameClock'
 import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT, type InstrumentPowerLineInput } from '@/composables/useMarsPower'
@@ -409,7 +432,7 @@ import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
-import { getInventoryItemDef } from '@/types/inventory'
+import { getInventoryItemDef, INVENTORY_CATALOG } from '@/types/inventory'
 import { isOrbitalDropItemId, listOrbitalDropItemIds } from '@/types/orbitalDrop'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
 import {
@@ -440,7 +463,7 @@ const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects } =
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
-const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0)
+const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
 /** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
@@ -705,7 +728,24 @@ const heaterHudButtonTitle = computed(() =>
     : 'Thermal / heater [H]',
 )
 const { mod: playerMod } = usePlayerProfile()
-const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSurvival } = useSciencePoints()
+const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival } = useSciencePoints()
+
+// --- SAM experiment system ---
+const samExperiments = useSamExperiments()
+samExperiments.ensureLoaded()
+const {
+  queue: samQueue,
+  results: samResults,
+  isProcessing: samIsProcessing,
+  currentExperiment: samCurrentExperiment,
+  unacknowledgedCount: samUnread,
+  enqueue: samEnqueue,
+  tick: samTick,
+  acknowledgeOldest: samAcknowledgeOldest,
+} = useSamQueue()
+const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries } = useSamArchive()
+
+const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 const { landmarks, loadLandmarks } = useMarsData()
 
 let lastSkyTimeOfDay = -1
@@ -762,6 +802,7 @@ interface SurvivalAchievement extends Achievement { minSol: number; spReward: nu
 const libsAchievements = ref<LibsAchievement[]>([])
 const danAchievements = ref<DanAchievement[]>([])
 const survivalAchievements = ref<SurvivalAchievement[]>([])
+const samAchievementsData = ref<{ id: string; event: string; icon: string; title: string; description: string; type: string }[]>([])
 /** Unlocked achievement ids this session (reactive so the HUD counter updates). */
 const unlockedAchievementIds = ref<string[]>([])
 
@@ -769,7 +810,8 @@ const totalAchievementCount = computed(
   () =>
     libsAchievements.value.length +
     danAchievements.value.length +
-    survivalAchievements.value.length,
+    survivalAchievements.value.length +
+    samAchievementsData.value.length,
 )
 const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
 
@@ -780,10 +822,12 @@ fetch('/data/achievements.json')
       'libs-calibration'?: LibsAchievement[]
       'dan-prospecting'?: DanAchievement[]
       'mars-survival'?: SurvivalAchievement[]
+      'sam-analysis'?: { id: string; event: string; icon: string; title: string; description: string; type: string }[]
     }) => {
       libsAchievements.value = data['libs-calibration'] ?? []
       danAchievements.value = data['dan-prospecting'] ?? []
       survivalAchievements.value = data['mars-survival'] ?? []
+      samAchievementsData.value = data['sam-analysis'] ?? []
     },
   )
   .catch(() => {})
@@ -794,6 +838,87 @@ function triggerDanAchievement(event: string): void {
       unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
       achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
     }
+  }
+}
+
+function triggerSamAchievement(event: string): void {
+  for (const ach of samAchievementsData.value) {
+    if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
+      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
+      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+    }
+  }
+}
+
+function handleSamEnqueue(entry: Omit<SamQueueEntry, 'id'>): void {
+  const { consumeItem } = useInventory()
+  const sampleConsumptionKg = samExperiments.data.value?.sampleConsumptionKg ?? 0.002
+  const def = INVENTORY_CATALOG[entry.sampleId]
+  if (def?.category === 'rock') {
+    consumeItem(entry.sampleId, 1, sampleConsumptionKg)
+  } else {
+    consumeItem(entry.sampleId, 1)
+  }
+  // Consume ingredients (ice for wet chemistry)
+  const mode = samExperiments.modes.value.find(m => m.id === entry.modeId)
+  if (mode?.ingredients) {
+    for (const ing of mode.ingredients) {
+      consumeItem(ing.itemId, ing.quantity)
+    }
+  }
+  // Fill in sol
+  const fullEntry = { ...entry, startedAtSol: marsSol.value }
+  samEnqueue(fullEntry)
+  samDialogVisible.value = false
+  triggerSamAchievement('first-analysis')
+}
+
+function handleSamAcknowledge(): void {
+  const entry = samAcknowledgeOldest()
+  if (!entry) return
+
+  const gain = awardSAM(entry.id, entry.spReward, entry.discoveryName)
+  if (gain) sampleToastRef.value?.showSP(gain.amount, 'SAM', gain.bonus)
+
+  // Drop side products
+  const { addComponent } = useInventory()
+  for (const sp of entry.sideProducts) {
+    addComponent(sp.itemId, sp.quantity)
+  }
+
+  // Archive to science log
+  archiveSamDiscovery({
+    discoveryId: entry.discoveryId,
+    discoveryName: entry.discoveryName,
+    rarity: entry.discoveryRarity,
+    modeId: entry.modeId,
+    modeName: entry.modeName,
+    sampleId: entry.sampleId,
+    sampleLabel: entry.sampleLabel,
+    quality: entry.quality,
+    spEarned: entry.spReward,
+    sideProducts: entry.sideProducts,
+    capturedSol: marsSol.value,
+    siteId,
+    siteLatDeg: siteLat.value,
+    siteLonDeg: siteLon.value,
+    roverWorldX: roverWorldX.value,
+    roverWorldZ: roverWorldZ.value,
+    roverSpawnX: roverSpawnXZ.value.x,
+    roverSpawnZ: roverSpawnXZ.value.z,
+    description: entry.discoveryDescription,
+  })
+
+  // Trigger rarity achievements
+  if (entry.discoveryRarity === 'uncommon') triggerSamAchievement('first-uncommon')
+  if (entry.discoveryRarity === 'rare') triggerSamAchievement('first-rare')
+  if (entry.discoveryRarity === 'legendary') triggerSamAchievement('first-legendary')
+
+  // Show next result or close
+  if (samUnread.value > 0) {
+    samResultDialogEntry.value = samResults.value[0] ?? null
+  } else {
+    samResultDialogEntry.value = null
   }
 }
 
@@ -1228,6 +1353,18 @@ onMounted(async () => {
       } else {
         if (samCtl && samCtl.coversOpen) samCtl.closeCovers()
         samDialogVisible.value = false
+      }
+    }
+
+    // --- SAM queue tick ---
+    {
+      const samCtl2 = controller?.instruments.find(i => i.id === 'sam') as SAMController | undefined
+      if (samCtl2) {
+        samCtl2.experimentRunning = samIsProcessing.value
+        const completed = samTick(sceneDelta)
+        if (completed) {
+          sampleToastRef.value?.showDAN(`SAM: ${completed.modeName} complete`)
+        }
       }
     }
 
