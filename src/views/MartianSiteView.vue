@@ -1381,7 +1381,7 @@ onMounted(async () => {
           if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         }
       }
-      const danInit = controller.instruments.find(i => i.id === 'dan') as DANController | undefined
+      const danInit = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
       if (danInit && siteScene) danInit.initVFX(siteScene.scene)
     }
 
