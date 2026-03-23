@@ -136,16 +136,11 @@
     </Transition>
     <Transition name="deploy-fade">
       <div
-        v-if="!deploying && !descending && activeInstrumentSlot === null && rtgPhase === 'idle' && rtgConservationMode !== 'active' && !controlsHintDismissed"
+        v-if="centerHintText"
         class="controls-hint"
+        :class="centerHintClass"
       >
-        WASD drive &middot; drag orbit &middot; 1&ndash;9 TOOLS
-      </div>
-      <div
-        v-else-if="!deploying && !descending && activeInstrumentSlot === null && rtgConservationMode === 'active'"
-        class="controls-hint controls-hint-shunt"
-      >
-        Power shunt: driving offline &middot; &minus;50% instrument load &middot; Drag to orbit
+        {{ centerHintText }}
       </div>
     </Transition>
     <Transition name="deploy-fade">
@@ -376,6 +371,7 @@ import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLi
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
+import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import {
   roverHeadingRadToCompassDeg,
   signedRelativeBearingDeg,
@@ -404,6 +400,7 @@ import PowerHud from '@/components/PowerHud.vue'
 import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory } from '@/composables/useInventory'
+import { useOrbitalDrops } from '@/composables/useOrbitalDrops'
 import { useMarsGameClock } from '@/composables/useMarsGameClock'
 import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT, type InstrumentPowerLineInput } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
@@ -411,6 +408,8 @@ import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
+import { getInventoryItemDef } from '@/types/inventory'
+import { isOrbitalDropItemId, listOrbitalDropItemIds } from '@/types/orbitalDrop'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
 import {
   MastCamController,
@@ -623,6 +622,7 @@ const chemcamPhaseLabel = computed(() => {
 })
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const achievementRef = ref<InstanceType<typeof AchievementBanner> | null>(null)
+const orbitalDrops = useOrbitalDrops()
 const siteLat = ref(0)
 const siteLon = ref(0)
 /** Landing spawn XZ — first frame at roverState `ready`; offsets rover position for archive lat/lon. */
@@ -635,6 +635,9 @@ const {
   pois: missionPois,
   focusPoiId,
   loadPoisForSite,
+  upsertPoi,
+  removePoi,
+  setFocusPoi,
   clearPois,
 } = useSiteMissionPois()
 
@@ -676,6 +679,7 @@ const {
   currentWeightKg,
   isFull,
   capacityKg,
+  addComponentsBatch,
   removeStack: removeInventoryStack,
 } = useInventory()
 const gameClock = useMarsGameClock()
@@ -818,6 +822,26 @@ watchEffect(() => {
 
 const showOverdriveConfirm = ref(false)
 const showConservationConfirm = ref(false)
+const orbitalDropInteractHint = computed(() => {
+  if (deploying.value || descending.value || isSleeping.value) return ''
+  if (controller?.mode !== 'driving') return ''
+  if (!orbitalDrops.nearbyDrop.value) return ''
+  return 'PAYLOAD IN RANGE · PRESS E TO OPEN'
+})
+const centerHintText = computed(() => {
+  if (!deploying.value && !descending.value && activeInstrumentSlot.value === null && rtgPhase.value === 'idle' && rtgConservationMode.value !== 'active' && !controlsHintDismissed.value) {
+    return 'WASD drive · drag orbit · 1-9 TOOLS'
+  }
+  if (orbitalDropInteractHint.value) return orbitalDropInteractHint.value
+  if (!deploying.value && !descending.value && activeInstrumentSlot.value === null && rtgConservationMode.value === 'active') {
+    return 'Power shunt: driving offline · -50% instrument load · Drag to orbit'
+  }
+  return ''
+})
+const centerHintClass = computed(() => ({
+  'controls-hint-shunt': centerHintText.value.startsWith('Power shunt:'),
+  'orbital-drop-hint': centerHintText.value === orbitalDropInteractHint.value && orbitalDropInteractHint.value.length > 0,
+}))
 
 function handleActivate() {
   if (!controller || isSleeping.value) return
@@ -863,6 +887,12 @@ function cancelConservation() {
   showConservationConfirm.value = false
 }
 
+function handleOrbitalDropOpen(): void {
+  const drop = orbitalDrops.nearbyDrop.value
+  if (!drop || controller?.mode !== 'driving') return
+  orbitalDrops.openDrop(drop.id, addComponentsBatch)
+}
+
 function handleDanProspect(): void {
   const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
   if (!danInst?.pendingHit) return
@@ -900,6 +930,10 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if (e.code === 'Digit0' || e.code === 'Backquote') {
     profileOpen.value = !profileOpen.value
   }
+  if (e.code === 'KeyE' && !e.repeat && controller?.mode === 'driving' && orbitalDrops.nearbyDrop.value) {
+    e.preventDefault()
+    handleOrbitalDropOpen()
+  }
 }
 
 let siteTerrainParams: TerrainParams | null = null
@@ -912,6 +946,39 @@ let clock: THREE.Clock | null = null
 let dustPass: ReturnType<typeof createDustAtmospherePass> | null = null
 let animationId = 0
 let cameraFillLight: THREE.DirectionalLight | null = null
+let disposeOrbitalDropDebugApi: (() => void) | null = null
+
+function resolveOrbitalDropPosition(options?: { x?: number; z?: number }): { x: number; z: number } {
+  return {
+    x: options?.x ?? roverWorldX.value + 18,
+    z: options?.z ?? roverWorldZ.value - 12,
+  }
+}
+
+function spawnOrbitalDropItem(
+  itemId: string,
+  options?: { x?: number; z?: number; quantity?: number },
+): string {
+  if (!siteScene) throw new Error('Site scene not ready.')
+  if (!isOrbitalDropItemId(itemId)) {
+    throw new Error(`Orbital drops currently support component items only: ${itemId}`)
+  }
+  const quantity = Math.max(1, Math.floor(options?.quantity ?? 1))
+  const position = resolveOrbitalDropPosition(options)
+  const id = orbitalDrops.spawnDrop(siteScene.scene, {
+    itemStacks: [{ itemId, quantity }],
+    position,
+    heightAt: (x, z) => siteScene!.terrain.heightAt(x, z),
+  })
+  sampleToastRef.value?.showPayloadStatus('Payload inbound')
+  return id
+}
+
+function spawnRandomOrbitalDrop(options?: { x?: number; z?: number; quantity?: number }): string {
+  const itemIds = listOrbitalDropItemIds()
+  const itemId = itemIds[Math.floor(Math.random() * itemIds.length)]
+  return spawnOrbitalDropItem(itemId, options)
+}
 
 function getTerrainParams(): TerrainParams {
   const site = landmarks.value.find((l) => l.id === siteId)
@@ -1026,6 +1093,14 @@ onMounted(async () => {
     controller.instruments = instrumentControllers
   }
 
+  if (import.meta.env.DEV) {
+    disposeOrbitalDropDebugApi = installOrbitalDropDebugApi({
+      dropItem: spawnOrbitalDropItem,
+      dropRandom: spawnRandomOrbitalDrop,
+      listComponentItems: listOrbitalDropItemIds,
+    })
+  }
+
   // Post-processing (dust-atmosphere / “drone feed” pass); optional via URL, env, or localStorage
   if (isSitePostProcessingEnabled()) {
     composer = new EffectComposer(renderer)
@@ -1093,6 +1168,38 @@ onMounted(async () => {
       roverSpawnCaptured = true
     }
 
+    if (siteScene.rover) {
+      orbitalDrops.updateDrops(sceneDelta, siteScene.rover.position)
+    }
+    if (orbitalDrops.lastLandedDrop.value) {
+      const landed = orbitalDrops.lastLandedDrop.value
+      upsertPoi({
+        id: landed.id,
+        label: 'Payload box',
+        x: landed.position.x,
+        z: landed.position.z,
+        color: '#ffd27a',
+      })
+      setFocusPoi(landed.id)
+      sampleToastRef.value?.showPayloadStatus('Payload landed')
+      orbitalDrops.lastLandedDrop.value = null
+    }
+    if (orbitalDrops.lastOpenedDrop.value) {
+      const opened = orbitalDrops.lastOpenedDrop.value
+      for (const applied of opened.applied) {
+        const itemDef = getInventoryItemDef(applied.itemId)
+        sampleToastRef.value?.showPayloadItem(itemDef?.label ?? applied.itemId, applied.quantity)
+      }
+      if (opened.ok) {
+        removePoi(opened.dropId)
+        if (focusPoiId.value === opened.dropId) setFocusPoi(null)
+      } else {
+        sampleToastRef.value?.showError('Cargo full — payload retained')
+        setFocusPoi(opened.dropId)
+      }
+      orbitalDrops.lastOpenedDrop.value = null
+    }
+
     if (camera && cameraFillLight) {
       syncCameraFillLight(
         cameraFillLight,
@@ -1102,7 +1209,18 @@ onMounted(async () => {
     }
 
     isInstrumentActive.value = controller?.mode === 'active'
-    samDialogVisible.value = controller?.mode === 'active' && controller?.activeInstrument instanceof SAMController
+    // SAM dialog: open covers on activate, show dialog when covers finish opening
+    {
+      const samCtl = controller?.instruments.find(i => i.id === 'sam') as SAMController | undefined
+      const samActive = controller?.mode === 'active' && controller?.activeInstrument instanceof SAMController
+      if (samActive && samCtl) {
+        samCtl.openCovers()
+        samDialogVisible.value = samCtl.coversOpen
+      } else {
+        if (samCtl && samCtl.coversOpen) samCtl.closeCovers()
+        samDialogVisible.value = false
+      }
+    }
 
     // Track RTG overdrive state + glow effect
     const rtg = controller?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
@@ -1650,6 +1768,9 @@ function onResize() {
 
 onUnmounted(() => {
   clearPois()
+  orbitalDrops.disposeAllDrops()
+  disposeOrbitalDropDebugApi?.()
+  disposeOrbitalDropDebugApi = null
   if (animationId) cancelAnimationFrame(animationId)
   window.removeEventListener('keydown', onGlobalKeyDown)
   controller?.dispose()
@@ -1985,6 +2106,12 @@ onUnmounted(() => {
   border-radius: 6px;
   pointer-events: none;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+.orbital-drop-hint {
+  background: rgba(33, 24, 10, 0.72);
+  border-color: rgba(255, 210, 122, 0.35);
+  color: rgba(255, 228, 178, 0.96);
 }
 
 /* Deployment overlay */
