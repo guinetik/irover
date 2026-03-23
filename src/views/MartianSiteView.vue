@@ -367,6 +367,8 @@ const scienceLogOpen = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
+/** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
+const roverIsMoving = ref(false)
 const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
@@ -457,15 +459,16 @@ const activeChemCamReadout = computed(() => {
 
 /**
  * Live mobility stats for the wheels instrument card (slot 12).
- * Depends on `roverHeading` so values refresh while the chassis moves.
+ * Depends on `roverHeading` and `roverIsMoving` (synced from the controller each frame).
  */
 const wheelsOverlayHud = computed(() => {
   roverHeading.value
+  roverIsMoving.value
   const w = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
   if (!w) return { powerStr: '—', statusStr: '—', healthPct: 100 }
-  const moving = controller?.isMoving ?? false
+  const moving = roverIsMoving.value
   const draw = w.getDrivePowerW()
-  const powerStr = moving ? `${draw.toFixed(0)} W` : `0 W (nom. ${w.baseDriveW.toFixed(0)} W)`
+  const powerStr = moving ? `${draw.toFixed(0)} W` : '0 W'
   const statusStr = !w.operational ? 'OFFLINE' : moving ? 'DRIVING' : 'READY'
   return { powerStr, statusStr, healthPct: w.durabilityPct }
 })
@@ -881,6 +884,11 @@ onMounted(async () => {
 
     controller?.update(sceneDelta)
     roverHeading.value = controller?.heading ?? 0
+    {
+      const moving =
+        siteScene.roverState === 'ready' && controller ? (controller.isMoving ?? false) : false
+      if (moving !== roverIsMoving.value) roverIsMoving.value = moving
+    }
     const wheelsInst = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
     if (wheelsInst) wheelsInst.baseDriveW = profile.baseDriveW
     if (siteScene?.rover) {

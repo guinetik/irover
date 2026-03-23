@@ -10,11 +10,23 @@ export class RoverWheelsController extends InstrumentController {
   readonly id = 'wheels'
   readonly name = 'WHLS'
   readonly slot = 12
-  /** Middle axle wheel — low on the body so the orbit cam frames tread, not deck. */
-  readonly focusNodeName = 'wheel_02_L'
-  override readonly altNodeNames = ['wheel_02_R', 'wheel_01_L', 'wheel_03_L', 'Chassis', 'body001', 'body']
-  /** Nudge look-at slightly inboard / up so the lens centers on the wheel assembly. */
-  readonly focusOffset = new THREE.Vector3(0.05, 0.12, 0)
+  /**
+   * Left rocker-bogie root under `body` — arms, rods, steer pivots, and wheels (see GLTF:
+   * `suspension_axel_L` → `suspension_arm_*`, `suspension_rod_*`, `wheel_*`). Selection glow
+   * applies to this whole subtree instead of a single tire.
+   */
+  readonly focusNodeName = 'suspension_axel_L'
+  override readonly altNodeNames = [
+    'suspension_axel_R',
+    'suspension_xmember',
+    'wheel_02_L',
+    'wheel_02_R',
+    'Chassis',
+    'body001',
+    'body',
+  ]
+  /** Nudge look-at slightly inboard / up toward the linkage mass. */
+  readonly focusOffset = new THREE.Vector3(0.06, 0.1, 0)
   /** Default orbit azimuth when opening the panel (rover heading added in RoverController). */
   readonly viewAngle = Math.PI * 0.92
   /**
@@ -23,7 +35,11 @@ export class RoverWheelsController extends InstrumentController {
    */
   readonly viewPitch = 0.1
   override readonly canActivate = false
-  override readonly selectionIdlePowerW = 1
+  /**
+   * No main-bus draw for merely opening the WHLS card — mobility is billed only while translating
+   * via {@link getDrivePowerW} in the site power tick (`driveMotorW`).
+   */
+  override readonly selectionIdlePowerW = 0
 
   /**
    * Nominal motor draw (W) while moving — mirror `RoverPowerProfile.baseDriveW`;
