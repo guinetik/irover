@@ -50,6 +50,12 @@ export interface RoverMast {
 
 export type RoverState = 'descending' | 'deploying' | 'ready'
 
+/** Options for {@link SiteScene.init}. */
+export interface SiteSceneInitOptions {
+  /** If true, rover spawns deployed on the ground (no descent or deploy GLTF clip). */
+  skipIntroSequence?: boolean
+}
+
 export class SiteScene {
   readonly scene = new THREE.Scene()
   readonly terrain = new TerrainGenerator()
@@ -86,6 +92,7 @@ export class SiteScene {
   private featureType: TerrainParams['featureType'] = 'plain'
   private roverLight: THREE.PointLight | null = null
   private roverFillLow: THREE.PointLight | null = null
+  private skipIntroSequence = false
   private sunRaycaster = new THREE.Raycaster()
   /** Whether the rover is currently in direct sunlight (not shadowed by terrain/rocks) */
   roverInSunlight = true
@@ -104,7 +111,8 @@ export class SiteScene {
     return Math.min(1, this.descentTime / this.DESCENT_DURATION)
   }
 
-  async init(params: TerrainParams): Promise<void> {
+  async init(params: TerrainParams, options?: SiteSceneInitOptions): Promise<void> {
+    this.skipIntroSequence = options?.skipIntroSequence ?? false
     this.dustCover = params.dustCover
     this.waterIceIndex = params.waterIceIndex
     this.featureType = params.featureType
@@ -307,31 +315,7 @@ export class SiteScene {
       this.deployAction.clampWhenFinished = true
 
       this.mixer.addEventListener('finished', () => {
-        this.roverState = 'ready'
-        // Snapshot every node's deployed-pose transforms before killing the mixer
-        const saved = new Map<THREE.Object3D, {
-          pos: THREE.Vector3, quat: THREE.Quaternion, scale: THREE.Vector3
-        }>()
-        this.rover!.traverse((node) => {
-          saved.set(node, {
-            pos: node.position.clone(),
-            quat: node.quaternion.clone(),
-            scale: node.scale.clone(),
-          })
-        })
-        // Kill the mixer (this resets nodes to bind pose)
-        this.deployAction!.stop()
-        this.mixer!.uncacheRoot(this.rover!)
-        this.mixer = null
-        this.deployAction = null
-        // Restore the deployed pose from our snapshot
-        saved.forEach(({ pos, quat, scale }, node) => {
-          node.position.copy(pos)
-          node.quaternion.copy(quat)
-          node.scale.copy(scale)
-        })
-        // Extract wheel/mast nodes from the baked deployed pose
-        this.extractWheelNodes()
+        this.bakeDeployedPoseAndStopMixer()
       })
     }
 
@@ -339,10 +323,20 @@ export class SiteScene {
     this.descentGroundY = this.terrain.heightAt(sx, sz)
     this.descentStartY = this.descentGroundY + this.DESCENT_HEIGHT
     this.descentTime = 0
-    this.roverState = 'descending'
-    this.rover.position.set(sx, this.descentStartY, sz)
+
+    if (this.skipIntroSequence) {
+      this.rover.position.set(sx, this.descentGroundY, sz)
+    } else {
+      this.roverState = 'descending'
+      this.rover.position.set(sx, this.descentStartY, sz)
+    }
     this.scene.add(this.rover)
-    this.createTouchdownRig()
+    if (!this.skipIntroSequence) {
+      this.createTouchdownRig()
+    }
+    if (this.skipIntroSequence) {
+      this.applySkippedIntroDeployedState()
+    }
 
     // Fill lights attached to rover — kept subtle so the sun is the key light.
     // Intensities are modulated by time of day in update().
@@ -474,6 +468,52 @@ export class SiteScene {
     this.landingDust.position.copy(this.rover.position)
     this.landingDustTime = 0
     this.scene.add(this.landingDust)
+  }
+
+  /**
+   * Samples the current animated pose, stops the deploy mixer, and reapplies transforms
+   * so the rover stays in the deployed configuration (bind pose would otherwise show stowed parts).
+   */
+  private bakeDeployedPoseAndStopMixer(): void {
+    if (!this.rover || !this.deployAction || !this.mixer) return
+    this.roverState = 'ready'
+    const saved = new Map<THREE.Object3D, {
+      pos: THREE.Vector3
+      quat: THREE.Quaternion
+      scale: THREE.Vector3
+    }>()
+    this.rover.traverse((node) => {
+      saved.set(node, {
+        pos: node.position.clone(),
+        quat: node.quaternion.clone(),
+        scale: node.scale.clone(),
+      })
+    })
+    this.deployAction.stop()
+    this.mixer.uncacheRoot(this.rover)
+    this.mixer = null
+    this.deployAction = null
+    saved.forEach(({ pos, quat, scale }, node) => {
+      node.position.copy(pos)
+      node.quaternion.copy(quat)
+      node.scale.copy(scale)
+    })
+    this.extractWheelNodes()
+  }
+
+  /** Jumps the deploy clip to the end and bakes pose (used when intro sequence is skipped). */
+  private applySkippedIntroDeployedState(): void {
+    if (!this.rover) return
+    if (this.mixer && this.deployAction && this.deployDuration > 0) {
+      this.deployAction.reset()
+      this.deployAction.play()
+      this.deployAction.time = this.deployDuration
+      this.mixer.update(0)
+      this.bakeDeployedPoseAndStopMixer()
+    } else {
+      this.roverState = 'ready'
+      this.extractWheelNodes()
+    }
   }
 
   /**

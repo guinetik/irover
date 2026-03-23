@@ -220,6 +220,7 @@ import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
+import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { useMarsData } from '@/composables/useMarsData'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { GeologicalFeature } from '@/types/landmark'
@@ -479,7 +480,7 @@ onMounted(async () => {
   siteTerrainParams = terrainParams
 
   siteScene = new SiteScene()
-  await siteScene.init(terrainParams)
+  await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
 
   cameraFillLight = createCameraFillLight()
   siteScene.scene.add(cameraFillLight)
@@ -1333,13 +1334,13 @@ onUnmounted(() => {
   letter-spacing: 0.15em;
 }
 
-/* ChemCam HUD */
+/* ChemCam HUD — above InstrumentToolbar (toolbar bottom: 24px, ~4.5rem tall); keep clear of compass at top */
 .chemcam-hud {
   position: fixed;
-  top: 56px;
+  bottom: calc(24px + 4.5rem + 10px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 42;
+  z-index: 43;
   display: flex;
   flex-direction: column;
   align-items: center;
