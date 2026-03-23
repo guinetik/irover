@@ -391,6 +391,7 @@ import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
+import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
 import { resolveRandomOrbitalDropPosition } from '@/lib/orbitalDropSpawn'
 import {
   roverHeadingRadToCompassDeg,
@@ -420,7 +421,7 @@ import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
-import { useInventory } from '@/composables/useInventory'
+import { useInventory, devSpawnRandomInventoryItems } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
 import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
 import { useSamArchive } from '@/composables/useSamArchive'
@@ -1073,6 +1074,7 @@ let dustPass: ReturnType<typeof createDustAtmospherePass> | null = null
 let animationId = 0
 let cameraFillLight: THREE.DirectionalLight | null = null
 let disposeOrbitalDropDebugApi: (() => void) | null = null
+let disposeMarsDevDebugApi: (() => void) | null = null
 
 function resolveOrbitalDropPosition(options?: { x?: number; z?: number }): { x: number; z: number } {
   return {
@@ -1232,6 +1234,9 @@ onMounted(async () => {
       dropItem: spawnOrbitalDropItem,
       dropRandom: spawnRandomOrbitalDrop,
       listComponentItems: listOrbitalDropItemIds,
+    })
+    disposeMarsDevDebugApi = installMarsDevDebugApi({
+      spawnRandomInventoryItems: devSpawnRandomInventoryItems,
     })
   }
 
@@ -1917,6 +1922,8 @@ onUnmounted(() => {
   orbitalDrops.disposeAllDrops()
   disposeOrbitalDropDebugApi?.()
   disposeOrbitalDropDebugApi = null
+  disposeMarsDevDebugApi?.()
+  disposeMarsDevDebugApi = null
   if (animationId) cancelAnimationFrame(animationId)
   window.removeEventListener('keydown', onGlobalKeyDown)
   controller?.dispose()

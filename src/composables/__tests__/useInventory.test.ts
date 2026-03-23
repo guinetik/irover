@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useInventory, resetInventoryForTests } from '../useInventory'
+import { useInventory, resetInventoryForTests, devSpawnRandomInventoryItems } from '../useInventory'
 
 describe('useInventory batch component grants', () => {
   beforeEach(() => {
@@ -47,5 +47,22 @@ describe('useInventory batch component grants', () => {
       { itemId: 'engineering-components', quantity: 10, totalWeightKg: 2.5 },
     ])
     expect(currentWeightKg.value).toBe(2.5)
+  })
+})
+
+describe('devSpawnRandomInventoryItems', () => {
+  beforeEach(() => {
+    resetInventoryForTests()
+  })
+
+  it('adds three distinct random catalog items without capacity errors', () => {
+    const ids = devSpawnRandomInventoryItems(3)
+    expect(ids.length).toBe(3)
+    expect(new Set(ids).size).toBe(3)
+
+    const { stacks } = useInventory()
+    for (const id of ids) {
+      expect(stacks.value.some((s) => s.itemId === id)).toBe(true)
+    }
   })
 })
