@@ -41,7 +41,7 @@ const ACK_SP = { min: 5, max: 15 }
 /** Track acknowledged readouts to prevent double-count */
 const acknowledgedReadouts = new Set<string>()
 
-export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'survival'
+export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival'
 type InstrumentSource = 'mastcam' | 'chemcam' | 'drill'
 
 export interface SPGain {
@@ -152,6 +152,20 @@ export function useSciencePoints() {
     return gain
   }
 
+  const samScored = new Set<string>()
+
+  function awardSAM(discoveryId: string, baseSp: number, label: string): SPGain | null {
+    if (samScored.has(discoveryId)) return null
+    samScored.add(discoveryId)
+    const spYieldMult = mod('spYield')
+    const amount = Math.round(baseSp * spYieldMult)
+    totalSP.value += amount
+    sessionSP.value += amount
+    const gain: SPGain = { amount, source: 'sam', rockLabel: label, bonus: 1.0 }
+    lastGain.value = gain
+    return gain
+  }
+
   function consumeLastGain(): SPGain | null {
     const g = lastGain.value
     lastGain.value = null
@@ -166,6 +180,7 @@ export function useSciencePoints() {
     award,
     awardAck,
     awardDAN,
+    awardSAM,
     awardSurvival,
     consumeLastGain,
   }
