@@ -455,6 +455,8 @@ const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
 let danDiscMesh: THREE.Mesh | null = null
 let danConeMesh: THREE.Mesh | null = null
+/** Completed prospect site markers — shown when DAN slot is selected */
+const danCompletedDiscs: THREE.Mesh[] = []
 const INITIATE_DURATION = 4
 const PROSPECT_DURATION_MARS_HOURS = 2
 
@@ -1186,10 +1188,14 @@ onMounted(async () => {
       danHitAvailable.value = danInst.pendingHit !== null
 
       // VFX: always tick so dots hide when deselected
-      danInst.vfxVisible = controller?.activeInstrument?.id === 'dan'
+      const danSelected = controller?.activeInstrument?.id === 'dan'
+      danInst.vfxVisible = !!danSelected
       const rp = siteScene.rover?.position
       const groundY = rp && siteScene.terrain ? siteScene.terrain.heightAt(rp.x, rp.z) : 0
       danInst.updateVFX(sceneDelta, groundY)
+
+      // Show completed prospect site discs when DAN is selected
+      for (const disc of danCompletedDiscs) disc.visible = !!danSelected
 
       // Hit detection → toast + SP
       if (danInst.pendingHit && !danInst.hitConsumed) {
@@ -1281,7 +1287,15 @@ onMounted(async () => {
               sampleToastRef.value?.showDAN('Analysis inconclusive — hydrogen likely mineral-bound')
             }
 
-            if (danDiscMesh) danDiscMesh.visible = false
+            // Keep disc as a completed site marker (hidden by default, shown when DAN selected)
+            if (danDiscMesh) {
+              danDiscMesh.visible = false
+              // Recolor: blue for water, dim gray for inconclusive
+              ;(danDiscMesh.material as THREE.MeshBasicMaterial).color.set(hasWater ? 0x44aaff : 0x666688)
+              ;(danDiscMesh.material as THREE.MeshBasicMaterial).opacity = 0.15
+              danCompletedDiscs.push(danDiscMesh)
+              danDiscMesh = null  // next prospect creates a fresh disc
+            }
             danInst.pendingHit = null
             danHitAvailable.value = false
             if (controller) controller.config.moveSpeed = 5
