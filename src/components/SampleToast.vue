@@ -8,8 +8,15 @@
         :class="item.variant"
       >
         <span class="toast-dot" :style="{ color: item.color }">&#x25CF;</span>
-        <span class="toast-label">{{ item.prefix }} {{ item.label }}</span>
-        <span v-if="item.weight" class="toast-weight">{{ item.weight }} kg</span>
+        <span class="toast-label">
+          <template v-if="item.variant === 'sp'">
+            <span class="font-instrument">{{ item.prefix }}</span> {{ item.label }}
+          </template>
+          <template v-else>
+            {{ item.prefix }} {{ item.label }}
+          </template>
+        </span>
+        <span v-if="item.weight" class="toast-weight font-instrument">{{ item.weight }} kg</span>
       </div>
     </TransitionGroup>
   </Teleport>
@@ -114,7 +121,7 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace })
   backdrop-filter: blur(8px);
   border: 1px solid rgba(196, 117, 58, 0.25);
   border-radius: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -141,7 +148,7 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace })
 }
 
 .toast-dot {
-  font-size: 10px;
+  font-size: 12px;
   text-shadow: 0 0 6px currentColor;
 }
 
@@ -171,7 +178,6 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace })
 
 .toast-weight {
   color: rgba(196, 149, 106, 0.5);
-  font-variant-numeric: tabular-nums;
 }
 
 .toast-pop-enter-active {

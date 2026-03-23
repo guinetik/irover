@@ -197,10 +197,14 @@ export class MastCamController extends InstrumentController {
     const hits = raycaster.intersectObjects(this.rocks, false)
     for (const hit of hits) {
       const rock = hit.object as THREE.Mesh
+      if (rock.userData.depleted) continue
       if (!rock.userData.mastcamScanned) return rock
     }
-    // If we hit a scanned rock, still return it for feedback
-    return hits.length > 0 ? hits[0].object as THREE.Mesh : null
+    for (const hit of hits) {
+      const rock = hit.object as THREE.Mesh
+      if (!rock.userData.depleted) return rock
+    }
+    return null
   }
 
   /** Create a persistent floating tag above a scanned rock */
@@ -327,6 +331,7 @@ export class MastCamController extends InstrumentController {
     for (const rock of this.rocks) {
       const type = rock.userData.rockType as RockTypeId | undefined
       if (!type) continue
+      if (rock.userData.depleted) continue
 
       // Distance check from mast
       if (this.mastWorldPos.distanceTo(rock.position) > SURVEY_RANGE) continue

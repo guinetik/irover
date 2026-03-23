@@ -71,8 +71,8 @@ const solarIcons = computed(() => {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(196, 117, 58, 0.2);
   border-radius: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   letter-spacing: 0.1em;
   pointer-events: none;
   transition: border-color 0.5s ease;
@@ -83,7 +83,7 @@ const solarIcons = computed(() => {
 }
 
 .pp-label {
-  font-size: 8px;
+  font-size: 11px;
   color: #6b4a30;
   letter-spacing: 0.15em;
 }
@@ -119,14 +119,16 @@ const solarIcons = computed(() => {
 }
 
 .pp-wh-main {
-  font-size: 10px;
+  font-family: var(--font-instrument);
+  font-size: 12px;
   font-weight: bold;
   color: #e8a060;
   font-variant-numeric: tabular-nums;
 }
 
 .pp-wh-cap {
-  font-size: 8px;
+  font-family: var(--font-instrument);
+  font-size: 11px;
   color: #6b4a30;
   font-variant-numeric: tabular-nums;
 }
@@ -139,7 +141,8 @@ const solarIcons = computed(() => {
 }
 
 .pp-net {
-  font-size: 10px;
+  font-family: var(--font-instrument);
+  font-size: 12px;
   font-weight: bold;
   font-variant-numeric: tabular-nums;
   transition: color 0.3s ease;
@@ -154,23 +157,25 @@ const solarIcons = computed(() => {
 }
 
 .pp-detail {
-  font-size: 7px;
+  font-size: 12px;
   color: #6b4a30;
 }
 
 .pp-detail-val {
+  font-family: var(--font-instrument);
+  font-variant-numeric: tabular-nums;
   color: #6b4a30;
   font-weight: bold;
 }
 
 .pp-source-icons {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 2px;
   opacity: 0.9;
 }
 
 .pp-source-label {
-  font-size: 7px;
+  font-size: 12px;
   color: #6b4a30;
 }
 </style>

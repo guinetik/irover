@@ -31,8 +31,13 @@ export class RockTargeting {
     return this.depletedRocks.has(rock)
   }
 
+  /**
+   * Marks a rock as mined out — MastCam drops the floating tag and survey highlight;
+   * ChemCam/APXS targeting already skip `userData.depleted`.
+   */
   depleteRock(rock: THREE.Mesh): void {
     this.depletedRocks.add(rock)
+    rock.userData.depleted = true
     const mat = (rock.material as THREE.MeshStandardMaterial).clone()
     mat.color.multiplyScalar(0.4)
     mat.roughness = Math.min(1.0, mat.roughness + 0.3)

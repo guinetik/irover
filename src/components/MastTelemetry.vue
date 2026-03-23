@@ -104,7 +104,7 @@ const rangeStr = computed(() => {
   border: 1px solid rgba(102, 255, 238, 0.15);
   border-radius: 6px;
   padding: 8px 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   pointer-events: none;
   min-width: 130px;
 }
@@ -117,14 +117,15 @@ const rangeStr = computed(() => {
 }
 
 .mt-label {
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(102, 255, 238, 0.4);
   letter-spacing: 0.12em;
   font-weight: bold;
 }
 
 .mt-value {
-  font-size: 10px;
+  font-family: var(--font-instrument);
+  font-size: 12px;
   color: rgba(102, 255, 238, 0.85);
   font-variant-numeric: tabular-nums;
   text-align: right;

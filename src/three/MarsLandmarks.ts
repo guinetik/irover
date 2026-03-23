@@ -51,8 +51,9 @@ export class MarsLandmarks implements SceneLayer {
       labelDiv.className = 'landmark-label'
       labelDiv.textContent = landmark.name
       labelDiv.style.color = landmark.accent
-      labelDiv.style.fontSize = '11px'
-      labelDiv.style.fontWeight = '400'
+      labelDiv.style.fontFamily = '"IBM Plex Sans", system-ui, sans-serif'
+      labelDiv.style.fontSize = '13px'
+      labelDiv.style.fontWeight = '500'
       labelDiv.style.letterSpacing = '0.05em'
       labelDiv.style.textShadow = '0 1px 4px rgba(0,0,0,0.8)'
       labelDiv.style.pointerEvents = 'none'

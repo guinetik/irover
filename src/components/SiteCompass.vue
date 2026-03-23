@@ -7,7 +7,7 @@
       </div>
     </div>
     <div class="compass-pointer" />
-    <div class="heading-readout">{{ headingDeg }}&deg;</div>
+    <div class="heading-readout font-instrument">{{ headingDeg }}&deg;</div>
   </div>
 </template>
 
@@ -103,8 +103,8 @@ const ticks = computed(() => {
 }
 
 .tick-label {
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   letter-spacing: 0.1em;
   color: rgba(196, 149, 106, 0.4);
   margin-top: 1px;
@@ -112,7 +112,7 @@ const ticks = computed(() => {
 }
 
 .tick.cardinal .tick-label {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: bold;
   color: rgba(196, 149, 106, 0.8);
 }
@@ -134,8 +134,8 @@ const ticks = computed(() => {
   bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: #c4753a;
   letter-spacing: 0.15em;
 }

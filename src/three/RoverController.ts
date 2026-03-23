@@ -365,6 +365,17 @@ export class RoverController {
     const samInst = this.instruments.find(i => i.id === 'sam')
     if (samInst && samInst !== this.activeInstrument) samInst.update(delta)
 
+    // ChemCam laser/integration continues if the player leaves active mode (e.g. ESC mid-sequence)
+    const chemCam = this.instruments.find((i): i is ChemCamController => i instanceof ChemCamController)
+    if (chemCam?.isSequenceAdvancing) {
+      const activeChemCam = this.mode === 'active' && this.activeInstrument === chemCam
+      const instrumentZoomTicksChemCam =
+        this.mode === 'instrument' && this.instrumentZoomPending && this.activeInstrument === chemCam
+      if (!activeChemCam && !instrumentZoomTicksChemCam) {
+        chemCam.update(delta)
+      }
+    }
+
     if (this.mode === 'instrument' && this.instrumentZoomPending && this.activeInstrument) {
       const delaySec = this.config.instrumentZoomDelaySeconds ?? 0
       if (delaySec > 0) {

@@ -7,10 +7,10 @@
       :class="{ active: activeSlot === inst.slot }"
       @click="handleClick(inst.slot)"
     >
-      <span class="slot-key">{{ inst.slot }}</span>
+      <span class="slot-key font-instrument">{{ inst.slot }}</span>
       <span class="slot-icon">{{ inst.icon }}</span>
       <span class="slot-name">{{ inst.name }}</span>
-      <span v-if="inst.slot === 2 && (chemCamUnread ?? 0) > 0" class="badge-dot">{{ chemCamUnread }}</span>
+      <span v-if="inst.slot === 2 && (chemCamUnread ?? 0) > 0" class="badge-dot font-instrument">{{ chemCamUnread }}</span>
     </button>
 
     <div class="toolbar-divider" />
@@ -20,7 +20,7 @@
       :class="{ active: inventoryOpen }"
       @click="emit('toggleInventory')"
     >
-      <span class="slot-key">Tab</span>
+      <span class="slot-key font-instrument">Tab</span>
       <span class="slot-icon">&#x2261;</span>
       <span class="slot-name">INV</span>
     </button>
@@ -107,8 +107,8 @@ function handleClick(slot: number) {
   position: absolute;
   top: 2px;
   left: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   font-weight: 600;
   color: rgba(196, 149, 106, 0.4);
   letter-spacing: 0;
@@ -130,8 +130,8 @@ function handleClick(slot: number) {
 }
 
 .slot-name {
-  font-family: 'Courier New', monospace;
-  font-size: 7px;
+  font-family: var(--font-ui);
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.12em;
   color: rgba(255, 255, 255, 0.25);
@@ -152,8 +152,8 @@ function handleClick(slot: number) {
   background: #66ffee;
   color: #0a0502;
   border-radius: 7px;
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   font-weight: bold;
   line-height: 14px;
   text-align: center;

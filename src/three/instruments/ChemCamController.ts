@@ -55,7 +55,10 @@ export interface ChemCamReadout {
   rockMeshUuid: string
   rockType: RockTypeId
   rockLabel: string
+  /** Unix ms when LIBS acquisition finished (spectrum ready). */
   timestamp: number
+  /** Mission sol when acquisition finished — set from `ChemCamController.currentSol`. */
+  capturedSol: number
   /** Procedural spectrum peaks — [{wavelength, intensity, element}] */
   peaks: SpectrumPeak[]
   /** 0–1 calibration at time of scan. Affects peak visibility & labels. */
@@ -89,6 +92,8 @@ export class ChemCamController extends InstrumentController {
   durationMultiplier = 1.0
   /** Current total SP — set by view each frame for calibration curve */
   currentSP = 0
+  /** Mission sol — set by view each frame; stamped on new readouts at capture. */
+  currentSol = 1
 
   /** 0–1 calibration level derived from accumulated SP */
   get calibration(): number {
@@ -161,6 +166,20 @@ export class ChemCamController extends InstrumentController {
       case 'ARMED': return IDLE_POWER_W
       default: return 0
     }
+  }
+
+  /**
+   * True while a shot is in flight (laser, integration, hand-off to cooldown).
+   * Rover ticks the controller in the background when this is true but ChemCam is not the active instrument,
+   * so sequences finish after ESC or when viewing another instrument card.
+   */
+  get isSequenceAdvancing(): boolean {
+    return (
+      this.phase === 'PULSE_TRAIN'
+      || this.phase === 'INTEGRATING'
+      || this.phase === 'READY'
+      || this.phase === 'COOLDOWN'
+    )
   }
 
   /** Call from view's wheel handler when ChemCam is active */
@@ -334,6 +353,7 @@ export class ChemCamController extends InstrumentController {
       rockType,
       rockLabel: label,
       timestamp: Date.now(),
+      capturedSol: this.currentSol,
       peaks,
       calibration: cal,
       read: false,

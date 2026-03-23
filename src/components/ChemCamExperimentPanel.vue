@@ -7,7 +7,8 @@
           <div class="cp-header">
             <div class="cp-header-left">
               <div class="cp-instrument">CHEMCAM LIBS</div>
-              <div class="cp-sol">SOL {{ sol }}</div>
+              <div class="cp-sol">CAPTURED SOL <span class="font-instrument">{{ readout.capturedSol }}</span></div>
+              <div class="cp-capture-utc">{{ captureUtcLabel }}</div>
             </div>
             <div class="cp-rock-label">{{ readout.rockLabel }}</div>
             <button class="cp-close" @click="$emit('close')">&times;</button>
@@ -25,7 +26,7 @@
 
           <!-- Spectrum plot -->
           <div class="cp-plot-wrap">
-            <svg class="cp-spectrum" viewBox="0 0 600 200" preserveAspectRatio="none">
+            <svg class="cp-spectrum" viewBox="0 -28 600 228" preserveAspectRatio="none">
               <!-- Grid lines -->
               <line v-for="y in [50, 100, 150]" :key="'g'+y"
                 x1="0" :y1="y" x2="600" :y2="y"
@@ -35,7 +36,7 @@
                 <line :x1="nmToX(nm)" y1="195" :x2="nmToX(nm)" y2="200"
                   stroke="rgba(102,255,238,0.3)" stroke-width="0.5" />
                 <text :x="nmToX(nm)" y="194" fill="rgba(102,255,238,0.3)"
-                  font-size="7" text-anchor="middle">{{ nm }}</text>
+                  font-size="10" text-anchor="middle" font-family="Datatype, sans-serif">{{ nm }}</text>
               </template>
 
               <!-- Baseline noise -->
@@ -53,8 +54,8 @@
                   :stroke="peakColor(peak)" stroke-width="0.5" />
                 <text v-if="peak.intensity > 0.4"
                   :x="nmToX(peak.wavelength)" :y="intensityToY(peak.intensity) - 16"
-                  :fill="peakColor(peak)" font-size="9" font-weight="bold"
-                  text-anchor="middle" font-family="Courier New, monospace">{{ peak.element }}</text>
+                  :fill="peakColor(peak)" font-size="11" font-weight="bold"
+                  text-anchor="middle" font-family="IBM Plex Sans, sans-serif">{{ peak.element }}</text>
               </template>
             </svg>
             <div class="cp-axis-label">WAVELENGTH (nm)</div>
@@ -88,8 +89,19 @@ import type { ChemCamReadout, SpectrumPeak } from '@/three/instruments/ChemCamCo
 
 const props = defineProps<{
   readout: ChemCamReadout | null
-  sol: number
 }>()
+
+/** ISO-style UTC time when LIBS acquisition finished. */
+const captureUtcLabel = computed(() => {
+  const r = props.readout
+  if (!r) return ''
+  try {
+    const iso = new Date(r.timestamp).toISOString()
+    return `${iso.slice(0, 10)} ${iso.slice(11, 19)} UTC`
+  } catch {
+    return ''
+  }
+})
 
 defineEmits<{
   close: []
@@ -261,7 +273,7 @@ const scienceBlurb = computed(() => {
   border: 1px solid rgba(102, 255, 238, 0.25);
   border-radius: 10px;
   padding: 20px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
 }
 
 /* Calibration bar */
@@ -277,7 +289,7 @@ const scienceBlurb = computed(() => {
 }
 
 .cp-cal-label {
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(102, 255, 238, 0.4);
   letter-spacing: 0.12em;
   flex-shrink: 0;
@@ -299,7 +311,8 @@ const scienceBlurb = computed(() => {
 }
 
 .cp-cal-pct {
-  font-size: 10px;
+  font-family: var(--font-instrument);
+  font-size: 12px;
   color: #66ffee;
   font-weight: bold;
   font-variant-numeric: tabular-nums;
@@ -308,7 +321,7 @@ const scienceBlurb = computed(() => {
 }
 
 .cp-cal-hint {
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(102, 255, 238, 0.35);
   letter-spacing: 0.04em;
   flex-shrink: 0;
@@ -324,16 +337,32 @@ const scienceBlurb = computed(() => {
   border-bottom: 1px solid rgba(102, 255, 238, 0.12);
 }
 
+.cp-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+}
+
 .cp-instrument {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(102, 255, 238, 0.5);
   letter-spacing: 0.15em;
 }
 
 .cp-sol {
-  font-size: 9px;
-  color: rgba(102, 255, 238, 0.3);
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  color: rgba(102, 255, 238, 0.55);
+  letter-spacing: 0.12em;
+  font-weight: bold;
+}
+
+.cp-capture-utc {
+  font-family: var(--font-instrument);
+  font-size: 11px;
+  color: rgba(102, 255, 238, 0.35);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
 }
 
 .cp-rock-label {
@@ -381,7 +410,7 @@ const scienceBlurb = computed(() => {
   position: absolute;
   bottom: 2px;
   right: 12px;
-  font-size: 7px;
+  font-size: 12px;
   color: rgba(102, 255, 238, 0.25);
   letter-spacing: 0.1em;
 }
@@ -402,21 +431,23 @@ const scienceBlurb = computed(() => {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: bold;
   color: rgba(232, 200, 160, 0.8);
   letter-spacing: 0.08em;
 }
 
 .cp-el-pct {
-  font-size: 8px;
+  font-family: var(--font-instrument);
+  font-size: 11px;
   color: rgba(232, 200, 160, 0.4);
   font-weight: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Science blurb */
 .cp-blurb {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(102, 255, 238, 0.5);
   line-height: 1.6;
   letter-spacing: 0.04em;
@@ -440,7 +471,7 @@ const scienceBlurb = computed(() => {
   border: 1px solid rgba(102, 255, 238, 0.4);
   border-radius: 6px;
   color: #66ffee;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 0.2em;
@@ -459,7 +490,7 @@ const scienceBlurb = computed(() => {
   border: 1px solid rgba(102, 255, 238, 0.15);
   border-radius: 6px;
   color: rgba(102, 255, 238, 0.3);
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 0.2em;

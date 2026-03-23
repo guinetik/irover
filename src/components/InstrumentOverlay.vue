@@ -55,17 +55,29 @@
         <!-- Temperature warning -->
         <div v-if="instrument.temp" class="ov-temp">{{ instrument.temp }}</div>
 
-        <!-- ChemCam shots + See Results -->
-        <div v-if="activeSlot === 2" class="ov-chemcam-status">
-          <div class="ov-stat">
-            <div class="ov-stat-label">SHOTS</div>
-            <div class="ov-stat-value" style="color: #66ffee">{{ chemCamShots }}</div>
+        <!-- ChemCam: background sequence progress + shots + See Results -->
+        <div v-if="activeSlot === 2" class="ov-chemcam-block">
+          <div v-if="chemCamSequenceActive" class="ov-cc-sequence">
+            <div class="ov-cc-seq-label">{{ chemCamSequenceLabel }}</div>
+            <div class="ov-cc-seq-track">
+              <div
+                class="ov-cc-seq-fill"
+                :class="chemCamSequencePulse ? 'pulse' : 'integrate'"
+                :style="{ width: chemCamSequenceProgress + '%' }"
+              />
+            </div>
           </div>
-          <button
-            v-if="chemCamUnread > 0"
-            class="ov-btn-see-results"
-            @click="$emit('seeResults')"
-          >SEE RESULTS <span class="ov-results-badge">{{ chemCamUnread }}</span></button>
+          <div class="ov-chemcam-status">
+            <div class="ov-stat">
+              <div class="ov-stat-label">SHOTS</div>
+              <div class="ov-stat-value" style="color: #66ffee">{{ chemCamShots }}</div>
+            </div>
+            <button
+              v-if="chemCamUnread > 0"
+              class="ov-btn-see-results"
+              @click="$emit('seeResults')"
+            >SEE RESULTS <span class="ov-results-badge font-instrument">{{ chemCamUnread }}</span></button>
+          </div>
         </div>
 
         <!-- Buttons -->
@@ -235,6 +247,11 @@ const props = withDefaults(
     thermal?: ThermalDisplay | null
     chemCamShots?: string
     chemCamUnread?: number
+    /** ChemCam card: show firing/integration bar when sequence runs outside active view */
+    chemCamSequenceActive?: boolean
+    chemCamSequenceProgress?: number
+    chemCamSequenceLabel?: string
+    chemCamSequencePulse?: boolean
   }>(),
   {
     canActivate: true,
@@ -242,6 +259,10 @@ const props = withDefaults(
     thermal: null,
     chemCamShots: '10/10',
     chemCamUnread: 0,
+    chemCamSequenceActive: false,
+    chemCamSequenceProgress: 0,
+    chemCamSequenceLabel: '',
+    chemCamSequencePulse: false,
   },
 )
 
@@ -293,14 +314,14 @@ const thermalZoneBg = computed(() =>
   right: 16px;
   top: 50%;
   transform: translateY(-50%);
-  width: 280px;
+  width: 320px;
   background: rgba(10, 5, 2, 0.88);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(196, 117, 58, 0.3);
   border-radius: 10px;
   padding: 16px;
   z-index: 50;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
 }
 
 /* Header */
@@ -334,7 +355,7 @@ const thermalZoneBg = computed(() =>
 }
 
 .ov-type {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.5);
   letter-spacing: 0.12em;
   margin-top: 1px;
@@ -351,7 +372,7 @@ const thermalZoneBg = computed(() =>
 
 /* Description */
 .ov-desc {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(196, 117, 58, 0.65);
   letter-spacing: 0.04em;
   line-height: 1.6;
@@ -376,20 +397,22 @@ const thermalZoneBg = computed(() =>
 }
 
 .ov-stat-label {
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.4);
   letter-spacing: 0.12em;
   margin-bottom: 3px;
 }
 
 .ov-stat-value {
+  font-family: var(--font-instrument);
   font-size: 13px;
   font-weight: bold;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Hint */
 .ov-hint {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.4);
   letter-spacing: 0.06em;
   line-height: 1.5;
@@ -402,7 +425,7 @@ const thermalZoneBg = computed(() =>
 
 /* Temperature warning */
 .ov-temp {
-  font-size: 9px;
+  font-size: 11px;
   color: #ef9f27;
   letter-spacing: 0.06em;
   margin-bottom: 12px;
@@ -426,7 +449,7 @@ const thermalZoneBg = computed(() =>
   border: none;
   border-radius: 6px;
   color: #1a0d08;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 0.2em;
@@ -450,8 +473,8 @@ const thermalZoneBg = computed(() =>
   border: 1px solid rgba(196, 117, 58, 0.3);
   border-radius: 6px;
   color: #a08060;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   letter-spacing: 0.15em;
   cursor: pointer;
   transition: all 0.15s;
@@ -477,7 +500,7 @@ const thermalZoneBg = computed(() =>
 }
 
 .ov-upgrade-label {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.4);
   letter-spacing: 0.12em;
   margin-bottom: 8px;
@@ -492,14 +515,14 @@ const thermalZoneBg = computed(() =>
 }
 
 .ov-upgrade-desc {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.5);
   line-height: 1.5;
   margin-bottom: 8px;
 }
 
 .ov-upgrade-req {
-  font-size: 9px;
+  font-size: 11px;
   color: #e05030;
   letter-spacing: 0.08em;
 }
@@ -508,7 +531,7 @@ const thermalZoneBg = computed(() =>
 .ov-esc {
   text-align: center;
   margin-top: 10px;
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.3);
   letter-spacing: 0.15em;
 }
@@ -529,12 +552,51 @@ const thermalZoneBg = computed(() =>
   opacity: 0;
 }
 
+/* ChemCam card block */
+.ov-chemcam-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ov-cc-sequence {
+  width: 100%;
+}
+
+.ov-cc-seq-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #66ffee;
+  margin-bottom: 4px;
+}
+
+.ov-cc-seq-track {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ov-cc-seq-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.08s linear;
+}
+
+.ov-cc-seq-fill.pulse {
+  background: linear-gradient(90deg, #ff6644, #ff4422);
+}
+
+.ov-cc-seq-fill.integrate {
+  background: linear-gradient(90deg, #ffcc44, #66ffee);
+}
+
 /* ChemCam status + See Results */
 .ov-chemcam-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
 }
 
 .ov-chemcam-status .ov-stat {
@@ -548,8 +610,8 @@ const thermalZoneBg = computed(() =>
   border: 1px solid rgba(102, 255, 238, 0.4);
   border-radius: 6px;
   color: #66ffee;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
+  font-family: var(--font-ui);
+  font-size: 12px;
   font-weight: bold;
   letter-spacing: 0.12em;
   cursor: pointer;
@@ -573,7 +635,7 @@ const thermalZoneBg = computed(() =>
   background: #66ffee;
   color: #0a0502;
   border-radius: 7px;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: bold;
   line-height: 14px;
   text-align: center;

@@ -1,9 +1,9 @@
 <template>
   <div class="sol-clock">
     <span class="sc-icon">{{ icon }}</span>
-    <span class="sc-time">{{ marsTime }}</span>
+    <span class="sc-time font-instrument">{{ marsTime }}</span>
     <span class="sc-dot">&middot;</span>
-    <span class="sc-sol">Sol {{ sol }}</span>
+    <span class="sc-sol">Sol <span class="font-instrument">{{ sol }}</span></span>
   </div>
 </template>
 
@@ -48,8 +48,9 @@ const icon = computed(() => {
   border: 1px solid rgba(196, 117, 58, 0.4);
   border-radius: 6px;
   padding: 4px 10px;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
   letter-spacing: 0.2em;
   color: #c4956a;
   pointer-events: none;
@@ -58,10 +59,6 @@ const icon = computed(() => {
 .sc-icon {
   color: #e8a060;
   font-size: 11px;
-}
-
-.sc-time {
-  font-variant-numeric: tabular-nums;
 }
 
 .sc-dot {

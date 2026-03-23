@@ -40,7 +40,7 @@ defineProps<{
   display: flex;
   flex-direction: column;
   z-index: 50;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   overflow: hidden;
 }
 
@@ -89,7 +89,7 @@ defineProps<{
 }
 
 .sam-placeholder-sub {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.25);
   letter-spacing: 0.1em;
 }
@@ -97,7 +97,7 @@ defineProps<{
 .sam-footer {
   text-align: center;
   padding: 8px;
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.3);
   letter-spacing: 0.15em;
   border-top: 1px solid rgba(196, 117, 58, 0.1);

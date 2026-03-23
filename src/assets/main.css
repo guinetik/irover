@@ -1,6 +1,25 @@
 @import "tailwindcss";
 
-html, body, #app {
+:root {
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", "Consolas", monospace;
+  /** Numeric / instrumentation readouts — [Datatype](https://fonts.google.com/specimen/Datatype) on Google Fonts */
+  --font-instrument: "Datatype", ui-monospace, "Courier New", monospace;
+}
+
+/**
+ * Instrumentation readouts (Wh, angles, coordinates, sol, calibration %, etc.).
+ * Tweak weight via `--font-instrument-weight` if the face needs a heavier cut.
+ */
+.font-instrument {
+  font-family: var(--font-instrument);
+  font-weight: var(--font-instrument-weight, 500);
+  font-variant-numeric: tabular-nums;
+}
+
+html,
+body,
+#app {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -8,5 +27,9 @@ html, body, #app {
   overflow: hidden;
   background: #000;
   color: #fff;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }

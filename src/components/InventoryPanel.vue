@@ -4,7 +4,7 @@
       <div v-if="open" class="inventory-panel">
         <div class="inv-header">
           <span class="inv-title">INVENTORY</span>
-          <span class="inv-weight" :class="{ full: isFull }">
+          <span class="inv-weight font-instrument" :class="{ full: isFull }">
             {{ currentWeight }} / {{ capacityKg }} KG
             <span v-if="isFull" class="inv-full-badge">FULL</span>
           </span>
@@ -35,7 +35,7 @@
                   :src="thumbSrc(cell.itemId)"
                   :alt="labelFor(cell.itemId)"
                 />
-                <span class="inv-count" :title="countTitle(cell)">×{{ cell.quantity }}</span>
+                <span class="inv-count font-instrument" :title="countTitle(cell)">×{{ cell.quantity }}</span>
                 <button
                   type="button"
                   class="inv-dump-btn"
@@ -64,7 +64,7 @@
     >
       <div class="inv-tip-title">{{ tooltipTitle }}</div>
       <div class="inv-tip-desc">{{ tooltipDesc }}</div>
-      <div class="inv-tip-weight">{{ tooltipWeight }}</div>
+      <div class="inv-tip-weight font-instrument">{{ tooltipWeight }}</div>
     </div>
   </Teleport>
 </template>
@@ -214,7 +214,7 @@ watch(
   border-radius: 8px;
   padding: 12px;
   z-index: 45;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
 }
 
 .inv-header {
@@ -235,7 +235,6 @@ watch(
   font-size: 10px;
   color: rgba(196, 149, 106, 0.6);
   letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums;
 }
 
 .inv-weight.full {
@@ -246,7 +245,7 @@ watch(
   display: inline-block;
   margin-left: 6px;
   padding: 1px 5px;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: bold;
   color: #1a0d08;
   background: #e05030;
@@ -331,14 +330,13 @@ watch(
   right: 2px;
   min-width: 18px;
   padding: 0 3px 0 2px;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: bold;
   color: #1a0d08;
   background: rgba(232, 160, 96, 0.95);
   border-radius: 3px;
   text-align: center;
   line-height: 14px;
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
@@ -388,22 +386,21 @@ watch(
 }
 
 .inv-tip-desc {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.35;
   color: rgba(196, 149, 106, 0.75);
   margin-bottom: 6px;
 }
 
 .inv-tip-weight {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(93, 201, 165, 0.85);
-  font-variant-numeric: tabular-nums;
 }
 
 .inv-footer {
   text-align: center;
   margin-top: 8px;
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.3);
   letter-spacing: 0.15em;
 }

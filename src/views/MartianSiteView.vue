@@ -4,10 +4,18 @@
     <div class="site-hud">
       <button class="back-btn" @click="$router.push('/globe')">BACK</button>
       <h2 class="site-name">{{ siteId }}</h2>
-      <div class="sp-counter">
-        <span class="sp-icon">&#x2726;</span>
-        <span class="sp-value">{{ totalSP }}</span>
-        <span class="sp-label">SP</span>
+      <div class="hud-actions">
+        <div class="sp-counter">
+          <span class="sp-icon">&#x2726;</span>
+          <span class="sp-value font-instrument">{{ totalSP }}</span>
+          <span class="sp-label">SP</span>
+        </div>
+        <button
+          v-if="hasScienceDiscoveries && !deploying && !descending"
+          type="button"
+          class="science-hud-btn"
+          @click="scienceLogOpen = true"
+        >SCIENCE</button>
       </div>
     </div>
     <SiteCompass :heading="roverHeading" />
@@ -35,7 +43,7 @@
           <div class="deploy-bar-track">
             <div class="deploy-bar-fill" :style="{ width: (deployProgress * 100) + '%' }" />
           </div>
-          <div class="deploy-pct">{{ Math.round(deployProgress * 100) }}%</div>
+          <div class="deploy-pct font-instrument">{{ Math.round(deployProgress * 100) }}%</div>
         </div>
       </div>
     </Transition>
@@ -56,7 +64,7 @@
         <div class="cc-strip">
           <span class="cc-label">CHEMCAM</span>
           <span class="cc-divider">|</span>
-          <span class="cc-shots">{{ chemcamShotsRemaining }}/{{ chemcamShotsMax }} SHOTS</span>
+          <span class="cc-shots"><span class="font-instrument">{{ chemcamShotsRemaining }}/{{ chemcamShotsMax }}</span> SHOTS</span>
           <span class="cc-divider">|</span>
           <span class="cc-phase" :class="chemcamPhase.toLowerCase()">{{ chemcamPhaseLabel }}</span>
           <span class="cc-divider">|</span>
@@ -66,6 +74,16 @@
           <div class="cc-progress-fill" :class="chemcamPhase.toLowerCase().replace('_','-')" :style="{ width: chemcamProgressPct + '%' }" />
           <span class="cc-progress-label">{{ chemcamPhase === 'PULSE_TRAIN' ? 'FIRING...' : 'INTEGRATING...' }}</span>
         </div>
+        <Transition name="deploy-fade">
+          <div v-if="chemCamUnreadCount > 0" class="cc-results-row">
+            <span class="cc-results-hint">SPECTRUM READY</span>
+            <button
+              type="button"
+              class="cc-btn-see-results"
+              @click="showChemCamResults = true"
+            >SEE RESULTS <span class="cc-results-badge font-instrument">{{ chemCamUnreadCount }}</span></button>
+          </div>
+        </Transition>
       </div>
     </Transition>
     <Transition name="deploy-fade">
@@ -107,14 +125,22 @@
       :thermal="activeInstrumentSlot === 9 ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
       :chem-cam-unread="chemCamUnreadCount"
+      :chem-cam-sequence-active="chemCamOverlaySequenceActive"
+      :chem-cam-sequence-progress="chemCamOverlaySequenceProgress"
+      :chem-cam-sequence-label="chemCamOverlaySequenceLabel"
+      :chem-cam-sequence-pulse="chemCamOverlaySequencePulse"
       @activate="handleActivate()"
       @see-results="showChemCamResults = true"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
-      :sol="marsSol"
       @close="showChemCamResults = false"
       @acknowledge="handleChemCamAck"
+    />
+    <ScienceLogDialog
+      :open="scienceLogOpen"
+      :spectra="chemCamArchivedSpectra"
+      @close="scienceLogOpen = false"
     />
     <InstrumentCrosshair
       :visible="crosshairVisible"
@@ -167,7 +193,7 @@
             <div class="sleep-bar-fill" :style="{ width: socPct + '%' }" />
             <div class="sleep-bar-target" />
           </div>
-          <div class="sleep-pct">{{ socPct.toFixed(0) }}% / 50%</div>
+          <div class="sleep-pct font-instrument">{{ socPct.toFixed(0) }}% / 50%</div>
           <div class="sleep-hint">Recharging from {{ netW >= 0 ? 'RTG + solar' : 'RTG' }}&hellip;</div>
         </div>
       </div>
@@ -228,6 +254,7 @@ import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
+import ScienceLogDialog from '@/components/ScienceLogDialog.vue'
 import AchievementBanner from '@/components/AchievementBanner.vue'
 import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
@@ -243,12 +270,16 @@ import { useMarsPower } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
+import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
 import { MastCamController, ChemCamController, APXSController, DANController, SAMController, RTGController, HeaterController, REMSController, RADController, AntennaLGController, AntennaUHFController, type InstrumentController } from '@/three/instruments'
 import CommToolbar from '@/components/CommToolbar.vue'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
+const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra } = useChemCamArchive()
+const scienceLogOpen = ref(false)
+const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
 const descending = ref(true)
@@ -276,6 +307,11 @@ const chemcamPhase = ref<string>('ARMED')
 const chemcamShotsRemaining = ref(10)
 const chemcamShotsMax = ref(10)
 const chemcamProgressPct = ref(0)
+/** Instrument card: ChemCam firing/integration when not in ChemCam active view */
+const chemCamOverlaySequenceActive = ref(false)
+const chemCamOverlaySequenceProgress = ref(0)
+const chemCamOverlaySequenceLabel = ref('')
+const chemCamOverlaySequencePulse = ref(false)
 const activeChemCamReadout = computed(() => {
   if (!showChemCamResults.value) return null
   const cc = controller?.instruments.find(i => i.id === 'chemcam')
@@ -289,9 +325,21 @@ function handleChemCamAck(readoutId: string) {
   const cc = controller?.instruments.find(i => i.id === 'chemcam')
   if (cc instanceof ChemCamController) {
     const readout = cc.readouts.find(r => r.id === readoutId)
+    if (readout) {
+      archiveAcknowledgedReadout({
+        readout,
+        solAcknowledged: marsSol.value,
+        siteId,
+        siteLatDeg: siteLat.value,
+        siteLonDeg: siteLon.value,
+        roverWorldX: roverWorldX.value,
+        roverWorldZ: roverWorldZ.value,
+        roverSpawnX: roverSpawnXZ.value.x,
+        roverSpawnZ: roverSpawnXZ.value.z,
+      })
+    }
     cc.markRead(readoutId)
     chemCamUnreadCount.value = cc.unreadCount
-    // SP for reviewing the spectrum
     if (readout) {
       const gain = awardAck(readoutId, readout.rockLabel)
       if (gain) sampleToastRef.value?.showSP(gain.amount, 'REVIEW', gain.bonus)
@@ -314,6 +362,9 @@ const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const achievementRef = ref<InstanceType<typeof AchievementBanner> | null>(null)
 const siteLat = ref(0)
 const siteLon = ref(0)
+/** Landing spawn XZ — first frame at roverState `ready`; offsets rover position for archive lat/lon. */
+const roverSpawnXZ = ref({ x: 0, z: 0 })
+let roverSpawnCaptured = false
 const roverWorldX = ref(0)
 const roverWorldZ = ref(0)
 const mastPan = ref(0)
@@ -562,6 +613,18 @@ onMounted(async () => {
       roverWorldX.value = siteScene.rover.position.x
       roverWorldZ.value = siteScene.rover.position.z
     }
+    if (
+      siteScene
+      && siteScene.roverState === 'ready'
+      && siteScene.rover
+      && !roverSpawnCaptured
+    ) {
+      roverSpawnXZ.value = {
+        x: siteScene.rover.position.x,
+        z: siteScene.rover.position.z,
+      }
+      roverSpawnCaptured = true
+    }
 
     if (camera && cameraFillLight) {
       syncCameraFillLight(
@@ -672,6 +735,10 @@ onMounted(async () => {
             sampleToastRef.value?.showTrace(drop.element, drop.label)
           }
           apxs.lastTraceDrops = null
+        }
+        const mcSurvey = controller?.instruments.find(i => i.id === 'mastcam')
+        if (mcSurvey instanceof MastCamController && mcSurvey['overlayMeshes']?.length > 0) {
+          mcSurvey.rebuildOverlays()
         }
         apxs.lastCollected = null
       }
@@ -833,19 +900,39 @@ onMounted(async () => {
       mastcamScanning.value = false
     }
 
-    // ChemCam HUD state + crosshair + badge
+    // ChemCam HUD state + crosshair + badge + instrument-card sequence progress
     const ccInst = controller?.instruments.find(i => i.id === 'chemcam')
+    const chemCamIsActiveInstrument =
+      controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController
     if (ccInst instanceof ChemCamController) {
       chemCamUnreadCount.value = ccInst.unreadCount
       ccInst.currentSP = totalSP.value
+      ccInst.currentSol = marsSol.value
+      if (ccInst.isSequenceAdvancing) {
+        const z = thermalZone.value
+        const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
+        ccInst.durationMultiplier = thermalMult / playerMod('analysisSpeed')
+      }
+      const showCardProgress =
+        activeInstrumentSlot.value === 2 && !chemCamIsActiveInstrument
+        && (ccInst.phase === 'PULSE_TRAIN' || ccInst.phase === 'INTEGRATING')
+      if (showCardProgress) {
+        chemCamOverlaySequenceActive.value = true
+        chemCamOverlaySequencePulse.value = ccInst.phase === 'PULSE_TRAIN'
+        chemCamOverlaySequenceProgress.value = ccInst.phase === 'PULSE_TRAIN'
+          ? ccInst.pulseProgress * 100
+          : ccInst.integrateProgress * 100
+        chemCamOverlaySequenceLabel.value = ccInst.phase === 'PULSE_TRAIN' ? 'FIRING...' : 'INTEGRATING...'
+      } else {
+        chemCamOverlaySequenceActive.value = false
+      }
+    } else {
+      chemCamOverlaySequenceActive.value = false
     }
     if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
       const cc = controller.activeInstrument
-      // Thermal + player analysisSpeed buff on sequence duration
-      const z = thermalZone.value
-      const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
-      cc.durationMultiplier = thermalMult / playerMod('analysisSpeed')
       cc.currentSP = totalSP.value
+      cc.currentSol = marsSol.value
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax
@@ -942,8 +1029,14 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.sp-counter {
+.hud-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-counter {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -951,6 +1044,26 @@ onUnmounted(() => {
   background: rgba(102, 255, 238, 0.08);
   border: 1px solid rgba(102, 255, 238, 0.25);
   border-radius: 4px;
+}
+
+.science-hud-btn {
+  padding: 4px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.18em;
+  color: #0a0604;
+  background: linear-gradient(180deg, rgba(102, 255, 238, 0.95), rgba(80, 200, 185, 0.9));
+  border: 1px solid rgba(102, 255, 238, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 0 12px rgba(102, 255, 238, 0.2);
+}
+
+.science-hud-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 16px rgba(102, 255, 238, 0.35);
 }
 
 .sp-icon {
@@ -961,23 +1074,21 @@ onUnmounted(() => {
 
 .sp-value {
   color: #66ffee;
-  font-family: 'Courier New', monospace;
   font-size: 13px;
   font-weight: bold;
-  font-variant-numeric: tabular-nums;
   letter-spacing: 0.05em;
 }
 
 .sp-label {
   color: rgba(102, 255, 238, 0.5);
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   letter-spacing: 0.12em;
 }
 
 .back-btn {
   padding: 5px 14px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -1056,7 +1167,7 @@ onUnmounted(() => {
 }
 
 .deploy-step {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.15em;
   color: rgba(255, 255, 255, 0.15);
@@ -1083,11 +1194,10 @@ onUnmounted(() => {
 }
 
 .deploy-pct {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.3);
-  font-variant-numeric: tabular-nums;
 }
 
 .descent-label {
@@ -1095,7 +1205,7 @@ onUnmounted(() => {
 }
 
 .deploy-altitude {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.15em;
   color: rgba(255, 255, 255, 0.4);
@@ -1131,7 +1241,7 @@ onUnmounted(() => {
   background: rgba(10, 5, 2, 0.7);
   backdrop-filter: blur(8px);
   border-radius: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   z-index: 40;
   pointer-events: none;
 }
@@ -1149,7 +1259,7 @@ onUnmounted(() => {
 }
 
 .rtg-banner-text {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.15em;
   color: #ef9f27;
@@ -1197,7 +1307,7 @@ onUnmounted(() => {
   border-radius: 10px;
   padding: 24px;
   text-align: center;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
 }
 
 .overdrive-icon {
@@ -1214,7 +1324,7 @@ onUnmounted(() => {
 }
 
 .overdrive-desc {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(196, 149, 106, 0.7);
   line-height: 1.6;
   letter-spacing: 0.04em;
@@ -1222,7 +1332,7 @@ onUnmounted(() => {
 }
 
 .overdrive-warning {
-  font-size: 9px;
+  font-size: 11px;
   color: #e05030;
   line-height: 1.6;
   letter-spacing: 0.04em;
@@ -1244,7 +1354,7 @@ onUnmounted(() => {
   padding: 10px;
   border: none;
   border-radius: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 0.15em;
@@ -1290,8 +1400,8 @@ onUnmounted(() => {
   border: 1px solid rgba(196, 117, 58, 0.3);
   border-radius: 6px;
   padding: 5px 14px;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   letter-spacing: 0.1em;
 }
 
@@ -1311,7 +1421,7 @@ onUnmounted(() => {
 
 .mc-hint {
   color: rgba(196, 117, 58, 0.4);
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .mc-scan-bar {
@@ -1335,8 +1445,8 @@ onUnmounted(() => {
   top: 6px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: #5dc9a5;
   letter-spacing: 0.15em;
 }
@@ -1364,8 +1474,8 @@ onUnmounted(() => {
   border: 1px solid rgba(100, 200, 230, 0.3);
   border-radius: 6px;
   padding: 5px 14px;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   letter-spacing: 0.1em;
 }
 
@@ -1380,7 +1490,6 @@ onUnmounted(() => {
 
 .cc-shots {
   color: #e8c8a0;
-  font-variant-numeric: tabular-nums;
 }
 
 .cc-phase {
@@ -1404,7 +1513,7 @@ onUnmounted(() => {
 
 .cc-hint {
   color: rgba(100, 200, 230, 0.4);
-  font-size: 8px;
+  font-size: 11px;
 }
 
 .cc-progress-bar {
@@ -1435,8 +1544,8 @@ onUnmounted(() => {
   top: 6px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: #66ffee;
   letter-spacing: 0.15em;
 }
@@ -1444,6 +1553,58 @@ onUnmounted(() => {
 @keyframes cc-blink {
   from { opacity: 0.6; }
   to { opacity: 1; }
+}
+
+/* Unread spectrum — same ChemCam view, no camera change */
+.cc-results-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.cc-results-hint {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #44ff88;
+}
+
+.cc-btn-see-results {
+  padding: 6px 12px;
+  background: rgba(102, 255, 238, 0.12);
+  border: 1px solid rgba(102, 255, 238, 0.4);
+  border-radius: 6px;
+  color: #66ffee;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.cc-btn-see-results:hover {
+  background: rgba(102, 255, 238, 0.2);
+  border-color: rgba(102, 255, 238, 0.6);
+}
+
+.cc-results-badge {
+  display: inline-block;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  background: #66ffee;
+  color: #0a0502;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 14px;
+  text-align: center;
 }
 
 /* Sleep mode overlay */
@@ -1468,7 +1629,7 @@ onUnmounted(() => {
   background: rgba(10, 5, 2, 0.9);
   border: 1px solid rgba(224, 80, 48, 0.4);
   border-radius: 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   min-width: 280px;
 }
 
@@ -1485,7 +1646,7 @@ onUnmounted(() => {
 }
 
 .sleep-desc {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(224, 80, 48, 0.6);
   letter-spacing: 0.1em;
   text-align: center;
@@ -1523,11 +1684,10 @@ onUnmounted(() => {
   color: #e05030;
   font-weight: bold;
   letter-spacing: 0.1em;
-  font-variant-numeric: tabular-nums;
 }
 
 .sleep-hint {
-  font-size: 9px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.4);
   letter-spacing: 0.1em;
   animation: sleep-pulse 2s ease-in-out infinite;

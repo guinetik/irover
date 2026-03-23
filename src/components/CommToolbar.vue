@@ -58,7 +58,7 @@ function handleClick(slot: number) {
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  width: 38px;
+  width: 44px;
   padding: 4px 3px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -83,8 +83,8 @@ function handleClick(slot: number) {
   position: absolute;
   top: 1px;
   left: 3px;
-  font-family: 'Courier New', monospace;
-  font-size: 7px;
+  font-family: var(--font-ui);
+  font-size: 10px;
   font-weight: 600;
   color: rgba(196, 149, 106, 0.4);
 }
@@ -100,8 +100,8 @@ function handleClick(slot: number) {
 }
 
 .comm-name {
-  font-family: 'Courier New', monospace;
-  font-size: 6px;
+  font-family: var(--font-ui);
+  font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.25);

@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 
+/**
+ * Low-gain antenna — direct-to-Earth link (status UI only for now).
+ * Planned: downlink archived ChemCam spectra from `useChemCamArchive` (pending transmission) for mission funding.
+ */
 export class AntennaLGController extends InstrumentController {
   readonly id = 'antenna-lg'
   readonly name = 'LGA'

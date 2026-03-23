@@ -90,7 +90,7 @@ defineExpose({ show })
 }
 
 .ach-title {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
   font-size: 12px;
   font-weight: bold;
   color: #66ffee;
@@ -99,16 +99,16 @@ defineExpose({ show })
 }
 
 .ach-desc {
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
   color: rgba(102, 255, 238, 0.5);
   letter-spacing: 0.04em;
   line-height: 1.4;
 }
 
 .ach-type {
-  font-family: 'Courier New', monospace;
-  font-size: 7px;
+  font-family: var(--font-ui);
+  font-size: 10px;
   color: rgba(102, 255, 238, 0.3);
   letter-spacing: 0.15em;
   writing-mode: vertical-rl;

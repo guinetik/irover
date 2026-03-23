@@ -121,7 +121,7 @@ const modifierRows = computed(() => {
   border-radius: 8px;
   padding: 12px;
   z-index: 45;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-ui);
 }
 
 .prof-header {
@@ -149,13 +149,13 @@ const modifierRows = computed(() => {
 }
 
 .prof-choice-label {
-  font-size: 7px;
+  font-size: 10px;
   color: rgba(196, 117, 58, 0.4);
   letter-spacing: 0.12em;
 }
 
 .prof-choice-value {
-  font-size: 9px;
+  font-size: 11px;
   color: #c4956a;
   font-weight: bold;
   letter-spacing: 0.08em;
@@ -184,13 +184,14 @@ const modifierRows = computed(() => {
 }
 
 .prof-mod-label {
-  font-size: 7px;
+  font-size: 10px;
   color: rgba(196, 117, 58, 0.5);
   letter-spacing: 0.08em;
 }
 
 .prof-mod-value {
-  font-size: 9px;
+  font-family: var(--font-instrument);
+  font-size: 11px;
   font-weight: bold;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
@@ -211,7 +212,7 @@ const modifierRows = computed(() => {
 .prof-footer {
   text-align: center;
   margin-top: 8px;
-  font-size: 8px;
+  font-size: 11px;
   color: rgba(196, 117, 58, 0.3);
   letter-spacing: 0.15em;
 }
