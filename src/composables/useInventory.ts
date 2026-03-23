@@ -41,13 +41,13 @@ export function useInventory() {
    * Merges one APXS rock sample into the stack for that lithology.
    * Rolls mass from catalog weightRange. Does not deplete the rock mesh (caller handles that).
    */
-  function addRockSample(rockType: RockTypeId, rockMeshUuid: string): AddRockSampleResult {
+  function addRockSample(rockType: RockTypeId, rockMeshUuid: string, weightMult = 1.0): AddRockSampleResult {
     const def = INVENTORY_CATALOG[rockType]
     if (!def || def.category !== 'rock' || !def.weightRange) {
       return { ok: false, message: 'Unknown sample type.' }
     }
     const [minW, maxW] = def.weightRange
-    const weight = minW + Math.random() * (maxW - minW)
+    const weight = (minW + Math.random() * (maxW - minW)) * weightMult
     const rounded = Math.round(weight * 100) / 100
     if (currentWeightKg.value + rounded > capacityKg.value + 1e-9) {
       return { ok: false, message: 'Cargo full — cannot store sample.' }
@@ -86,7 +86,7 @@ export function useInventory() {
   function addComponent(itemId: string, quantity: number): AddComponentResult {
     if (quantity <= 0) return { ok: false, message: 'Invalid quantity.' }
     const def = INVENTORY_CATALOG[itemId]
-    if (!def || def.category !== 'component' || def.weightPerUnit == null || def.maxStack == null) {
+    if (!def || (def.category !== 'component' && def.category !== 'trace') || def.weightPerUnit == null || def.maxStack == null) {
       return { ok: false, message: 'Unknown component.' }
     }
     const addWeight = def.weightPerUnit * quantity
@@ -118,6 +118,13 @@ export function useInventory() {
   }
 
   /**
+   * Adds trace element samples (from ChemCam-buffed APXS mining).
+   */
+  function addTrace(elementSymbol: string, quantity = 1): AddComponentResult {
+    return addComponent(`trace-${elementSymbol}`, quantity)
+  }
+
+  /**
    * Removes an entire stack (dump cargo slot).
    */
   function removeStack(itemId: string): void {
@@ -132,6 +139,7 @@ export function useInventory() {
     canFitRockSampleMax,
     addRockSample,
     addComponent,
+    addTrace,
     removeStack,
   }
 }

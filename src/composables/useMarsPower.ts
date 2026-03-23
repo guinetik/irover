@@ -55,7 +55,7 @@ export const APXS_DRILL_BASE_W = 22
  * Linked to MarsSky.SOL_DURATION — if sol length changes, retune this.
  * See docs/superpowers/specs/gdd-power-simulation-mvp-design.md
  */
-const ECONOMY_WH_PER_W_SEC = 1 / 90
+const ECONOMY_WH_PER_W_SEC = 1 / 35
 
 // --- sleep mode thresholds (SOC %) ---
 const SLEEP_THRESHOLD = 15

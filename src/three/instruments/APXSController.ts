@@ -55,6 +55,9 @@ export class APXSController extends InstrumentController {
   /** Updated each frame: pointed rock can still accept a worst-case mass sample */
   canCollectCurrentTarget = false
 
+  /** Trace element drops from last collection (read + cleared by view) */
+  lastTraceDrops: { element: string; label: string }[] | null = null
+
   get drillProgress(): number { return this.drill?.progress ?? 0 }
   get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
   get hasTarget(): boolean { return this.currentTarget !== null }
@@ -163,6 +166,12 @@ export class APXSController extends InstrumentController {
     const drillActive = Boolean(this.drilling && this.currentTarget && canCollect)
 
     if (this.drill) {
+      // MastCam scan buff: 40% faster drilling on tagged rocks
+      if (this.currentTarget) {
+        const scanned = this.currentTarget.rock.userData.mastcamScanned === true
+        this.drill.scanSpeedMult = scanned ? 0.6 : 1.0
+      }
+
       if (drillActive) {
         const drillOrigin = this.getDrillWorldPosition()
         if (!this.drill.isDrilling) {
@@ -192,10 +201,34 @@ export class APXSController extends InstrumentController {
 
   private collectSample(rock: THREE.Mesh): void {
     const rockType = (rock.userData.rockType as RockTypeId) ?? 'basalt'
-    const res = this.inventory.addRockSample(rockType, rock.uuid)
+    const chemcamAnalyzed = rock.userData.chemcamAnalyzed === true
+
+    // ChemCam bonus: 1.3x rock weight
+    const res = this.inventory.addRockSample(rockType, rock.uuid, chemcamAnalyzed ? 1.3 : 1.0)
     if (res.ok) {
       this.targeting?.depleteRock(rock)
       this.lastCollected = res.payload
+
+      // ChemCam trace element drops — pick from detected peaks
+      this.lastTraceDrops = null
+      if (chemcamAnalyzed) {
+        const peaks = rock.userData.chemcamPeaks as { element: string }[] | undefined
+        if (peaks && peaks.length > 0) {
+          const drops: { element: string; label: string }[] = []
+          // Drop 1-3 random identified elements (skip "??")
+          const identified = peaks.filter(p => p.element !== '??')
+          const dropCount = Math.min(identified.length, 1 + Math.floor(Math.random() * 3))
+          const shuffled = [...identified].sort(() => Math.random() - 0.5)
+          for (let i = 0; i < dropCount; i++) {
+            const el = shuffled[i].element
+            const traceRes = this.inventory.addTrace(el)
+            if (traceRes.ok) {
+              drops.push({ element: el, label: `${el} trace` })
+            }
+          }
+          if (drops.length > 0) this.lastTraceDrops = drops
+        }
+      }
     } else {
       this.lastInventoryError = res.message
     }

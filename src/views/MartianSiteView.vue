@@ -666,6 +666,13 @@ onMounted(async () => {
         sampleToastRef.value?.show(s.rockType, s.displayLabel, s.weightKgThisSample)
         const gain = awardSP('apxs', s.rockMeshUuid, s.displayLabel)
         if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
+        // Trace element drops from ChemCam-buffed mining
+        if (apxs.lastTraceDrops) {
+          for (const drop of apxs.lastTraceDrops) {
+            sampleToastRef.value?.showTrace(drop.element, drop.label)
+          }
+          apxs.lastTraceDrops = null
+        }
         apxs.lastCollected = null
       }
     } else {

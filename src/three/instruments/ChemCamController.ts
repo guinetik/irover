@@ -319,13 +319,14 @@ export class ChemCamController extends InstrumentController {
     const rockType = (this.currentTarget.userData.rockType as RockTypeId) ?? 'basalt'
     const label = ROCK_TYPES[rockType]?.label ?? 'Unknown'
 
-    // Persist on rock
-    this.currentTarget.userData.chemcamAnalyzed = true
-    this.currentTarget.userData.chemcamRockType = rockType
-
     // Generate procedural spectrum — quality depends on calibration
     const cal = this.calibration
     const peaks = generateSpectrum(rockType, cal)
+
+    // Persist on rock
+    this.currentTarget.userData.chemcamAnalyzed = true
+    this.currentTarget.userData.chemcamRockType = rockType
+    this.currentTarget.userData.chemcamPeaks = peaks
 
     const readout: ChemCamReadout = {
       id: `cc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

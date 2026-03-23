@@ -73,11 +73,22 @@ function showSP(amount: number, source: string, bonusMult: number): void {
   })
 }
 
+function showTrace(element: string, label: string): void {
+  push({
+    id: uid(),
+    prefix: '+',
+    label: `${label} (${element})`,
+    weight: '~1g',
+    color: '#cc88ff',
+    variant: 'trace',
+  })
+}
+
 function uid(): string {
   return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-defineExpose({ show, showError, showChemCam, showSP })
+defineExpose({ show, showError, showChemCam, showSP, showTrace })
 </script>
 
 <style scoped>
@@ -143,6 +154,19 @@ defineExpose({ show, showError, showChemCam, showSP })
   color: rgba(102, 255, 238, 0.95);
   font-weight: bold;
   letter-spacing: 0.08em;
+}
+
+.sample-toast.trace {
+  background: rgba(20, 10, 30, 0.9);
+  border-color: rgba(204, 136, 255, 0.35);
+}
+
+.sample-toast.trace .toast-label {
+  color: rgba(204, 136, 255, 0.9);
+}
+
+.sample-toast.trace .toast-weight {
+  color: rgba(204, 136, 255, 0.5);
 }
 
 .toast-weight {

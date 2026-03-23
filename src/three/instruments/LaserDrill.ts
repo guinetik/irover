@@ -32,6 +32,8 @@ export class LaserDrill {
   isComplete = false
   /** External multiplier on drill duration (e.g. 1.25 in COLD zone) */
   durationMultiplier = 1.0
+  /** MastCam scan speed buff (0.6 = 40% faster on scanned rocks) */
+  scanSpeedMult = 1.0
 
   private graceTimer = 0
   private drillOrigin = new THREE.Vector3()
@@ -103,7 +105,7 @@ export class LaserDrill {
       this.graceTimer = 0
     }
 
-    this.progress += delta / (DRILL_DURATION * this.durationMultiplier)
+    this.progress += delta / (DRILL_DURATION * this.durationMultiplier * this.scanSpeedMult)
 
     // Pulse the beam
     const pulse = 0.8 + Math.sin(this.elapsed * 30) * 0.15 + Math.sin(this.elapsed * 7) * 0.05

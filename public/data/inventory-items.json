@@ -50,6 +50,96 @@
       "weightRange": [0.5, 1.5]
     },
     {
+      "id": "trace-Fe",
+      "category": "trace",
+      "label": "Iron (Fe)",
+      "description": "Trace iron sample extracted via LIBS-guided drilling.",
+      "image": "/inventory/trace-fe.svg",
+      "weightPerUnit": 0.002,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Si",
+      "category": "trace",
+      "label": "Silicon (Si)",
+      "description": "Trace silicon sample. Key indicator of silicate mineralogy.",
+      "image": "/inventory/trace-si.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Mn",
+      "category": "trace",
+      "label": "Manganese (Mn)",
+      "description": "Trace manganese — enrichment suggests oxidizing conditions.",
+      "image": "/inventory/trace-mn.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Mg",
+      "category": "trace",
+      "label": "Magnesium (Mg)",
+      "description": "Trace magnesium from mafic mineral breakdown.",
+      "image": "/inventory/trace-mg.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Al",
+      "category": "trace",
+      "label": "Aluminum (Al)",
+      "description": "Trace aluminum — common in feldspar-bearing rocks.",
+      "image": "/inventory/trace-al.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Ca",
+      "category": "trace",
+      "label": "Calcium (Ca)",
+      "description": "Trace calcium from carbonate or sulfate precipitation.",
+      "image": "/inventory/trace-ca.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Na",
+      "category": "trace",
+      "label": "Sodium (Na)",
+      "description": "Trace sodium — indicator of evaporite or plagioclase.",
+      "image": "/inventory/trace-na.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Ti",
+      "category": "trace",
+      "label": "Titanium (Ti)",
+      "description": "Trace titanium from ilmenite or volcanic glass.",
+      "image": "/inventory/trace-ti.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-S",
+      "category": "trace",
+      "label": "Sulfur (S)",
+      "description": "Trace sulfur — volcanic or evaporite origin.",
+      "image": "/inventory/trace-s.svg",
+      "weightPerUnit": 0.001,
+      "maxStack": 999
+    },
+    {
+      "id": "trace-Ni",
+      "category": "trace",
+      "label": "Nickel (Ni)",
+      "description": "Trace nickel — meteoritic signature element.",
+      "image": "/inventory/trace-ni.svg",
+      "weightPerUnit": 0.002,
+      "maxStack": 999
+    },
+    {
       "id": "engineering-components",
       "category": "component",
       "label": "Engineering components (EC)",

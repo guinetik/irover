@@ -7,7 +7,7 @@ export interface InventoryItemsFile {
   items: InventoryItemDefJson[]
 }
 
-export type InventoryItemCategory = 'rock' | 'component'
+export type InventoryItemCategory = 'rock' | 'component' | 'trace'
 
 /** One row from the inventory catalog JSON. */
 export interface InventoryItemDefJson {
@@ -77,12 +77,12 @@ function buildCatalog(items: InventoryItemDefJson[]): Record<string, InventoryIt
         weightPerUnit: null,
         maxStack: null,
       }
-    } else {
+    } else if (row.category === 'component' || row.category === 'trace') {
       if (row.weightPerUnit == null || row.maxStack == null)
-        throw new Error(`[inventory] component "${row.id}" needs weightPerUnit and maxStack`)
+        throw new Error(`[inventory] ${row.category} "${row.id}" needs weightPerUnit and maxStack`)
       out[row.id] = {
         id: row.id,
-        category: 'component',
+        category: row.category,
         label: row.label,
         description: row.description,
         image: row.image,
