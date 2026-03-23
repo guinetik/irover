@@ -38,12 +38,13 @@ export class DANController extends InstrumentController {
   readonly canActivate = true
   readonly billsPassiveBackgroundPower = true
   readonly passiveSubsystemOnly = true
-  readonly focusNodeName = 'DAN_L'
+  readonly focusNodeName = 'DAN_R'       // emitter boxes (highlighted)
+  readonly altNodeNames = ['DAN_L']      // fallback to panel if DAN_R missing
   readonly focusOffset = new THREE.Vector3(0.0, 0.3, 0.0)
   readonly viewAngle = Math.PI * 0.5
   readonly viewPitch = 0.15
   readonly selectionIdlePowerW = 10
-  override readonly selectionHighlightColor = 0x44ccff  // blue highlight on DAN emitter node
+  override readonly selectionHighlightColor = 0x44ccff
 
   // --- Sampling state ---
   private sampleTimer = 0
@@ -184,7 +185,7 @@ export class DANController extends InstrumentController {
     // The DAN emitter points backward-and-down from under the rover body.
     const rover = this.node.parent
     if (rover) {
-      const aimLocal = new THREE.Vector3(0, -0.7, -0.7).normalize()
+      const aimLocal = new THREE.Vector3(0, -0.7, 0.7).normalize()
       const roverQuat = new THREE.Quaternion()
       rover.getWorldQuaternion(roverQuat)
       this._aimDir.copy(aimLocal).applyQuaternion(roverQuat)
@@ -214,7 +215,7 @@ export class DANController extends InstrumentController {
       }
     }
   }
-  private _aimDir = new THREE.Vector3(0, -0.7, -0.7).normalize()
+  private _aimDir = new THREE.Vector3(0, -0.7, 0.7).normalize()
 
   override dispose(): void {
     if (this.sceneRef) {
