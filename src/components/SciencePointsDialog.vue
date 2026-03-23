@@ -57,6 +57,7 @@ const SOURCE_HEADLINE: Record<SPSource, string> = {
   drill: 'Drill',
   'chemcam-ack': 'ChemCam review',
   dan: 'DAN',
+  sam: 'SAM',
   survival: 'Mars survival',
 }
 

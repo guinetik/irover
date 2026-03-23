@@ -12,6 +12,7 @@ describe('orbitalDrop item catalog helpers', () => {
       'mechatronics-components',
       'digital-components',
       'welding-wire',
+      'ice',
     ])
   })
 
