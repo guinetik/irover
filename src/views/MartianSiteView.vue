@@ -261,6 +261,11 @@
       @acknowledge="handleSamAcknowledge"
       @close="samResultDialogEntry = null"
     />
+    <APXSResultDialog
+      :result="apxsResultDialogEntry"
+      @acknowledge="handleAPXSAcknowledge"
+      @close="apxsResultDialogEntry = null"
+    />
     <DANDialog
       :visible="danDialogVisible"
       :signal-strength="danSignalStrength"
@@ -505,7 +510,9 @@ import UHFUplinkPanel from '@/components/UHFUplinkPanel.vue'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
 import APXSMinigame from '@/components/APXSMinigame.vue'
+import APXSResultDialog from '@/components/APXSResultDialog.vue'
 import { useAPXSArchive } from '@/composables/useAPXSArchive'
+import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { generateComposition, computeAPXSSp, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 
@@ -669,16 +676,18 @@ function toggleHeaterPanel() {
   else siteRover.value.activateInstrument(HEATER_SLOT)
 }
 
-function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam', archiveId: string) {
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string) {
   if (source === 'chemcam') queueChemCamTx(archiveId)
   else if (source === 'dan') queueDanTx(archiveId)
   else if (source === 'sam') queueSamTx(archiveId)
+  else if (source === 'apxs') queueAPXSTx(archiveId)
 }
 
-function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam', archiveId: string) {
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string) {
   if (source === 'chemcam') dequeueChemCamTx(archiveId)
   else if (source === 'dan') dequeueDanTx(archiveId)
   else if (source === 'sam') dequeueSamTx(archiveId)
+  else if (source === 'apxs') dequeueAPXSTx(archiveId)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -821,9 +830,20 @@ const {
   acknowledgeOldest: samAcknowledgeOldest,
 } = useSamQueue()
 const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries, queueForTransmission: queueSamTx, dequeueFromTransmission: dequeueSamTx } = useSamArchive()
-const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis } = useAPXSArchive()
+const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis, queueForTransmission: queueAPXSTx, dequeueFromTransmission: dequeueAPXSTx } = useAPXSArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
+
+const {
+  queue: apxsQueue,
+  results: apxsResults,
+  isProcessing: apxsIsProcessing,
+  unacknowledgedCount: apxsUnread,
+  enqueue: apxsEnqueue,
+  tick: apxsTick,
+  acknowledgeOldest: apxsAcknowledgeOldest,
+} = useAPXSQueue()
+const apxsResultDialogEntry = ref<APXSQueueEntry | null>(null)
 
 // --- APXS state ---
 const apxsMinigameOpen = ref(false)
@@ -1015,11 +1035,26 @@ function handleAPXSComplete(result: {
     [...result.caughtElements],
   )
 
-  // Award SP
-  const gain = awardAPXS(apxsGameRockUuid.value, sp, apxsGameRockLabel.value)
-  if (gain) sampleToastRef.value?.showSP(gain.amount, 'APXS', gain.bonus)
+  const baseTime = 30 + Math.random() * 30
+  const processingTime = baseTime / playerMod('analysisSpeed')
 
-  // Mark rock as analyzed
+  apxsEnqueue({
+    rockMeshUuid: apxsGameRockUuid.value,
+    rockType: apxsGameRockType.value,
+    rockLabel: apxsGameRockLabel.value,
+    grade,
+    accuracy: result.accuracy,
+    trueComposition: apxsGameComposition.value,
+    measuredComposition: result.measuredComposition,
+    anomalies,
+    caughtElements: [...result.caughtElements],
+    sp,
+    remainingTimeSec: processingTime,
+    totalTimeSec: processingTime,
+    startedAtSol: marsSol.value,
+  })
+
+  // Mark rock as analyzed immediately (prevent re-analysis while processing)
   const rover = siteHandle.value?.rover
   if (rover) {
     const apxsInst = rover.instruments.find(i => i.id === 'apxs') as any
@@ -1028,30 +1063,54 @@ function handleAPXSComplete(result: {
     }
   }
 
+  sampleToastRef.value?.showComm('APXS analysis queued — processing...')
+}
+
+function handleAPXSAcknowledge(): void {
+  const entry = apxsAcknowledgeOldest()
+  if (!entry) return
+
+  // Award SP
+  const gain = awardAPXS(entry.rockMeshUuid, entry.sp, entry.rockLabel)
+  if (gain) sampleToastRef.value?.showSP(gain.amount, 'APXS', gain.bonus)
+
   // Archive
   archiveAPXSAnalysis({
-    rockType: apxsGameRockType.value as any,
-    rockLabel: apxsGameRockLabel.value,
-    grade,
-    accuracy: result.accuracy,
-    trueComposition: apxsGameComposition.value,
-    measuredComposition: result.measuredComposition,
-    anomalies,
-    spEarned: gain?.amount ?? sp,
-    capturedSol: marsSol.value,
+    rockType: entry.rockType as any,
+    rockLabel: entry.rockLabel,
+    grade: entry.grade,
+    accuracy: entry.accuracy,
+    trueComposition: entry.trueComposition,
+    measuredComposition: entry.measuredComposition,
+    anomalies: entry.anomalies,
+    spEarned: gain?.amount ?? entry.sp,
+    capturedSol: entry.startedAtSol,
     siteId,
   })
 
   // Achievements
   apxsAnalysisCount.value++
-  if (anomalies.length > 0) apxsAnomalyCount.value++
-  if (grade === 'S') apxsSGradeCount.value++
+  if (entry.anomalies.length > 0) apxsAnomalyCount.value++
+  if (entry.grade === 'S') apxsSGradeCount.value++
 
   if (apxsAnalysisCount.value === 1) triggerAPXSAchievement('first-analysis')
   if (apxsAnalysisCount.value === 5) triggerAPXSAchievement('five-analyses')
   if (apxsAnomalyCount.value === 5) triggerAPXSAchievement('five-anomalies')
   if (apxsSGradeCount.value === 5) triggerAPXSAchievement('five-s-grades')
+
+  // Show next or close
+  if (apxsUnread.value > 0) {
+    apxsResultDialogEntry.value = apxsResults.value[0] ?? null
+  } else {
+    apxsResultDialogEntry.value = null
+  }
 }
+
+watchEffect(() => {
+  if (apxsUnread.value > 0 && !apxsResultDialogEntry.value) {
+    apxsResultDialogEntry.value = apxsResults.value[0] ?? null
+  }
+})
 
 watchEffect(() => {
   const sp = chemcamSP.value
@@ -1214,6 +1273,7 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
     awardDAN,
     archiveDanProspect,
     samTick,
+    apxsTick,
     totalSP,
     triggerDanAchievement,
     awardTransmission,

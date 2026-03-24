@@ -15,6 +15,8 @@ export interface ArchivedAPXSAnalysis {
   capturedSol: number
   capturedAtMs: number
   siteId: string
+  queuedForTransmission: boolean
+  transmitted: boolean
 }
 
 const STORAGE_KEY = 'mars-apxs-archive-v1'
@@ -56,12 +58,14 @@ export function resetAPXSArchiveForTests(): void {
 
 export function useAPXSArchive() {
   function archiveAnalysis(
-    params: Omit<ArchivedAPXSAnalysis, 'archiveId' | 'capturedAtMs'>,
+    params: Omit<ArchivedAPXSAnalysis, 'archiveId' | 'capturedAtMs' | 'queuedForTransmission' | 'transmitted'>,
   ): ArchivedAPXSAnalysis {
     const row: ArchivedAPXSAnalysis = {
       ...params,
       archiveId: newId(),
       capturedAtMs: Date.now(),
+      queuedForTransmission: false,
+      transmitted: false,
     }
     const next = [...analyses.value, row]
     analyses.value = next
@@ -69,5 +73,29 @@ export function useAPXSArchive() {
     return row
   }
 
-  return { analyses, archiveAnalysis }
+  function queueForTransmission(archiveId: string): void {
+    const next = analyses.value.map((a) =>
+      a.archiveId === archiveId ? { ...a, queuedForTransmission: true } : a,
+    )
+    analyses.value = next
+    saveToStorage(next)
+  }
+
+  function dequeueFromTransmission(archiveId: string): void {
+    const next = analyses.value.map((a) =>
+      a.archiveId === archiveId ? { ...a, queuedForTransmission: false } : a,
+    )
+    analyses.value = next
+    saveToStorage(next)
+  }
+
+  function markTransmitted(archiveId: string): void {
+    const next = analyses.value.map((a) =>
+      a.archiveId === archiveId ? { ...a, transmitted: true, queuedForTransmission: false } : a,
+    )
+    analyses.value = next
+    saveToStorage(next)
+  }
+
+  return { analyses, archiveAnalysis, queueForTransmission, dequeueFromTransmission, markTransmitted }
 }

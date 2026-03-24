@@ -120,7 +120,10 @@
                       :class="{ active: a.archiveId === selectedApxsId }"
                       @click="selectedApxsId = a.archiveId">
                       <span class="sai-rock">{{ a.rockLabel }}</span>
-                      <span class="sai-sol font-instrument">Sol {{ a.capturedSol }}</span>
+                      <span class="sai-sol font-instrument">Sol {{ a.capturedSol }}
+                        <span v-if="a.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="a.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
                     </button>
                   </li>
                 </ul>
@@ -292,6 +295,21 @@
                   <div style="margin-top: 8px; font-size: 11px; color: rgba(196,117,58,0.5);">
                     +{{ selectedApxs.spEarned }} SP
                   </div>
+                  <div v-if="!selectedApxs.transmitted" class="tx-queue-actions">
+                    <button
+                      v-if="!selectedApxs.queuedForTransmission"
+                      type="button"
+                      class="tx-queue-btn tx-queue"
+                      @click="emit('queueForTransmission', 'apxs', selectedApxs.archiveId)"
+                    >QUEUE FOR TRANSMISSION</button>
+                    <button
+                      v-else
+                      type="button"
+                      class="tx-queue-btn tx-dequeue"
+                      @click="emit('dequeueFromTransmission', 'apxs', selectedApxs.archiveId)"
+                    >REMOVE FROM QUEUE</button>
+                  </div>
+                  <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
                 </div>
               </template>
             </div>
@@ -321,8 +339,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam', archiveId: string]
-  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam', archiveId: string]
+  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
+  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
 }>()
 
 const chemcamExpanded = ref(true)

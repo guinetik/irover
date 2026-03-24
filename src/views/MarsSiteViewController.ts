@@ -24,6 +24,7 @@ import type { ThermalTickInput, ThermalZone } from '@/composables/useMarsThermal
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { SamQueueEntry } from '@/composables/useSamQueue'
+import type { APXSQueueEntry } from '@/composables/useAPXSQueue'
 import type { SPGain } from '@/composables/useSciencePoints'
 import {
   MastCamController,
@@ -287,6 +288,7 @@ export interface MarsSiteViewContext {
     reservoirQuality: number
   }) => void
   samTick: (deltaSec: number) => SamQueueEntry | null
+  apxsTick: (deltaSec: number) => APXSQueueEntry | null
   totalSP: Ref<number>
   triggerDanAchievement: (event: string) => void
   awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
@@ -343,6 +345,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     awardSP,
     archiveDanProspect,
     samTick,
+    apxsTick,
     totalSP,
     triggerDanAchievement,
     awardTransmission,
@@ -759,6 +762,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           if (completed) {
             sampleToastRef.value?.showDAN(`SAM: ${completed.modeName} complete`)
           }
+        }
+      }
+      {
+        // APXS queue processing
+        const apxsCompleted = apxsTick(sceneDelta)
+        if (apxsCompleted) {
+          sampleToastRef.value?.showDAN('APXS analysis complete')
         }
       }
 
