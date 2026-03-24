@@ -1,7 +1,16 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController, MastCamController, ChemCamController, SAMController, APXSController, RoverWheelsController, DrillController } from './instruments'
+import {
+  RTGController,
+  MastCamController,
+  ChemCamController,
+  SAMController,
+  APXSController,
+  RoverWheelsController,
+  DrillController,
+  DANController,
+} from './instruments'
 import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
@@ -112,6 +121,12 @@ export class RoverController {
   mode: 'driving' | 'instrument' | 'active' = 'driving'
   activeInstrument: InstrumentController | null = null
   instruments: InstrumentController[] = []
+
+  /**
+   * Set each frame from the site when critical battery sleep is active: no translation billing,
+   * {@link isMoving} stays false, and WASD does not drive or steer the chassis.
+   */
+  criticalPowerMobilitySuspended = false
 
   /** When set (e.g. to Vue `handleActivate`), Key E in instrument mode invokes the same flow as the Activate button (RTG confirm, etc.). */
   onInstrumentActivateRequest: (() => void) | null = null
@@ -499,13 +514,14 @@ export class RoverController {
     const drivingDisengaged = rtgCtrl?.isDrivingDisengaged ?? false
     const wheelsCtrl = this.instruments.find((i): i is RoverWheelsController => i instanceof RoverWheelsController)
     const wheelsMobilityDead = wheelsCtrl != null && !wheelsCtrl.operational
+    const mobilitySuspended = this.criticalPowerMobilitySuspended
 
-    // Keyboard turn + translation (WASD) — disabled during RTG power shunt or broken wheels
+    // Keyboard turn + translation (WASD) — disabled during RTG power shunt, broken wheels, or critical sleep
     let driveSign = 0
     let steerSign = 0
     let moveDir = new THREE.Vector3()
 
-    if (!drivingDisengaged && !wheelsMobilityDead) {
+    if (!drivingDisengaged && !wheelsMobilityDead && !mobilitySuspended) {
       if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
         this.heading += this.config.turnSpeed * delta
       }
@@ -717,6 +733,28 @@ export class RoverController {
 
     this.camera.position.copy(this.cameraPos)
     this.camera.lookAt(this.cameraTarget)
+  }
+
+  /**
+   * Critical battery / sleep: clear active instrument UI, cancel ChemCam sequences, and force
+   * passive STANDBY payloads (DAN, REMS, RAD, comms) off. Does not alter RTG or mobility.
+   */
+  shutdownInstrumentsForSleep(): void {
+    this.activateInstrument(null)
+    const chemCam = this.instruments.find((i): i is ChemCamController => i instanceof ChemCamController)
+    if (chemCam?.isSequenceAdvancing) {
+      chemCam.deactivate()
+      this.camera.fov = 50
+      this.camera.updateProjectionMatrix()
+    }
+    for (const inst of this.instruments) {
+      if (!inst.passiveSubsystemOnly) continue
+      if (inst instanceof DANController) {
+        inst.forceOff()
+      } else {
+        inst.passiveSubsystemEnabled = false
+      }
+    }
   }
 
   dispose() {

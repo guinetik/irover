@@ -90,7 +90,12 @@ export function buildInstrumentPowerLines(
 
   const mode = roverCtl.mode
   const focused = roverCtl.activeInstrument
-  if ((mode === 'instrument' || mode === 'active') && focused && focused.id !== 'heater') {
+  if (
+    roverAwake
+    && (mode === 'instrument' || mode === 'active')
+    && focused
+    && focused.id !== 'heater'
+  ) {
     const phase = mode === 'active' ? 'active' : 'instrument'
     const w = focused.getInstrumentBusPowerW(phase)
     if (w > 1e-6) {
@@ -99,7 +104,7 @@ export function buildInstrumentPowerLines(
   }
 
   const cc = roverCtl.instruments.find((i): i is ChemCamController => i instanceof ChemCamController)
-  if (cc?.isSequenceAdvancing) {
+  if (roverAwake && cc?.isSequenceAdvancing) {
     const chemCamFocused =
       focused?.id === 'chemcam' && (mode === 'instrument' || mode === 'active')
     if (!chemCamFocused) {
@@ -627,6 +632,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     clock = new THREE.Clock()
 
     let simulationTime = 0
+    let wasSleeping = false
 
     function animate() {
       animationId = requestAnimationFrame(animate)
@@ -640,6 +646,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       const roverReady = siteScene.roverState === 'ready'
       const nightFactor = siteScene.sky?.nightFactor ?? 0
+
+      if (isSleeping.value && !wasSleeping && controller) {
+        samIsProcessing.value = false
+        controller.shutdownInstrumentsForSleep()
+        passiveUiRevision.value++
+      }
+      wasSleeping = isSleeping.value
 
       // --- Build per-frame context ---
       const fctx: SiteFrameContext = {
@@ -661,9 +674,6 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Sleep / speed control ---
       if (isSleeping.value && controller) {
-        if (controller.activeInstrument) {
-          controller.activateInstrument(null)
-        }
         controller.config.moveSpeed = 0
         controller.config.turnSpeed = 0
       } else if (controller && siteScene.sky) {
@@ -677,6 +687,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
 
       // --- Core rover update + position sync ---
+      if (controller) {
+        controller.criticalPowerMobilitySuspended = isSleeping.value
+      }
       controller?.update(sceneDelta)
       roverHeading.value = controller?.heading ?? 0
       {
@@ -774,13 +787,16 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const rtgForPower = controller?.instruments.find(i => i.id === 'rtg')
         const powerLoadFactor = rtgForPower instanceof RTGController ? rtgForPower.powerLoadFactor : 1
         const wheelsForPower = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+        const awakeForPower = !isSleeping.value
         const driveMotorW =
-          wheelsForPower && (controller?.isMoving ?? false) ? wheelsForPower.getDrivePowerW() : 0
+          awakeForPower && wheelsForPower && (controller?.isMoving ?? false)
+            ? wheelsForPower.getDrivePowerW()
+            : 0
         tickPower(sceneDelta, {
           nightFactor,
           roverInSunlight: siteScene.roverInSunlight,
-          moving: controller?.isMoving ?? false,
-          rockDrilling: drillHandler.lastResult.rockDrilling,
+          moving: awakeForPower && (controller?.isMoving ?? false),
+          rockDrilling: awakeForPower && drillHandler.lastResult.rockDrilling,
           driveMotorW,
           driveMotorHudLabel: 'Rover wheels',
           instrumentLines,
