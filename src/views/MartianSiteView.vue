@@ -72,8 +72,10 @@
     </Transition>
     <Transition name="deploy-fade">
       <div v-if="apxsState === 'counting'" class="apxs-countdown-overlay" key="apxs-countdown">
-        <div class="apxs-countdown-label">APXS CONTACT</div>
-        <div class="apxs-countdown-num font-instrument">{{ apxsCountdown }}</div>
+        <div class="apxs-countdown-card">
+          <div class="apxs-countdown-label">APXS CONTACT</div>
+          <div class="apxs-countdown-num font-instrument">{{ apxsCountdown }}</div>
+        </div>
       </div>
     </Transition>
     <Transition name="deploy-fade">
