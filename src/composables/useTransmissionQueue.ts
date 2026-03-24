@@ -3,6 +3,7 @@ import type { ComputedRef } from 'vue'
 import { useChemCamArchive } from './useChemCamArchive'
 import { useDanArchive } from './useDanArchive'
 import { useSamArchive } from './useSamArchive'
+import { useAPXSArchive } from './useAPXSArchive'
 import type { TransmissionQueueItem } from '@/types/transmissionQueue'
 import { BANDWIDTH_SEC } from '@/types/transmissionQueue'
 
@@ -20,6 +21,7 @@ export function useTransmissionQueue(): {
   const chemcam = useChemCamArchive()
   const dan = useDanArchive()
   const sam = useSamArchive()
+  const apxs = useAPXSArchive()
 
   const queue = computed<TransmissionQueueItem[]>(() => {
     const items: (TransmissionQueueItem & { _capturedAtMs: number })[] = []
@@ -64,6 +66,19 @@ export function useTransmissionQueue(): {
       })
     }
 
+    // APXS analyses — always 'common'
+    for (const analysis of apxs.pendingTransmission.value) {
+      items.push({
+        archiveId: analysis.archiveId,
+        source: 'apxs',
+        label: `APXS: ${analysis.rockLabel}`,
+        rarity: 'common',
+        bandwidthSec: BANDWIDTH_SEC.common,
+        originalSP: analysis.spEarned,
+        _capturedAtMs: analysis.capturedAtMs,
+      })
+    }
+
     // FIFO sort by capture time (oldest first)
     items.sort((a, b) => a._capturedAtMs - b._capturedAtMs)
 
@@ -80,6 +95,8 @@ export function useTransmissionQueue(): {
       dan.markTransmitted(item.archiveId)
     } else if (item.source === 'sam') {
       sam.markTransmitted(item.archiveId)
+    } else if (item.source === 'apxs') {
+      apxs.markTransmitted(item.archiveId)
     }
   }
 

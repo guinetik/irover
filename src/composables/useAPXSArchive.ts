@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { APXSComposition, APXSGrade, APXSElementId } from '@/lib/apxsComposition'
 import type { RockTypeId } from '@/three/terrain/RockTypes'
 
@@ -97,5 +97,7 @@ export function useAPXSArchive() {
     saveToStorage(next)
   }
 
-  return { analyses, archiveAnalysis, queueForTransmission, dequeueFromTransmission, markTransmitted }
+  const pendingTransmission = computed(() => analyses.value.filter((a) => a.queuedForTransmission && !a.transmitted))
+
+  return { analyses, pendingTransmission, archiveAnalysis, queueForTransmission, dequeueFromTransmission, markTransmitted }
 }
