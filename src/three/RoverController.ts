@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController, MastCamController, ChemCamController, SAMController, RoverWheelsController } from './instruments'
+import { RTGController, MastCamController, ChemCamController, SAMController, APXSController, RoverWheelsController } from './instruments'
 import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
@@ -444,6 +444,13 @@ export class RoverController {
     // Always tick SAM (cover animation runs regardless of mode)
     const samInst = this.instruments.find(i => i.id === 'sam')
     if (samInst && samInst !== this.activeInstrument) samInst.update(delta)
+
+    // Always tick APXS (turret head lerps back when deactivated)
+    const apxsInst = this.instruments.find((i): i is APXSController => i instanceof APXSController)
+    if (apxsInst) {
+      apxsInst.isActive = this.mode === 'active' && this.activeInstrument === apxsInst
+      if (apxsInst !== this.activeInstrument) apxsInst.update(delta)
+    }
 
     // ChemCam laser/integration continues if the player leaves active mode (e.g. ESC mid-sequence)
     const chemCam = this.instruments.find((i): i is ChemCamController => i instanceof ChemCamController)
