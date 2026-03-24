@@ -156,6 +156,40 @@
       "type": "MARS SURVIVAL"
     }
   ],
+  "apxs-analysis": [
+    {
+      "id": "apxs-first-contact",
+      "event": "first-analysis",
+      "icon": "\u270b",
+      "title": "FIRST CONTACT",
+      "description": "Complete your first APXS surface analysis.",
+      "type": "APXS ANALYSIS"
+    },
+    {
+      "id": "apxs-surface-reader",
+      "event": "five-analyses",
+      "icon": "\ud83d\udcca",
+      "title": "SURFACE READER",
+      "description": "Complete 5 APXS analyses.",
+      "type": "APXS ANALYSIS"
+    },
+    {
+      "id": "apxs-anomaly-hunter",
+      "event": "five-anomalies",
+      "icon": "\u26a0",
+      "title": "ANOMALY HUNTER",
+      "description": "Detect trace element anomalies in 5 different analyses.",
+      "type": "APXS ANALYSIS"
+    },
+    {
+      "id": "apxs-precision",
+      "event": "five-s-grades",
+      "icon": "\ud83c\udfaf",
+      "title": "PRECISION INSTRUMENT",
+      "description": "Achieve S grade in 5 APXS analyses.",
+      "type": "APXS ANALYSIS"
+    }
+  ],
   "reward-track": [
     { "sp": 25, "id": "track-swift-wheels", "icon": "\u26a1", "title": "SWIFT WHEELS", "description": "Your driving algorithms are optimizing. Paths feel smoother.", "type": "REWARD TRACK", "modifierKey": "movementSpeed", "modifierValue": 0.05 },
     { "sp": 50, "id": "track-keen-eye", "icon": "\ud83d\udc41", "title": "KEEN EYE", "description": "Pattern recognition improving. Instruments read faster.", "type": "REWARD TRACK", "modifierKey": "analysisSpeed", "modifierValue": 0.05 },
