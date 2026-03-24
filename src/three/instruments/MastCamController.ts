@@ -69,8 +69,8 @@ export class MastCamController extends InstrumentController {
     )
   }
 
-  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
-    return this.powerDrawW
+  override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
+    return phase === 'active' ? this.powerDrawW : 0
   }
 
   // Camera state for RoverController to read

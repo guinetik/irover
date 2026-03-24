@@ -129,8 +129,10 @@ export abstract class InstrumentController {
    * Does not include special lines (e.g. rock drill bit, heater thermal) — those stay separate in {@link useMarsPower}.
    * Passive background payloads return 0 here so they are not double-counted with {@link getPassiveBackgroundPowerW}.
    */
-  getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+  getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
     if (this.billsPassiveBackgroundPower) return 0
+    // Active tools draw power only when activated, not when merely selected
+    if (phase === 'instrument') return 0
     return this.selectionIdlePowerW
   }
 

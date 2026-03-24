@@ -66,7 +66,7 @@ export class APXSController extends InstrumentController {
   }
 
   override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
-    return phase === 'active' ? APXSController.ACTIVE_BUS_W : this.selectionIdlePowerW
+    return phase === 'active' ? APXSController.ACTIVE_BUS_W : 0
   }
 
   override handleInput(keys: Set<string>, delta: number): void {

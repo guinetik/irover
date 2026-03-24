@@ -172,8 +172,8 @@ export class ChemCamController extends InstrumentController {
     }
   }
 
-  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
-    return Math.max(ChemCamController.BUS_IDLE_W, this.powerDrawW)
+  override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
+    return phase === 'active' ? Math.max(ChemCamController.BUS_IDLE_W, this.powerDrawW) : 0
   }
 
   /**
