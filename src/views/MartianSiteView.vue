@@ -1042,7 +1042,7 @@ function handleAPXSComplete(result: {
     [...result.caughtElements],
   )
 
-  const baseTime = 90 + Math.random() * 90
+  const baseTime = 30
   const processingTime = baseTime / playerMod('analysisSpeed')
 
   apxsEnqueue({
