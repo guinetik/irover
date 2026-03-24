@@ -774,7 +774,7 @@ const heaterHudButtonTitle = computed(() =>
     : 'Thermal / heater [H]',
 )
 const { mod: playerMod, applyRewardTrack } = usePlayerProfile()
-const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival, awardTransmission } = useSciencePoints()
+const { totalSP, sessionSP, chemcamSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival, awardTransmission } = useSciencePoints()
 const { milestones: rewardTrackMilestones, loaded: rewardTrackLoaded, trackModifiers, unlockedPerks, unlockedTrackIds, prevSP: rewardTrackPrevSP, hasPerk, loadRewardTrack } = useRewardTrack()
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
@@ -936,7 +936,7 @@ function handleSamAcknowledge(): void {
 }
 
 watchEffect(() => {
-  const sp = totalSP.value
+  const sp = chemcamSP.value
   for (const ach of libsAchievements.value) {
     if (sp >= ach.sp && !unlockedAchievementIds.value.includes(ach.id)) {
       unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]

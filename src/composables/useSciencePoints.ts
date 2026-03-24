@@ -13,6 +13,8 @@ try {
 } catch { /* private browsing / SSR safety */ }
 const totalSP = ref(storedSP)
 const sessionSP = ref(0)
+/** SP earned from ChemCam + ChemCam ack only — used by LIBS calibration watcher */
+const chemcamSP = ref(0)
 
 function persistSP(): void {
   try { localStorage.setItem(SP_STORAGE_KEY, String(totalSP.value)) } catch { /* ignore */ }
@@ -25,11 +27,11 @@ const scored = {
   drill: new Set<string>(),
 }
 
-// --- SP yield ranges (from GDD spec) ---
+// --- SP yield ranges (rebalanced: ~5-8x reduction for slow-drip pacing) ---
 const YIELDS = {
-  mastcam: { min: 5, max: 15 },
-  chemcam: { min: 15, max: 40 },
-  drill: { min: 30, max: 80 },
+  mastcam: { min: 1, max: 3 },
+  chemcam: { min: 2, max: 4 },
+  drill: { min: 3, max: 5 },
 } as const
 
 // --- Multi-instrument bonus ---
@@ -47,7 +49,7 @@ function rollYield(min: number, max: number): number {
   return Math.round(min + Math.random() * (max - min))
 }
 
-const ACK_SP = { min: 5, max: 15 }
+const ACK_SP = { min: 1, max: 2 }
 
 /** Track acknowledged readouts to prevent double-count */
 const acknowledgedReadouts = new Set<string>()
@@ -115,6 +117,7 @@ export function useSciencePoints() {
 
     totalSP.value += amount
     sessionSP.value += amount
+    if (source === 'chemcam') chemcamSP.value += amount
     persistSP()
 
     const gain: SPGain = { amount, source, rockLabel, bonus }
@@ -134,6 +137,7 @@ export function useSciencePoints() {
 
     totalSP.value += amount
     sessionSP.value += amount
+    chemcamSP.value += amount
     persistSP()
 
     const gain: SPGain = { amount, source: 'chemcam-ack', rockLabel, bonus: 1 }
@@ -142,7 +146,7 @@ export function useSciencePoints() {
     return gain
   }
 
-  const DAN_SP = 100
+  const DAN_SP = 15
 
   function awardDAN(reason: string): SPGain {
     const spYieldMult = mod('spYield')
@@ -221,6 +225,7 @@ export function useSciencePoints() {
   return {
     totalSP,
     sessionSP,
+    chemcamSP,
     lastGain,
     spLedger,
     award,
@@ -258,6 +263,7 @@ export function devAwardSciencePoints(amount: number): SPGain | null {
 export function resetSciencePointsForTests(): void {
   totalSP.value = 0
   sessionSP.value = 0
+  chemcamSP.value = 0
   try { localStorage.removeItem(SP_STORAGE_KEY) } catch { /* ignore */ }
   lastGain.value = null
   spLedger.value = []
