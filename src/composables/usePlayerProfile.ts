@@ -1,4 +1,4 @@
-import { reactive, computed } from 'vue'
+import { reactive, ref } from 'vue'
 
 // --- Modifier categories ---
 // All values are percentage offsets: 0 = no change, 0.05 = +5%, -0.10 = -10%.
@@ -230,6 +230,38 @@ export function createNeutralProfile(): PlayerProfile {
 
 const profile = reactive<PlayerProfile>(createNeutralProfile())
 
+// Private refs for the three choice IDs + reward track layer
+const chosenArchetype = ref<ArchetypeId | null>(null)
+const chosenFoundation = ref<FoundationId | null>(null)
+const chosenPatron = ref<PatronId | null>(null)
+const rewardTrackLayer = ref<Partial<ProfileModifiers>>({})
+
+/**
+ * Recompute profile modifiers from all four sources:
+ * archetype + foundation + patron + reward track.
+ */
+function recomputeModifiers(): void {
+  if (!chosenArchetype.value || !chosenFoundation.value || !chosenPatron.value) {
+    profile.archetype = null
+    profile.foundation = null
+    profile.patron = null
+    Object.assign(profile.modifiers, NEUTRAL_MODIFIERS)
+    return
+  }
+  profile.archetype = chosenArchetype.value
+  profile.foundation = chosenFoundation.value
+  profile.patron = chosenPatron.value
+  Object.assign(
+    profile.modifiers,
+    resolveModifiers(
+      ARCHETYPES[chosenArchetype.value].modifiers,
+      FOUNDATIONS[chosenFoundation.value].modifiers,
+      PATRONS[chosenPatron.value].modifiers,
+      rewardTrackLayer.value,
+    ),
+  )
+}
+
 /**
  * Reactive player profile (singleton). Call setProfile() to change run configuration.
  */
@@ -239,11 +271,19 @@ export function usePlayerProfile() {
     foundation: FoundationId | null,
     patron: PatronId | null,
   ): void {
-    if (!archetype || !foundation || !patron) {
-      Object.assign(profile, createNeutralProfile())
-    } else {
-      Object.assign(profile, createPlayerProfile(archetype, foundation, patron))
-    }
+    chosenArchetype.value = archetype
+    chosenFoundation.value = foundation
+    chosenPatron.value = patron
+    recomputeModifiers()
+  }
+
+  /**
+   * Apply reward-track modifier overrides (fourth layer).
+   * This is lifetime data — setProfile does NOT clear it.
+   */
+  function applyRewardTrack(partial: Partial<ProfileModifiers>): void {
+    rewardTrackLayer.value = partial
+    recomputeModifiers()
   }
 
   /** Convenience: get a single modifier multiplier */
@@ -254,6 +294,7 @@ export function usePlayerProfile() {
   return {
     profile,
     setProfile,
+    applyRewardTrack,
     mod,
     ARCHETYPES,
     FOUNDATIONS,
