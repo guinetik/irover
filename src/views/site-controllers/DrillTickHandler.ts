@@ -41,6 +41,7 @@ export function createDrillTickHandler(
 
   const lastResult: DrillTickResult = { rockDrilling: false }
   let gameplayInitialised = false
+  let cargoFullToastCooldown = 0
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (gameplayInitialised) return
@@ -71,6 +72,13 @@ export function createDrillTickHandler(
       drillProgress.value = drill.drillProgress
       isDrilling.value = drill.isDrilling
       lastResult.rockDrilling = drill.isDrilling
+
+      // Toast when player tries to drill a rock but cargo is full
+      cargoFullToastCooldown = Math.max(0, cargoFullToastCooldown - fctx.sceneDelta)
+      if (drill.hasTarget && !drill.canCollectCurrentTarget && drill['drilling'] && cargoFullToastCooldown <= 0) {
+        sampleToastRef.value?.showError('Cargo full — dump items to drill')
+        cargoFullToastCooldown = 3
+      }
 
       if (camera) {
         const projected = drill.targetWorldPos.clone().project(camera)
