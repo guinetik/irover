@@ -449,6 +449,9 @@ import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT } from '@/composables/useMarsPo
 import { useMarsThermal } from '@/composables/useMarsThermal'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
+import { useRewardTrack } from '@/composables/useRewardTrack'
+import type { RewardTrackMilestone } from '@/lib/rewardTrack'
+import { milestonesUnlockedBetween } from '@/lib/rewardTrack'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
 import { getInventoryItemDef, INVENTORY_CATALOG } from '@/types/inventory'
@@ -760,8 +763,9 @@ const heaterHudButtonTitle = computed(() =>
     ? `Thermal / heater [H] — heating ~${Math.round(heaterW.value)} W`
     : 'Thermal / heater [H]',
 )
-const { mod: playerMod } = usePlayerProfile()
+const { mod: playerMod, applyRewardTrack } = usePlayerProfile()
 const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival, awardTransmission } = useSciencePoints()
+const { milestones: rewardTrackMilestones, loaded: rewardTrackLoaded, trackModifiers, unlockedPerks, unlockedTrackIds, prevSP: rewardTrackPrevSP, hasPerk, loadRewardTrack } = useRewardTrack()
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
@@ -803,7 +807,8 @@ const totalAchievementCount = computed(
     libsAchievements.value.length +
     danAchievements.value.length +
     survivalAchievements.value.length +
-    samAchievementsData.value.length,
+    samAchievementsData.value.length +
+    rewardTrackMilestones.value.length,
 )
 const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
 
@@ -815,11 +820,13 @@ fetch('/data/achievements.json')
       'dan-prospecting'?: DanAchievement[]
       'mars-survival'?: SurvivalAchievement[]
       'sam-analysis'?: { id: string; event: string; icon: string; title: string; description: string; type: string }[]
+      'reward-track'?: RewardTrackMilestone[]
     }) => {
       libsAchievements.value = data['libs-calibration'] ?? []
       danAchievements.value = data['dan-prospecting'] ?? []
       survivalAchievements.value = data['mars-survival'] ?? []
       samAchievementsData.value = data['sam-analysis'] ?? []
+      if (data['reward-track']) loadRewardTrack(data['reward-track'])
     },
   )
   .catch(() => {})
@@ -926,6 +933,29 @@ watchEffect(() => {
       achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
     }
   }
+})
+
+// --- Reward track banner watcher ---
+watchEffect(() => {
+  if (!rewardTrackLoaded.value || rewardTrackMilestones.value.length === 0) return
+  const sp = totalSP.value
+  const prev = rewardTrackPrevSP.value
+  if (sp <= prev) return
+
+  const crossed = milestonesUnlockedBetween(prev, sp, rewardTrackMilestones.value)
+  for (const m of crossed) {
+    if (!unlockedTrackIds.value.includes(m.id)) {
+      unlockedTrackIds.value = [...unlockedTrackIds.value, m.id]
+      unlockedAchievementIds.value = [...unlockedAchievementIds.value, m.id]
+      achievementRef.value?.show(m.icon, m.title, m.description, m.type)
+    }
+  }
+  rewardTrackPrevSP.value = sp
+})
+
+// --- Reward track modifier sync ---
+watchEffect(() => {
+  applyRewardTrack(trackModifiers.value)
 })
 
 watchEffect(() => {

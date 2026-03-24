@@ -4,8 +4,19 @@ import { usePlayerProfile } from './usePlayerProfile'
 const { mod } = usePlayerProfile()
 
 // --- Singleton state ---
-const totalSP = ref(0)
+const SP_STORAGE_KEY = 'mars-lifetime-sp'
+let storedSP = 0
+try {
+  const raw = localStorage.getItem(SP_STORAGE_KEY)
+  const parsed = Number(raw)
+  if (Number.isFinite(parsed) && parsed > 0) storedSP = parsed
+} catch { /* private browsing / SSR safety */ }
+const totalSP = ref(storedSP)
 const sessionSP = ref(0)
+
+function persistSP(): void {
+  try { localStorage.setItem(SP_STORAGE_KEY, String(totalSP.value)) } catch { /* ignore */ }
+}
 
 /** Track which rocks have been scored per instrument to prevent double-counting */
 const scored = {
@@ -104,6 +115,7 @@ export function useSciencePoints() {
 
     totalSP.value += amount
     sessionSP.value += amount
+    persistSP()
 
     const gain: SPGain = { amount, source, rockLabel, bonus }
     lastGain.value = gain
@@ -122,6 +134,7 @@ export function useSciencePoints() {
 
     totalSP.value += amount
     sessionSP.value += amount
+    persistSP()
 
     const gain: SPGain = { amount, source: 'chemcam-ack', rockLabel, bonus: 1 }
     lastGain.value = gain
@@ -136,6 +149,7 @@ export function useSciencePoints() {
     const amount = Math.round(DAN_SP * spYieldMult)
     totalSP.value += amount
     sessionSP.value += amount
+    persistSP()
     const gain: SPGain = { amount, source: 'dan', rockLabel: reason, bonus: 1.0 }
     lastGain.value = gain
     pushLedger(gain)
@@ -152,6 +166,7 @@ export function useSciencePoints() {
     const amount = Math.round(baseSp * spYieldMult)
     totalSP.value += amount
     sessionSP.value += amount
+    persistSP()
     const gain: SPGain = { amount, source: 'survival', rockLabel: detail, bonus: 1.0 }
     lastGain.value = gain
     pushLedger(gain)
@@ -167,6 +182,7 @@ export function useSciencePoints() {
     const amount = Math.round(baseSp * spYieldMult)
     totalSP.value += amount
     sessionSP.value += amount
+    persistSP()
     const gain: SPGain = { amount, source: 'sam', rockLabel: label, bonus: 1.0 }
     lastGain.value = gain
     return gain
@@ -188,6 +204,7 @@ export function useSciencePoints() {
 
     totalSP.value += amount
     sessionSP.value += amount
+    persistSP()
 
     const gain: SPGain = { amount, source: 'transmission', rockLabel: label, bonus: 1.0 }
     lastGain.value = gain
@@ -228,6 +245,7 @@ export function devAwardSciencePoints(amount: number): SPGain | null {
 
   totalSP.value += n
   sessionSP.value += n
+  persistSP()
   const gain: SPGain = { amount: n, source: 'dev', rockLabel: 'Console grant', bonus: 1.0 }
   lastGain.value = gain
   pushLedger(gain)
@@ -240,6 +258,7 @@ export function devAwardSciencePoints(amount: number): SPGain | null {
 export function resetSciencePointsForTests(): void {
   totalSP.value = 0
   sessionSP.value = 0
+  try { localStorage.removeItem(SP_STORAGE_KEY) } catch { /* ignore */ }
   lastGain.value = null
   spLedger.value = []
   scored.mastcam.clear()
