@@ -2,7 +2,7 @@
   "libs-calibration": [
     {
       "id": "libs-first-light",
-      "sp": 0,
+      "sp": 1,
       "icon": "🔬",
       "title": "FIRST LIGHT",
       "description": "ChemCam spectrometer powered on. Signal noisy — calibration sequence initiated.",
