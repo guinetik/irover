@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import * as THREE from 'three'
 import {
+  HeaterController,
   RTGController,
   instrumentSelectionEmissiveIntensity,
   type RTGConservationState,
@@ -17,6 +18,9 @@ export interface RoverVfxRefs {
   rtgConservationReady: Ref<boolean>
   rtgConservationCdLabel: Ref<string>
   rtgConservationCooldownTitle: Ref<string>
+  heaterOverdriveReady: Ref<boolean>
+  heaterHeatBoostActive: Ref<boolean>
+  heaterHeatBoostProgressElapsed01: Ref<number>
 }
 
 /**
@@ -29,6 +33,7 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
   const {
     rtgPhase, rtgPhaseProgress, rtgConservationMode, rtgConservationProgress01,
     rtgOverdriveReady, rtgConservationReady, rtgConservationCdLabel, rtgConservationCooldownTitle,
+    heaterOverdriveReady, heaterHeatBoostActive, heaterHeatBoostProgressElapsed01,
   } = refs
 
   function tick(fctx: SiteFrameContext): void {
@@ -87,6 +92,37 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
       })
     }
 
+    // --- Heater overdrive HUD + radiator glow (after chassis emissive decay so boost VFX wins) ---
+    const heater = controller?.instruments.find(i => i.id === 'heater') as HeaterController | undefined
+    if (heater) {
+      heaterOverdriveReady.value = heater.canActivateOverdrive
+      heaterHeatBoostActive.value = heater.heatBoostActive
+      heaterHeatBoostProgressElapsed01.value = heater.heatBoostProgressElapsed01
+      if (heater.node && heater.heatBoostActive) {
+        heater.node.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+            mat.emissive = mat.emissive || new THREE.Color()
+            mat.emissive.setHex(0xff4400)
+            mat.emissiveIntensity = 0.22 + Math.sin(simulationTime * 3.5) * 0.1
+          }
+        })
+      } else if (heater.node) {
+        heater.node.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+            if (mat.emissiveIntensity > 0) {
+              mat.emissiveIntensity = Math.max(0, mat.emissiveIntensity - sceneDelta * 0.5)
+            }
+          }
+        })
+      }
+    } else {
+      heaterOverdriveReady.value = false
+      heaterHeatBoostActive.value = false
+      heaterHeatBoostProgressElapsed01.value = 0
+    }
+
     // --- Instrument focus — emissive on selected tool's GLTF subtree ---
     const activeInst = controller?.activeInstrument ?? null
     const instrumentViewActive =
@@ -96,6 +132,7 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
       const hex = inst.selectionHighlightColor
       if (hex == null || !inst.node) continue
       if (inst instanceof RTGController && inst.phase === 'overdrive') continue
+      if (inst instanceof HeaterController && inst.heatBoostActive) continue
       const focused =
         instrumentViewActive && activeInst === inst && !isSleeping
       inst.node.traverse((child) => {

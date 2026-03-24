@@ -196,6 +196,9 @@ export interface MarsSiteViewRefs {
   rtgConservationReady: Ref<boolean>
   rtgConservationCdLabel: Ref<string>
   rtgConservationCooldownTitle: Ref<string>
+  heaterOverdriveReady: Ref<boolean>
+  heaterHeatBoostActive: Ref<boolean>
+  heaterHeatBoostProgressElapsed01: Ref<number>
   crosshairVisible: Ref<boolean>
   crosshairColor: Ref<'green' | 'red'>
   crosshairX: Ref<number>
@@ -235,6 +238,7 @@ export interface MarsSiteViewRefs {
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
+  heaterEffectiveW: Ref<number>
   thermalZone: Ref<ThermalZone>
   samIsProcessing: Ref<boolean>
   apxsCountdown: Ref<number>
@@ -379,6 +383,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     internalTempC,
     ambientEffectiveC,
     heaterW,
+    heaterEffectiveW,
     thermalZone,
     samIsProcessing,
     // Antenna system refs
@@ -419,6 +424,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     rtgConservationReady: ctx.refs.rtgConservationReady,
     rtgConservationCdLabel: ctx.refs.rtgConservationCdLabel,
     rtgConservationCooldownTitle: ctx.refs.rtgConservationCooldownTitle,
+    heaterOverdriveReady: ctx.refs.heaterOverdriveReady,
+    heaterHeatBoostActive: ctx.refs.heaterHeatBoostActive,
+    heaterHeatBoostProgressElapsed01: ctx.refs.heaterHeatBoostProgressElapsed01,
   })
 
   const danHandler = createDanTickHandler(
@@ -705,8 +713,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
         const speedMult = playerMod('movementSpeed')
-        controller.config.moveSpeed = 1.2 * nightPenalty * rtgBoost * speedMult
-        controller.config.turnSpeed = 0.5 * nightPenalty * rtgBoost * speedMult
+        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * speedMult
+        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * speedMult
       }
 
       // --- Core rover update + position sync ---
@@ -805,7 +813,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         if (heaterInst) {
           heaterInst.internalTempC = internalTempC.value
           heaterInst.ambientC = ambientEffectiveC.value
-          heaterInst.heaterW = heaterW.value
+          heaterInst.heaterW = heaterEffectiveW.value
           heaterInst.zone = thermalZone.value
         }
       }
@@ -831,7 +839,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           driveMotorW,
           driveMotorHudLabel: 'Rover wheels',
           instrumentLines,
-          heaterW: heaterW.value,
+          heaterW: heaterEffectiveW.value,
           powerLoadFactor,
         })
       }

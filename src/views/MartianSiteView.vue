@@ -99,6 +99,11 @@
         <span class="rtg-banner-text">SHUNT RECHARGE &mdash; {{ rtgConservationCdLabel }}</span>
         <div class="rtg-banner-bar"><div class="rtg-banner-fill shunt-cd" :style="{ width: (1 - rtgConservationProgress01) * 100 + '%' }" /></div>
       </div>
+      <div v-else-if="heaterHeatBoostActive" class="rtg-banner overdrive heater-od-banner" key="heater-overdrive-heat">
+        <span class="rtg-banner-icon">&#x2668;</span>
+        <span class="rtg-banner-text">HEATER OVERDRIVE &mdash; DOUBLE THERMAL OUTPUT</span>
+        <div class="rtg-banner-bar"><div class="rtg-banner-fill" :style="{ width: (1 - heaterHeatBoostProgressElapsed01) * 100 + '%' }" /></div>
+      </div>
     </Transition>
     <Transition name="deploy-fade">
       <div v-if="isInstrumentActive && activeInstrumentSlot === 2" class="chemcam-hud">
@@ -174,7 +179,7 @@
       :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
       :wheels-hud="activeInstrumentSlot === WHLS_SLOT ? wheelsOverlayHud : null"
-      :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterW, zone: thermalZone } : null"
+      :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterEffectiveW, zone: thermalZone } : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
       :chem-cam-unread="chemCamUnreadCount"
       :chem-cam-sequence-active="chemCamOverlaySequenceActive"
@@ -184,9 +189,11 @@
       :rtg-overdrive-ready="rtgOverdriveReady"
       :rtg-conservation-ready="rtgConservationReady"
       :rtg-conservation-cooldown-title="rtgConservationCooldownTitle"
+      :heater-overdrive-ready="heaterOverdriveReady"
       @activate="handleActivate()"
       @see-results="showChemCamResults = true"
       @rtg-overdrive="showOverdriveConfirm = true"
+      @heater-overdrive="showHeaterOverdriveConfirm = true"
       @rtg-conservation="openConservationConfirm()"
       @repair="handleInstrumentRepair"
       :dan-hit-available="danHitAvailable"
@@ -317,6 +324,25 @@
         </div>
       </Transition>
       <Transition name="deploy-fade">
+        <div v-if="showHeaterOverdriveConfirm" key="heater-overdrive-confirm" class="overdrive-confirm-overlay">
+          <div class="overdrive-confirm heater-overdrive-dialog">
+            <div class="overdrive-icon">&#x2668;</div>
+            <div class="overdrive-title">HEATER OVERDRIVE</div>
+            <div class="overdrive-desc">
+              Dump {{ Math.round(HEATER_OVERDRIVE_BATTERY_COST * 100) }}% of battery charge instantly. For the next
+              {{ HEATER_MISSION_DURATIONS.overdriveHeatMarsClockHours }} hours (mission clock), thermostat heating warms the rover at double the normal rate.
+            </div>
+            <div class="overdrive-warning">
+              You cannot use heater overdrive again for {{ HEATER_MISSION_DURATIONS.overdriveLockoutSols }} full sols after you confirm. Timers pause only if the mission clock is paused.
+            </div>
+            <div class="overdrive-buttons">
+              <button class="overdrive-btn confirm" @click="confirmHeaterOverdrive()">ENGAGE OVERDRIVE</button>
+              <button class="overdrive-btn cancel" @click="cancelHeaterOverdrive()">CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+      <Transition name="deploy-fade">
         <div v-if="showConservationConfirm" key="conservation-confirm" class="overdrive-confirm-overlay">
           <div class="overdrive-confirm conservation-dialog">
             <div class="overdrive-icon conservation-icon">&#x26AB;</div>
@@ -359,6 +385,7 @@
       :sol="marsSol"
       :time-of-day="marsTimeOfDay"
       :night-factor="currentNightFactor"
+      :ambient-celsius="ambientEffectiveC"
     />
     <CommToolbar
       v-if="!deploying && !descending"
@@ -505,6 +532,7 @@ import {
   SAMController,
   RTGController,
   HeaterController,
+  HEATER_OVERDRIVE_BATTERY_COST,
   HEATER_SLOT,
   RoverWheelsController,
   WHLS_SLOT,
@@ -612,6 +640,9 @@ const rtgConservationCooldownTitle = ref('')
 /** 0–1 elapsed for active shunt or shunt cooldown (for banner bars). */
 const rtgConservationProgress01 = ref(0)
 const rtgConservationCdLabel = ref('')
+const heaterOverdriveReady = ref(false)
+const heaterHeatBoostActive = ref(false)
+const heaterHeatBoostProgressElapsed01 = ref(0)
 
 /** WHLS + HTR controls beside power HUD — disabled while RTG locks other instruments ([B]/[H]). */
 const wheelsHudBlocked = computed(
@@ -657,12 +688,64 @@ const wheelsOverlayHud = computed(() => {
   roverHeading.value
   roverIsMoving.value
   const w = siteRover.value?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
-  if (!w) return { powerStr: '—', statusStr: '—', healthPct: 100 }
+  if (!w) return { powerStr: '—', statusStr: '—', healthPct: 100, speedPct: 100, speedBuffs: [] }
   const moving = roverIsMoving.value
   const draw = w.getDrivePowerW()
   const powerStr = moving ? `${draw.toFixed(0)} W` : '0 W'
   const statusStr = !w.operational ? 'OFFLINE' : moving ? 'DRIVING' : 'READY'
-  return { powerStr, statusStr, healthPct: w.durabilityPct }
+
+  // Speed buff breakdown
+  const buffs: { label: string; value: string; color: string }[] = []
+  const fmtBuff = (v: number) => {
+    const pct = Math.round(v * 100)
+    return pct >= 0 ? `+${pct}%` : `${pct}%`
+  }
+  const green = '#5dc9a5'
+  const red = '#e05030'
+  const dim = 'rgba(196,117,58,0.6)'
+
+  // Archetype
+  if (playerProfile.archetype) {
+    const ms = ARCHETYPES[playerProfile.archetype].modifiers.movementSpeed
+    if (ms) buffs.push({ label: ARCHETYPES[playerProfile.archetype].name.toUpperCase(), value: fmtBuff(ms), color: ms > 0 ? green : red })
+  }
+  // Foundation
+  if (playerProfile.foundation) {
+    const ms = FOUNDATIONS[playerProfile.foundation].modifiers.movementSpeed
+    if (ms) buffs.push({ label: FOUNDATIONS[playerProfile.foundation].name.toUpperCase(), value: fmtBuff(ms), color: ms > 0 ? green : red })
+  }
+  // Patron
+  if (playerProfile.patron) {
+    const ms = PATRONS[playerProfile.patron].modifiers.movementSpeed
+    if (ms) buffs.push({ label: PATRONS[playerProfile.patron].name.toUpperCase(), value: fmtBuff(ms), color: ms > 0 ? green : red })
+  }
+  // Reward track
+  const rtMod = trackModifiers.value.movementSpeed
+  if (rtMod) buffs.push({ label: 'REWARD TRACK', value: fmtBuff(rtMod), color: rtMod > 0 ? green : red })
+
+  // Night penalty
+  const nf = currentNightFactor.value
+  if (nf > 0.01) {
+    const penaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
+    const nightPenalty = -(nf * penaltyFactor)
+    buffs.push({ label: hasPerk('night-vision') ? 'NIGHT (NV)' : 'NIGHT', value: fmtBuff(nightPenalty), color: red })
+  }
+
+  // RTG overdrive
+  const rtg = siteRover.value?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
+  const rtgBoost = rtg?.speedMultiplier ?? 1.0
+  if (rtgBoost > 1) buffs.push({ label: 'RTG OVERDRIVE', value: fmtBuff(rtgBoost - 1), color: green })
+
+  // Final effective speed %
+  const profileMult = playerMod('movementSpeed')
+  const nightPenaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
+  const nightPenalty = 1.0 - nf * nightPenaltyFactor
+  const speedPct = profileMult * nightPenalty * rtgBoost * 100
+
+  // Add base label if no buffs
+  if (buffs.length === 0) buffs.push({ label: 'BASELINE', value: '100%', color: dim })
+
+  return { powerStr, statusStr, healthPct: w.durabilityPct, speedPct, speedBuffs: buffs }
 })
 
 function handleInstrumentRepair() {
@@ -795,6 +878,7 @@ const {
   removeStack: removeInventoryStack,
 } = useInventory()
 const gameClock = useMarsGameClock()
+const { HEATER_MISSION_DURATIONS } = gameClock
 const {
   profile,
   batteryWh,
@@ -806,16 +890,17 @@ const {
   isSleeping,
   tickPower,
   fillBatteryFull,
+  drainBatteryFraction,
 } = useMarsPower()
-const { internalTempC, ambientEffectiveC, heaterW, zone: thermalZone, tickThermal } = useMarsThermal()
+const { internalTempC, ambientEffectiveC, heaterW, heaterEffectiveW, zone: thermalZone, tickThermal } = useMarsThermal()
 /** True when automatic thermostat is drawing bus power (heaterW from thermal tick). */
 const heaterThermostatOn = computed(() => heaterW.value > 0.5)
 const heaterHudButtonTitle = computed(() =>
   heaterThermostatOn.value
-    ? `Thermal / heater [H] — heating ~${Math.round(heaterW.value)} W`
+    ? `Thermal / heater [H] — heating ~${Math.round(heaterEffectiveW.value)} W`
     : 'Thermal / heater [H]',
 )
-const { mod: playerMod, applyRewardTrack } = usePlayerProfile()
+const { mod: playerMod, applyRewardTrack, profile: playerProfile, ARCHETYPES, FOUNDATIONS, PATRONS } = usePlayerProfile()
 const { totalSP, sessionSP, chemcamSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardAPXS, awardSurvival, awardTransmission } = useSciencePoints()
 const { milestones: rewardTrackMilestones, loaded: rewardTrackLoaded, trackModifiers, unlockedPerks, unlockedTrackIds, prevSP: rewardTrackPrevSP, hasPerk, loadRewardTrack } = useRewardTrack()
 const lgaMailbox = useLGAMailbox()
@@ -1166,6 +1251,7 @@ watchEffect(() => {
 })
 
 const showOverdriveConfirm = ref(false)
+const showHeaterOverdriveConfirm = ref(false)
 const showConservationConfirm = ref(false)
 const orbitalDropInteractHint = computed(() => {
   if (deploying.value || descending.value || isSleeping.value) return ''
@@ -1192,6 +1278,8 @@ function handleActivate() {
   if (!siteRover.value || isSleeping.value) return
   if (siteRover.value.activeInstrument instanceof RTGController) {
     showOverdriveConfirm.value = true
+  } else if (siteRover.value.activeInstrument instanceof HeaterController) {
+    showHeaterOverdriveConfirm.value = true
   } else {
     const passive = siteRover.value.activeInstrument?.passiveSubsystemOnly
     siteRover.value.enterActiveMode()
@@ -1211,6 +1299,21 @@ function confirmOverdrive() {
 
 function cancelOverdrive() {
   showOverdriveConfirm.value = false
+}
+
+function confirmHeaterOverdrive() {
+  showHeaterOverdriveConfirm.value = false
+  if (!siteRover.value || isSleeping.value) return
+  const h = siteRover.value.activeInstrument
+  if (h instanceof HeaterController && h.canActivateOverdrive) {
+    drainBatteryFraction(HEATER_OVERDRIVE_BATTERY_COST)
+    h.activateOverdrive()
+    siteRover.value.activateInstrument(null)
+  }
+}
+
+function cancelHeaterOverdrive() {
+  showHeaterOverdriveConfirm.value = false
 }
 
 function openConservationConfirm() {
@@ -1323,6 +1426,9 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       rtgConservationReady,
       rtgConservationCdLabel,
       rtgConservationCooldownTitle,
+      heaterOverdriveReady,
+      heaterHeatBoostActive,
+      heaterHeatBoostProgressElapsed01,
       crosshairVisible,
       crosshairColor,
       crosshairX,
@@ -1362,6 +1468,7 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       internalTempC,
       ambientEffectiveC,
       heaterW,
+      heaterEffectiveW,
       thermalZone,
       samIsProcessing,
       apxsCountdown,
