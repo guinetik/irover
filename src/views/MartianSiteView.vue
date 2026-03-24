@@ -158,6 +158,7 @@
         :inventory-open="inventoryOpen"
         :chem-cam-unread="chemCamUnreadCount"
         :sam-unread="samUnread"
+        :apxs-unread="apxsUnread"
         :dan-scanning="!!(siteRover?.instruments.find(i => i.id === 'dan') as DANController | undefined)?.passiveSubsystemEnabled"
         @select="(slot: number) => { if (!isSleeping) siteRover?.activateInstrument(slot) }"
         @deselect="siteRover?.activateInstrument(null)"
@@ -196,6 +197,11 @@
       :sam-progress-label="samCurrentExperiment ? samCurrentExperiment.modeName + ' — ' + Math.ceil(samCurrentExperiment.remainingTimeSec) + 's' : ''"
       :sam-unread="samUnread"
       @sam-see-results="samResultDialogEntry = samResults[0] ?? null"
+      :apxs-processing="apxsIsProcessing"
+      :apxs-progress-pct="apxsCurrentExperiment ? ((1 - apxsCurrentExperiment.remainingTimeSec / apxsCurrentExperiment.totalTimeSec) * 100) : 0"
+      :apxs-progress-label="apxsCurrentExperiment ? 'APXS — ' + Math.ceil(apxsCurrentExperiment.remainingTimeSec) + 's' : ''"
+      :apxs-unread="apxsUnread"
+      @apxs-see-results="apxsResultDialogEntry = apxsResults[0] ?? null"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -838,6 +844,7 @@ const {
   queue: apxsQueue,
   results: apxsResults,
   isProcessing: apxsIsProcessing,
+  currentExperiment: apxsCurrentExperiment,
   unacknowledgedCount: apxsUnread,
   enqueue: apxsEnqueue,
   tick: apxsTick,

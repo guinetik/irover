@@ -95,6 +95,21 @@
           </div>
         </div>
 
+        <!-- APXS: analysis progress + See Results -->
+        <div v-if="activeSlot === 4" class="ov-sam-block">
+          <div v-if="apxsProcessing" class="ov-cc-sequence">
+            <div class="ov-cc-seq-label">{{ apxsProgressLabel }}</div>
+            <div class="ov-cc-seq-track">
+              <div class="ov-cc-seq-fill integrate" :style="{ width: apxsProgressPct + '%' }" />
+            </div>
+          </div>
+          <div v-if="(apxsUnread ?? 0) > 0" class="ov-chemcam-status">
+            <button class="ov-btn-see-results" @click="$emit('apxsSeeResults')">
+              SEE RESULTS <span class="ov-results-badge font-instrument">{{ apxsUnread }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Buttons -->
         <div class="ov-buttons">
           <template v-if="activeSlot === 7">
@@ -296,6 +311,7 @@ defineEmits<{
   rtgConservation: []
   danProspect: []
   samSeeResults: []
+  apxsSeeResults: []
 }>()
 
 export interface ThermalDisplay {
@@ -343,6 +359,10 @@ const props = withDefaults(
     samProgressPct?: number
     samProgressLabel?: string
     samUnread?: number
+    apxsProcessing?: boolean
+    apxsProgressPct?: number
+    apxsProgressLabel?: string
+    apxsUnread?: number
   }>(),
   {
     canActivate: true,
@@ -367,6 +387,10 @@ const props = withDefaults(
     samProgressPct: 0,
     samProgressLabel: '',
     samUnread: 0,
+    apxsProcessing: false,
+    apxsProgressPct: 0,
+    apxsProgressLabel: '',
+    apxsUnread: 0,
   },
 )
 

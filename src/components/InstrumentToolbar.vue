@@ -12,6 +12,7 @@
       <span class="slot-name">{{ inst.name }}</span>
       <span v-if="inst.slot === 2 && (chemCamUnread ?? 0) > 0" class="badge-dot font-instrument">{{ chemCamUnread }}</span>
       <span v-if="inst.slot === 5 && (danScanning ?? false)" class="badge-dan">&#x2022;</span>
+      <span v-if="inst.slot === 4 && (apxsUnread ?? 0) > 0" class="badge-dot font-instrument">{{ apxsUnread }}</span>
       <span v-if="inst.slot === 6 && (samUnread ?? 0) > 0" class="badge-dot font-instrument">{{ samUnread }}</span>
     </button>
 
@@ -36,6 +37,7 @@ const props = defineProps<{
   chemCamUnread?: number
   danScanning?: boolean
   samUnread?: number
+  apxsUnread?: number
 }>()
 
 const emit = defineEmits<{
