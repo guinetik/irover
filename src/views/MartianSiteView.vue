@@ -1042,8 +1042,7 @@ function handleAPXSComplete(result: {
     [...result.caughtElements],
   )
 
-  const baseTime = 30
-  const processingTime = baseTime / playerMod('analysisSpeed')
+  const processingTime = 30
 
   apxsEnqueue({
     rockMeshUuid: apxsGameRockUuid.value,
