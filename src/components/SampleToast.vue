@@ -91,11 +91,35 @@ function showTrace(element: string, label: string): void {
   })
 }
 
+/** Communication event toast (antenna heartbeats, pass notifications, incoming messages) */
+function showComm(message: string): void {
+  push({
+    id: uid(),
+    prefix: 'COMM',
+    label: message,
+    weight: '',
+    color: '#88ccff',
+    variant: 'comm',
+  })
+}
+
+/** Successful UHF uplink toast showing bonus SP earned */
+function showTransmission(label: string, bonusSP: number): void {
+  push({
+    id: uid(),
+    prefix: `+${bonusSP} SP`,
+    label: `UPLINK: ${label}`,
+    weight: '',
+    color: '#44ff88',
+    variant: 'transmission',
+  })
+}
+
 function uid(): string {
   return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-defineExpose({ show, showError, showChemCam, showSP, showTrace })
+defineExpose({ show, showError, showChemCam, showSP, showTrace, showComm, showTransmission })
 </script>
 
 <style scoped>
@@ -196,5 +220,26 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace })
 .toast-pop-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+.sample-toast.comm {
+  background: rgba(8, 18, 35, 0.92);
+  border-color: rgba(136, 204, 255, 0.35);
+}
+
+.sample-toast.comm .toast-label {
+  color: rgba(136, 204, 255, 0.9);
+}
+
+.sample-toast.transmission {
+  background: rgba(5, 30, 15, 0.92);
+  border-color: rgba(68, 255, 136, 0.4);
+  box-shadow: 0 0 10px rgba(68, 255, 136, 0.12);
+}
+
+.sample-toast.transmission .toast-label {
+  color: rgba(68, 255, 136, 0.95);
+  font-weight: bold;
+  letter-spacing: 0.06em;
 }
 </style>
