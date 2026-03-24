@@ -54,7 +54,7 @@
       "category": "trace",
       "label": "Iron (Fe)",
       "description": "Trace iron sample extracted via LIBS-guided drilling.",
-      "image": "/inventory/trace-fe.svg",
+      "image": "/inventory/trace-fe.png",
       "weightPerUnit": 0.002,
       "maxStack": 999
     },
@@ -63,7 +63,7 @@
       "category": "trace",
       "label": "Silicon (Si)",
       "description": "Trace silicon sample. Key indicator of silicate mineralogy.",
-      "image": "/inventory/trace-si.svg",
+      "image": "/inventory/trace-si.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -72,7 +72,7 @@
       "category": "trace",
       "label": "Manganese (Mn)",
       "description": "Trace manganese — enrichment suggests oxidizing conditions.",
-      "image": "/inventory/trace-mn.svg",
+      "image": "/inventory/trace-mn.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -81,7 +81,7 @@
       "category": "trace",
       "label": "Magnesium (Mg)",
       "description": "Trace magnesium from mafic mineral breakdown.",
-      "image": "/inventory/trace-mg.svg",
+      "image": "/inventory/trace-mg.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -90,7 +90,7 @@
       "category": "trace",
       "label": "Aluminum (Al)",
       "description": "Trace aluminum — common in feldspar-bearing rocks.",
-      "image": "/inventory/trace-al.svg",
+      "image": "/inventory/trace-al.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -99,7 +99,7 @@
       "category": "trace",
       "label": "Calcium (Ca)",
       "description": "Trace calcium from carbonate or sulfate precipitation.",
-      "image": "/inventory/trace-ca.svg",
+      "image": "/inventory/trace-ca.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -108,7 +108,7 @@
       "category": "trace",
       "label": "Sodium (Na)",
       "description": "Trace sodium — indicator of evaporite or plagioclase.",
-      "image": "/inventory/trace-na.svg",
+      "image": "/inventory/trace-na.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -117,7 +117,7 @@
       "category": "trace",
       "label": "Titanium (Ti)",
       "description": "Trace titanium from ilmenite or volcanic glass.",
-      "image": "/inventory/trace-ti.svg",
+      "image": "/inventory/trace-ti.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -126,7 +126,7 @@
       "category": "trace",
       "label": "Sulfur (S)",
       "description": "Trace sulfur — volcanic or evaporite origin.",
-      "image": "/inventory/trace-s.svg",
+      "image": "/inventory/trace-s.png",
       "weightPerUnit": 0.001,
       "maxStack": 999
     },
@@ -135,7 +135,7 @@
       "category": "trace",
       "label": "Nickel (Ni)",
       "description": "Trace nickel — meteoritic signature element.",
-      "image": "/inventory/trace-ni.svg",
+      "image": "/inventory/trace-ni.png",
       "weightPerUnit": 0.002,
       "maxStack": 999
     },
@@ -144,7 +144,7 @@
       "category": "component",
       "label": "Engineering components (EC)",
       "description": "Standard engineering parts kit. Used for repairs on engineering systems.",
-      "image": "/inventory/ec.svg",
+      "image": "/inventory/component-tier-1.png",
       "weightPerUnit": 0.25,
       "maxStack": 500
     },
@@ -153,7 +153,7 @@
       "category": "component",
       "label": "Science components (SC)",
       "description": "Sensors, optics, and lab subassemblies. Used for repairs on science instruments.",
-      "image": "/inventory/sc.svg",
+      "image": "/inventory/component-tier-2.png",
       "weightPerUnit": 0.25,
       "maxStack": 500
     },
@@ -162,7 +162,7 @@
       "category": "component",
       "label": "Mechatronics components (MC)",
       "description": "Actuators, harnesses, and mechanisms. Used for crafting buildables.",
-      "image": "/inventory/mc.svg",
+      "image": "/inventory/component-tier-3.png",
       "weightPerUnit": 0.25,
       "maxStack": 500
     },
@@ -171,7 +171,7 @@
       "category": "component",
       "label": "Digital components (DC)",
       "description": "High-reliability compute and comms modules. Used for digital subsystems.",
-      "image": "/inventory/dc.svg",
+      "image": "/inventory/component-tier-4.png",
       "weightPerUnit": 0.25,
       "maxStack": 500
     },
@@ -180,7 +180,7 @@
       "category": "component",
       "label": "Welding wire",
       "description": "Consumable filler for structural repairs in the field.",
-      "image": "/inventory/welding-wire.svg",
+      "image": "/inventory/welding-wire.png",
       "weightPerUnit": 0.25,
       "maxStack": 500
     },
@@ -198,7 +198,7 @@
       "category": "refined",
       "label": "Purified Iron Oxide",
       "description": "High-purity Fe₂O₃ separated via wet chemistry. Potential feedstock for in-situ metal production.",
-      "image": "/inventory/refined-iron-oxide.svg",
+      "image": "/inventory/sample-01-iron.png",
       "weightPerUnit": 0.005,
       "maxStack": 200
     },
@@ -207,7 +207,7 @@
       "category": "refined",
       "label": "Organic Extract",
       "description": "Volatile organic compounds captured during pyrolysis. Handle with extreme care — possible biosignature material.",
-      "image": "/inventory/refined-organic.svg",
+      "image": "/inventory/sample-02-organic.png",
       "weightPerUnit": 0.002,
       "maxStack": 200
     },
@@ -216,7 +216,7 @@
       "category": "refined",
       "label": "Sulfur Distillate",
       "description": "Concentrated sulfur compounds from thermal decomposition. Pungent. Useful in chemical synthesis.",
-      "image": "/inventory/refined-sulfur.svg",
+      "image": "/inventory/sample-03-sulfur.png",
       "weightPerUnit": 0.003,
       "maxStack": 200
     },
@@ -225,7 +225,7 @@
       "category": "refined",
       "label": "Brine Concentrate",
       "description": "Ancient Martian salt solution reconstituted during wet chemistry. Contains perchlorate traces.",
-      "image": "/inventory/refined-brine.svg",
+      "image": "/inventory/sample-04-brine.png",
       "weightPerUnit": 0.008,
       "maxStack": 100
     },
@@ -234,7 +234,7 @@
       "category": "refined",
       "label": "Noble Gas Vial",
       "description": "Sealed micro-vial of trapped noble gases released during isotope analysis. Argon, xenon, krypton.",
-      "image": "/inventory/refined-noble-gas.svg",
+      "image": "/inventory/sample-05-gas.png",
       "weightPerUnit": 0.001,
       "maxStack": 200
     },
@@ -243,7 +243,7 @@
       "category": "refined",
       "label": "Clay Mineral Sample",
       "description": "Purified phyllosilicate fraction from mudstone dissolution. Layered structure preserved.",
-      "image": "/inventory/refined-clay.svg",
+      "image": "/inventory/sample-06-clay.png",
       "weightPerUnit": 0.004,
       "maxStack": 200
     },
@@ -252,7 +252,7 @@
       "category": "refined",
       "label": "Meteoritic Alloy",
       "description": "Refined kamacite-taenite nickel-iron from meteorite wet chemistry. Extremely hard.",
-      "image": "/inventory/refined-meteoritic.svg",
+      "image": "/inventory/sample-07-meteor.png",
       "weightPerUnit": 0.01,
       "maxStack": 100
     },
@@ -261,7 +261,7 @@
       "category": "refined",
       "label": "Biosignature Sample",
       "description": "Sealed container of isotopically anomalous organic material. The most valuable substance on Mars.",
-      "image": "/inventory/refined-biosignature.svg",
+      "image": "/inventory/sample-08-bio.png",
       "weightPerUnit": 0.001,
       "maxStack": 50
     }
