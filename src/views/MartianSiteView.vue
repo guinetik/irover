@@ -71,6 +71,14 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
+      <div v-if="apxsState === 'counting'" class="deploy-overlay" key="apxs-countdown">
+        <div class="deploy-content">
+          <div class="deploy-label">APXS CONTACT</div>
+          <div class="deploy-altitude" style="font-size: 64px;">{{ apxsCountdown }}</div>
+        </div>
+      </div>
+    </Transition>
+    <Transition name="deploy-fade">
       <div v-if="rtgPhase === 'overdrive'" class="rtg-banner overdrive" key="rtg-overdrive">
         <span class="rtg-banner-icon">&#x26A1;</span>
         <span class="rtg-banner-text">OVERDRIVE ACTIVE</span>
@@ -199,6 +207,7 @@
       :spectra="chemCamArchivedSpectra"
       :dan-prospects="danArchivedProspects"
       :sam-results="samArchivedDiscoveries"
+      :apxs-results="apxsArchivedAnalyses"
       @close="scienceLogOpen = false"
       @queue-for-transmission="handleQueueForTx"
       @dequeue-from-transmission="handleDequeueFromTx"
@@ -263,6 +272,20 @@
     />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
+    <Teleport to="body">
+      <Transition name="science-fade">
+        <div v-if="apxsMinigameOpen && apxsGameComposition" class="science-overlay">
+          <div class="apxs-game-container">
+            <APXSMinigame
+              :rock-type="apxsGameRockType"
+              :composition="apxsGameComposition"
+              :duration-sec="apxsGameDuration"
+              @complete="handleAPXSComplete"
+            />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
     <Teleport to="body">
       <Transition name="deploy-fade">
         <div v-if="showOverdriveConfirm" key="overdrive-confirm" class="overdrive-confirm-overlay">
@@ -481,6 +504,10 @@ import LGAMailbox from '@/components/LGAMailbox.vue'
 import UHFUplinkPanel from '@/components/UHFUplinkPanel.vue'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
+import APXSMinigame from '@/components/APXSMinigame.vue'
+import { useAPXSArchive } from '@/composables/useAPXSArchive'
+import { generateComposition, computeAPXSSp, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
+import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -494,7 +521,7 @@ const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
 const rewardTrackOpen = ref(false)
-const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0)
+const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)
 /** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
@@ -774,7 +801,7 @@ const heaterHudButtonTitle = computed(() =>
     : 'Thermal / heater [H]',
 )
 const { mod: playerMod, applyRewardTrack } = usePlayerProfile()
-const { totalSP, sessionSP, chemcamSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival, awardTransmission } = useSciencePoints()
+const { totalSP, sessionSP, chemcamSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardAPXS, awardSurvival, awardTransmission } = useSciencePoints()
 const { milestones: rewardTrackMilestones, loaded: rewardTrackLoaded, trackModifiers, unlockedPerks, unlockedTrackIds, prevSP: rewardTrackPrevSP, hasPerk, loadRewardTrack } = useRewardTrack()
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
@@ -794,8 +821,19 @@ const {
   acknowledgeOldest: samAcknowledgeOldest,
 } = useSamQueue()
 const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries, queueForTransmission: queueSamTx, dequeueFromTransmission: dequeueSamTx } = useSamArchive()
+const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis } = useAPXSArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
+
+// --- APXS state ---
+const apxsMinigameOpen = ref(false)
+const apxsCountdown = ref(0)
+const apxsState = ref<APXSCountdownState>('idle')
+const apxsGameRockUuid = ref('')
+const apxsGameRockType = ref('')
+const apxsGameRockLabel = ref('')
+const apxsGameComposition = ref<APXSComposition | null>(null)
+const apxsGameDuration = ref(25)
 const { landmarks, loadLandmarks } = useMarsData()
 
 const siteTerrainParams = ref<TerrainParams | null>(null)
@@ -809,6 +847,12 @@ const libsAchievements = ref<LibsAchievement[]>([])
 const danAchievements = ref<DanAchievement[]>([])
 const survivalAchievements = ref<SurvivalAchievement[]>([])
 const samAchievementsData = ref<{ id: string; event: string; icon: string; title: string; description: string; type: string }[]>([])
+const apxsAchievementsData = ref<{ id: string; event: string; icon: string; title: string; description: string; type: string }[]>([])
+
+// APXS achievement counters
+const apxsAnalysisCount = ref(0)
+const apxsAnomalyCount = ref(0)
+const apxsSGradeCount = ref(0)
 /** Unlocked achievement ids this session (reactive so the HUD counter updates). */
 const unlockedAchievementIds = ref<string[]>([])
 
@@ -818,9 +862,16 @@ const totalAchievementCount = computed(
     danAchievements.value.length +
     survivalAchievements.value.length +
     samAchievementsData.value.length +
+    apxsAchievementsData.value.length +
     rewardTrackMilestones.value.length,
 )
 const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
+
+let apxsCompositionData: Record<string, Record<string, number>> = {}
+fetch('/data/apxs-compositions.json')
+  .then(r => r.json())
+  .then((data: Record<string, Record<string, number>>) => { apxsCompositionData = data })
+  .catch(() => {})
 
 fetch('/data/achievements.json')
   .then(r => r.json())
@@ -830,12 +881,14 @@ fetch('/data/achievements.json')
       'dan-prospecting'?: DanAchievement[]
       'mars-survival'?: SurvivalAchievement[]
       'sam-analysis'?: { id: string; event: string; icon: string; title: string; description: string; type: string }[]
+      'apxs-analysis'?: { id: string; event: string; icon: string; title: string; description: string; type: string }[]
       'reward-track'?: RewardTrackMilestone[]
     }) => {
       libsAchievements.value = data['libs-calibration'] ?? []
       danAchievements.value = data['dan-prospecting'] ?? []
       survivalAchievements.value = data['mars-survival'] ?? []
       samAchievementsData.value = data['sam-analysis'] ?? []
+      apxsAchievementsData.value = data['apxs-analysis'] ?? []
       if (data['reward-track']) loadRewardTrack(data['reward-track'])
     },
   )
@@ -852,6 +905,15 @@ function triggerDanAchievement(event: string): void {
 
 function triggerSamAchievement(event: string): void {
   for (const ach of samAchievementsData.value) {
+    if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
+      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
+      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+    }
+  }
+}
+
+function triggerAPXSAchievement(event: string): void {
+  for (const ach of apxsAchievementsData.value) {
     if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
       unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
       achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
@@ -933,6 +995,62 @@ function handleSamAcknowledge(): void {
   } else {
     samResultDialogEntry.value = null
   }
+}
+
+function handleAPXSComplete(result: {
+  accuracy: number
+  measuredComposition: APXSComposition
+  caughtElements: Set<APXSElementId>
+  totalCaught: number
+  totalEmitted: number
+}): void {
+  apxsMinigameOpen.value = false
+  apxsState.value = 'idle'
+
+  if (!apxsGameComposition.value) return
+
+  const { grade, sp, anomalies } = computeAPXSSp(
+    result.accuracy,
+    apxsGameComposition.value,
+    [...result.caughtElements],
+  )
+
+  // Award SP
+  const gain = awardAPXS(apxsGameRockUuid.value, sp, apxsGameRockLabel.value)
+  if (gain) sampleToastRef.value?.showSP(gain.amount, 'APXS', gain.bonus)
+
+  // Mark rock as analyzed
+  const rover = siteHandle.value?.rover
+  if (rover) {
+    const apxsInst = rover.instruments.find(i => i.id === 'apxs') as any
+    if (apxsInst && 'markAnalyzed' in apxsInst && apxsInst.currentTargetResult) {
+      apxsInst.markAnalyzed(apxsInst.currentTargetResult.rock)
+    }
+  }
+
+  // Archive
+  archiveAPXSAnalysis({
+    rockType: apxsGameRockType.value as any,
+    rockLabel: apxsGameRockLabel.value,
+    grade,
+    accuracy: result.accuracy,
+    trueComposition: apxsGameComposition.value,
+    measuredComposition: result.measuredComposition,
+    anomalies,
+    spEarned: gain?.amount ?? sp,
+    capturedSol: marsSol.value,
+    siteId,
+  })
+
+  // Achievements
+  apxsAnalysisCount.value++
+  if (anomalies.length > 0) apxsAnomalyCount.value++
+  if (grade === 'S') apxsSGradeCount.value++
+
+  if (apxsAnalysisCount.value === 1) triggerAPXSAchievement('first-analysis')
+  if (apxsAnalysisCount.value === 5) triggerAPXSAchievement('five-analyses')
+  if (apxsAnomalyCount.value === 5) triggerAPXSAchievement('five-anomalies')
+  if (apxsSGradeCount.value === 5) triggerAPXSAchievement('five-s-grades')
 }
 
 watchEffect(() => {
@@ -1099,6 +1217,20 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
     totalSP,
     triggerDanAchievement,
     awardTransmission,
+    onAPXSLaunchMinigame: (rockMeshUuid, rockType, rockLabel, durationSec) => {
+      const baseWeights = apxsCompositionData[rockType] ?? apxsCompositionData['basalt'] ?? {}
+      const comp = generateComposition(baseWeights)
+      apxsGameRockUuid.value = rockMeshUuid
+      apxsGameRockType.value = rockType
+      apxsGameRockLabel.value = rockLabel
+      apxsGameComposition.value = comp
+      apxsGameDuration.value = durationSec
+      apxsMinigameOpen.value = true
+      apxsState.value = 'playing'
+    },
+    onAPXSBlockedByCold: () => {
+      sampleToastRef.value?.showError('Too cold for APXS — warm up first')
+    },
     onInstrumentActivateRequest: handleActivate,
     onGlobalKeyDown,
     clearPois,
@@ -1166,6 +1298,8 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       heaterW,
       thermalZone,
       samIsProcessing,
+      apxsCountdown,
+      apxsState,
       // Antenna system refs
       uhfPassActive,
       uhfTransmitting,

@@ -9,7 +9,7 @@
           </div>
           <div class="science-panes">
             <nav class="science-cats" aria-label="Categories">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0" class="science-empty-side">No discoveries yet.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0" class="science-empty-side">No discoveries yet.</div>
               <div v-if="spectra.length > 0" class="science-accordion">
                 <button
                   type="button"
@@ -105,9 +105,29 @@
                   </li>
                 </ul>
               </div>
+              <!-- APXS accordion -->
+              <div v-if="apxsResults.length > 0" class="science-accordion">
+                <button type="button" class="science-acc-head"
+                  :aria-expanded="apxsExpanded"
+                  @click="apxsExpanded = !apxsExpanded">
+                  <span class="science-acc-chev" aria-hidden="true">{{ apxsExpanded ? '▼' : '▶' }}</span>
+                  <span class="science-acc-label">APXS</span>
+                  <span class="science-acc-badge font-instrument">{{ apxsResults.length }}</span>
+                </button>
+                <ul v-show="apxsExpanded" class="science-acc-list" role="list">
+                  <li v-for="a in sortedApxsResults" :key="a.archiveId">
+                    <button type="button" class="science-acc-item"
+                      :class="{ active: a.archiveId === selectedApxsId }"
+                      @click="selectedApxsId = a.archiveId">
+                      <span class="sai-rock">{{ a.rockLabel }}</span>
+                      <span class="sai-sol font-instrument">Sol {{ a.capturedSol }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </nav>
             <div class="science-detail">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0" class="science-empty">No archived data.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0" class="science-empty">No archived data.</div>
               <!-- ChemCam detail -->
               <template v-if="detailMode === 'chemcam'">
                 <div v-if="!selected" class="science-detail-hint">Select a spectrum in the list.</div>
@@ -243,6 +263,37 @@
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
                 </div>
               </template>
+              <!-- APXS detail -->
+              <template v-if="detailMode === 'apxs' && selectedApxs">
+                <div class="science-detail-header">
+                  <div class="sdh-instrument">APXS ANALYSIS</div>
+                  <div class="sdh-rock">{{ selectedApxs.rockLabel }}</div>
+                  <div class="sdh-sol">Sol {{ selectedApxs.capturedSol }}</div>
+                </div>
+                <div class="science-detail-body">
+                  <div style="margin-bottom: 8px;">
+                    <span style="font-size: 11px; color: #e8a060; letter-spacing: 0.1em;">GRADE: </span>
+                    <span class="font-instrument" style="font-size: 18px; font-weight: bold;"
+                      :style="{ color: selectedApxs.grade === 'S' ? '#ffdd33' : selectedApxs.grade === 'A' ? '#44dd88' : '#e8a060' }">
+                      {{ selectedApxs.grade }}
+                    </span>
+                    <span style="font-size: 11px; color: rgba(196,117,58,0.6); margin-left: 12px;">
+                      Accuracy: {{ selectedApxs.accuracy.toFixed(1) }}%
+                    </span>
+                  </div>
+                  <APXSResultChart
+                    :true-composition="selectedApxs.trueComposition"
+                    :measured-composition="selectedApxs.measuredComposition"
+                    :grade="selectedApxs.grade"
+                  />
+                  <div v-if="selectedApxs.anomalies.length > 0" style="margin-top: 8px; font-size: 10px; color: #cc55ff;">
+                    Trace anomalies: {{ selectedApxs.anomalies.join(', ') }}
+                  </div>
+                  <div style="margin-top: 8px; font-size: 11px; color: rgba(196,117,58,0.5);">
+                    +{{ selectedApxs.spEarned }} SP
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -257,12 +308,15 @@ import type { ArchivedChemCamSpectrum } from '@/types/chemcamArchive'
 import type { SpectrumPeak } from '@/three/instruments/ChemCamController'
 import type { ArchivedDANProspect } from '@/types/danArchive'
 import type { ArchivedSAMDiscovery } from '@/types/samArchive'
+import type { ArchivedAPXSAnalysis } from '@/composables/useAPXSArchive'
+import APXSResultChart from '@/components/APXSResultChart.vue'
 
 const props = defineProps<{
   open: boolean
   spectra: ArchivedChemCamSpectrum[]
   danProspects: ArchivedDANProspect[]
   samResults: ArchivedSAMDiscovery[]
+  apxsResults: ArchivedAPXSAnalysis[]
 }>()
 
 const emit = defineEmits<{
@@ -280,7 +334,10 @@ const selectedDanId = ref<string | null>(null)
 const samExpanded = ref(true)
 const selectedSamId = ref<string | null>(null)
 
-const detailMode = ref<'chemcam' | 'dan' | 'sam'>('chemcam')
+const apxsExpanded = ref(false)
+const selectedApxsId = ref<string | null>(null)
+
+const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs'>('chemcam')
 
 watch(selectedDanId, (id) => {
   if (id) detailMode.value = 'dan'
@@ -290,6 +347,9 @@ watch(selectedId, (id) => {
 })
 watch(selectedSamId, (id) => {
   if (id) detailMode.value = 'sam'
+})
+watch(selectedApxsId, (id) => {
+  if (id) detailMode.value = 'apxs'
 })
 
 watch(
@@ -321,6 +381,14 @@ const sortedSamResults = computed(() =>
 
 const selectedSam = computed(() =>
   sortedSamResults.value.find((s) => s.archiveId === selectedSamId.value) ?? null,
+)
+
+const sortedApxsResults = computed(() =>
+  [...props.apxsResults].sort((a, b) => b.capturedAtMs - a.capturedAtMs),
+)
+
+const selectedApxs = computed(() =>
+  sortedApxsResults.value.find((s) => s.archiveId === selectedApxsId.value) ?? null,
 )
 
 const RARITY_COLORS: Record<string, string> = {
@@ -894,5 +962,40 @@ function formatLatLon(lat: number, lon: number): string {
   border: 1px solid rgba(102, 255, 238, 0.15);
   border-radius: 4px;
   background: rgba(102, 255, 238, 0.05);
+}
+
+/* APXS detail styles */
+.science-detail-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(196, 117, 58, 0.15);
+}
+
+.sdh-instrument {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #e8a060;
+}
+
+.sdh-rock {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ccc;
+  margin-top: 2px;
+}
+
+.sdh-sol {
+  font-size: 11px;
+  color: rgba(196, 117, 58, 0.5);
+  margin-top: 2px;
+}
+
+.science-detail-body {
+  padding: 12px 16px;
+}
+
+.sai-sol {
+  font-size: 10px;
+  color: rgba(196, 117, 58, 0.5);
 }
 </style>

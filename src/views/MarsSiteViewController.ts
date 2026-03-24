@@ -50,6 +50,7 @@ import { createMastCamTickHandler } from './site-controllers/MastCamTickHandler'
 import { createChemCamTickHandler } from './site-controllers/ChemCamTickHandler'
 import { createOrbitalDropTickHandler } from './site-controllers/OrbitalDropTickHandler'
 import { createAntennaTickHandler, type AntennaTickRefs } from './site-controllers/AntennaTickHandler'
+import { createAPXSTickHandler } from './site-controllers/APXSTickHandler'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 
 /** Seconds to hold position before DAN prospecting begins. */
@@ -235,6 +236,8 @@ export interface MarsSiteViewRefs {
   heaterW: Ref<number>
   thermalZone: Ref<ThermalZone>
   samIsProcessing: Ref<boolean>
+  apxsCountdown: Ref<number>
+  apxsState: Ref<'idle' | 'counting' | 'launching' | 'playing'>
   // Antenna system refs
   uhfPassActive: Ref<boolean>
   uhfTransmitting: Ref<boolean>
@@ -287,6 +290,8 @@ export interface MarsSiteViewContext {
   totalSP: Ref<number>
   triggerDanAchievement: (event: string) => void
   awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
+  onAPXSLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
+  onAPXSBlockedByCold: () => void
   onInstrumentActivateRequest: () => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
   clearPois: () => void
@@ -487,6 +492,21 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       drillProgress: ctx.refs.drillProgress,
     },
     { sampleToastRef, playerMod, awardSP },
+  )
+
+  const apxsHandler = createAPXSTickHandler(
+    {
+      crosshairVisible: ctx.refs.crosshairVisible,
+      crosshairColor: ctx.refs.crosshairColor,
+      crosshairX: ctx.refs.crosshairX,
+      crosshairY: ctx.refs.crosshairY,
+      apxsCountdown: ctx.refs.apxsCountdown,
+      apxsState: ctx.refs.apxsState,
+    },
+    {
+      onLaunchMinigame: ctx.onAPXSLaunchMinigame,
+      onBlockedByCold: ctx.onAPXSBlockedByCold,
+    },
   )
 
   const orbitalDropHandler = createOrbitalDropTickHandler({
@@ -760,6 +780,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       antennaHandler.tick(fctx)
 
       drillHandler.tick(fctx)
+      apxsHandler.tick(fctx)
 
       // --- Thermal + heater ---
       if (siteTerrainParams.value) {
@@ -840,6 +861,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         mastCamHandler.initIfReady(fctx)
         chemCamHandler.initIfReady(fctx)
         danHandler.initIfReady(fctx)
+        apxsHandler.initIfReady(fctx)
       }
 
       mastCamHandler.tick(fctx)
@@ -910,6 +932,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     roverVfxHandler.dispose()
     danHandler.dispose()
     drillHandler.dispose()
+    apxsHandler.dispose()
     mastCamHandler.dispose()
     chemCamHandler.dispose()
     orbitalDropHandler.dispose()
