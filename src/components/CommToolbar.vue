@@ -25,8 +25,8 @@ const emit = defineEmits<{
 }>()
 
 const comms = [
-  { slot: 10, key: 'R', id: 'antenna-lg',  name: 'LGA',  icon: '\uD83D\uDCE1' },
-  { slot: 11, key: 'T', id: 'antenna-uhf', name: 'UHF',  icon: '\uD83D\uDCF6' },
+  { slot: 11, key: 'R', id: 'antenna-lg',  name: 'LGA',  icon: '\uD83D\uDCE1' },
+  { slot: 12, key: 'T', id: 'antenna-uhf', name: 'UHF',  icon: '\uD83D\uDCF6' },
 ]
 
 function handleClick(slot: number) {
@@ -41,15 +41,17 @@ function handleClick(slot: number) {
 <style scoped>
 .comm-toolbar {
   position: fixed;
-  top: 86px;
+  top: 102px;
   left: 10px;
+  box-sizing: border-box;
+  width: var(--site-left-stack-width);
   display: flex;
-  gap: 3px;
-  padding: 4px;
+  gap: 4px;
+  padding: 6px;
   background: rgba(10, 5, 2, 0.65);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(196, 117, 58, 0.15);
-  border-radius: 5px;
+  border-radius: 8px;
   z-index: 42;
 }
 
@@ -57,9 +59,10 @@ function handleClick(slot: number) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  width: 44px;
-  padding: 4px 3px;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 3px;

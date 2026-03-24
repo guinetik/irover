@@ -1,27 +1,27 @@
 /**
- * Immutable DAN (Dynamic Albedo of Neutrons) prospect record saved when the
- * player acknowledges a DAN reading. Intended for UHF transmission queue.
+ * Immutable DAN prospect record saved when a prospect completes.
  */
-export interface ArchivedDanProspect {
-  /** Stable id for this archive row */
+export interface ArchivedDANProspect {
   archiveId: string
-  /** Unix ms when DAN acquisition finished */
-  capturedAtMs: number
-  /** Mission sol when DAN acquisition finished */
+  /** Mission sol when prospect completed */
   capturedSol: number
-  /** Unix ms when the player acknowledged the result */
-  acknowledgedAtMs: number
-  /** Mission sol when acknowledged */
-  solAcknowledged: number
+  /** Unix ms when prospect completed */
+  capturedAtMs: number
   siteId: string
+  /** Best-effort areographic coordinates */
   latitudeDeg: number
   longitudeDeg: number
-  /** Qualitative signal strength */
+  /** Rover world XZ when prospect completed (scene units) */
+  roverWorldX: number
+  roverWorldZ: number
+  /** 0–1 signal strength of the hit that triggered this prospect */
+  signalStrength: number
+  /** Quality label derived from signal strength */
   quality: 'Weak' | 'Moderate' | 'Strong'
-  /** True if hydrogen/water signature was confirmed above threshold */
+  /** Whether the water roll succeeded */
   waterConfirmed: boolean
-  /** Estimated hydrogen equivalent water fraction (0–1) */
-  waterFraction: number
-  /** After UHF downlink succeeds */
+  /** 0–1 reservoir quality (= signal strength) */
+  reservoirQuality: number
+  /** After LGA/UHF transmit — for future funding flow */
   transmitted: boolean
 }

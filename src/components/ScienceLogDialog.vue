@@ -9,8 +9,8 @@
           </div>
           <div class="science-panes">
             <nav class="science-cats" aria-label="Categories">
-              <div v-if="spectra.length === 0" class="science-empty-side">No discoveries yet.</div>
-              <div v-else class="science-accordion">
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0" class="science-empty-side">No discoveries yet.</div>
+              <div v-if="spectra.length > 0" class="science-accordion">
                 <button
                   type="button"
                   class="science-acc-head"
@@ -43,10 +43,64 @@
                   </li>
                 </ul>
               </div>
+              <!-- DAN accordion -->
+              <div v-if="danProspects.length > 0" class="science-accordion science-accordion-dan">
+                <button
+                  type="button"
+                  class="science-acc-head science-acc-head-dan"
+                  :aria-expanded="danExpanded"
+                  aria-controls="science-dan-list"
+                  id="science-dan-trigger"
+                  @click="danExpanded = !danExpanded"
+                >
+                  <span class="science-acc-chev" aria-hidden="true">{{ danExpanded ? '▼' : '▶' }}</span>
+                  <span class="science-acc-label">DAN</span>
+                  <span class="science-acc-badge science-acc-badge-dan font-instrument">{{ danProspects.length }}</span>
+                </button>
+                <ul
+                  v-show="danExpanded"
+                  id="science-dan-list"
+                  class="science-acc-list"
+                  role="list"
+                  aria-labelledby="science-dan-trigger"
+                >
+                  <li v-for="p in sortedDanProspects" :key="p.archiveId">
+                    <button
+                      type="button"
+                      class="science-acc-item"
+                      :class="{ active: p.archiveId === selectedDanId }"
+                      @click="selectedDanId = p.archiveId"
+                    >
+                      <span class="sai-rock">{{ p.quality }} Signal{{ p.waterConfirmed ? ' — WATER' : '' }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ p.capturedSol }} · {{ formatShortDate(p.capturedAtMs) }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <!-- SAM accordion -->
+              <div v-if="samResults.length > 0" class="science-accordion science-accordion-sam">
+                <button type="button" class="science-acc-head science-acc-head-sam"
+                  :aria-expanded="samExpanded" @click="samExpanded = !samExpanded">
+                  <span class="science-acc-chev" aria-hidden="true">{{ samExpanded ? '▼' : '▶' }}</span>
+                  <span class="science-acc-label">SAM</span>
+                  <span class="science-acc-badge science-acc-badge-sam font-instrument">{{ samResults.length }}</span>
+                </button>
+                <ul v-show="samExpanded" class="science-acc-list" role="list">
+                  <li v-for="r in sortedSamResults" :key="r.archiveId">
+                    <button type="button" class="science-acc-item"
+                      :class="{ active: r.archiveId === selectedSamId }"
+                      @click="selectedSamId = r.archiveId">
+                      <span class="sai-rock" :style="{ color: RARITY_COLORS[r.rarity] ?? '#888' }">{{ r.discoveryName }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ r.capturedSol }} · {{ r.modeName }}</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </nav>
             <div class="science-detail">
-              <div v-if="spectra.length === 0" class="science-empty">No archived LIBS spectra.</div>
-              <template v-else>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0" class="science-empty">No archived data.</div>
+              <!-- ChemCam detail -->
+              <template v-if="detailMode === 'chemcam'">
                 <div v-if="!selected" class="science-detail-hint">Select a spectrum in the list.</div>
                 <div v-else class="science-record-body">
                     <div class="science-plot-wrap">
@@ -91,6 +145,50 @@
                     </dl>
                 </div>
               </template>
+              <!-- DAN detail -->
+              <template v-if="detailMode === 'dan'">
+                <div v-if="!selectedDan" class="science-detail-hint">Select a prospect in the list.</div>
+                <div v-else class="science-record-body science-dan-detail">
+                  <div class="dan-detail-graphic">
+                    <div class="dan-detail-placeholder">
+                      <div class="dan-detail-icon">&#x2261;</div>
+                      <div class="dan-detail-text">NEUTRON MAP</div>
+                      <div class="dan-detail-sub">Traverse visualization pending</div>
+                    </div>
+                  </div>
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Quality</dt><dd :style="{ color: danQualityColor }">{{ selectedDan.quality }}</dd></div>
+                    <div class="sm-row"><dt>Signal</dt><dd class="sm-instr">{{ Math.round(selectedDan.signalStrength * 100) }}%</dd></div>
+                    <div class="sm-row"><dt>Water</dt><dd :style="{ color: selectedDan.waterConfirmed ? '#44aaff' : '#886a50' }">{{ selectedDan.waterConfirmed ? 'CONFIRMED' : 'INCONCLUSIVE' }}</dd></div>
+                    <div class="sm-row"><dt>Reservoir</dt><dd class="sm-instr">{{ Math.round(selectedDan.reservoirQuality * 100) }}%</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedDan.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Lat / Lon</dt><dd class="sm-instr">{{ formatLatLon(selectedDan.latitudeDeg, selectedDan.longitudeDeg) }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedDan.capturedSol }} · {{ formatUtc(selectedDan.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedDan.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                </div>
+              </template>
+              <!-- SAM detail -->
+              <template v-if="detailMode === 'sam'">
+                <div v-if="!selectedSam" class="science-detail-hint">Select a discovery in the list.</div>
+                <div v-else class="science-record-body">
+                  <div class="sam-detail-rarity" :style="{ background: RARITY_COLORS[selectedSam.rarity] + '22', borderColor: RARITY_COLORS[selectedSam.rarity] + '44' }">
+                    <span :style="{ color: RARITY_COLORS[selectedSam.rarity] }">{{ selectedSam.rarity.toUpperCase() }} DISCOVERY</span>
+                  </div>
+                  <div class="sam-detail-name">{{ selectedSam.discoveryName }}</div>
+                  <div class="sam-detail-desc">{{ selectedSam.description }}</div>
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Mode</dt><dd>{{ selectedSam.modeName }}</dd></div>
+                    <div class="sm-row"><dt>Sample</dt><dd>{{ selectedSam.sampleLabel }}</dd></div>
+                    <div class="sm-row"><dt>Quality</dt><dd class="sm-instr">{{ selectedSam.quality }}%</dd></div>
+                    <div class="sm-row"><dt>SP Earned</dt><dd class="sm-instr" style="color: #5dc9a5">+{{ selectedSam.spEarned }}</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedSam.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Lat / Lon</dt><dd class="sm-instr">{{ formatLatLon(selectedSam.latitudeDeg, selectedSam.longitudeDeg) }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedSam.capturedSol }} · {{ formatUtc(selectedSam.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedSam.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -103,10 +201,14 @@
 import { ref, computed, watch } from 'vue'
 import type { ArchivedChemCamSpectrum } from '@/types/chemcamArchive'
 import type { SpectrumPeak } from '@/three/instruments/ChemCamController'
+import type { ArchivedDANProspect } from '@/types/danArchive'
+import type { ArchivedSAMDiscovery } from '@/types/samArchive'
 
 const props = defineProps<{
   open: boolean
   spectra: ArchivedChemCamSpectrum[]
+  danProspects: ArchivedDANProspect[]
+  samResults: ArchivedSAMDiscovery[]
 }>()
 
 defineEmits<{
@@ -115,6 +217,24 @@ defineEmits<{
 
 const chemcamExpanded = ref(true)
 const selectedId = ref<string | null>(null)
+
+const danExpanded = ref(true)
+const selectedDanId = ref<string | null>(null)
+
+const samExpanded = ref(true)
+const selectedSamId = ref<string | null>(null)
+
+const detailMode = ref<'chemcam' | 'dan' | 'sam'>('chemcam')
+
+watch(selectedDanId, (id) => {
+  if (id) detailMode.value = 'dan'
+})
+watch(selectedId, (id) => {
+  if (id) detailMode.value = 'chemcam'
+})
+watch(selectedSamId, (id) => {
+  if (id) detailMode.value = 'sam'
+})
 
 watch(
   () => props.open,
@@ -130,6 +250,36 @@ const sortedSpectra = computed(() =>
 const selected = computed(() =>
   sortedSpectra.value.find((s) => s.archiveId === selectedId.value) ?? null,
 )
+
+const sortedDanProspects = computed(() =>
+  [...props.danProspects].sort((a, b) => b.capturedAtMs - a.capturedAtMs),
+)
+
+const selectedDan = computed(() =>
+  sortedDanProspects.value.find((s) => s.archiveId === selectedDanId.value) ?? null,
+)
+
+const sortedSamResults = computed(() =>
+  [...props.samResults].sort((a, b) => b.capturedAtMs - a.capturedAtMs),
+)
+
+const selectedSam = computed(() =>
+  sortedSamResults.value.find((s) => s.archiveId === selectedSamId.value) ?? null,
+)
+
+const RARITY_COLORS: Record<string, string> = {
+  common: '#888',
+  uncommon: '#5dc9a5',
+  rare: '#ef9f27',
+  legendary: '#cc44ff',
+}
+
+const danQualityColor = computed(() => {
+  if (!selectedDan.value) return '#888'
+  if (selectedDan.value.quality === 'Strong') return '#44aaff'
+  if (selectedDan.value.quality === 'Moderate') return '#66ccff'
+  return '#88aacc'
+})
 
 watch(
   () => [props.open, props.spectra] as const,
@@ -254,6 +404,11 @@ function formatLatLon(lat: number, lon: number): string {
   border-radius: 10px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
   overflow: hidden;
+  /* Teal-tinted scrollbars for accordion + detail (inherits to scrollable children; Firefox + WebKit) */
+  --scrollbar-track: rgba(4, 14, 12, 0.9);
+  --scrollbar-thumb: rgba(102, 255, 238, 0.22);
+  --scrollbar-thumb-hover: rgba(102, 255, 238, 0.42);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .science-head {
@@ -525,6 +680,73 @@ function formatLatLon(lat: number, lon: number): string {
 .sm-instr {
   font-family: var(--font-instrument);
   font-variant-numeric: tabular-nums;
+}
+
+.science-acc-head-dan {
+  color: #44aaff;
+  background: rgba(68, 170, 255, 0.08);
+}
+.science-acc-head-dan:hover {
+  background: rgba(68, 170, 255, 0.14);
+}
+.science-acc-badge-dan {
+  background: rgba(68, 170, 255, 0.75);
+}
+.science-accordion-dan {
+  border-color: rgba(68, 170, 255, 0.15);
+}
+.science-accordion-dan .science-acc-chev {
+  color: rgba(68, 170, 255, 0.65);
+}
+
+.dan-detail-graphic {
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 8px;
+  background: rgba(5, 10, 25, 0.6);
+  border: 1px solid rgba(68, 170, 255, 0.1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+}
+.dan-detail-placeholder {
+  text-align: center;
+  color: rgba(68, 170, 255, 0.3);
+}
+.dan-detail-icon { font-size: 28px; margin-bottom: 6px; }
+.dan-detail-text { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; }
+.dan-detail-sub { font-size: 10px; margin-top: 4px; opacity: 0.6; }
+
+.science-acc-head-sam { color: #e8a060; background: rgba(232, 160, 96, 0.08); }
+.science-acc-head-sam:hover { background: rgba(232, 160, 96, 0.14); }
+.science-acc-badge-sam { background: rgba(232, 160, 96, 0.75); }
+.science-accordion-sam { border-color: rgba(232, 160, 96, 0.15); }
+.science-accordion-sam .science-acc-chev { color: rgba(232, 160, 96, 0.65); }
+
+.sam-detail-rarity {
+  padding: 6px 12px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-align: center;
+}
+.sam-detail-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #e8f0e8;
+  text-align: center;
+  margin: 8px 0 4px;
+}
+.sam-detail-desc {
+  font-size: 11px;
+  color: rgba(196, 117, 58, 0.7);
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 12px;
 }
 
 .science-fade-enter-active,

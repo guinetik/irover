@@ -1,17 +1,30 @@
 <template>
   <Teleport to="body">
-    <TransitionGroup name="ach-slide" tag="div" class="achievement-stack">
+    <TransitionGroup
+      name="ach-slide"
+      tag="div"
+      class="achievement-stack"
+      aria-live="polite"
+      aria-relevant="additions"
+    >
       <div
         v-for="item in visible"
         :key="item.id"
         class="achievement-banner"
+        role="status"
       >
-        <div class="ach-icon">{{ item.icon }}</div>
-        <div class="ach-body">
-          <div class="ach-title">{{ item.title }}</div>
-          <div class="ach-desc">{{ item.description }}</div>
+        <div class="ach-unlocked-strip">
+          <span class="ach-trophy-mark" aria-hidden="true">🏆</span>
+          <span class="ach-unlocked-text">Achievement unlocked</span>
         </div>
-        <div class="ach-type">{{ item.type }}</div>
+        <div class="ach-main">
+          <div class="ach-icon">{{ item.icon }}</div>
+          <div class="ach-body">
+            <div class="ach-title">{{ item.title }}</div>
+            <div class="ach-desc">{{ item.description }}</div>
+          </div>
+          <div class="ach-type">{{ item.type }}</div>
+        </div>
       </div>
     </TransitionGroup>
   </Teleport>
@@ -60,16 +73,51 @@ defineExpose({ show })
 
 .achievement-banner {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
-  background: rgba(5, 25, 30, 0.92);
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  background: rgba(12, 8, 5, 0.94);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(102, 255, 238, 0.4);
+  border: 1px solid rgba(196, 149, 106, 0.45);
   border-radius: 8px;
-  box-shadow: 0 0 20px rgba(102, 255, 238, 0.15), inset 0 0 30px rgba(102, 255, 238, 0.03);
+  box-shadow:
+    0 0 0 1px rgba(232, 176, 96, 0.12),
+    0 8px 28px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(232, 176, 96, 0.12);
   min-width: 360px;
   max-width: 500px;
+}
+
+.ach-unlocked-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, rgba(196, 149, 106, 0.18), rgba(102, 255, 238, 0.06));
+  border-bottom: 1px solid rgba(196, 149, 106, 0.25);
+}
+
+.ach-trophy-mark {
+  font-size: 16px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(232, 176, 96, 0.45));
+}
+
+.ach-unlocked-text {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #e8b060;
+}
+
+.ach-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 12px;
 }
 
 .ach-icon {

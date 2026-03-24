@@ -11,6 +11,8 @@
       <span class="slot-icon">{{ inst.icon }}</span>
       <span class="slot-name">{{ inst.name }}</span>
       <span v-if="inst.slot === 2 && (chemCamUnread ?? 0) > 0" class="badge-dot font-instrument">{{ chemCamUnread }}</span>
+      <span v-if="inst.slot === 5 && (danScanning ?? false)" class="badge-dan">&#x2022;</span>
+      <span v-if="inst.slot === 6 && (samUnread ?? 0) > 0" class="badge-dot font-instrument">{{ samUnread }}</span>
     </button>
 
     <div class="toolbar-divider" />
@@ -32,6 +34,8 @@ const props = defineProps<{
   activeSlot: number | null
   inventoryOpen?: boolean
   chemCamUnread?: number
+  danScanning?: boolean
+  samUnread?: number
 }>()
 
 const emit = defineEmits<{
@@ -40,16 +44,23 @@ const emit = defineEmits<{
   toggleInventory: []
 }>()
 
-const instruments = [
+interface ToolbarInstrument {
+  slot: number
+  id: string
+  name: string
+  icon: string
+}
+
+const instruments: ToolbarInstrument[] = [
   { slot: 1, id: 'mastcam', name: 'MCAM', icon: '\u25A3' },
   { slot: 2, id: 'chemcam', name: 'CHEM', icon: '\u2316' },
-  { slot: 3, id: 'apxs',    name: 'APXS', icon: '\u25CE' },
-  { slot: 4, id: 'dan',     name: 'DAN',  icon: '\u2261' },
-  { slot: 5, id: 'sam',     name: 'SAM',  icon: '\u2394' },
-  { slot: 6, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },
-  { slot: 7, id: 'rems',    name: 'REMS', icon: '\u2602' },
-  { slot: 8, id: 'rad',     name: 'RAD',  icon: '\u2622' },
-  { slot: 9, id: 'heater',  name: 'HTR',  icon: '\u2668' },
+  { slot: 3, id: 'drill',   name: 'DRIL', icon: '\u25CE' },
+  { slot: 4, id: 'apxs',    name: 'APXS', icon: '\u2295' },
+  { slot: 5, id: 'dan',     name: 'DAN',  icon: '\u2261' },
+  { slot: 6, id: 'sam',     name: 'SAM',  icon: '\u2394' },
+  { slot: 7, id: 'rtg',     name: 'RTG',  icon: '\u26A1' },
+  { slot: 8, id: 'rems',    name: 'REMS', icon: '\u2602' },
+  { slot: 9, id: 'rad',     name: 'RAD',  icon: '\u2622' },
 ]
 
 function handleClick(slot: number) {
@@ -165,5 +176,24 @@ function handleClick(slot: number) {
   align-self: stretch;
   margin: 4px 2px;
   background: rgba(196, 117, 58, 0.15);
+}
+
+.badge-dan {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  color: #44aaff;
+  font-size: 16px;
+  line-height: 10px;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(68, 170, 255, 0.8);
+  animation: dan-badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dan-badge-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1.0; }
 }
 </style>

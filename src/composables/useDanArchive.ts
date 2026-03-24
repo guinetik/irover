@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
-import type { ArchivedDanProspect } from '@/types/danArchive'
+import type { ArchivedDANProspect } from '@/types/danArchive'
+import { approximateLatLonFromTangentOffset } from '@/lib/areography'
 
 const STORAGE_KEY = 'mars-dan-archive-v1'
 
@@ -10,90 +11,70 @@ function newArchiveId(): string {
   return `dan-arch-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function migrateDanArchiveRow(raw: unknown): ArchivedDanProspect | null {
-  if (!raw || typeof raw !== 'object') return null
-  const o = raw as Record<string, unknown>
-  if (typeof o.archiveId !== 'string') return null
-  const now = Date.now()
-  const ackMs = typeof o.acknowledgedAtMs === 'number' ? o.acknowledgedAtMs : now
-  const capMs = typeof o.capturedAtMs === 'number' ? o.capturedAtMs : ackMs
-  return {
-    archiveId: o.archiveId,
-    capturedAtMs: capMs,
-    capturedSol: typeof o.capturedSol === 'number' ? o.capturedSol : 1,
-    acknowledgedAtMs: ackMs,
-    solAcknowledged: typeof o.solAcknowledged === 'number' ? o.solAcknowledged : 1,
-    siteId: typeof o.siteId === 'string' ? o.siteId : '',
-    latitudeDeg: typeof o.latitudeDeg === 'number' ? o.latitudeDeg : 0,
-    longitudeDeg: typeof o.longitudeDeg === 'number' ? o.longitudeDeg : 0,
-    quality: (o.quality as ArchivedDanProspect['quality']) ?? 'Weak',
-    waterConfirmed: o.waterConfirmed === true,
-    waterFraction: typeof o.waterFraction === 'number' ? o.waterFraction : 0,
-    transmitted: o.transmitted === true,
-  }
-}
-
-function loadFromStorage(): ArchivedDanProspect[] {
+function loadFromStorage(): ArchivedDANProspect[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed
-      .map(migrateDanArchiveRow)
-      .filter((r): r is ArchivedDanProspect => r !== null)
+    return parsed.filter((r): r is ArchivedDANProspect =>
+      r && typeof r === 'object' && typeof r.archiveId === 'string',
+    )
   } catch {
     return []
   }
 }
 
-function saveToStorage(rows: ArchivedDanProspect[]): void {
+function saveToStorage(rows: ArchivedDANProspect[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rows))
-  } catch {
-    /* quota / private mode */
-  }
+  } catch { /* quota / private mode */ }
 }
 
-const prospects = ref<ArchivedDanProspect[]>(loadFromStorage())
+const prospects = ref<ArchivedDANProspect[]>(loadFromStorage())
 
-/** Exported for tests only — resets module-level singleton state */
-export function resetForTests(): void {
-  prospects.value = []
-}
-
-/**
- * Persisted DAN prospects acknowledged by the player.
- * Call `markTransmitted` when UHF downlink completes.
- */
 export function useDanArchive() {
-  const pendingTransmission = computed(() => prospects.value.filter((p) => !p.transmitted))
+  const pendingTransmission = computed(() => prospects.value.filter((s) => !s.transmitted))
 
   function archiveProspect(params: {
-    capturedAtMs: number
     capturedSol: number
-    solAcknowledged: number
     siteId: string
-    latitudeDeg: number
-    longitudeDeg: number
-    quality: ArchivedDanProspect['quality']
+    siteLatDeg: number
+    siteLonDeg: number
+    roverWorldX: number
+    roverWorldZ: number
+    roverSpawnX: number
+    roverSpawnZ: number
+    siteUnitsPerMeter?: number
+    signalStrength: number
+    quality: 'Weak' | 'Moderate' | 'Strong'
     waterConfirmed: boolean
-    waterFraction: number
-  }): ArchivedDanProspect {
-    const row: ArchivedDanProspect = {
+    reservoirQuality: number
+  }): ArchivedDANProspect {
+    const { latitudeDeg, longitudeDeg } = approximateLatLonFromTangentOffset(
+      params.siteLatDeg,
+      params.siteLonDeg,
+      params.roverWorldX - params.roverSpawnX,
+      params.roverWorldZ - params.roverSpawnZ,
+      params.siteUnitsPerMeter ?? 1,
+    )
+
+    const row: ArchivedDANProspect = {
       archiveId: newArchiveId(),
-      capturedAtMs: params.capturedAtMs,
       capturedSol: params.capturedSol,
-      acknowledgedAtMs: Date.now(),
-      solAcknowledged: params.solAcknowledged,
+      capturedAtMs: Date.now(),
       siteId: params.siteId,
-      latitudeDeg: params.latitudeDeg,
-      longitudeDeg: params.longitudeDeg,
+      latitudeDeg,
+      longitudeDeg,
+      roverWorldX: params.roverWorldX,
+      roverWorldZ: params.roverWorldZ,
+      signalStrength: params.signalStrength,
       quality: params.quality,
       waterConfirmed: params.waterConfirmed,
-      waterFraction: params.waterFraction,
+      reservoirQuality: params.reservoirQuality,
       transmitted: false,
     }
+
     const next = [...prospects.value, row]
     prospects.value = next
     saveToStorage(next)
@@ -101,8 +82,8 @@ export function useDanArchive() {
   }
 
   function markTransmitted(archiveId: string): void {
-    const next = prospects.value.map((p) =>
-      p.archiveId === archiveId ? { ...p, transmitted: true } : p,
+    const next = prospects.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, transmitted: true } : s,
     )
     prospects.value = next
     saveToStorage(next)

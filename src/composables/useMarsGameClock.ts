@@ -1,4 +1,12 @@
 import { ref } from 'vue'
+import {
+  getRtgPhaseSceneSeconds,
+  RTG_MISSION_DURATIONS,
+  sceneSecondsFromMarsClockHours,
+  sceneSecondsFromSolFraction,
+  secondsPerSol,
+} from '@/lib/missionTime'
+import { missionCooldowns, MISSION_COOLDOWN_ID } from '@/lib/missionCooldowns'
 
 /**
  * Global simulation clock for the Martian site: sol / sky advance and optional full pause.
@@ -6,6 +14,8 @@ import { ref } from 'vue'
  * - **Rover clock**: `timeOfDay` / sun only advance after `notifyRoverReady()` (rover under player control).
  * - **Pause**: `setClockPaused(true)` freezes simulation time — no sun movement, no rover movement,
  *   no power/thermal integration (caller must pass `sceneDelta === 0` from `getSceneDelta`).
+ * - **Mission time**: use `secondsPerSol` / `sceneSecondsFromSolFraction` / `sceneSecondsFromMarsClockHours`
+ *   for any duration tied to sol length; tick {@link missionCooldowns} with the same `sceneDelta`.
  *
  * Intended for modal dialogs and scripted beats. Dialogs can call `useMarsGameClock()` and toggle pause.
  */
@@ -50,5 +60,17 @@ export function useMarsGameClock() {
     setClockPaused,
     getSceneDelta,
     getSkyDelta,
+    /** Sol-relative duration helpers (backed by `MarsSky.SOL_DURATION`). */
+    secondsPerSol,
+    sceneSecondsFromSolFraction,
+    sceneSecondsFromMarsClockHours,
+    /** RTG balance knobs (Mars hours / sol fractions) and resolved scene-second lengths. */
+    RTG_MISSION_DURATIONS,
+    getRtgPhaseSceneSeconds,
+    /** Central cooldown / timed windows — tick every frame with `getSceneDelta(rawDelta)`. */
+    missionCooldowns,
+    MISSION_COOLDOWN_ID,
   }
 }
+
+export type { MissionCooldownId } from '@/lib/missionCooldowns'

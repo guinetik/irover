@@ -7,7 +7,7 @@ export interface InventoryItemsFile {
   items: InventoryItemDefJson[]
 }
 
-export type InventoryItemCategory = 'rock' | 'component' | 'trace'
+export type InventoryItemCategory = 'rock' | 'component' | 'trace' | 'refined'
 
 /** One row from the inventory catalog JSON. */
 export interface InventoryItemDefJson {
@@ -47,7 +47,12 @@ export interface InventoryStack {
   totalWeightKg: number
 }
 
-/** Payload after a successful APXS rock collection (for UI + science scoring). */
+/** Result of dev-only inventory spawn by id (`devSpawnInventoryItem`). */
+export type DevSpawnInventoryItemResult =
+  | { ok: true }
+  | { ok: false; message: string }
+
+/** Payload after a successful arm drill rock collection (for UI + science scoring). */
 export interface CollectedRockSample {
   rockMeshUuid: string
   rockType: RockTypeId
@@ -77,7 +82,7 @@ function buildCatalog(items: InventoryItemDefJson[]): Record<string, InventoryIt
         weightPerUnit: null,
         maxStack: null,
       }
-    } else if (row.category === 'component' || row.category === 'trace') {
+    } else if (row.category === 'component' || row.category === 'trace' || row.category === 'refined') {
       if (row.weightPerUnit == null || row.maxStack == null)
         throw new Error(`[inventory] ${row.category} "${row.id}" needs weightPerUnit and maxStack`)
       out[row.id] = {

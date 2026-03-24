@@ -7,12 +7,13 @@ const COVER_NAMES = ['cover_01', 'cover_02', 'cover_03']
 export class SAMController extends InstrumentController {
   readonly id = 'sam'
   readonly name = 'SAM'
-  readonly slot = 5
+  readonly slot = 6
   readonly focusNodeName = 'SAM'
   readonly focusOffset = new THREE.Vector3(0.0, 0.1, 0.1)
   readonly viewAngle = 0.1
   readonly viewPitch = 1.1
   override readonly canActivate = true
+  override readonly selectionIdlePowerW = 0  // no idle draw — power only when experiments run
 
   // Cover animation
   private covers: THREE.Object3D[] = []
@@ -84,5 +85,11 @@ export class SAMController extends InstrumentController {
 
   deactivate(): void {
     this.closeCovers()
+  }
+
+  /** SAM draws power only during active experiments — not from card view or activate. */
+  experimentRunning = false
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return this.experimentRunning ? 25 : 0
   }
 }

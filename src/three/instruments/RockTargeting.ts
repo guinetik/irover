@@ -33,7 +33,7 @@ export class RockTargeting {
 
   /**
    * Marks a rock as mined out — MastCam drops the floating tag and survey highlight;
-   * ChemCam/APXS targeting already skip `userData.depleted`.
+   * ChemCam / arm drill targeting already skip `userData.depleted`.
    */
   depleteRock(rock: THREE.Mesh): void {
     this.depletedRocks.add(rock)

@@ -4,6 +4,7 @@ import {
   INVENTORY_CATALOG,
   maxRockSampleKg,
   type CollectedRockSample,
+  type DevSpawnInventoryItemResult,
   type InventoryStack,
 } from '@/types/inventory'
 import { usePlayerProfile } from './usePlayerProfile'
@@ -13,11 +14,37 @@ const BASE_CAPACITY_KG = 5
 const stacks = ref<InventoryStack[]>([])
 const { mod } = usePlayerProfile()
 
+// Seed starter ice (1 kg = 10 units at 0.1 kg/unit) — placeholder until DAN cones produce it
+if (stacks.value.length === 0) {
+  stacks.value = [{ itemId: 'ice', quantity: 10, totalWeightKg: 1.0 }]
+}
+
 export type AddRockSampleResult =
   | { ok: true; payload: CollectedRockSample }
   | { ok: false; message: string }
 
 export type AddComponentResult = { ok: true } | { ok: false; message: string }
+
+export interface InventoryComponentGrant {
+  itemId: string
+  quantity: number
+}
+
+export interface InventoryBatchFailure extends InventoryComponentGrant {
+  message: string
+}
+
+export type AddComponentsBatchResult =
+  | {
+    ok: true
+    applied: InventoryComponentGrant[]
+    failed: InventoryBatchFailure[]
+  }
+  | {
+    ok: false
+    applied: InventoryComponentGrant[]
+    failed: InventoryBatchFailure[]
+  }
 
 export function useInventory() {
   const capacityKg = computed(() => BASE_CAPACITY_KG * mod('inventorySpace'))
@@ -30,7 +57,7 @@ export function useInventory() {
 
   /**
    * True if a rock sample of this type could be added without exceeding capacity,
-   * assuming worst-case mass (max of weight range). Used to gate APXS drilling.
+   * assuming worst-case mass (max of weight range). Used to gate arm drill collection.
    */
   function canFitRockSampleMax(rockType: RockTypeId): boolean {
     const maxW = maxRockSampleKg(rockType)
@@ -38,7 +65,7 @@ export function useInventory() {
   }
 
   /**
-   * Merges one APXS rock sample into the stack for that lithology.
+   * Merges one drill rock sample into the stack for that lithology.
    * Rolls mass from catalog weightRange. Does not deplete the rock mesh (caller handles that).
    */
   function addRockSample(rockType: RockTypeId, rockMeshUuid: string, weightMult = 1.0): AddRockSampleResult {
@@ -86,7 +113,7 @@ export function useInventory() {
   function addComponent(itemId: string, quantity: number): AddComponentResult {
     if (quantity <= 0) return { ok: false, message: 'Invalid quantity.' }
     const def = INVENTORY_CATALOG[itemId]
-    if (!def || (def.category !== 'component' && def.category !== 'trace') || def.weightPerUnit == null || def.maxStack == null) {
+    if (!def || (def.category !== 'component' && def.category !== 'trace' && def.category !== 'refined') || def.weightPerUnit == null || def.maxStack == null) {
       return { ok: false, message: 'Unknown component.' }
     }
     const addWeight = def.weightPerUnit * quantity
@@ -118,10 +145,40 @@ export function useInventory() {
   }
 
   /**
-   * Adds trace element samples (from ChemCam-buffed APXS mining).
+   * Adds trace element samples (from ChemCam-buffed drill collection).
    */
   function addTrace(elementSymbol: string, quantity = 1): AddComponentResult {
     return addComponent(`trace-${elementSymbol}`, quantity)
+  }
+
+  /**
+   * Applies multiple component grants in order, preserving partial success details.
+   */
+  function addComponentsBatch(grants: InventoryComponentGrant[]): AddComponentsBatchResult {
+    const applied: InventoryComponentGrant[] = []
+    const failed: InventoryBatchFailure[] = []
+
+    for (const grant of grants) {
+      const result = addComponent(grant.itemId, grant.quantity)
+      if (result.ok) {
+        applied.push({
+          itemId: grant.itemId,
+          quantity: grant.quantity,
+        })
+      } else {
+        failed.push({
+          itemId: grant.itemId,
+          quantity: grant.quantity,
+          message: result.message,
+        })
+      }
+    }
+
+    return {
+      ok: failed.length === 0,
+      applied,
+      failed,
+    }
   }
 
   /**
@@ -129,6 +186,42 @@ export function useInventory() {
    */
   function removeStack(itemId: string): void {
     stacks.value = stacks.value.filter((s) => s.itemId !== itemId)
+  }
+
+  /**
+   * Consumes quantity units (for components/traces/refined) or weightKg (for rocks) from a stack.
+   * Removes the stack entirely when it reaches zero.
+   */
+  function consumeItem(itemId: string, quantity: number, weightKg?: number): { ok: boolean; message?: string } {
+    const idx = stacks.value.findIndex(s => s.itemId === itemId)
+    if (idx < 0) return { ok: false, message: 'Item not in inventory.' }
+    const s = stacks.value[idx]
+    const def = INVENTORY_CATALOG[itemId]
+    if (!def) return { ok: false, message: 'Unknown item.' }
+
+    const next = [...stacks.value]
+    if (def.category === 'rock') {
+      const w = weightKg ?? 0
+      if (w <= 0) return { ok: false, message: 'Must specify weight for rock consumption.' }
+      if (s.totalWeightKg < w - 1e-9) return { ok: false, message: 'Insufficient sample weight.' }
+      const newWeight = Math.round((s.totalWeightKg - w) * 1000) / 1000
+      if (newWeight <= 0.001) {
+        next.splice(idx, 1)
+      } else {
+        next[idx] = { ...s, totalWeightKg: newWeight }
+      }
+    } else {
+      if (s.quantity < quantity) return { ok: false, message: 'Insufficient quantity.' }
+      const newQty = s.quantity - quantity
+      if (newQty <= 0) {
+        next.splice(idx, 1)
+      } else {
+        const unitW = def.weightPerUnit ?? 0
+        next[idx] = { ...s, quantity: newQty, totalWeightKg: Math.round(newQty * unitW * 1000) / 1000 }
+      }
+    }
+    stacks.value = next
+    return { ok: true }
   }
 
   return {
@@ -139,7 +232,157 @@ export function useInventory() {
     canFitRockSampleMax,
     addRockSample,
     addComponent,
+    addComponentsBatch,
     addTrace,
     removeStack,
+    consumeItem,
   }
+}
+
+/**
+ * Attempts to merge one unit of a catalog item into cargo, ignoring capacity and stack limits
+ * only where they would block a normal single-unit grant (dev helper).
+ */
+function tryMergeOneDevItem(itemId: string): boolean {
+  const def = INVENTORY_CATALOG[itemId]
+  if (!def) return false
+
+  if (def.category === 'rock' && def.weightRange) {
+    const [minW, maxW] = def.weightRange
+    const weight = minW + Math.random() * (maxW - minW)
+    const rounded = Math.round(weight * 100) / 100
+    const next = [...stacks.value]
+    const i = next.findIndex((s) => s.itemId === itemId)
+    if (i >= 0) {
+      const s = next[i]
+      next[i] = {
+        itemId: s.itemId,
+        quantity: s.quantity + 1,
+        totalWeightKg: Math.round((s.totalWeightKg + rounded) * 100) / 100,
+      }
+    } else {
+      next.push({
+        itemId,
+        quantity: 1,
+        totalWeightKg: rounded,
+      })
+    }
+    stacks.value = next
+    return true
+  }
+
+  if (
+    (def.category === 'component' || def.category === 'trace' || def.category === 'refined') &&
+    def.weightPerUnit != null &&
+    def.maxStack != null
+  ) {
+    const quantity = 1
+    const addWeight = def.weightPerUnit * quantity
+    const next = [...stacks.value]
+    const i = next.findIndex((s) => s.itemId === itemId)
+    if (i >= 0) {
+      const s = next[i]
+      const newQty = s.quantity + quantity
+      if (newQty > def.maxStack) return false
+      next[i] = {
+        itemId: s.itemId,
+        quantity: newQty,
+        totalWeightKg: Math.round((s.totalWeightKg + addWeight) * 100) / 100,
+      }
+    } else {
+      if (quantity > def.maxStack) return false
+      next.push({
+        itemId,
+        quantity,
+        totalWeightKg: Math.round(addWeight * 100) / 100,
+      })
+    }
+    stacks.value = next
+    return true
+  }
+
+  return false
+}
+
+/**
+ * Development helper: merges up to `count` distinct random catalog items into cargo, ignoring capacity.
+ * Skips ids that cannot accept another unit (e.g. at max stack) until the shuffled list is exhausted.
+ *
+ * @param count - Number of distinct item types to add (default 3).
+ * @returns Item ids that were merged or newly stacked.
+ */
+export function devSpawnRandomInventoryItems(count = 3): string[] {
+  const allIds = Object.keys(INVENTORY_CATALOG)
+  const shuffled = [...allIds]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  const added: string[] = []
+  for (const itemId of shuffled) {
+    if (added.length >= count) break
+    if (tryMergeOneDevItem(itemId)) added.push(itemId)
+  }
+  return added
+}
+
+/**
+ * Development helper: merges catalog items by id into cargo, ignoring capacity (still enforces maxStack).
+ *
+ * @param itemId - Key in {@link INVENTORY_CATALOG}.
+ * @param quantity - Rock: number of separate samples (each random mass). Component/trace/refined: unit count.
+ */
+export function devSpawnInventoryItem(itemId: string, quantity = 1): DevSpawnInventoryItemResult {
+  const def = INVENTORY_CATALOG[itemId]
+  if (!def) return { ok: false, message: `Unknown item id: ${itemId}` }
+
+  const q = Math.floor(quantity)
+  if (!Number.isFinite(q) || q < 1) return { ok: false, message: 'Invalid quantity.' }
+
+  if (def.category === 'rock' && def.weightRange) {
+    for (let i = 0; i < q; i++) {
+      if (!tryMergeOneDevItem(itemId)) {
+        return { ok: false, message: 'Failed to merge rock sample.' }
+      }
+    }
+    return { ok: true }
+  }
+
+  if (
+    (def.category === 'component' || def.category === 'trace' || def.category === 'refined') &&
+    def.weightPerUnit != null &&
+    def.maxStack != null
+  ) {
+    const addWeight = def.weightPerUnit * q
+    const next = [...stacks.value]
+    const idx = next.findIndex((s) => s.itemId === itemId)
+    if (idx >= 0) {
+      const s = next[idx]
+      const newQty = s.quantity + q
+      if (newQty > def.maxStack) return { ok: false, message: 'Stack limit reached.' }
+      next[idx] = {
+        itemId: s.itemId,
+        quantity: newQty,
+        totalWeightKg: Math.round((s.totalWeightKg + addWeight) * 100) / 100,
+      }
+    } else {
+      if (q > def.maxStack) return { ok: false, message: 'Stack limit reached.' }
+      next.push({
+        itemId,
+        quantity: q,
+        totalWeightKg: Math.round(addWeight * 100) / 100,
+      })
+    }
+    stacks.value = next
+    return { ok: true }
+  }
+
+  return { ok: false, message: 'Unsupported item category.' }
+}
+
+/**
+ * Test-only reset for the singleton inventory state.
+ */
+export function resetInventoryForTests(): void {
+  stacks.value = []
 }

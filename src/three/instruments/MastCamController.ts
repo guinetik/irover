@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { ROCK_TYPES, ROCK_TYPE_LIST, type RockTypeId } from '@/three/terrain/RockTypes'
-import { mastState } from './MastState'
+import { mastPanTiltKeysHeld, mastState, MAST_ACTUATOR_HOLD_POWER_W } from './MastState'
 
 const PAN_SPEED = 0.5      // radians/sec
 const TILT_SPEED = 0.35    // radians/sec
@@ -13,8 +13,9 @@ const FOV_DEFAULT = 50
 const ZOOM_STEP = 3        // FOV degrees per wheel tick
 const SURVEY_RANGE = 40     // meters — rocks beyond this aren't highlighted
 const SCAN_DURATION = 2.0   // seconds to complete a scan
-const IDLE_POWER_W = 3      // base draw while MastCam is active
-const SCAN_POWER_W = 5      // extra draw while scanning (total = idle + scan = 8W)
+const IDLE_POWER_W = 4      // base draw while MastCam is active
+/** Extra draw while E-held scan / tagging (imager + processing — tuned vs small battery) */
+const SCAN_POWER_W = 18
 
 export class MastCamController extends InstrumentController {
   readonly id = 'mastcam'
@@ -59,8 +60,18 @@ export class MastCamController extends InstrumentController {
   /** True while scan key is held AND target is valid */
   get isScanning(): boolean { return this.scanning && this.scanTarget !== null }
   get scanProgressValue(): number { return this.scanProgress }
-  /** Power draw: 3W idle + 5W extra while scanning */
-  get powerDrawW(): number { return IDLE_POWER_W + (this.isScanning ? SCAN_POWER_W : 0) }
+  /** Power draw: idle mast + gimbal slew + scan (hold E on rock to tag) */
+  get powerDrawW(): number {
+    return (
+      IDLE_POWER_W
+      + (mastState.actuatorKeysHeld ? MAST_ACTUATOR_HOLD_POWER_W : 0)
+      + (this.isScanning ? SCAN_POWER_W : 0)
+    )
+  }
+
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return this.powerDrawW
+  }
 
   // Camera state for RoverController to read
   /** World position of mast camera (offset forward for rendering) */
@@ -128,6 +139,8 @@ export class MastCamController extends InstrumentController {
 
     // E to scan (hold)
     this.scanning = keys.has('KeyE')
+
+    if (mastPanTiltKeysHeld(keys)) mastState.actuatorKeysHeld = true
   }
 
   /** Call from view's wheel handler when MastCam is active */

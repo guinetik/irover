@@ -1,5 +1,7 @@
 import { ref, computed } from 'vue'
-import type { ArchivedSamDiscovery } from '@/types/samArchive'
+import type { ArchivedSAMDiscovery } from '@/types/samArchive'
+import type { DiscoveryRarity } from '@/types/samExperiments'
+import { approximateLatLonFromTangentOffset } from '@/lib/areography'
 
 const STORAGE_KEY = 'mars-sam-archive-v1'
 
@@ -10,90 +12,82 @@ function newArchiveId(): string {
   return `sam-arch-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function migrateSamArchiveRow(raw: unknown): ArchivedSamDiscovery | null {
-  if (!raw || typeof raw !== 'object') return null
-  const o = raw as Record<string, unknown>
-  if (typeof o.archiveId !== 'string') return null
-  const now = Date.now()
-  const ackMs = typeof o.acknowledgedAtMs === 'number' ? o.acknowledgedAtMs : now
-  const capMs = typeof o.capturedAtMs === 'number' ? o.capturedAtMs : ackMs
-  return {
-    archiveId: o.archiveId,
-    capturedAtMs: capMs,
-    capturedSol: typeof o.capturedSol === 'number' ? o.capturedSol : 1,
-    acknowledgedAtMs: ackMs,
-    solAcknowledged: typeof o.solAcknowledged === 'number' ? o.solAcknowledged : 1,
-    siteId: typeof o.siteId === 'string' ? o.siteId : '',
-    latitudeDeg: typeof o.latitudeDeg === 'number' ? o.latitudeDeg : 0,
-    longitudeDeg: typeof o.longitudeDeg === 'number' ? o.longitudeDeg : 0,
-    discoveryName: typeof o.discoveryName === 'string' ? o.discoveryName : 'Unknown',
-    rarity: (o.rarity as ArchivedSamDiscovery['rarity']) ?? 'common',
-    spEarned: typeof o.spEarned === 'number' ? o.spEarned : 0,
-    transmitted: o.transmitted === true,
-  }
-}
-
-function loadFromStorage(): ArchivedSamDiscovery[] {
+function loadFromStorage(): ArchivedSAMDiscovery[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed
-      .map(migrateSamArchiveRow)
-      .filter((r): r is ArchivedSamDiscovery => r !== null)
+    return parsed.filter((r): r is ArchivedSAMDiscovery =>
+      r && typeof r === 'object' && typeof r.archiveId === 'string',
+    )
   } catch {
     return []
   }
 }
 
-function saveToStorage(rows: ArchivedSamDiscovery[]): void {
+function saveToStorage(rows: ArchivedSAMDiscovery[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(rows))
-  } catch {
-    /* quota / private mode */
-  }
+  } catch { /* quota / private mode */ }
 }
 
-const discoveries = ref<ArchivedSamDiscovery[]>(loadFromStorage())
+const discoveries = ref<ArchivedSAMDiscovery[]>(loadFromStorage())
 
-/** Exported for tests only — resets module-level singleton state */
-export function resetForTests(): void {
-  discoveries.value = []
-}
-
-/**
- * Persisted SAM discoveries acknowledged by the player.
- * Call `markTransmitted` when UHF downlink completes.
- */
 export function useSamArchive() {
-  const pendingTransmission = computed(() => discoveries.value.filter((d) => !d.transmitted))
+  const pendingTransmission = computed(() => discoveries.value.filter((s) => !s.transmitted))
 
   function archiveDiscovery(params: {
-    capturedAtMs: number
-    capturedSol: number
-    solAcknowledged: number
-    siteId: string
-    latitudeDeg: number
-    longitudeDeg: number
+    discoveryId: string
     discoveryName: string
-    rarity: ArchivedSamDiscovery['rarity']
+    rarity: DiscoveryRarity
+    modeId: string
+    modeName: string
+    sampleId: string
+    sampleLabel: string
+    quality: number
     spEarned: number
-  }): ArchivedSamDiscovery {
-    const row: ArchivedSamDiscovery = {
+    sideProducts: { itemId: string; quantity: number }[]
+    capturedSol: number
+    siteId: string
+    siteLatDeg: number
+    siteLonDeg: number
+    roverWorldX: number
+    roverWorldZ: number
+    roverSpawnX: number
+    roverSpawnZ: number
+    description: string
+    siteUnitsPerMeter?: number
+  }): ArchivedSAMDiscovery {
+    const { latitudeDeg, longitudeDeg } = approximateLatLonFromTangentOffset(
+      params.siteLatDeg,
+      params.siteLonDeg,
+      params.roverWorldX - params.roverSpawnX,
+      params.roverWorldZ - params.roverSpawnZ,
+      params.siteUnitsPerMeter ?? 1,
+    )
+
+    const row: ArchivedSAMDiscovery = {
       archiveId: newArchiveId(),
-      capturedAtMs: params.capturedAtMs,
-      capturedSol: params.capturedSol,
-      acknowledgedAtMs: Date.now(),
-      solAcknowledged: params.solAcknowledged,
-      siteId: params.siteId,
-      latitudeDeg: params.latitudeDeg,
-      longitudeDeg: params.longitudeDeg,
+      discoveryId: params.discoveryId,
       discoveryName: params.discoveryName,
       rarity: params.rarity,
+      modeId: params.modeId,
+      modeName: params.modeName,
+      sampleId: params.sampleId,
+      sampleLabel: params.sampleLabel,
+      quality: params.quality,
       spEarned: params.spEarned,
+      sideProducts: params.sideProducts,
+      capturedSol: params.capturedSol,
+      capturedAtMs: Date.now(),
+      siteId: params.siteId,
+      latitudeDeg,
+      longitudeDeg,
+      description: params.description,
       transmitted: false,
     }
+
     const next = [...discoveries.value, row]
     discoveries.value = next
     saveToStorage(next)
@@ -101,8 +95,8 @@ export function useSamArchive() {
   }
 
   function markTransmitted(archiveId: string): void {
-    const next = discoveries.value.map((d) =>
-      d.archiveId === archiveId ? { ...d, transmitted: true } : d,
+    const next = discoveries.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, transmitted: true } : s,
     )
     discoveries.value = next
     saveToStorage(next)

@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
-import { mastState } from './MastState'
+import { mastPanTiltKeysHeld, mastState, MAST_ACTUATOR_HOLD_POWER_W } from './MastState'
 
 // --- Timing (base values — modified by durationMultiplier) ---
 const BASE_PULSE_TRAIN_DURATION = 7.0   // seconds of pulsed laser fire
@@ -24,10 +24,10 @@ const ZOOM_STEP = 3
 /** SP needed for fully calibrated LIBS results */
 const FULL_CALIBRATION_SP = 250
 
-// --- Power ---
-const PULSE_POWER_W = 12
-const INTEGRATE_POWER_W = 3
-const IDLE_POWER_W = 2
+// --- Power (LIBS + mast chain — heavy while E holds pulse; hurts on 50 Wh + weak gen) ---
+const PULSE_POWER_W = 102
+const INTEGRATE_POWER_W = 28
+const IDLE_POWER_W = 6
 
 // --- Beam VFX ---
 const CORE_RADIUS = 0.003
@@ -73,6 +73,9 @@ export interface SpectrumPeak {
 }
 
 export class ChemCamController extends InstrumentController {
+  /** Minimum bus draw while ChemCam hardware is engaged (orbit, armed, or background sequence). */
+  static readonly BUS_IDLE_W = IDLE_POWER_W
+
   readonly id = 'chemcam'
   readonly name = 'ChemCam'
   readonly slot = 2
@@ -143,7 +146,8 @@ export class ChemCamController extends InstrumentController {
   // --- Callbacks (set by view) ---
   onReady: ((readout: ChemCamReadout) => void) | null = null
 
-  private _eHeld = false
+  /** True while E is held — IR pulse train runs only while this is true (same idea as arm drill hold-to-fire). */
+  private _eFireHeld = false
 
   override attach(rover: THREE.Group): void {
     super.attach(rover)
@@ -166,6 +170,10 @@ export class ChemCamController extends InstrumentController {
       case 'ARMED': return IDLE_POWER_W
       default: return 0
     }
+  }
+
+  override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
+    return Math.max(ChemCamController.BUS_IDLE_W, this.powerDrawW)
   }
 
   /**
@@ -197,15 +205,10 @@ export class ChemCamController extends InstrumentController {
     if (keys.has('KeyW') || keys.has('ArrowUp')) this.tiltAngle = Math.max(TILT_MIN, this.tiltAngle - TILT_SPEED * delta)
     if (keys.has('KeyS') || keys.has('ArrowDown')) this.tiltAngle = Math.min(TILT_MAX, this.tiltAngle + TILT_SPEED * delta)
 
-    // E to fire (tap, not hold)
-    if (keys.has('KeyE')) {
-      if (!this._eHeld) {
-        this._eHeld = true
-        this.tryFire()
-      }
-    } else {
-      this._eHeld = false
-    }
+    // E hold to fire IR (release E aborts pulse train — mirrors arm drill hold-to-fire)
+    this._eFireHeld = keys.has('KeyE')
+
+    if (mastPanTiltKeysHeld(keys)) mastState.actuatorKeysHeld = true
   }
 
   override update(delta: number): void {
@@ -266,9 +269,8 @@ export class ChemCamController extends InstrumentController {
     }
   }
 
-  // --- Fire ---
-  private tryFire(): void {
-    if (this.phase !== 'ARMED') return
+  /** Begin LIBS pulse: decrements shot and spawns beam — only from `updatePhase` when armed + E held. */
+  private beginPulseTrain(): void {
     if (!this.currentTarget || !this.targetValid) return
     if (this.shotsRemaining <= 0) return
 
@@ -277,11 +279,19 @@ export class ChemCamController extends InstrumentController {
     this.phaseTimer = 0
     this.pulseElapsed = 0
 
-    // Determine plasma color from rock type
     const rockType = this.currentTarget.userData.rockType as RockTypeId | undefined
     this.currentPlasmaColor = rockType ? (PLASMA_COLORS[rockType] ?? 0xcc44ff) : 0xcc44ff
 
     this.createBeamVFX()
+  }
+
+  /** User released E or lost target mid-pulse — refund shot, no spectrum. */
+  private abortPulseTrain(): void {
+    this.removeBeamVFX()
+    this.shotsRemaining++
+    this.phase = 'ARMED'
+    this.phaseTimer = 0
+    this.pulseElapsed = 0
   }
 
   /** Effective pulse train duration after multiplier */
@@ -291,17 +301,32 @@ export class ChemCamController extends InstrumentController {
 
   // --- Phase machine ---
   private updatePhase(delta: number): void {
-    if (this.phase === 'ARMED' || this.phase === 'IDLE') return
+    if (this.phase === 'ARMED') {
+      if (this._eFireHeld && this.targetValid && this.shotsRemaining > 0) {
+        this.beginPulseTrain()
+      }
+      return
+    }
 
-    this.phaseTimer += delta
+    if (this.phase === 'IDLE') return
 
     if (this.phase === 'PULSE_TRAIN') {
+      if (!this._eFireHeld || !this.currentTarget) {
+        this.abortPulseTrain()
+        return
+      }
+      this.phaseTimer += delta
       if (this.phaseTimer >= this.pulseDuration) {
         this.phase = 'INTEGRATING'
         this.phaseTimer = 0
         this.removeBeamVFX()
       }
-    } else if (this.phase === 'INTEGRATING') {
+      return
+    }
+
+    this.phaseTimer += delta
+
+    if (this.phase === 'INTEGRATING') {
       if (this.phaseTimer >= this.integrateDuration) {
         this.phase = 'READY'
         this.phaseTimer = 0
@@ -540,7 +565,7 @@ export class ChemCamController extends InstrumentController {
     this.removeBeamVFX()
     this.fov = FOV_DEFAULT
     // Don't reset phase — integrating/ready should survive deactivation
-    this._eHeld = false
+    this._eFireHeld = false
   }
 
   override dispose(): void {

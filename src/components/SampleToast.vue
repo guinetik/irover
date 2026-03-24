@@ -251,6 +251,27 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace, showDAN, showPay
   color: rgba(255, 223, 166, 0.96);
 }
 
+.sample-toast.comm {
+  background: rgba(8, 18, 35, 0.92);
+  border-color: rgba(136, 204, 255, 0.35);
+}
+
+.sample-toast.comm .toast-label {
+  color: rgba(136, 204, 255, 0.9);
+}
+
+.sample-toast.transmission {
+  background: rgba(5, 30, 15, 0.92);
+  border-color: rgba(68, 255, 136, 0.4);
+  box-shadow: 0 0 10px rgba(68, 255, 136, 0.12);
+}
+
+.sample-toast.transmission .toast-label {
+  color: rgba(68, 255, 136, 0.95);
+  font-weight: bold;
+  letter-spacing: 0.06em;
+}
+
 .toast-weight {
   color: rgba(196, 149, 106, 0.5);
 }
@@ -271,26 +292,5 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace, showDAN, showPay
 .toast-pop-leave-to {
   opacity: 0;
   transform: translateY(-8px);
-}
-
-.sample-toast.comm {
-  background: rgba(8, 18, 35, 0.92);
-  border-color: rgba(136, 204, 255, 0.35);
-}
-
-.sample-toast.comm .toast-label {
-  color: rgba(136, 204, 255, 0.9);
-}
-
-.sample-toast.transmission {
-  background: rgba(5, 30, 15, 0.92);
-  border-color: rgba(68, 255, 136, 0.4);
-  box-shadow: 0 0 10px rgba(68, 255, 136, 0.12);
-}
-
-.sample-toast.transmission .toast-label {
-  color: rgba(68, 255, 136, 0.95);
-  font-weight: bold;
-  letter-spacing: 0.06em;
 }
 </style>

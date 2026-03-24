@@ -40,5 +40,120 @@
       "description": "Spectrometer fully calibrated. All emission lines resolved — maximum scientific yield.",
       "type": "LIBS CALIBRATION"
     }
+  ],
+  "dan-prospecting": [
+    {
+      "id": "dan-first-signal",
+      "event": "first-hit",
+      "icon": "📡",
+      "title": "HYDROGEN TRACE",
+      "description": "DAN detected a subsurface hydrogen anomaly. Neutron albedo shift confirmed — something is down there.",
+      "type": "DAN PROSPECTING"
+    },
+    {
+      "id": "dan-first-prospect",
+      "event": "first-prospect",
+      "icon": "⛏",
+      "title": "FIRST PROSPECT",
+      "description": "Neutron survey complete. Subsurface composition analyzed — drill site assessment pending.",
+      "type": "DAN PROSPECTING"
+    },
+    {
+      "id": "dan-water-confirmed",
+      "event": "water-confirmed",
+      "icon": "💧",
+      "title": "WATER ON MARS",
+      "description": "Subsurface ice deposit confirmed. Drill marker placed — extraction hardware will follow.",
+      "type": "DAN PROSPECTING"
+    }
+  ],
+  "sam-analysis": [
+    {
+      "id": "sam-first-analysis",
+      "event": "first-analysis",
+      "icon": "⚗",
+      "title": "FIRST ANALYSIS",
+      "description": "SAM's first experiment complete. The lab is operational.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-first-uncommon",
+      "event": "first-uncommon",
+      "icon": "🔬",
+      "title": "NOTABLE FINDING",
+      "description": "An uncommon discovery — the data is getting interesting.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-first-rare",
+      "event": "first-rare",
+      "icon": "💎",
+      "title": "RARE SPECIMEN",
+      "description": "A rare discovery. Mission Control will want to see this.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-first-legendary",
+      "event": "first-legendary",
+      "icon": "⭐",
+      "title": "BREAKTHROUGH",
+      "description": "A legendary discovery. This changes everything we know about Mars.",
+      "type": "SAM ANALYSIS"
+    },
+    {
+      "id": "sam-triple-mode",
+      "event": "triple-mode",
+      "icon": "🧬",
+      "title": "TRIPLE ANALYSIS",
+      "description": "All three SAM modes run on a single rock type. Maximum scientific yield.",
+      "type": "SAM ANALYSIS"
+    }
+  ],
+  "mars-survival": [
+    {
+      "id": "survive-1-sol",
+      "minSol": 2,
+      "spReward": 25,
+      "icon": "☀",
+      "title": "FIRST SOL",
+      "description": "One full Martian day and night cycle completed. Mission clock still running.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-5-sol",
+      "minSol": 6,
+      "spReward": 90,
+      "icon": "🌅",
+      "title": "FIVE SOLS",
+      "description": "Five sols on the surface. Radiation and cold logged — crew still operational.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-10-sol",
+      "minSol": 11,
+      "spReward": 220,
+      "icon": "🌤",
+      "title": "TEN SOLS",
+      "description": "Double-digit sols. Long-baseline environmental data accumulating.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-50-sol",
+      "minSol": 51,
+      "spReward": 1800,
+      "icon": "🛰",
+      "title": "FIFTY SOLS",
+      "description": "Extended surface campaign. Mission endurance exceeds many design studies.",
+      "type": "MARS SURVIVAL"
+    },
+    {
+      "id": "survive-100-sol",
+      "minSol": 101,
+      "spReward": 5000,
+      "icon": "⭐",
+      "title": "HUNDRED SOLS",
+      "description": "Century sol on Mars. Sustained science operations — a landmark in surface survival.",
+      "type": "MARS SURVIVAL"
+    }
   ]
 }
