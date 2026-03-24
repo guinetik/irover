@@ -20,6 +20,7 @@ export interface SiteFrameContext {
   nightFactor: number
   thermalZone: ThermalZone
   marsSol: number
+  marsTimeOfDay: number
   totalSP: number
   activeInstrumentSlot: number | null
 }

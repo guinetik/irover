@@ -5,3 +5,4 @@ export { createDrillTickHandler, type DrillTickRefs, type DrillTickCallbacks, ty
 export { createMastCamTickHandler, type MastCamTickRefs, type MastCamTickCallbacks } from './MastCamTickHandler'
 export { createChemCamTickHandler, type ChemCamTickRefs, type ChemCamTickCallbacks } from './ChemCamTickHandler'
 export { createOrbitalDropTickHandler, type OrbitalDropTickCallbacks, type OrbitalDropTickHandler } from './OrbitalDropTickHandler'
+export { createAntennaTickHandler, type AntennaTickRefs, type AntennaTickCallbacks } from './AntennaTickHandler'
