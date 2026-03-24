@@ -1,7 +1,9 @@
 import { ref } from 'vue'
 import {
   getRtgPhaseSceneSeconds,
+  getHeaterOverdriveSceneSeconds,
   RTG_MISSION_DURATIONS,
+  HEATER_MISSION_DURATIONS,
   sceneSecondsFromMarsClockHours,
   sceneSecondsFromSolFraction,
   secondsPerSol,
@@ -14,8 +16,10 @@ import { missionCooldowns, MISSION_COOLDOWN_ID } from '@/lib/missionCooldowns'
  * - **Rover clock**: `timeOfDay` / sun only advance after `notifyRoverReady()` (rover under player control).
  * - **Pause**: `setClockPaused(true)` freezes simulation time — no sun movement, no rover movement,
  *   no power/thermal integration (caller must pass `sceneDelta === 0` from `getSceneDelta`).
- * - **Mission time**: use `secondsPerSol` / `sceneSecondsFromSolFraction` / `sceneSecondsFromMarsClockHours`
- *   for any duration tied to sol length; tick {@link missionCooldowns} with the same `sceneDelta`.
+ * - **Mission time**: use `secondsPerSol` / `sceneSecondsFromSolFraction` / `sceneSecondsFromMarsClockHours`,
+ *   {@link RTG_MISSION_DURATIONS} / {@link getRtgPhaseSceneSeconds}, and
+ *   {@link HEATER_MISSION_DURATIONS} / {@link getHeaterOverdriveSceneSeconds} for balance knobs;
+ *   tick {@link missionCooldowns} with the same `sceneDelta` from {@link getSceneDelta}.
  *
  * Intended for modal dialogs and scripted beats. Dialogs can call `useMarsGameClock()` and toggle pause.
  */
@@ -67,6 +71,9 @@ export function useMarsGameClock() {
     /** RTG balance knobs (Mars hours / sol fractions) and resolved scene-second lengths. */
     RTG_MISSION_DURATIONS,
     getRtgPhaseSceneSeconds,
+    /** Heater overdrive (Mars-clock heat window + sol lockout) as scene seconds. */
+    HEATER_MISSION_DURATIONS,
+    getHeaterOverdriveSceneSeconds,
     /** Central cooldown / timed windows — tick every frame with `getSceneDelta(rawDelta)`. */
     missionCooldowns,
     MISSION_COOLDOWN_ID,

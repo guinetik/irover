@@ -245,7 +245,7 @@ function recomputeModifiers(): void {
     profile.archetype = null
     profile.foundation = null
     profile.patron = null
-    Object.assign(profile.modifiers, NEUTRAL_MODIFIERS)
+    Object.assign(profile.modifiers, resolveModifiers(rewardTrackLayer.value))
     return
   }
   profile.archetype = chosenArchetype.value

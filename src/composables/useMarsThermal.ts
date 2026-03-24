@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { MISSION_COOLDOWN_ID, missionCooldowns } from '@/lib/missionCooldowns'
 
 export type ThermalZone = 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL'
 
@@ -42,7 +43,10 @@ const INSULATION_FACTOR = 1.0
 // --- singleton state ---
 const internalTempC = ref(15) // start warm
 const ambientEffectiveC = ref(-10)
+/** Thermostat command 0…MAX_HEATER_W (bus W before overdrive). */
 const heaterW = ref(0)
+/** Billed / modeled heater draw including HTR overdrive double-output (0…2×MAX_HEATER_W). */
+const heaterEffectiveW = ref(0)
 const zone = ref<ThermalZone>('OPTIMAL')
 
 function kelvinToCelsius(k: number): number {
@@ -90,7 +94,10 @@ export function useMarsThermal() {
     // Between floor and ceiling: hold current heater level (hysteresis)
 
     // --- Internal temp ODE ---
-    const heaterWarmRate = (heaterW.value / MAX_HEATER_W) * HEATER_MAX_WARM_CS
+    const heaterOverdriveMul = missionCooldowns.isActive(MISSION_COOLDOWN_ID.HEATER_OVERDRIVE_HEAT) ? 2 : 1
+    const effectiveW = heaterW.value * heaterOverdriveMul
+    heaterEffectiveW.value = effectiveW
+    const heaterWarmRate = (effectiveW / MAX_HEATER_W) * HEATER_MAX_WARM_CS
     const heatIn = (RTG_WASTE_HEAT_CS + heaterWarmRate) * deltaSeconds
     const heatLoss = HEAT_LOSS_COEFF * INSULATION_FACTOR *
       (internalTempC.value - ambientEffectiveC.value) * deltaSeconds
@@ -104,6 +111,7 @@ export function useMarsThermal() {
     internalTempC,
     ambientEffectiveC,
     heaterW,
+    heaterEffectiveW,
     zone,
     MAX_HEATER_W,
     tickThermal,

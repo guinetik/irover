@@ -49,6 +49,27 @@
           </div>
         </div>
 
+        <!-- WHLS: movement speed indicator -->
+        <div v-if="activeSlot === WHLS_SLOT && wheelsHud" class="ov-whls-speed">
+          <div class="ov-whls-speed-row">
+            <span class="ov-whls-speed-label">MOVE SPD</span>
+            <span class="ov-whls-speed-value" :style="{ color: wheelsSpeedColor }">{{ wheelsSpeedStr }}</span>
+          </div>
+          <div class="ov-whls-speed-bar-track">
+            <div class="ov-whls-speed-bar-fill" :style="{ width: wheelsSpeedBarPct + '%', background: wheelsSpeedColor }" />
+          </div>
+          <div class="ov-whls-buffs">
+            <div
+              v-for="buff in wheelsHud.speedBuffs"
+              :key="buff.label"
+              class="ov-whls-buff"
+            >
+              <span class="ov-whls-buff-label">{{ buff.label }}</span>
+              <span class="ov-whls-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Hint -->
         <div class="ov-hint">{{ instrument.hint }}</div>
 
@@ -126,6 +147,14 @@
               :title="rtgConservationCooldownTitle"
               @click="rtgConservationReady && !isActiveMode && $emit('rtgConservation')"
             >POWER SHUNT</button>
+          </template>
+          <template v-else-if="activeSlot === HEATER_SLOT">
+            <button
+              class="ov-btn-primary ov-btn-rtg-overdrive"
+              :class="{ disabled: !heaterOverdriveReady || isActiveMode }"
+              :disabled="!heaterOverdriveReady || isActiveMode"
+              @click="heaterOverdriveReady && !isActiveMode && $emit('heaterOverdrive')"
+            >OVERDRIVE</button>
           </template>
           <template v-else-if="passiveSubsystemOnly">
             <button
@@ -309,6 +338,7 @@ defineEmits<{
   seeResults: []
   rtgOverdrive: []
   rtgConservation: []
+  heaterOverdrive: []
   danProspect: []
   samSeeResults: []
   apxsSeeResults: []
@@ -317,8 +347,16 @@ defineEmits<{
 export interface ThermalDisplay {
   internalTempC: number
   ambientC: number
+  /** Modeled bus watts (doubles during HTR overdrive when active). */
   heaterW: number
   zone: string
+}
+
+/** One line in the speed-buff tooltip breakdown. */
+export interface SpeedBuffEntry {
+  label: string
+  value: string
+  color: string
 }
 
 /** Live fields merged onto the static wheels card (slot 13). */
@@ -326,6 +364,10 @@ export interface WheelsHudDisplay {
   powerStr: string
   statusStr: string
   healthPct: number
+  /** Effective speed as percentage of baseline (100 = no buffs). */
+  speedPct: number
+  /** Contributing buff / debuff entries for the tooltip. */
+  speedBuffs: SpeedBuffEntry[]
 }
 
 const props = withDefaults(
@@ -348,6 +390,8 @@ const props = withDefaults(
     rtgConservationReady?: boolean
     /** Tooltip when shunt on cooldown */
     rtgConservationCooldownTitle?: string
+    /** HTR card: emergency heat overdrive (not in sol lockout) */
+    heaterOverdriveReady?: boolean
     /** DAN / REMS / RAD / comms: ACTIVATE only toggles bus power */
     passiveSubsystemOnly?: boolean
     passiveSubsystemEnabled?: boolean
@@ -378,6 +422,7 @@ const props = withDefaults(
     rtgOverdriveReady: false,
     rtgConservationReady: false,
     rtgConservationCooldownTitle: '',
+    heaterOverdriveReady: false,
     passiveSubsystemOnly: false,
     passiveSubsystemEnabled: false,
     passiveInstrumentHud: null,
@@ -431,6 +476,23 @@ const healthColor = computed(() => {
   if (val > 85) return '#5dc9a5'
   if (val > 60) return '#ef9f27'
   return '#e05030'
+})
+
+const wheelsSpeedStr = computed(() => {
+  const pct = props.wheelsHud?.speedPct ?? 100
+  return `${Math.round(pct)}%`
+})
+
+const wheelsSpeedColor = computed(() => {
+  const pct = props.wheelsHud?.speedPct ?? 100
+  if (pct > 105) return '#5dc9a5'
+  if (pct >= 95) return '#ef9f27'
+  return '#e05030'
+})
+
+const wheelsSpeedBarPct = computed(() => {
+  const pct = props.wheelsHud?.speedPct ?? 100
+  return Math.min(100, Math.max(0, pct / 1.5))
 })
 
 const ZONE_COLORS: Record<string, string> = {
@@ -830,6 +892,69 @@ const thermalZoneBg = computed(() =>
 @keyframes dan-pulse {
   0%, 100% { box-shadow: 0 0 4px rgba(68, 170, 255, 0.2); }
   50% { box-shadow: 0 0 12px rgba(68, 170, 255, 0.5); }
+}
+
+/* WHLS speed section */
+.ov-whls-speed {
+  padding: 6px 16px 2px;
+  border-top: 1px solid rgba(196, 117, 58, 0.15);
+}
+
+.ov-whls-speed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.ov-whls-speed-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(196, 117, 58, 0.6);
+}
+
+.ov-whls-speed-value {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.ov-whls-speed-bar-track {
+  height: 3px;
+  background: rgba(196, 117, 58, 0.12);
+  border-radius: 2px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.ov-whls-speed-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.ov-whls-buffs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 4px;
+}
+
+.ov-whls-buff {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.ov-whls-buff-label {
+  color: rgba(196, 117, 58, 0.45);
+}
+
+.ov-whls-buff-value {
+  font-family: var(--font-ui);
+  font-weight: 600;
 }
 
 .ov-sam-block {

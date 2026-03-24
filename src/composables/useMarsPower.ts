@@ -192,6 +192,16 @@ export function useMarsPower() {
     batteryWh.value = capacityWh.value
   }
 
+  /**
+   * Removes a fraction of current effective capacity immediately (e.g. heater overdrive cost).
+   * @param fraction 0–1 of pack energy to drain
+   */
+  function drainBatteryFraction(fraction: number): void {
+    const f = Math.max(0, Math.min(1, fraction))
+    const cap = capacityWh.value
+    batteryWh.value = Math.max(0, Math.min(cap, batteryWh.value - f * cap))
+  }
+
   function tickPower(deltaSeconds: number, input: PowerTickInput): void {
     // --- Generation (apply generationMult) ---
     const daylight = 1 - input.nightFactor
@@ -332,6 +342,7 @@ export function useMarsPower() {
     tickPower,
     setProfile,
     fillBatteryFull,
+    drainBatteryFraction,
     ROCK_DRILL_BASE_W,
   }
 }

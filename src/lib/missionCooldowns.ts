@@ -12,6 +12,10 @@ export const MISSION_COOLDOWN_ID = {
   RTG_OVERDRIVE_RECHARGE: 'rtg.overdrive.recharge',
   RTG_POWER_SHUNT_EFFECT: 'rtg.powerShunt.effect',
   RTG_POWER_SHUNT_RECOVERY: 'rtg.powerShunt.recovery',
+  /** HTR overdrive: doubled thermostat heating rate (durations from `missionTime` / game clock). */
+  HEATER_OVERDRIVE_HEAT: 'heater.overdrive.heat',
+  /** HTR overdrive: cannot re-engage until lockout elapses. */
+  HEATER_OVERDRIVE_LOCKOUT: 'heater.overdrive.lockout',
 } as const
 
 export type MissionCooldownId = (typeof MISSION_COOLDOWN_ID)[keyof typeof MISSION_COOLDOWN_ID]

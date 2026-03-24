@@ -79,3 +79,26 @@ export function getRtgPhaseSceneSeconds(): {
     powerShuntRecovery: sceneSecondsFromMarsClockHours(d.powerShuntRecoveryMarsClockHours),
   }
 }
+
+/**
+ * Heater emergency overdrive — mission-language knobs resolved to scene seconds (same units as
+ * `getSceneDelta` from the site game clock / `missionCooldowns.tick`).
+ */
+export const HEATER_MISSION_DURATIONS = {
+  /** Doubled heater thermal output — Mars-clock hours. */
+  overdriveHeatMarsClockHours: 12,
+  /** Cannot re-engage until this many full sols after activation. */
+  overdriveLockoutSols: 2,
+} as const
+
+/** Scene-second lengths for heater overdrive (use with {@link missionCooldowns}). */
+export function getHeaterOverdriveSceneSeconds(): {
+  heatBoost: number
+  lockoutCooldown: number
+} {
+  const d = HEATER_MISSION_DURATIONS
+  return {
+    heatBoost: sceneSecondsFromMarsClockHours(d.overdriveHeatMarsClockHours),
+    lockoutCooldown: sceneSecondsFromSolFraction(d.overdriveLockoutSols),
+  }
+}

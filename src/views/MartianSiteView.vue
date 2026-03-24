@@ -429,6 +429,17 @@
       :target-range="mastTargetRange"
     />
     <div v-if="!deploying && !descending" class="power-hud-stack">
+      <button
+        v-if="!isSleeping"
+        type="button"
+        class="rover-profile-btn"
+        :class="{ active: profileOpen }"
+        title="Rover Profile [0]"
+        @click="profileOpen = !profileOpen"
+      >
+        <span class="rover-profile-key font-instrument">0</span>
+        <span class="rover-profile-label">ROVER</span>
+      </button>
       <PowerHud
         :battery-wh="batteryWh"
         :capacity-wh="capacityWh"
