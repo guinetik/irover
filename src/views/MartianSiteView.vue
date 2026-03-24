@@ -1113,11 +1113,7 @@ function handleAPXSAcknowledge(): void {
   }
 }
 
-watchEffect(() => {
-  if (apxsUnread.value > 0 && !apxsResultDialogEntry.value) {
-    apxsResultDialogEntry.value = apxsResults.value[0] ?? null
-  }
-})
+// APXS results shown via SEE RESULTS button on instrument card, not auto-opened
 
 watchEffect(() => {
   const sp = chemcamSP.value
