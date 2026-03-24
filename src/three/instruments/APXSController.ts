@@ -9,7 +9,7 @@ const ARM_EXTEND_MAX = 0.8
 const ARM_LERP = 0.1
 
 /** Turret head rotation angle (radians) to swing APXS from side to front. Tweak to taste. */
-const TURRET_ROTATION = Math.PI * 1.15
+const TURRET_ROTATION = Math.PI * 7 / 6
 const TURRET_LERP = 0.06
 
 /**
