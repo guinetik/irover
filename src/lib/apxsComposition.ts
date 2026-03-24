@@ -67,7 +67,12 @@ export function generateComposition(
 }
 
 /**
- * Cosine similarity between two compositions, scaled to 0-100.
+ * Cosine similarity between two compositions, scaled to 0-100,
+ * with a coverage penalty for missing significant elements.
+ *
+ * Any element with >1% true composition that has 0 measured counts
+ * reduces the score by 12% per missing element. This forces the
+ * player to actively chase all major element types.
  */
 export function computeAccuracy(
   trueComp: APXSComposition,
@@ -88,7 +93,16 @@ export function computeAccuracy(
   if (magA === 0 || magB === 0) return 0
 
   const cosSim = dot / (Math.sqrt(magA) * Math.sqrt(magB))
-  return cosSim * 100
+  let score = cosSim * 100
+
+  // Coverage penalty: -12% per significant element with zero catches
+  for (const el of APXS_ELEMENTS) {
+    if (trueComp[el] > 1 && measuredComp[el] === 0) {
+      score -= 12
+    }
+  }
+
+  return Math.max(0, score)
 }
 
 /**
