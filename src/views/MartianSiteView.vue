@@ -71,11 +71,9 @@
       </div>
     </Transition>
     <Transition name="deploy-fade">
-      <div v-if="apxsState === 'counting'" class="deploy-overlay" key="apxs-countdown">
-        <div class="deploy-content">
-          <div class="deploy-label">APXS CONTACT</div>
-          <div class="deploy-altitude" style="font-size: 64px;">{{ apxsCountdown }}</div>
-        </div>
+      <div v-if="apxsState === 'counting'" class="apxs-countdown-overlay" key="apxs-countdown">
+        <div class="apxs-countdown-label">APXS CONTACT</div>
+        <div class="apxs-countdown-num font-instrument">{{ apxsCountdown }}</div>
       </div>
     </Transition>
     <Transition name="deploy-fade">
@@ -1042,7 +1040,8 @@ function handleAPXSComplete(result: {
     [...result.caughtElements],
   )
 
-  const processingTime = 30
+  const baseTime = 20 + Math.random() * 10
+  const processingTime = baseTime / playerMod('analysisSpeed')
 
   apxsEnqueue({
     rockMeshUuid: apxsGameRockUuid.value,
