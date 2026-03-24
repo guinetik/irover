@@ -288,6 +288,8 @@ Add to the class:
   get canAnalyzeTarget(): boolean {
     return this.currentTarget !== null && this.currentTarget.rock.userData.apxsAnalyzed !== true
   }
+  /** Public access for tick handler to read target info on launch. */
+  get currentTargetResult(): TargetResult | null { return this.currentTarget }
 
   initGameplay(_scene: THREE.Scene, _camera: THREE.PerspectiveCamera, rocks: THREE.Mesh[]): void {
     this.targeting = new RockTargeting()
@@ -553,8 +555,17 @@ export interface APXSTickRefs {
   apxsState: Ref<APXSCountdownState>
 }
 
+/** Thermal zone → game duration mapping. Cold = less time = harder. */
+const APXS_THERMAL_DURATION: Record<string, number> = {
+  OPTIMAL: 25,
+  COLD: 21,
+  FRIGID: 12.5,
+  CRITICAL: 0, // blocked — cannot start
+}
+
 export interface APXSTickCallbacks {
-  onLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string) => void
+  onLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
+  onBlockedByCold: () => void // show "Too cold for APXS" toast
 }
 
 export function createAPXSTickHandler(
@@ -562,7 +573,7 @@ export function createAPXSTickHandler(
   callbacks: APXSTickCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
-  const { onLaunchMinigame } = callbacks
+  const { onLaunchMinigame, onBlockedByCold } = callbacks
   let gameplayInitialised = false
   let countdownTimer = 0
 
@@ -594,24 +605,32 @@ export function createAPXSTickHandler(
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
+      // Thermal gate: CRITICAL zone blocks APXS entirely
+      const duration = APXS_THERMAL_DURATION[fctx.thermalZone] ?? 25
+      if (duration <= 0 && hasValidTarget && apxsState.value === 'idle') {
+        onBlockedByCold()
+        // Don't start countdown — stay idle
+      }
+
       // Countdown state machine
-      if (hasValidTarget && apxsState.value === 'idle') {
+      const canStart = hasValidTarget && duration > 0
+      if (canStart && apxsState.value === 'idle') {
         apxsState.value = 'counting'
         countdownTimer = 3
         apxsCountdown.value = 3
-      } else if (hasValidTarget && apxsState.value === 'counting') {
+      } else if (canStart && apxsState.value === 'counting') {
         countdownTimer -= fctx.sceneDelta
         apxsCountdown.value = Math.ceil(countdownTimer)
         if (countdownTimer <= 0) {
           apxsState.value = 'launching'
-          const target = apxs['currentTarget']!
+          const target = apxs.currentTargetResult! // public getter added in Task 2
           const rockType = target.rockType
           const rockLabel = target.rock.userData.rockLabel ?? rockType
           const uuid = target.rock.uuid
-          onLaunchMinigame(uuid, rockType, rockLabel)
+          onLaunchMinigame(uuid, rockType, rockLabel, duration)
         }
-      } else if (!hasValidTarget && apxsState.value === 'counting') {
-        // Pulled away — cancel
+      } else if (!canStart && apxsState.value === 'counting') {
+        // Pulled away or zone changed — cancel
         apxsState.value = 'idle'
         apxsCountdown.value = 0
       }
