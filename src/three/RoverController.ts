@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { SiteScene } from './SiteScene'
 import type { InstrumentController } from './instruments'
-import { RTGController, MastCamController, ChemCamController, SAMController, APXSController, RoverWheelsController } from './instruments'
+import { RTGController, MastCamController, ChemCamController, SAMController, APXSController, RoverWheelsController, DrillController } from './instruments'
 import { mastState } from './instruments/MastState'
 
 const CAMERA_DISTANCE_DEFAULT = 8
@@ -303,6 +303,11 @@ export class RoverController {
           this.activeInstrument = null
           return
         }
+        if (this.activeInstrument instanceof DrillController) {
+          this.activeInstrument.deactivate()
+          this.mode = 'instrument'
+          return
+        }
         if (this.activeInstrument instanceof SAMController) {
           this.activeInstrument.deactivate()
         }
@@ -341,6 +346,8 @@ export class RoverController {
           this.activeInstrument.deactivate()
         } else if (this.activeInstrument instanceof ChemCamController) {
           this.activeInstrument.deactivate()
+        } else if (this.activeInstrument instanceof DrillController) {
+          this.activeInstrument.deactivate()
         } else if (this.activeInstrument instanceof SAMController) {
           this.activeInstrument.deactivate()
         }
@@ -371,6 +378,9 @@ export class RoverController {
     }
     // Deactivate SAM if leaving it
     if (this.activeInstrument instanceof SAMController && (slot === null || slot !== this.activeInstrument.slot)) {
+      this.activeInstrument.deactivate()
+    }
+    if (this.activeInstrument instanceof DrillController && (slot === null || slot !== this.activeInstrument.slot)) {
       this.activeInstrument.deactivate()
     }
     if (slot === null) {

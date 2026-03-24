@@ -242,6 +242,15 @@ export class DrillController extends InstrumentController {
     this.targeting?.setRoverPosition(pos)
   }
 
+  /**
+   * Stops drilling and removes beam/spark VFX — call when leaving active mode or clearing selection
+   * (e.g. sleep mode, Escape) so {@link LaserDrill} is not left frozen without {@link update} ticks.
+   */
+  deactivate(): void {
+    this.drilling = false
+    this.drill?.cancelDrill()
+  }
+
   override dispose(): void {
     this.drill?.dispose()
     this.targeting?.dispose()
