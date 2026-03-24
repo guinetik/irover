@@ -8,10 +8,12 @@ export class RADController extends InstrumentController {
   override readonly canActivate = true
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
+  /** Start STANDBY until the player ACTIVATEs (matches DAN / UHF opt-in). */
+  override passiveSubsystemEnabled = false
   readonly focusNodeName = 'RAD'
   readonly focusOffset = new THREE.Vector3(0.2, 0.15, 0.2)
   readonly viewAngle = 0.45
-  /** Same deck framing as REMS — orbit from above the chassis. */
+  /** Deck orbit from above the chassis (REMS uses mast-side framing). */
   readonly viewPitch = 1.0
   override readonly selectionIdlePowerW = 2
 

@@ -1,10 +1,20 @@
 <template>
-  <div class="sol-clock">
-    <span class="sc-icon" aria-hidden="true">{{ icon }}</span>
+  <div
+    class="sol-clock"
+    role="status"
+    aria-live="polite"
+    :aria-label="ariaLabel"
+  >
+    <div class="sc-icon-wrap" aria-hidden="true">
+      <span class="sc-icon">{{ icon }}</span>
+    </div>
     <div class="sc-main">
       <span class="sc-time font-instrument">{{ marsTime }}</span>
       <span class="sc-dot" aria-hidden="true">&middot;</span>
-      <span class="sc-sol"><span class="sc-sol-label">Sol</span> <span class="font-instrument sc-sol-num">{{ sol }}</span></span>
+      <span class="sc-sol">
+        <span class="sc-sol-label">Sol</span>
+        <span class="font-instrument sc-sol-num">{{ sol }}</span>
+      </span>
       <template v-if="ambientDisplay !== null">
         <span class="sc-dot" aria-hidden="true">&middot;</span>
         <span class="sc-ambient" :title="ambientTitle">{{ ambientDisplay }}</span>
@@ -47,94 +57,111 @@ const marsTime = computed(() => {
 
 const icon = computed(() => {
   const nf = props.nightFactor ?? 0
-  if (nf > 0.8) return '\u263E'   // crescent moon — night
-  if (nf > 0.4) return '\uD83C\uDF05' // sunrise/sunset
-  return '\u2600'                  // sun — day (using text, not emoji)
+  if (nf > 0.8) return '\u263E'
+  if (nf > 0.4) return '\uD83C\uDF05'
+  return '\u2600'
+})
+
+const ariaLabel = computed(() => {
+  const parts = [`Mars local time ${marsTime.value}`, `sol ${props.sol}`]
+  if (ambientDisplay.value) parts.push(`ambient ${ambientDisplay.value}`)
+  return parts.join(', ')
 })
 </script>
 
 <style scoped>
 .sol-clock {
-  position: fixed;
-  top: 56px;
-  left: 10px;
-  z-index: 42;
   box-sizing: border-box;
-  width: var(--site-left-stack-width);
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  background: rgba(10, 5, 2, 0.75);
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  min-height: 32px;
+  max-height: 36px;
+  padding: 2px 2px 2px 4px;
+  background:
+    linear-gradient(165deg, rgba(28, 22, 18, 0.92) 0%, rgba(12, 8, 6, 0.88) 100%);
+  border: 1px solid rgba(196, 117, 58, 0.35);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 180, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(196, 117, 58, 0.4);
-  border-radius: 8px;
-  padding: 8px 12px;
   font-family: var(--font-ui);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 
-.sc-icon {
+.sc-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  color: #e8a060;
+  width: 30px;
+  margin: 2px 2px 2px 4px;
+  border-radius: 4px;
+  background: rgba(196, 117, 58, 0.12);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.25);
+}
+
+.sc-icon {
   font-size: 15px;
   line-height: 1;
+  color: #f0b878;
+  filter: drop-shadow(0 0 6px rgba(232, 160, 80, 0.35));
 }
 
 .sc-main {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: 7px;
   min-width: 0;
-  flex: 1;
-  justify-content: center;
+  padding: 4px 10px 4px 4px;
 }
 
 .sc-time {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  color: #e8c4a0;
+  letter-spacing: 0.08em;
+  color: #f2dcc4;
 }
 
 .sc-dot {
   flex-shrink: 0;
-  color: rgba(196, 117, 58, 0.45);
-  font-size: 12px;
+  color: rgba(196, 149, 106, 0.5);
+  font-size: 11px;
   line-height: 1;
-  transform: translateY(-1px);
+  user-select: none;
 }
 
 .sc-sol {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
-  color: rgba(196, 117, 58, 0.88);
 }
 
 .sc-sol-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(196, 149, 106, 0.55);
+  color: rgba(196, 149, 106, 0.65);
 }
 
 .sc-sol-num {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  color: #d4a574;
+  letter-spacing: 0.06em;
+  color: #e8b878;
 }
 
 .sc-ambient {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  color: #6b4a30;
+  letter-spacing: 0.04em;
+  color: #9ec8d4;
+  text-shadow: 0 0 10px rgba(120, 200, 220, 0.2);
   white-space: nowrap;
 }
 </style>

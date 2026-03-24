@@ -13,6 +13,8 @@ uniform float uSilicate;      // silicateIndex: 0-1
 // Detail textures
 uniform sampler2D uRockTexture;   // texture1 — greyscale cracked bedrock
 uniform sampler2D uDustTexture;   // texture2 — iron-rich dusty surface
+uniform sampler2D uDetailTexA;    // geology-driven mineral detail A
+uniform sampler2D uDetailTexB;    // geology-driven mineral detail B
 uniform sampler2D uSiteTexture;   // orbital NASA imagery for macro color
 uniform float uHasSiteTexture;    // 1.0 if site texture loaded, 0.0 if missing
 
@@ -66,6 +68,31 @@ void main() {
   vec3 dustTex2 = texture2D(uDustTexture, texUv2 * 1.1 + 0.7).rgb;
   vec3 dustTex = mix(dustTex1, dustTex2, 0.35);
 
+  // --- Orbital map patch masks ---
+  // Large-scale noise carves the terrain into 3 distinct zones, each showing
+  // a different NASA orbital image (site + two complementary maps).
+  float patchNoiseA = fbm(vWorldPosition.xz * 0.008 + 50.0, 4);
+  float patchNoiseB = fbm(vWorldPosition.xz * 0.006 + 150.0, 4);
+  float patchMaskA = smoothstep(0.38, 0.55, patchNoiseA);
+  float patchMaskB = smoothstep(0.42, 0.58, patchNoiseB) * (1.0 - patchMaskA * 0.6);
+  // Zone C is where neither A nor B dominate — the site's own texture lives here
+  float patchMaskSite = 1.0 - clamp(patchMaskA + patchMaskB, 0.0, 1.0);
+
+  // Sample complementary orbital maps at multiple scales
+  vec2 mapUv1 = vWorldPosition.xz * 0.004 + 0.2;
+  vec2 mapUv2 = vWorldPosition.xz * 0.011 + 0.45;
+
+  vec3 detailA = mix(
+    texture2D(uDetailTexA, mapUv1).rgb,
+    texture2D(uDetailTexA, mapUv2).rgb,
+    0.4
+  );
+  vec3 detailB = mix(
+    texture2D(uDetailTexB, mapUv1 * 1.3 + 0.6).rgb,
+    texture2D(uDetailTexB, mapUv2 * 0.8 + 0.3).rgb,
+    0.45
+  );
+
   // --- Procedural color tinting (modulate textures by site params) ---
 
   // Basalt darkens and desaturates rock — high basalt = near-black volcanic ground
@@ -113,26 +140,34 @@ void main() {
   color = mix(color, rockColor, slopeFactor + heightExposure);
   color = mix(color, dustColor, dustAmount);
 
-  // --- Site-specific orbital texture overlay ---
-  // Real NASA orbital imagery provides the dominant color palette for each site.
-  // Detail textures (rock/dust) provide micro-structure on top.
-  if (uHasSiteTexture > 0.5) {
-    // Sample at 3 scales to break up any single-image artifacts
-    vec3 site1 = texture2D(uSiteTexture, vUv).rgb;
-    vec3 site2 = texture2D(uSiteTexture, vUv * 2.3 + 0.17).rgb;
-    vec3 site3 = texture2D(uSiteTexture, vUv * 0.5 + 0.4).rgb;
-    vec3 siteColor = site1 * 0.5 + site2 * 0.3 + site3 * 0.2;
-
-    // Extract luminance from detail textures to use as micro-structure
-    float rockDetail = dot(rockTex, vec3(0.33)) * 0.5 + 0.5; // 0.5-1.0 range
-    float dustDetail = dot(dustTex, vec3(0.33)) * 0.3 + 0.7; // 0.7-1.0 range
+  // --- Orbital imagery zone blending ---
+  // Three orbital maps (site + two complementary) blend in large noise-driven
+  // patches so the terrain has visible color variety as you drive around.
+  {
+    // Extract luminance from detail textures for micro-structure
+    float rockDetail = dot(rockTex, vec3(0.33)) * 0.5 + 0.5;
+    float dustDetail = dot(dustTex, vec3(0.33)) * 0.3 + 0.7;
     float detail = mix(dustDetail, rockDetail, slopeFactor);
 
-    // Apply detail structure to orbital color
-    vec3 siteDetailed = siteColor * detail;
+    // Site's own orbital image — sampled at multiple scales
+    vec3 siteColor = vec3(0.0);
+    if (uHasSiteTexture > 0.5) {
+      vec3 site1 = texture2D(uSiteTexture, vUv).rgb;
+      vec3 site2 = texture2D(uSiteTexture, vUv * 2.3 + 0.17).rgb;
+      vec3 site3 = texture2D(uSiteTexture, vUv * 0.5 + 0.4).rgb;
+      siteColor = site1 * 0.5 + site2 * 0.3 + site3 * 0.2;
+    }
 
-    // Blend strongly — orbital color is the hero, procedural is the fallback
-    color = mix(color, siteDetailed, 0.65);
+    // Weighted blend of the three orbital sources per zone
+    vec3 orbitalColor = siteColor * patchMaskSite
+                      + detailA * patchMaskA
+                      + detailB * patchMaskB;
+
+    // Apply rock/dust micro-structure over the orbital color
+    vec3 orbitalDetailed = orbitalColor * detail;
+
+    // Blend into procedural base — orbital is the hero, procedural fills gaps
+    color = mix(color, orbitalDetailed, 0.65);
   }
 
   // --- Canyon height-stratified strata bands ---

@@ -1,0 +1,286 @@
+<template>
+  <div class="site-hud">
+    <div class="site-hud-left">
+      <button type="button" class="back-btn" @click="goBack">BACK</button>
+      <SolClock
+        v-if="showSolClock"
+        :sol="marsSol"
+        :time-of-day="marsTimeOfDay"
+        :night-factor="currentNightFactor"
+        :ambient-celsius="ambientCelsius"
+      />
+      <h2 class="site-name">{{ siteTitle }}</h2>
+    </div>
+    <div class="site-hud-center">
+      <SiteCompass :heading="roverHeading" :pois="compassPois" />
+    </div>
+    <div class="hud-actions">
+      <button
+        type="button"
+        class="ach-counter"
+        aria-haspopup="dialog"
+        :aria-expanded="achievementsExpanded"
+        aria-label="Achievements"
+        @click="$emit('open-achievements')"
+      >
+        <span class="ach-trophy" aria-hidden="true">🏆</span>
+        <span class="ach-count font-instrument">{{ unlockedAchievementCount }}/{{ totalAchievementCount }}</span>
+      </button>
+      <button
+        type="button"
+        class="sp-counter"
+        aria-haspopup="dialog"
+        :aria-expanded="spLedgerExpanded"
+        aria-label="Science points history"
+        @click="$emit('open-sp-ledger')"
+      >
+        <span class="sp-icon" aria-hidden="true">&#x2726;</span>
+        <span class="sp-value font-instrument">{{ totalSp }}</span>
+        <span class="sp-label">SP</span>
+      </button>
+      <button
+        v-if="showScienceButton"
+        type="button"
+        class="science-hud-btn"
+        @click="$emit('open-science-log')"
+      >
+        SCIENCE
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+import SiteCompass from '@/components/SiteCompass.vue'
+import type { SiteCompassPoi } from '@/components/SiteCompass.vue'
+import SolClock from '@/components/SolClock.vue'
+
+withDefaults(
+  defineProps<{
+    /** Map / site label (route id or display name). */
+    siteTitle: string
+    showSolClock: boolean
+    marsSol: number
+    marsTimeOfDay: number
+    currentNightFactor?: number
+    ambientCelsius?: number | null
+    roverHeading: number
+    compassPois?: SiteCompassPoi[]
+    unlockedAchievementCount: number
+    totalAchievementCount: number
+    totalSp: number
+    showScienceButton: boolean
+    achievementsExpanded: boolean
+    spLedgerExpanded: boolean
+  }>(),
+  { compassPois: () => [], currentNightFactor: 0 },
+)
+
+defineEmits<{
+  'open-achievements': []
+  'open-sp-ledger': []
+  'open-science-log': []
+}>()
+
+const router = useRouter()
+
+/** Returns to the global Mars globe view. */
+function goBack(): void {
+  void router.push('/globe')
+}
+</script>
+
+<style scoped>
+.site-hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  padding: 0 16px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.site-hud-left {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.site-hud-left > * + * {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.site-hud-center {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hud-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ach-counter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+  background: rgba(196, 149, 106, 0.1);
+  border: 1px solid rgba(196, 149, 106, 0.35);
+  border-radius: 4px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ach-counter:hover {
+  background: rgba(196, 149, 106, 0.16);
+  border-color: rgba(232, 176, 96, 0.45);
+}
+
+.ach-counter:focus {
+  outline: none;
+}
+
+.ach-counter:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(10, 6, 4, 0.95),
+    0 0 0 4px rgba(232, 176, 96, 0.45);
+}
+
+.ach-trophy {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ach-count {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  color: #e8b060;
+}
+
+.sp-counter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+  background: rgba(102, 255, 238, 0.08);
+  border: 1px solid rgba(102, 255, 238, 0.25);
+  border-radius: 4px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sp-counter:hover {
+  background: rgba(102, 255, 238, 0.12);
+  border-color: rgba(102, 255, 238, 0.4);
+}
+
+.sp-counter:focus {
+  outline: none;
+}
+
+.sp-counter:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(10, 6, 4, 0.95),
+    0 0 0 4px rgba(102, 255, 238, 0.55);
+}
+
+.science-hud-btn {
+  padding: 4px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.18em;
+  color: #0a0604;
+  background: linear-gradient(180deg, rgba(102, 255, 238, 0.95), rgba(80, 200, 185, 0.9));
+  border: 1px solid rgba(102, 255, 238, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    filter 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 0 12px rgba(102, 255, 238, 0.2);
+}
+
+.science-hud-btn:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 16px rgba(102, 255, 238, 0.35);
+}
+
+.sp-icon {
+  color: #66ffee;
+  font-size: 12px;
+  text-shadow: 0 0 6px rgba(102, 255, 238, 0.4);
+}
+
+.sp-value {
+  color: #66ffee;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.sp-label {
+  color: rgba(102, 255, 238, 0.5);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+.back-btn {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.site-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+</style>

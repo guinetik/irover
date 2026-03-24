@@ -96,7 +96,7 @@ const rangeStr = computed(() => {
 <style scoped>
 .mast-telemetry {
   position: fixed;
-  top: 92px;
+  top: 132px;
   left: 10px;
   z-index: 42;
   background: rgba(10, 5, 2, 0.7);

@@ -130,20 +130,23 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
     const glowIntensity = instrumentSelectionEmissiveIntensity(simulationTime)
     for (const inst of controller?.instruments ?? []) {
       const hex = inst.selectionHighlightColor
-      if (hex == null || !inst.node) continue
+      const glowRoots = inst.getSelectionHighlightRoots()
+      if (hex == null || glowRoots.length === 0) continue
       if (inst instanceof RTGController && inst.phase === 'overdrive') continue
       if (inst instanceof HeaterController && inst.heatBoostActive) continue
       const focused =
         instrumentViewActive && activeInst === inst && !isSleeping
-      inst.node.traverse((child) => {
-        if (!(child as THREE.Mesh).isMesh) return
-        const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
-        if (!mat.emissive) return
-        if (focused) {
-          mat.emissive.setHex(hex)
-          mat.emissiveIntensity = glowIntensity
-        }
-      })
+      for (const root of glowRoots) {
+        root.traverse((child) => {
+          if (!(child as THREE.Mesh).isMesh) return
+          const mat = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
+          if (!mat.emissive) return
+          if (focused) {
+            mat.emissive.setHex(hex)
+            mat.emissiveIntensity = glowIntensity
+          }
+        })
+      }
     }
   }
 

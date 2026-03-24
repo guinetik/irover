@@ -67,14 +67,15 @@ export class MarsSky {
     this.sunLight.shadow.camera.top = d
     this.sunLight.shadow.camera.bottom = -d
     this.sunLight.shadow.bias = -0.0002
+    this.sunLight.shadow.normalBias = 0.03
     scene.add(this.sunLight)
 
-    // Ambient
-    this.ambientLight = new THREE.AmbientLight(0x8b5e3c, 0.4)
+    // Ambient — warm Mars fill to soften shadow contrast
+    this.ambientLight = new THREE.AmbientLight(0x9b6e4c, 0.55)
     scene.add(this.ambientLight)
 
-    // Hemisphere
-    this.hemiLight = new THREE.HemisphereLight(0xc4956a, 0x3d2817, 0.3)
+    // Hemisphere — sky/ground gradient for natural bounce light
+    this.hemiLight = new THREE.HemisphereLight(0xd4a57a, 0x4d3020, 0.45)
     scene.add(this.hemiLight)
 
     this.updateSun()
@@ -118,9 +119,9 @@ export class MarsSky {
     const noonRamp = smoothstep(0.5, 1.0, elevation)
     this.sunLight.intensity = dawnRamp * 2.0 + morningRamp * 2.0 + noonRamp * 1.5
 
-    // Ambient and hemisphere — higher daytime fill
-    this.ambientLight.intensity = 0.05 + sunUp * 0.35
-    this.hemiLight.intensity = 0.05 + sunUp * 0.25
+    // Ambient and hemisphere — higher daytime fill for softer shadows
+    this.ambientLight.intensity = 0.1 + sunUp * 0.5
+    this.hemiLight.intensity = 0.08 + sunUp * 0.4
 
     // Sun color temperature arc — smooth lerp through day phases
     // Dawn: warm orange -> Morning: soft gold -> Noon: bright warm white

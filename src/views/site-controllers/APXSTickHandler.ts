@@ -35,6 +35,7 @@ export function createAPXSTickHandler(
   let gameplayInitialised = false
   let countdownTimer = 0
   let coldToastCooldown = 0
+  let apxsOwnsCrosshair = false
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (gameplayInitialised) return
@@ -56,6 +57,7 @@ export function createAPXSTickHandler(
       const apxs = controller.activeInstrument
       apxs.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
+      apxsOwnsCrosshair = true
       const hasValidTarget = apxs.canAnalyzeTarget
       crosshairColor.value = hasValidTarget ? 'green' : 'red'
 
@@ -95,7 +97,11 @@ export function createAPXSTickHandler(
         apxsCountdown.value = 0
       }
     } else {
-      crosshairVisible.value = false
+      // Only clear crosshair if APXS was the last to claim it (avoid clobbering drill/chemcam)
+      if (apxsOwnsCrosshair) {
+        crosshairVisible.value = false
+        apxsOwnsCrosshair = false
+      }
       if (apxsState.value === 'counting') {
         apxsState.value = 'idle'
         apxsCountdown.value = 0

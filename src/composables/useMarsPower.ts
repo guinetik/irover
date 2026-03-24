@@ -53,7 +53,7 @@ export const CURIOSITY_PROFILE: RoverPowerProfile = {
 }
 
 /** Arm drill (powder sample) sustained draw (W) while E held. Base value before profile mult. */
-export const ROCK_DRILL_BASE_W = 118
+export const ROCK_DRILL_BASE_W = 100
 
 /**
  * Scales Wh integration so battery changes are visible with an accelerated sol.

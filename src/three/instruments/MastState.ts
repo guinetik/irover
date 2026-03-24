@@ -7,6 +7,12 @@ export const mastState = {
   tiltAngle: 0,
   fov: 50,
   /**
+   * Rover heading (Y rotation) — written by RoverController each frame so
+   * mast instruments use the authoritative value instead of decomposing the
+   * combined slope+heading quaternion (which drifts on sloped terrain).
+   */
+  roverHeading: 0,
+  /**
    * Cleared at the start of each `RoverController.update` tick; set when the
    * active mast instrument handles A/D/W/S (or arrows) for pan/tilt.
    */

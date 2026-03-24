@@ -1,46 +1,34 @@
 <template>
   <div class="martian-site-view w-full h-full">
     <canvas ref="canvasRef" class="block w-full h-full" />
-    <div class="site-hud">
-      <div class="site-hud-left">
-        <button class="back-btn" @click="$router.push('/globe')">BACK</button>
-        <h2 class="site-name">{{ siteId }}</h2>
+    <Transition name="deploy-fade">
+      <div
+        v-if="remsStormIncomingText || remsStormActiveText"
+        class="rems-storm-banner font-instrument"
+        role="status"
+      >
+        {{ remsStormActiveText || remsStormIncomingText }}
       </div>
-      <div class="site-hud-center">
-        <SiteCompass :heading="roverHeading" :pois="siteCompassPois" />
-      </div>
-      <div class="hud-actions">
-        <button
-          type="button"
-          class="ach-counter"
-          aria-haspopup="dialog"
-          :aria-expanded="achievementsOpen"
-          aria-label="Achievements"
-          @click="achievementsOpen = true"
-        >
-          <span class="ach-trophy" aria-hidden="true">🏆</span>
-          <span class="ach-count font-instrument">{{ unlockedAchievementCount }}/{{ totalAchievementCount }}</span>
-        </button>
-        <button
-          type="button"
-          class="sp-counter"
-          aria-haspopup="dialog"
-          :aria-expanded="spLedgerOpen"
-          aria-label="Science points history"
-          @click="spLedgerOpen = true"
-        >
-          <span class="sp-icon" aria-hidden="true">&#x2726;</span>
-          <span class="sp-value font-instrument">{{ totalSP }}</span>
-          <span class="sp-label">SP</span>
-        </button>
-        <button
-          v-if="hasScienceDiscoveries && !deploying && !descending"
-          type="button"
-          class="science-hud-btn"
-          @click="scienceLogOpen = true"
-        >SCIENCE</button>
-      </div>
-    </div>
+    </Transition>
+    <MartianSiteNavbar
+      :site-title="siteId"
+      :show-sol-clock="!deploying && !descending"
+      :mars-sol="marsSol"
+      :mars-time-of-day="marsTimeOfDay"
+      :current-night-factor="currentNightFactor"
+      :ambient-celsius="solClockAmbientC"
+      :rover-heading="roverHeading"
+      :compass-pois="siteCompassPois"
+      :unlocked-achievement-count="unlockedAchievementCount"
+      :total-achievement-count="totalAchievementCount"
+      :total-sp="totalSP"
+      :show-science-button="hasScienceDiscoveries && !deploying && !descending"
+      :achievements-expanded="achievementsOpen"
+      :sp-ledger-expanded="spLedgerOpen"
+      @open-achievements="achievementsOpen = true"
+      @open-sp-ledger="spLedgerOpen = true"
+      @open-science-log="scienceLogOpen = true"
+    />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <Transition name="deploy-fade">
       <div v-if="descending" class="deploy-overlay" key="descent">
@@ -179,7 +167,8 @@
       :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
       :wheels-hud="activeInstrumentSlot === WHLS_SLOT ? wheelsOverlayHud : null"
-      :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, heaterW: heaterEffectiveW, zone: thermalZone } : null"
+      :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, ambientMeasured: remsSurveying, heaterW: heaterEffectiveW, zone: thermalZone } : null"
+      :rems-hud="activeInstrumentSlot === REMS_SLOT ? remsHud : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
       :chem-cam-unread="chemCamUnreadCount"
       :chem-cam-sequence-active="chemCamOverlaySequenceActive"
@@ -380,13 +369,6 @@
         </div>
       </div>
     </Transition>
-    <SolClock
-      v-if="!deploying && !descending"
-      :sol="marsSol"
-      :time-of-day="marsTimeOfDay"
-      :night-factor="currentNightFactor"
-      :ambient-celsius="ambientEffectiveC"
-    />
     <CommToolbar
       v-if="!deploying && !descending"
       :active-slot="activeInstrumentSlot"
@@ -399,7 +381,7 @@
       :messages="lgaMailbox.messages.value"
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
-      style="position: fixed; top: 160px; left: 10px; z-index: 40;"
+      style="position: fixed; top: 168px; left: 10px; z-index: 40;"
     />
     <!-- UHF Uplink panel (shown when UHF antenna selected) -->
     <UHFUplinkPanel
@@ -414,7 +396,7 @@
       :transmitted-this-pass="uhfTransmittedThisPass"
       :uhf-enabled="uhfEnabled"
       :passes="currentSolPasses"
-      style="position: fixed; top: 160px; left: 10px; z-index: 40;"
+      style="position: fixed; top: 168px; left: 10px; z-index: 40;"
     />
     <MastTelemetry
       v-if="isInstrumentActive && (activeInstrumentSlot === 1 || activeInstrumentSlot === 2)"
@@ -495,7 +477,7 @@ import {
 } from '@/lib/sitePoiBearing'
 import { useMarsData } from '@/composables/useMarsData'
 import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
-import SiteCompass from '@/components/SiteCompass.vue'
+import MartianSiteNavbar from '@/components/MartianSiteNavbar.vue'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import {
   createMarsSiteViewController,
@@ -520,7 +502,6 @@ import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
-import SolClock from '@/components/SolClock.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
@@ -530,6 +511,7 @@ import { useOrbitalDrops } from '@/composables/useOrbitalDrops'
 import { useMarsGameClock } from '@/composables/useMarsGameClock'
 import { useMarsPower, POWER_SLEEP_THRESHOLD_PCT } from '@/composables/useMarsPower'
 import { useMarsThermal } from '@/composables/useMarsThermal'
+import { useSiteRemsWeather } from '@/composables/useSiteRemsWeather'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useRewardTrack } from '@/composables/useRewardTrack'
@@ -547,6 +529,7 @@ import {
   HeaterController,
   HEATER_OVERDRIVE_BATTERY_COST,
   HEATER_SLOT,
+  REMS_SLOT,
   RoverWheelsController,
   WHLS_SLOT,
   type RTGConservationState,
@@ -906,6 +889,14 @@ const {
   drainBatteryFraction,
 } = useMarsPower()
 const { internalTempC, ambientEffectiveC, heaterW, heaterEffectiveW, zone: thermalZone, tickThermal } = useMarsThermal()
+const {
+  solClockAmbientC,
+  remsHud,
+  remsStormIncomingText,
+  remsStormActiveText,
+  tickRemsWeather,
+} = useSiteRemsWeather()
+const remsSurveying = ref(false)
 /** True when automatic thermostat is drawing bus power (heaterW from thermal tick). */
 const heaterThermostatOn = computed(() => heaterW.value > 0.5)
 const heaterHudButtonTitle = computed(() =>
@@ -1386,6 +1377,7 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
     hasPerk,
     tickPower,
     tickThermal,
+    tickRemsWeather,
     sampleToastRef,
     upsertPoi,
     removePoi,
@@ -1496,6 +1488,11 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       uhfNextPassInSec,
       uhfTransmittedThisPass,
       lgaUnreadCount,
+      solClockAmbientC,
+      remsHud,
+      remsStormIncomingText,
+      remsStormActiveText,
+      remsSurveying,
     },
   }
 }

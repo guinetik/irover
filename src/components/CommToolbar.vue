@@ -41,11 +41,13 @@ function handleClick(slot: number) {
 <style scoped>
 .comm-toolbar {
   position: fixed;
-  top: 102px;
+  top: 58px;
   left: 10px;
   box-sizing: border-box;
-  width: var(--site-left-stack-width);
+  width: max-content;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 4px;
   padding: 6px;
   background: rgba(10, 5, 2, 0.65);
@@ -60,12 +62,14 @@ function handleClick(slot: number) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
+  /* Same footprint as InstrumentToolbar .instrument-slot */
+  width: 52px;
+  box-sizing: border-box;
   padding: 6px 4px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;

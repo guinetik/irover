@@ -23,7 +23,11 @@
           </div>
           <div class="ov-stat">
             <div class="ov-stat-label">AMBIENT</div>
-            <div class="ov-stat-value" style="color: #6b4a30">{{ Math.round(thermal.ambientC) }}&deg;C</div>
+            <div
+              class="ov-stat-value"
+              style="color: #6b4a30"
+              :title="thermal.ambientMeasured ? '' : 'REMS on mast required for ambient air sensing'"
+            >{{ thermal.ambientMeasured ? Math.round(thermal.ambientC) + '\u00B0C' : '\u2014' }}</div>
           </div>
           <div class="ov-stat">
             <div class="ov-stat-label">HEATER</div>
@@ -33,6 +37,43 @@
             <div class="ov-stat-label">ZONE</div>
             <div class="ov-stat-value" :style="{ color: thermalZoneColor }">{{ thermal.zone }}</div>
           </div>
+        </div>
+        <div v-else-if="activeSlot === REMS_SLOT && remsHud" class="ov-stats ov-stats-rems">
+          <div class="ov-stat">
+            <div class="ov-stat-label">POWER</div>
+            <div class="ov-stat-value" :style="{ color: statPowerColor }">{{ statPower }}</div>
+          </div>
+          <div class="ov-stat">
+            <div class="ov-stat-label">STATUS</div>
+            <div class="ov-stat-value" :style="{ color: statStatusColor }">{{ statStatus }}</div>
+          </div>
+          <div class="ov-stat">
+            <div class="ov-stat-label">HEALTH</div>
+            <div class="ov-stat-value" :style="{ color: healthColor }">{{ instrument.health }}</div>
+          </div>
+          <template v-if="remsHud.available">
+            <div class="ov-stat">
+              <div class="ov-stat-label">PRESS</div>
+              <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.pressureHpa.toFixed(1) }} hPa</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-label">RH</div>
+              <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.humidityPct.toFixed(1) }}%</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-label">AIR</div>
+              <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.tempC >= 0 ? '+' : '' }}{{ remsHud.tempC.toFixed(1) }}&deg;C</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-label">WIND</div>
+              <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.windMs.toFixed(1) }} m/s {{ remsHud.windDirCompass }}</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat-label">UV</div>
+              <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.uvIndex.toFixed(1) }}</div>
+            </div>
+          </template>
+          <div v-else class="ov-rems-offline">Ambient sensing off — ACTIVATE REMS for pressure, humidity, air temp, wind, and storm alerts.</div>
         </div>
         <div v-else class="ov-stats">
           <div class="ov-stat">
@@ -205,7 +246,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue'
-import { HEATER_SLOT, WHLS_SLOT } from '@/three/instruments'
+import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
+import type { RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
 
 export interface InstrumentData {
   slot: number
@@ -245,7 +287,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
   3: {
     slot: 3, icon: 'ARM', name: 'DRILL', type: 'ARM POWDER SAMPLER',
     desc: 'Rotary percussive bit on the arm turret: collects powdered rock for the lab after MastCam/ChemCam tell you what to hit. Shares the arm with APXS on the real rover.',
-    power: '6W / 118W drilling', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '95%',
+    power: '6W / 100W drilling', powerColor: '#ef9f27', status: 'READY', statusColor: '#5dc9a5', health: '95%',
     hint: 'Drive within 1.5m of target. Aim the arm with mouse. Hold [E] to drill and collect powder.',
     temp: '',
     upgName: 'BIT WEAR KIT', upgDesc: 'Reduces drill time on tagged rocks.', upgReq: 'Requires: Deep Analysis Kit drop',
@@ -347,6 +389,8 @@ defineEmits<{
 export interface ThermalDisplay {
   internalTempC: number
   ambientC: number
+  /** False when REMS is on STANDBY — ambient air is not measured for HUD. */
+  ambientMeasured: boolean
   /** Modeled bus watts (doubles during HTR overdrive when active). */
   heaterW: number
   zone: string
@@ -384,6 +428,8 @@ const props = withDefaults(
     chemCamSequenceProgress?: number
     chemCamSequenceLabel?: string
     chemCamSequencePulse?: boolean
+    /** REMS card: live environment readouts while surveying */
+    remsHud?: RemsHudSnapshot | null
     /** RTG card: overdrive (idle, not in shunt cooldown) */
     rtgOverdriveReady?: boolean
     /** RTG card: power shunt available */
@@ -419,6 +465,7 @@ const props = withDefaults(
     chemCamSequenceProgress: 0,
     chemCamSequenceLabel: '',
     chemCamSequencePulse: false,
+    remsHud: null,
     rtgOverdriveReady: false,
     rtgConservationReady: false,
     rtgConservationCooldownTitle: '',
@@ -873,6 +920,20 @@ const thermalZoneBg = computed(() =>
 
 .ov-stat-zone {
   grid-column: 1 / -1;
+}
+
+.ov-stats-rems {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+.ov-rems-offline {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(196, 149, 106, 0.75);
+  padding: 4px 0 2px;
 }
 
 .ov-btn-dan-prospect {

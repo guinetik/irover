@@ -19,6 +19,30 @@ const SCALE = 800
 const ROCK_COUNT = 1200
 const BOULDER_COUNT = 50
 
+/** Map orbital textures grouped by feature type for cross-site blending. */
+const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {
+  'volcano':      ['/olympus-mons.jpg', '/ascraeus-mons.jpg', '/pavonis-mons.jpg', '/elysium-mons.jpg'],
+  'canyon':       ['/valles-marineris.jpg', '/syrtis-major.jpg', '/argyre-basin.jpg'],
+  'basin':        ['/hellas-basin.jpg', '/argyre-basin.jpg', '/utopia-planitia.jpg'],
+  'plain':        ['/utopia-planitia.jpg', '/acidalia-planitia.jpg', '/syrtis-major.jpg'],
+  'polar-cap':    ['/north-polar-cap.jpg', '/south-polar-cap.jpg', '/utopia-planitia.jpg'],
+  'landing-site': ['/utopia-planitia.jpg', '/acidalia-planitia.jpg', '/hellas-basin.jpg'],
+}
+
+/**
+ * Picks two complementary orbital map textures from the same feature-type pool,
+ * excluding the site's own image so all three terrain textures are distinct.
+ */
+function pickDetailTextures(p: TerrainParams): [string, string] {
+  const own = `/${p.siteId}.jpg`
+  const pool = (MAP_TEXTURES_BY_TYPE[p.featureType] ?? MAP_TEXTURES_BY_TYPE['plain'])
+    .filter(url => url !== own)
+  // Deterministic pick based on seed
+  const i = Math.abs(p.seed) % pool.length
+  const j = (i + 1) % pool.length
+  return [pool[i], pool[j === i ? (i + 1) % pool.length : j]]
+}
+
 export interface TerrainParams {
   roughness: number
   craterDensity: number
@@ -487,6 +511,20 @@ export class TerrainGenerator {
     siteTex.anisotropy = 4
     this.textures.push(siteTex)
 
+    // Two geology-driven detail textures for patchy variety
+    const [detailUrl1, detailUrl2] = pickDetailTextures(p)
+    const detailTexA = textureLoader.load(detailUrl1)
+    detailTexA.wrapS = detailTexA.wrapT = THREE.RepeatWrapping
+    detailTexA.minFilter = THREE.LinearMipmapLinearFilter
+    detailTexA.magFilter = THREE.LinearFilter
+    detailTexA.anisotropy = 4
+    const detailTexB = textureLoader.load(detailUrl2)
+    detailTexB.wrapS = detailTexB.wrapT = THREE.RepeatWrapping
+    detailTexB.minFilter = THREE.LinearMipmapLinearFilter
+    detailTexB.magFilter = THREE.LinearFilter
+    detailTexB.anisotropy = 4
+    this.textures.push(detailTexA, detailTexB)
+
     const sunDir = new THREE.Vector3(50, 80, 30).normalize()
 
     const material = new THREE.ShaderMaterial({
@@ -501,6 +539,8 @@ export class TerrainGenerator {
         uHeightRange: { value: this.heightMax - this.heightMin },
         uRockTexture: { value: rockTex },
         uDustTexture: { value: dustTex },
+        uDetailTexA: { value: detailTexA },
+        uDetailTexB: { value: detailTexB },
         uSiteTexture: { value: siteTex },
         uHasSiteTexture: { value: 1.0 },
         uWaterIce: { value: p.waterIceIndex },

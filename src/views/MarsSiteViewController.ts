@@ -5,6 +5,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
+import { createMarsEnvironment } from '@/three/MarsEnvironment'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
@@ -21,6 +22,7 @@ import {
   type RoverPowerProfile,
 } from '@/composables/useMarsPower'
 import type { ThermalTickInput, ThermalZone } from '@/composables/useMarsThermal'
+import type { RemsHudSnapshot, RemsWeatherTickInput } from '@/composables/useSiteRemsWeather'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { SamQueueEntry } from '@/composables/useSamQueue'
@@ -253,6 +255,13 @@ export interface MarsSiteViewRefs {
   uhfNextPassInSec: Ref<number>
   uhfTransmittedThisPass: Ref<number>
   lgaUnreadCount: Ref<number>
+  /** Sol clock ambient segment — null when REMS not surveying. */
+  solClockAmbientC: Ref<number | null>
+  remsHud: Ref<RemsHudSnapshot>
+  remsStormIncomingText: Ref<string | null>
+  remsStormActiveText: Ref<string | null>
+  /** REMS passive surveying — drives ambient air HUD availability. */
+  remsSurveying: Ref<boolean>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -269,6 +278,7 @@ export interface MarsSiteViewContext {
   hasPerk: (perkId: string) => boolean
   tickPower: (deltaSeconds: number, input: PowerTickInput) => void
   tickThermal: (deltaSeconds: number, input: ThermalTickInput) => void
+  tickRemsWeather: (input: RemsWeatherTickInput) => void
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   upsertPoi: (poi: { id: string; label: string; x: number; z: number; color: string }) => void
   removePoi: (id: string) => void
@@ -340,6 +350,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     hasPerk,
     tickPower,
     tickThermal,
+    tickRemsWeather,
     sampleToastRef,
     upsertPoi,
     removePoi,
@@ -396,6 +407,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     uhfNextPassInSec,
     uhfTransmittedThisPass,
     lgaUnreadCount,
+    remsHud,
+    remsSurveying,
   } = ctx.refs
 
   // --- Three.js core ---
@@ -596,6 +609,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
     siteScene = new SiteScene()
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
+
+    // Procedural Mars environment map — gives PBR metals something to reflect
+    siteScene.scene.environment = createMarsEnvironment(renderer)
+    siteScene.scene.environmentIntensity = 0.6
 
     cameraFillLight = createCameraFillLight()
     siteScene.scene.add(cameraFillLight)
@@ -816,6 +833,28 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           heaterInst.heaterW = heaterEffectiveW.value
           heaterInst.zone = thermalZone.value
         }
+      }
+
+      const remsInst = controller?.instruments.find((i) => i.id === 'rems') as REMSController | undefined
+      const remsOn = remsInst?.passiveSubsystemEnabled ?? false
+      remsSurveying.value = remsOn
+      tickRemsWeather({
+        deltaSeconds: sceneDelta,
+        timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
+        sol: marsSol.value,
+        simulationTime,
+        terrain: siteTerrainParams.value,
+        remsOn,
+        ambientEffectiveC: ambientEffectiveC.value,
+      })
+      if (remsInst && remsOn && remsHud.value.available) {
+        const h = remsHud.value
+        remsInst.temperature = h.tempC
+        remsInst.windSpeed = h.windMs
+        remsInst.windDirectionDeg = h.windDirDeg
+        remsInst.pressure = h.pressureHpa
+        remsInst.humidity = Math.min(0.5, Math.max(0, h.humidityPct / 100))
+        remsInst.uvIndex = h.uvIndex
       }
 
       danHandler.tick(fctx)

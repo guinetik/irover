@@ -14,9 +14,12 @@ const BASE_CAPACITY_KG = 5
 const stacks = ref<InventoryStack[]>([])
 const { mod } = usePlayerProfile()
 
-// Seed starter ice (1 kg = 10 units at 0.1 kg/unit) — placeholder until DAN cones produce it
+// Seed starter items — placeholder until DAN cones / orbital drops produce them
 if (stacks.value.length === 0) {
-  stacks.value = [{ itemId: 'ice', quantity: 10, totalWeightKg: 1.0 }]
+  stacks.value = [
+    { itemId: 'ice', quantity: 10, totalWeightKg: 1.0 },
+    { itemId: 'welding-wire', quantity: 8, totalWeightKg: 2.0 },
+  ]
 }
 
 export type AddRockSampleResult =
