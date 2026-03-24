@@ -33,7 +33,7 @@ export class APXSController extends InstrumentController {
   override readonly selectionIdlePowerW = 5
   /** Contact-science style load stub while active (no sample logic yet). */
   private static readonly ACTIVE_BUS_W = 18
-  private static readonly CONTACT_RANGE = 1.0
+  private static readonly CONTACT_RANGE = 0.6
 
   targeting: RockTargeting | null = null
   private currentTarget: TargetResult | null = null
