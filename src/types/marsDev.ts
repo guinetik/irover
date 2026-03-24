@@ -1,5 +1,10 @@
 import type { DevSpawnInventoryItemResult } from '@/types/inventory'
 
+/** Result of {@link MarsDevDebugApi.science.addSP}. */
+export type DevAddSciencePointsResult =
+  | { ok: true; amount: number }
+  | { ok: false; message: string }
+
 /**
  * Console API for development helpers exposed as `window.MarsDev` in DEV builds only.
  */
@@ -18,5 +23,13 @@ export interface MarsDevDebugApi {
      * @param quantity - Rocks: number of samples (each random mass). Others: unit count (default 1).
      */
     spawnById(itemId: string, quantity?: number): DevSpawnInventoryItemResult
+  }
+
+  science: {
+    /**
+     * Grants SP (no profile `spYield` scaling), updates the session ledger, and triggers the same SP toast as gameplay awards.
+     * @param amount - Positive integer amount.
+     */
+    addSP(amount: number): DevAddSciencePointsResult
   }
 }

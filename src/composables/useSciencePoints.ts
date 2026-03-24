@@ -41,7 +41,7 @@ const ACK_SP = { min: 5, max: 15 }
 /** Track acknowledged readouts to prevent double-count */
 const acknowledgedReadouts = new Set<string>()
 
-export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival'
+export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival' | 'dev'
 type InstrumentSource = 'mastcam' | 'chemcam' | 'drill'
 
 export interface SPGain {
@@ -184,6 +184,24 @@ export function useSciencePoints() {
     awardSurvival,
     consumeLastGain,
   }
+}
+
+/**
+ * Development helper: grants SP by a flat amount (no `spYield` modifier), records ledger + `lastGain`.
+ *
+ * @param amount - Positive integer science points to add.
+ * @returns Gain payload, or `null` if `amount` is invalid.
+ */
+export function devAwardSciencePoints(amount: number): SPGain | null {
+  const n = Math.floor(Number(amount))
+  if (!Number.isFinite(n) || n < 1) return null
+
+  totalSP.value += n
+  sessionSP.value += n
+  const gain: SPGain = { amount: n, source: 'dev', rockLabel: 'Console grant', bonus: 1.0 }
+  lastGain.value = gain
+  pushLedger(gain)
+  return gain
 }
 
 /**

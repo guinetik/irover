@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useSciencePoints, resetSciencePointsForTests } from '../useSciencePoints'
+import { useSciencePoints, resetSciencePointsForTests, devAwardSciencePoints } from '../useSciencePoints'
 
 describe('useSciencePoints ledger', () => {
   beforeEach(() => {
@@ -51,5 +51,22 @@ describe('useSciencePoints ledger', () => {
     expect(gain.source).toBe('survival')
     expect(spLedger.value[0]?.source).toBe('survival')
     expect(spLedger.value[0]?.detail).toBe('FIRST SOL')
+  })
+
+  it('devAwardSciencePoints appends flat amount without spYield', () => {
+    const { spLedger, totalSP, sessionSP } = useSciencePoints()
+    const gain = devAwardSciencePoints(100)
+    expect(gain?.amount).toBe(100)
+    expect(gain?.source).toBe('dev')
+    expect(totalSP.value).toBe(100)
+    expect(sessionSP.value).toBe(100)
+    expect(spLedger.value[0]?.source).toBe('dev')
+    expect(spLedger.value[0]?.detail).toBe('Console grant')
+  })
+
+  it('devAwardSciencePoints returns null for invalid amount', () => {
+    expect(devAwardSciencePoints(0)).toBeNull()
+    expect(devAwardSciencePoints(-1)).toBeNull()
+    expect(devAwardSciencePoints(Number.NaN)).toBeNull()
   })
 })

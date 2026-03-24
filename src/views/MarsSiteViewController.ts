@@ -14,6 +14,7 @@ import { listOrbitalDropItemIds } from '@/types/orbitalDrop'
 import type { GeologicalFeature, Landmark } from '@/types/landmark'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import { devSpawnRandomInventoryItems } from '@/composables/useInventory'
+import { devAwardSciencePoints } from '@/composables/useSciencePoints'
 import {
   type InstrumentPowerLineInput,
   type PowerTickInput,
@@ -560,6 +561,14 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       disposeMarsDevDebugApi = installMarsDevDebugApi({
         spawnRandomInventoryItems: devSpawnRandom,
         spawnInventoryItemById: devSpawnInventoryItemById,
+        addSciencePoints: (amount: number) => {
+          const gain = devAwardSciencePoints(amount)
+          if (!gain) {
+            return { ok: false as const, message: 'Invalid amount (use a positive integer).' }
+          }
+          sampleToastRef.value?.showSP(gain.amount, 'DEV', gain.bonus)
+          return { ok: true as const, amount: gain.amount }
+        },
       })
     }
 

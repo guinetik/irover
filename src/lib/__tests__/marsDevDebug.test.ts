@@ -7,13 +7,15 @@ describe('installMarsDevDebugApi', () => {
     delete (globalThis as { MarsDev?: unknown }).MarsDev
   })
 
-  it('installs MarsDev API and forwards inventory.spawnRandom and spawnById', () => {
+  it('installs MarsDev API and forwards inventory and science helpers', () => {
     const spawnRandomInventoryItems = vi.fn(() => ['a', 'b', 'c'])
     const spawnInventoryItemById = vi.fn(() => ({ ok: true as const }))
+    const addSciencePoints = vi.fn(() => ({ ok: true as const, amount: 100 }))
 
     const dispose = installMarsDevDebugApi({
       spawnRandomInventoryItems,
       spawnInventoryItemById,
+      addSciencePoints,
     })
 
     const api = (globalThis as { MarsDev?: MarsDevDebugApi }).MarsDev
@@ -24,6 +26,9 @@ describe('installMarsDevDebugApi', () => {
 
     expect(api?.inventory.spawnById('basalt', 2)).toEqual({ ok: true })
     expect(spawnInventoryItemById).toHaveBeenCalledWith('basalt', 2)
+
+    expect(api?.science.addSP(50)).toEqual({ ok: true, amount: 100 })
+    expect(addSciencePoints).toHaveBeenCalledWith(50)
 
     dispose()
     expect((globalThis as { MarsDev?: unknown }).MarsDev).toBeUndefined()

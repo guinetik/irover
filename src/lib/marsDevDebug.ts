@@ -1,9 +1,10 @@
-import type { MarsDevDebugApi } from '@/types/marsDev'
+import type { DevAddSciencePointsResult, MarsDevDebugApi } from '@/types/marsDev'
 import type { DevSpawnInventoryItemResult } from '@/types/inventory'
 
 export interface InstallMarsDevDebugApiOptions {
   spawnRandomInventoryItems: (count?: number) => string[]
   spawnInventoryItemById: (itemId: string, quantity?: number) => DevSpawnInventoryItemResult
+  addSciencePoints: (amount: number) => DevAddSciencePointsResult
 }
 
 declare global {
@@ -24,6 +25,11 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
       },
       spawnById(itemId, quantity = 1) {
         return options.spawnInventoryItemById(itemId, quantity)
+      },
+    },
+    science: {
+      addSP(amount) {
+        return options.addSciencePoints(amount)
       },
     },
   }
