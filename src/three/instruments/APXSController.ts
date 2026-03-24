@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
+import { RockTargeting, type TargetResult } from './RockTargeting'
 
 const ARM_SWING_SPEED = 0.8
 const ARM_EXTEND_SPEED = 0.6
@@ -32,6 +33,11 @@ export class APXSController extends InstrumentController {
   override readonly selectionIdlePowerW = 5
   /** Contact-science style load stub while active (no sample logic yet). */
   private static readonly ACTIVE_BUS_W = 18
+  private static readonly CONTACT_RANGE = 0.3
+
+  targeting: RockTargeting | null = null
+  private currentTarget: TargetResult | null = null
+  targetWorldPos = new THREE.Vector3()
 
   private shoulder: THREE.Object3D | null = null
   private elbow: THREE.Object3D | null = null
@@ -43,6 +49,12 @@ export class APXSController extends InstrumentController {
   private turretAngle = 0
   /** True while this instrument is the active one — set by RoverController lifecycle. */
   isActive = false
+
+  get hasTarget(): boolean { return this.currentTarget !== null }
+  get canAnalyzeTarget(): boolean {
+    return this.currentTarget !== null && this.currentTarget.rock.userData.apxsAnalyzed !== true
+  }
+  get currentTargetResult(): TargetResult | null { return this.currentTarget }
 
   private swingAngle = 0
   private extendAngle = 0
@@ -63,6 +75,19 @@ export class APXSController extends InstrumentController {
     if (!this.elbow) console.warn('[APXS] arm_02001 not found')
     if (!this.turretHead) console.warn('[APXS] arm_05_head001 not found')
     if (!this.node) console.warn('[APXS] APXS node not found')
+  }
+
+  initGameplay(_scene: THREE.Scene, _camera: THREE.PerspectiveCamera, rocks: THREE.Mesh[]): void {
+    this.targeting = new RockTargeting()
+    this.targeting.setRocks(rocks)
+  }
+
+  setRoverPosition(pos: THREE.Vector3): void {
+    this.targeting?.setRoverPosition(pos)
+  }
+
+  markAnalyzed(rock: THREE.Mesh): void {
+    rock.userData.apxsAnalyzed = true
   }
 
   override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
@@ -116,5 +141,24 @@ export class APXSController extends InstrumentController {
       )
       this.turretHead.quaternion.copy(this.turretBaseQuat).multiply(turretDelta)
     }
+
+    // Contact targeting (only when active)
+    if (this.targeting && this.isActive) {
+      const apxsPos = this.getAPXSWorldPosition()
+      this.currentTarget = this.targeting.castFromDrillHead(apxsPos, APXSController.CONTACT_RANGE)
+      if (this.currentTarget && this.currentTarget.rock.userData.apxsAnalyzed) {
+        this.currentTarget = null
+      }
+      this.targetWorldPos.copy(this.currentTarget?.point ?? apxsPos)
+    } else {
+      this.currentTarget = null
+    }
+  }
+
+  private getAPXSWorldPosition(): THREE.Vector3 {
+    if (!this.node) return new THREE.Vector3()
+    const pos = new THREE.Vector3()
+    this.node.getWorldPosition(pos)
+    return pos
   }
 }

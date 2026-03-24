@@ -69,9 +69,9 @@ export class RockTargeting {
    * Finds the nearest non-depleted rock within DRILL_HEAD_RANGE of the given position.
    * Returns the rock surface point closest to the drill head.
    */
-  castFromDrillHead(drillHeadPos: THREE.Vector3): TargetResult | null {
+  castFromDrillHead(drillHeadPos: THREE.Vector3, maxRange = DRILL_HEAD_RANGE): TargetResult | null {
     let bestRock: THREE.Mesh | null = null
-    let bestDist = DRILL_HEAD_RANGE
+    let bestDist = maxRange
     let bestPos = new THREE.Vector3()
 
     for (const rock of this.smallRocks) {
@@ -96,7 +96,7 @@ export class RockTargeting {
     // Raycast from drill head toward rock to get surface hit point
     const dir = new THREE.Vector3().subVectors(bestPos, drillHeadPos).normalize()
     this.raycaster.set(drillHeadPos, dir)
-    this.raycaster.far = DRILL_HEAD_RANGE
+    this.raycaster.far = maxRange
     const hits = this.raycaster.intersectObject(bestRock, false)
     const hitPoint = hits.length > 0 ? hits[0].point : bestPos
 
