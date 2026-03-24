@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import { solFractionFromMarsClockHours, sceneSecondsFromSolFraction, secondsPerSol } from '@/lib/missionTime'
-import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
+
 import { AntennaLGController } from '@/three/instruments/AntennaLGController'
 import { AntennaUHFController } from '@/three/instruments/AntennaUHFController'
 import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
@@ -137,9 +137,6 @@ export function createAntennaTickHandler(
 
     // During active pass with UHF on: transmit
     if (activePass && uhfCtrl.passiveSubsystemEnabled) {
-      const marsClockSecondsPerSceneSecond = (MARS_SOL_CLOCK_MINUTES * 60) / secondsPerSol()
-      const marsClockDelta = sceneDelta * marsClockSecondsPerSceneSecond
-
       // Calculate window remaining
       const windowFractionRemaining = activePass.endTimeOfDay - marsTimeOfDay
       uhfCtrl.windowRemainingSec = sceneSecondsFromSolFraction(windowFractionRemaining)
@@ -158,7 +155,7 @@ export function createAntennaTickHandler(
 
       // Progress current item
       if (currentTxItem) {
-        currentTxElapsed += marsClockDelta
+        currentTxElapsed += sceneDelta
         uhfCtrl.transmissionProgress = Math.min(1, currentTxElapsed / currentTxItem.bandwidthSec)
 
         // Item complete

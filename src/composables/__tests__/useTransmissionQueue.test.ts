@@ -23,10 +23,10 @@ beforeEach(() => {
 
 describe('transmissionQueue types', () => {
   it('BANDWIDTH_SEC exports correct values for all rarities', () => {
-    expect(BANDWIDTH_SEC.common).toBe(2)
-    expect(BANDWIDTH_SEC.uncommon).toBe(4)
-    expect(BANDWIDTH_SEC.rare).toBe(6)
-    expect(BANDWIDTH_SEC.legendary).toBe(10)
+    expect(BANDWIDTH_SEC.common).toBe(5)
+    expect(BANDWIDTH_SEC.uncommon).toBe(8)
+    expect(BANDWIDTH_SEC.rare).toBe(12)
+    expect(BANDWIDTH_SEC.legendary).toBe(18)
   })
 
   it('BANDWIDTH_SEC has entries for all four rarity tiers', () => {
