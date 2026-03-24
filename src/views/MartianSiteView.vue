@@ -816,7 +816,11 @@ function handleSamAcknowledge(): void {
   // Drop side products
   const { addComponent } = useInventory()
   for (const sp of entry.sideProducts) {
-    addComponent(sp.itemId, sp.quantity)
+    const res = addComponent(sp.itemId, sp.quantity)
+    if (res.ok) {
+      const label = INVENTORY_CATALOG[sp.itemId]?.label ?? sp.itemId
+      sampleToastRef.value?.showPayloadItem(label, sp.quantity)
+    }
   }
 
   // Archive to science log

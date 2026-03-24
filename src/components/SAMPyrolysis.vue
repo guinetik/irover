@@ -2,31 +2,53 @@
   <div class="pyrolysis-game" ref="containerRef">
     <canvas ref="canvasRef" />
 
+    <SAMMiniGameTutorial
+      :visible="!started"
+      title="PYROLYSIS"
+      icon="&#x1F525;"
+      :diagram="'&#x2191; mouse up = hotter<br>TARGET ━━━ <span style=&quot;color:#5dc9a5&quot;>▬▬▬▬▬</span> ━━━ keep line in green zone<br>&#x2193; mouse down = cooler'"
+      :steps="[
+        { key: 'MOUSE Y', text: 'Controls oven temperature — move up to heat, down to cool' },
+        { text: 'Keep the temperature trace inside the green target band' },
+        { text: '4 phases with rising targets — 20 seconds total' },
+        { text: 'Quality drains when outside the band. Hits zero = experiment fails' },
+      ]"
+      @start="onStart"
+    />
+
     <!-- HUD overlay -->
-    <div class="pyro-hud-top">
+    <div class="pyro-hud-top" v-show="started">
       <div class="pyro-hud-phase">PHASE {{ phase + 1 }}/4 — {{ phaseName }}</div>
       <div class="pyro-hud-time">{{ Math.floor(gameTime) }}s / 20s</div>
     </div>
 
     <!-- Quality bar -->
-    <div class="pyro-quality-bar">
+    <div class="pyro-quality-bar" v-show="started">
       <div class="pyro-quality-fill" :style="{ height: quality + '%', background: qualityGradient }" />
     </div>
-    <div class="pyro-quality-label">QUAL</div>
+    <div class="pyro-quality-label" v-show="started">QUAL</div>
 
     <!-- Current temperature -->
-    <div class="pyro-temp-readout font-instrument">{{ Math.round(temperature) }}°C</div>
+    <div v-show="started" class="pyro-temp-readout font-instrument">{{ Math.round(temperature) }}°C</div>
 
     <!-- Target hint -->
-    <div v-if="currentPhase" class="pyro-target-hint">TARGET: {{ currentPhase.target }}°C ±{{ currentPhase.range }}</div>
+    <div v-if="currentPhase && started" class="pyro-target-hint">TARGET: {{ currentPhase.target }}°C ±{{ currentPhase.range }}</div>
 
     <!-- Hint -->
-    <div class="pyro-hint">MOUSE Y to control oven temperature</div>
+    <div v-show="started" class="pyro-hint">MOUSE Y to control oven temperature</div>
+
+    <SAMMiniGameResult
+      :visible="finished"
+      :quality="finalQuality"
+      @continue="emit('complete', finalQuality)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import SAMMiniGameTutorial from '@/components/SAMMiniGameTutorial.vue'
+import SAMMiniGameResult from '@/components/SAMMiniGameResult.vue'
 
 defineProps<{
   modeId: string
@@ -61,6 +83,13 @@ const qualityGradient = computed(() =>
       ? 'linear-gradient(180deg, #ef9f27, #ba7517)'
       : 'linear-gradient(180deg, #e05030, #a03020)',
 )
+
+const started = ref(false)
+const finished = ref(false)
+const finalQuality = ref(0)
+
+/** Thermal noise intensity (0 = dead calm, 1 = default, higher = harder) */
+const NOISE_INTENSITY = 0.8
 
 let mouseY = 0.5
 let history: number[] = []
@@ -97,6 +126,11 @@ function update(dt: number) {
   // Mild passive heat loss toward ambient
   const heatLoss = (temperature.value - 20) * 0.003
   temperature.value -= heatLoss
+  // Thermal noise — oven "fights back" with random drift + slow sine wobble
+  // Thermal drift — persistent push away from where you are, plus noise
+  const wobble = Math.sin(gameTime.value * 1.7) * 1.5 + Math.sin(gameTime.value * 3.1) * 0.8
+  const jitter = (Math.random() - 0.5) * 2
+  temperature.value += (wobble + jitter) * NOISE_INTENSITY
   temperature.value = Math.max(20, Math.min(830, temperature.value))
 
   history.push(temperature.value)
@@ -118,7 +152,8 @@ function update(dt: number) {
   // Quality hits 0 = experiment fails
   if (quality.value <= 0) {
     running = false
-    emit('complete', 0)
+    finalQuality.value = 0
+    finished.value = true
     return
   }
 
@@ -128,7 +163,8 @@ function update(dt: number) {
     phase.value++
     if (phase.value >= 4) {
       running = false
-      emit('complete', Math.round(quality.value))
+      finalQuality.value = Math.round(quality.value)
+      finished.value = true
       return
     }
   }
@@ -155,7 +191,7 @@ function draw() {
     ctx.lineTo(gx + gw, y)
     ctx.stroke()
     ctx.fillStyle = 'rgba(196,117,58,0.25)'
-    ctx.font = '9px Courier New'
+    ctx.font = '9px "IBM Plex Mono"'
     ctx.fillText(t + '°C', 4, y + 3)
   }
 
@@ -202,12 +238,16 @@ function loop(now: number) {
   animId = requestAnimationFrame(loop)
 }
 
+function onStart() {
+  started.value = true
+  lastTime = performance.now()
+  animId = requestAnimationFrame(loop)
+}
+
 onMounted(() => {
   resize()
   window.addEventListener('resize', resize)
   containerRef.value?.addEventListener('mousemove', handleMouseMove)
-  lastTime = performance.now()
-  animId = requestAnimationFrame(loop)
 })
 
 onUnmounted(() => {

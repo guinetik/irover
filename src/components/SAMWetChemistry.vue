@@ -2,25 +2,47 @@
   <div class="wetchem-game" ref="containerRef">
     <canvas ref="canvasRef" />
 
+    <SAMMiniGameTutorial
+      :visible="!started"
+      title="WET CHEMISTRY"
+      icon="&#x1F9EA;"
+      :diagram="'<span style=&quot;color:#e05030&quot;>HCl</span> &nbsp; <span style=&quot;color:#ef9f27&quot;>CH₂Cl₂</span> &nbsp; <span style=&quot;color:#378add&quot;>H₂O</span><br>▕██▏ ▕██▏ ▕██▏ ← drag to match <span style=&quot;color:#5dc9a5&quot;>---</span> targets<br>then press SPACE'"
+      :steps="[
+        { key: 'DRAG', text: 'Click and drag the three reagent sliders to set concentration levels' },
+        { text: 'Green dashed lines show the target — match them as closely as you can' },
+        { key: 'SPACE', text: 'Press to begin the 10-second reaction' },
+        { text: 'Targets drift during the reaction — closer = higher quality' },
+      ]"
+      @start="onStart"
+    />
+
     <!-- HUD overlay -->
-    <div class="wc-hud-top">
+    <div class="wc-hud-top" v-show="started">
       <div class="wc-hud-phase">{{ reacting ? 'ANALYZING' : 'SET REAGENT LEVELS' }}</div>
       <div class="wc-hud-time">{{ reacting ? `${Math.floor(reactionTime)}s / 10s` : '—' }}</div>
     </div>
 
     <!-- Quality bar -->
-    <div class="wc-quality-bar">
+    <div class="wc-quality-bar" v-show="started">
       <div class="wc-quality-fill" :style="{ height: quality + '%', background: qualityGradient }" />
     </div>
-    <div class="wc-quality-label">QUAL</div>
+    <div class="wc-quality-label" v-show="started">QUAL</div>
 
     <!-- Hint -->
-    <div class="wc-hint">{{ reacting ? 'REACTION IN PROGRESS...' : 'CLICK + DRAG sliders — press SPACE to run' }}</div>
+    <div class="wc-hint" v-show="started">{{ reacting ? 'REACTION IN PROGRESS...' : 'CLICK + DRAG sliders — press SPACE to run' }}</div>
+
+    <SAMMiniGameResult
+      :visible="finished"
+      :quality="finalQuality"
+      @continue="emit('complete', finalQuality)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import SAMMiniGameTutorial from '@/components/SAMMiniGameTutorial.vue'
+import SAMMiniGameResult from '@/components/SAMMiniGameResult.vue'
 
 defineProps<{
   modeId: string
@@ -45,6 +67,10 @@ const qualityGradient = computed(() =>
       ? 'linear-gradient(180deg, #ef9f27, #ba7517)'
       : 'linear-gradient(180deg, #e05030, #a03020)',
 )
+
+const started = ref(false)
+const finished = ref(false)
+const finalQuality = ref(0)
 
 let reagents = [50, 50, 50]
 let sweetSpots = [50, 50, 50]
@@ -146,14 +172,16 @@ function update(dt: number) {
     // Quality hits 0 = fail
     if (quality.value <= 0) {
       running = false
-      emit('complete', 0)
+      finalQuality.value = 0
+      finished.value = true
       return
     }
 
     // Time up = complete
     if (reactionTime.value > 10) {
       running = false
-      emit('complete', Math.round(quality.value))
+      finalQuality.value = Math.round(quality.value)
+      finished.value = true
       return
     }
   }
@@ -205,7 +233,7 @@ function draw() {
 
     // Label
     c.fillStyle = '#a08060'
-    c.font = '10px Courier New'
+    c.font = '10px "IBM Plex Mono"'
     c.textAlign = 'center'
     c.fillText(LABELS[i], sx, sBot + 16)
     c.fillText(Math.round(reagents[i]) + '%', sx, sTop - 8)
@@ -230,7 +258,7 @@ function draw() {
   // Prompt to start
   if (!reacting.value) {
     c.fillStyle = 'rgba(196,117,58,0.3)'
-    c.font = '11px Courier New'
+    c.font = '11px "IBM Plex Mono"'
     c.textAlign = 'center'
     c.fillText('[ SPACE ] to begin reaction', W * 0.5, H * 0.5 + 4)
     c.textAlign = 'left'
@@ -246,6 +274,12 @@ function loop(now: number) {
   animId = requestAnimationFrame(loop)
 }
 
+function onStart() {
+  started.value = true
+  lastTime = performance.now()
+  animId = requestAnimationFrame(loop)
+}
+
 onMounted(() => {
   // Init sweet spots with some randomness
   sweetSpots = [30 + Math.random() * 40, 30 + Math.random() * 40, 30 + Math.random() * 40]
@@ -258,8 +292,6 @@ onMounted(() => {
   window.addEventListener('mouseup', handleMouseUp)
   containerRef.value?.addEventListener('mousemove', handleMouseMove)
   window.addEventListener('keydown', handleKeyDown)
-  lastTime = performance.now()
-  animId = requestAnimationFrame(loop)
 })
 
 onUnmounted(() => {
