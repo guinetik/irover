@@ -49,6 +49,8 @@ import { createDrillTickHandler } from './site-controllers/DrillTickHandler'
 import { createMastCamTickHandler } from './site-controllers/MastCamTickHandler'
 import { createChemCamTickHandler } from './site-controllers/ChemCamTickHandler'
 import { createOrbitalDropTickHandler } from './site-controllers/OrbitalDropTickHandler'
+import { createAntennaTickHandler, type AntennaTickRefs } from './site-controllers/AntennaTickHandler'
+import { useSciencePoints } from '@/composables/useSciencePoints'
 
 /** Seconds to hold position before DAN prospecting begins. */
 export const DAN_INITIATE_DURATION_SEC = 4
@@ -228,6 +230,16 @@ export interface MarsSiteViewRefs {
   heaterW: Ref<number>
   thermalZone: Ref<ThermalZone>
   samIsProcessing: Ref<boolean>
+  // Antenna system refs
+  uhfPassActive: Ref<boolean>
+  uhfTransmitting: Ref<boolean>
+  uhfCurrentOrbiter: Ref<string>
+  uhfTransmissionProgress: Ref<number>
+  uhfQueueLength: Ref<number>
+  uhfWindowRemainingSec: Ref<number>
+  uhfNextPassInSec: Ref<number>
+  uhfTransmittedThisPass: Ref<number>
+  lgaUnreadCount: Ref<number>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -268,6 +280,7 @@ export interface MarsSiteViewContext {
   samTick: (deltaSec: number) => SamQueueEntry | null
   totalSP: Ref<number>
   triggerDanAchievement: (event: string) => void
+  awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
   onInstrumentActivateRequest: () => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
   clearPois: () => void
@@ -320,6 +333,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     samTick,
     totalSP,
     triggerDanAchievement,
+    awardTransmission,
     onInstrumentActivateRequest,
     onGlobalKeyDown,
     clearPois,
@@ -352,6 +366,16 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     heaterW,
     thermalZone,
     samIsProcessing,
+    // Antenna system refs
+    uhfPassActive,
+    uhfTransmitting,
+    uhfCurrentOrbiter,
+    uhfTransmissionProgress,
+    uhfQueueLength,
+    uhfWindowRemainingSec,
+    uhfNextPassInSec,
+    uhfTransmittedThisPass,
+    lgaUnreadCount,
   } = ctx.refs
 
   // --- Three.js core ---
@@ -468,6 +492,25 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     setFocusPoi,
     focusPoiId,
   })
+
+  const antennaHandler = createAntennaTickHandler(
+    {
+      uhfPassActive,
+      uhfTransmitting,
+      uhfCurrentOrbiter,
+      uhfTransmissionProgress,
+      uhfQueueLength,
+      uhfWindowRemainingSec,
+      uhfNextPassInSec,
+      uhfTransmittedThisPass,
+      lgaUnreadCount,
+      passiveUiRevision,
+    },
+    {
+      sampleToastRef,
+      awardTransmission,
+    },
+  )
 
   // --- Resize ---
 
@@ -609,6 +652,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         nightFactor,
         thermalZone: thermalZone.value,
         marsSol: marsSol.value,
+        marsTimeOfDay: marsTimeOfDay.value,
         totalSP: totalSP.value,
         activeInstrumentSlot: activeInstrumentSlot.value,
       }
@@ -692,7 +736,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           marsSol.value++
         }
         lastSkyTimeOfDay = siteScene.sky.timeOfDay
+        // Update frame context with fresh sol/time values
+        fctx.marsSol = marsSol.value
+        fctx.marsTimeOfDay = marsTimeOfDay.value
       }
+
+      antennaHandler.tick(fctx)
 
       drillHandler.tick(fctx)
 
@@ -820,6 +869,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       nightFactor: siteScene.sky?.nightFactor ?? 0,
       thermalZone: thermalZone.value,
       marsSol: marsSol.value,
+      marsTimeOfDay: marsTimeOfDay.value,
       totalSP: totalSP.value,
       activeInstrumentSlot: activeInstrumentSlot.value,
     }
@@ -844,6 +894,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     mastCamHandler.dispose()
     chemCamHandler.dispose()
     orbitalDropHandler.dispose()
+    antennaHandler.dispose()
 
     controller?.dispose()
     if (cameraFillLight && siteScene) {
