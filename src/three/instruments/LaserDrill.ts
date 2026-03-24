@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-const DRILL_DURATION = 18.0
+const DRILL_DURATION = 15.0
 const GRACE_PERIOD = 0.2
 const SPARK_COUNT = 40
 

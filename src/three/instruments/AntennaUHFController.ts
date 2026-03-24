@@ -13,6 +13,8 @@ export class AntennaUHFController extends InstrumentController {
   override readonly canActivate = true
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
+  /** Relay hardware off until the player ACTIVATEs (higher idle + burst draw). */
+  override passiveSubsystemEnabled = false
   readonly focusNodeName = 'antenna_UHF'
   readonly focusOffset = new THREE.Vector3(0.0, 0.15, -0.1)
   readonly viewAngle = Math.PI * 1.15    // from behind, slightly left
@@ -30,7 +32,7 @@ export class AntennaUHFController extends InstrumentController {
   windowRemainingSec = 0                                     // scene-seconds left in current pass
   nextPassInSec = 0                                          // scene-seconds countdown to next pass
   transmittedThisPass = 0                                    // count of items transmitted in current pass
-  linkStatus: 'RELAY LOCK' | 'WAITING PASS' | 'OFF' = 'WAITING PASS'
+  linkStatus: 'RELAY LOCK' | 'WAITING PASS' | 'OFF' = 'OFF'
   relayOrbiter = ''                                          // set dynamically by tick handler
 
   /** 6W idle, 18W while actively transmitting */

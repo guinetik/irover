@@ -34,6 +34,16 @@ export abstract class InstrumentController {
   abstract readonly viewAngle: number   // orbit angle the camera snaps to (radians)
   abstract readonly viewPitch: number   // orbit pitch the camera snaps to (radians)
   readonly altNodeNames: string[] = []
+  /**
+   * Optional GLTF object names for selection emissive + {@link getWorldFocusPosition} centroid.
+   * When empty, behavior uses only the subtree rooted at {@link node}.
+   */
+  readonly selectionHighlightRootNames: readonly string[] = []
+  /**
+   * When true, only the first name in {@link selectionHighlightRootNames} that exists under the rover is used
+   * (alias chain for the same logical part). When false, every resolved name is highlighted.
+   */
+  readonly selectionHighlightResolveFirstOnly: boolean = false
   readonly canActivate: boolean = false
 
   /**
@@ -57,9 +67,9 @@ export abstract class InstrumentController {
 
   /**
    * For {@link billsPassiveBackgroundPower} / {@link passiveSubsystemOnly}: when false, no passive draw.
-   * Toggled by ACTIVATE (STANDBY) from the instrument card. Default off — player enables each payload.
+   * Toggled by ACTIVATE (STANDBY) from the instrument card. Default **on** at deploy; player can STANDBY.
    */
-  passiveSubsystemEnabled = false
+  passiveSubsystemEnabled = true
 
   /**
    * When non-null, the view applies a pulsing emissive on this instrument’s focus subtree while selected.
@@ -70,7 +80,10 @@ export abstract class InstrumentController {
   node: THREE.Object3D | null = null
   attached = false
 
-  /** True after materials under `node` were cloned for selection glow (avoids mutating shared GLTF materials). */
+  /** Resolved from {@link selectionHighlightRootNames} in {@link attach}; drives glow + focus centroid when non-empty. */
+  protected highlightRoots: THREE.Object3D[] = []
+
+  /** True after materials under highlight roots were cloned for selection glow (avoids mutating shared GLTF materials). */
   private focusBranchMaterialsCloned = false
 
   attach(rover: THREE.Group): void {
@@ -86,26 +99,53 @@ export abstract class InstrumentController {
     if (!this.node) {
       console.warn(`[${this.id}] Node "${this.focusNodeName}" not found in rover`)
     }
+
+    this.highlightRoots = []
+    for (const nm of this.selectionHighlightRootNames) {
+      const o = rover.getObjectByName(nm)
+      if (o) {
+        this.highlightRoots.push(o)
+        if (this.selectionHighlightResolveFirstOnly) break
+      }
+    }
+    if (this.selectionHighlightRootNames.length > 0 && this.highlightRoots.length === 0) {
+      console.warn(
+        `[${this.id}] selectionHighlightRootNames: none of [${this.selectionHighlightRootNames.join(', ')}] found in rover`,
+      )
+    }
+
     if (this.selectionHighlightColor != null) {
       this.cloneMaterialsUnderFocusNode()
     }
   }
 
   /**
-   * Clones mesh materials on the resolved focus subtree so selection emissive never tints unrelated rover parts.
+   * Subtrees that receive selection emissive in the rover VFX tick.
+   */
+  getSelectionHighlightRoots(): THREE.Object3D[] {
+    if (this.highlightRoots.length > 0) return this.highlightRoots
+    return this.node ? [this.node] : []
+  }
+
+  /**
+   * Clones mesh materials on the highlight subtrees so selection emissive never tints unrelated rover parts.
    */
   protected cloneMaterialsUnderFocusNode(): void {
-    if (!this.node || this.focusBranchMaterialsCloned) return
-    this.node.traverse((child) => {
-      if (!(child as THREE.Mesh).isMesh) return
-      const mesh = child as THREE.Mesh
-      const m = mesh.material
-      if (Array.isArray(m)) {
-        mesh.material = m.map((mat) => (mat as THREE.Material).clone())
-      } else {
-        mesh.material = (m as THREE.Material).clone()
-      }
-    })
+    if (this.focusBranchMaterialsCloned) return
+    const roots = this.getSelectionHighlightRoots()
+    if (roots.length === 0) return
+    for (const root of roots) {
+      root.traverse((child) => {
+        if (!(child as THREE.Mesh).isMesh) return
+        const mesh = child as THREE.Mesh
+        const m = mesh.material
+        if (Array.isArray(m)) {
+          mesh.material = m.map((mat) => (mat as THREE.Material).clone())
+        } else {
+          mesh.material = (m as THREE.Material).clone()
+        }
+      })
+    }
     this.focusBranchMaterialsCloned = true
   }
 
@@ -118,6 +158,17 @@ export abstract class InstrumentController {
   }
 
   getWorldFocusPosition(): THREE.Vector3 {
+    const roots = this.getSelectionHighlightRoots()
+    if (roots.length > 0) {
+      const acc = new THREE.Vector3()
+      for (const root of roots) {
+        const p = new THREE.Vector3()
+        root.getWorldPosition(p)
+        acc.add(p)
+      }
+      acc.multiplyScalar(1 / roots.length)
+      return acc
+    }
     if (!this.node) return new THREE.Vector3()
     const worldPos = new THREE.Vector3()
     this.node.getWorldPosition(worldPos)

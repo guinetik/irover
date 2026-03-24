@@ -459,6 +459,8 @@ export class RoverController {
       return
     }
 
+    // Sync authoritative heading so mast instruments don't need to decompose the quaternion
+    mastState.roverHeading = this.heading
     // Mast power: one frame flag — MastCam/ChemCam set in handleInput when pan/tilt keys held
     mastState.actuatorKeysHeld = false
 

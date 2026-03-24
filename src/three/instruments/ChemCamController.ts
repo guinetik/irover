@@ -225,13 +225,7 @@ export class ChemCamController extends InstrumentController {
       this.mastWorldPos.copy(this.mastOrigin)
     }
 
-    const roverParent = this.node?.parent
-    let baseHeading = 0
-    if (roverParent) {
-      const euler = new THREE.Euler().setFromQuaternion(roverParent.quaternion, 'YXZ')
-      baseHeading = euler.y
-    }
-    const lookAngle = baseHeading + this.panAngle + Math.PI
+    const lookAngle = mastState.roverHeading + this.panAngle + Math.PI
     const cosTilt = Math.cos(this.tiltAngle)
     this.mastLookDir.set(
       -Math.sin(lookAngle) * cosTilt,

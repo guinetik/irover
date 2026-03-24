@@ -159,13 +159,7 @@ export class MastCamController extends InstrumentController {
     }
 
     // Look direction from rover heading + pan angle
-    const roverParent = this.node?.parent
-    let baseHeading = 0
-    if (roverParent) {
-      const euler = new THREE.Euler().setFromQuaternion(roverParent.quaternion, 'YXZ')
-      baseHeading = euler.y
-    }
-    const lookAngle = baseHeading + this.panAngle + Math.PI
+    const lookAngle = mastState.roverHeading + this.panAngle + Math.PI
     const cosTilt = Math.cos(this.tiltAngle)
     this.mastLookDir.set(
       -Math.sin(lookAngle) * cosTilt,

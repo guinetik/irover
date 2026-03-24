@@ -38,6 +38,8 @@ export class DANController extends InstrumentController {
   readonly canActivate = true
   readonly billsPassiveBackgroundPower = true
   readonly passiveSubsystemOnly = true
+  /** Higher bus draw than REMS/RAD — start STANDBY until the player ACTIVATEs. */
+  override passiveSubsystemEnabled = false
   readonly focusNodeName = 'DAN_L'        // DAN detector panel on rover body
   readonly altNodeNames = ['DAN_R']
   readonly focusOffset = new THREE.Vector3(0.0, 0.3, 0.0)

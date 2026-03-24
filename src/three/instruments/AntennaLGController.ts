@@ -19,7 +19,6 @@ export class AntennaLGController extends InstrumentController {
   readonly viewAngle = Math.PI * 0.85    // from behind, slightly right
   readonly viewPitch = 0.25
   override readonly selectionIdlePowerW = 2
-  override passiveSubsystemEnabled = true
 
   // Mailbox / heartbeat state — managed by tick handler
   heartbeatSentThisSol = false
