@@ -57,10 +57,13 @@ const acknowledgedReadouts = new Set<string>()
 /** Track transmitted archive IDs to prevent double-counting bonus SP */
 const transmittedArchiveIds = new Set<string>()
 
+/** Track which rocks have been APXS-scanned to prevent double-counting */
+const apxsScored = new Set<string>()
+
 /** Transmission bonus: 50% of original SP as bonus */
 const TRANSMISSION_BONUS_MULT = 0.5
 
-export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival' | 'transmission' | 'dev'
+export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival' | 'transmission' | 'apxs' | 'dev'
 type InstrumentSource = 'mastcam' | 'chemcam' | 'drill'
 
 export interface SPGain {
@@ -192,6 +195,20 @@ export function useSciencePoints() {
     return gain
   }
 
+  function awardAPXS(rockMeshUuid: string, baseSp: number, label: string): SPGain | null {
+    if (apxsScored.has(rockMeshUuid)) return null
+    apxsScored.add(rockMeshUuid)
+    const spYieldMult = mod('spYield')
+    const amount = Math.round(baseSp * spYieldMult)
+    totalSP.value += amount
+    sessionSP.value += amount
+    persistSP()
+    const gain: SPGain = { amount, source: 'apxs', rockLabel: label, bonus: 1.0 }
+    lastGain.value = gain
+    pushLedger(gain)
+    return gain
+  }
+
   /**
    * Bonus SP awarded when a discovery is transmitted via UHF during an orbital pass.
    * @param archiveId Unique archive ID (prevents double-counting)
@@ -231,6 +248,7 @@ export function useSciencePoints() {
     award,
     awardAck,
     awardDAN,
+    awardAPXS,
     awardSAM,
     awardSurvival,
     awardTransmission,
@@ -272,4 +290,5 @@ export function resetSciencePointsForTests(): void {
   scored.drill.clear()
   acknowledgedReadouts.clear()
   transmittedArchiveIds.clear()
+  apxsScored.clear()
 }

@@ -66,8 +66,9 @@ const SOURCE_HEADLINE: Record<SPSource, string> = {
   dan: 'DAN',
   sam: 'SAM',
   survival: 'Mars survival',
-  dev: 'Dev console',
   transmission: 'Transmission',
+  apxs: 'APXS',
+  dev: 'Dev console',
 }
 
 /**
