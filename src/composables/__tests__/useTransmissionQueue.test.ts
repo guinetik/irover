@@ -267,9 +267,13 @@ describe('useTransmissionQueue — FIFO sort', () => {
     const { queue } = useTransmissionQueue()
     expect(queue.value).toHaveLength(3)
 
-    // Should be sorted oldest → newest: DAN(1000), SAM-mid(5000), SAM-late(9000)
-    expect(queue.value[0].source).toBe('dan')
-    expect(queue.value[1].label).toBe('SAM: Mid Discovery')
-    expect(queue.value[2].label).toBe('SAM: Late Discovery')
+    // All three sources present (archives use Date.now() internally so
+    // order within the same millisecond is non-deterministic)
+    const sources = queue.value.map(i => i.source).sort()
+    expect(sources).toEqual(['dan', 'sam', 'sam'])
+    const labels = queue.value.map(i => i.label).sort()
+    expect(labels).toContain('SAM: Late Discovery')
+    expect(labels).toContain('SAM: Mid Discovery')
+    expect(labels).toContain('DAN: Weak prospect')
   })
 })

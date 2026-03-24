@@ -1,4 +1,4 @@
-import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
+import { solFractionFromMarsClockHours } from '@/lib/missionTime'
 
 export interface OrbitalPass {
   id: string               // `pass-sol${N}-${index}`
@@ -11,11 +11,12 @@ export interface OrbitalPass {
 const ORBITERS: OrbitalPass['orbiter'][] = ['MRO', 'MAVEN', 'ODY']
 
 // Minimum spacing between pass starts: 3 Mars-clock hours
-const MIN_SPACING = (3 * 60) / MARS_SOL_CLOCK_MINUTES
+const MIN_SPACING = solFractionFromMarsClockHours(3)
 
-// Pass duration range: 10-15 Mars-clock minutes
-const MIN_DURATION = 10 / MARS_SOL_CLOCK_MINUTES
-const MAX_DURATION = 15 / MARS_SOL_CLOCK_MINUTES
+// Pass duration range: 2-3 Mars-clock hours
+// At SOL_DURATION=180s this gives ~90-120 real seconds of coverage
+const MIN_DURATION = solFractionFromMarsClockHours(2)
+const MAX_DURATION = solFractionFromMarsClockHours(3)
 
 /**
  * Deterministic hash of a sol number returning a float in [0, 1).

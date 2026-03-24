@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
-import { SOL_DURATION, MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
+import { solFractionFromMarsClockHours, sceneSecondsFromSolFraction, secondsPerSol } from '@/lib/missionTime'
+import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
 import { AntennaLGController } from '@/three/instruments/AntennaLGController'
 import { AntennaUHFController } from '@/three/instruments/AntennaUHFController'
 import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
@@ -58,7 +59,7 @@ export function createAntennaTickHandler(
     if (!lgaCtrl.passiveSubsystemEnabled) return
 
     const { marsSol, marsTimeOfDay } = fctx
-    const HEARTBEAT_TIME = (8 * 60) / MARS_SOL_CLOCK_MINUTES // 0800
+    const HEARTBEAT_TIME = solFractionFromMarsClockHours(8) // 0800
 
     // Heartbeat: send once per sol when timeOfDay crosses 0800
     if (marsSol !== lastLgaSol) {
@@ -136,12 +137,12 @@ export function createAntennaTickHandler(
 
     // During active pass with UHF on: transmit
     if (activePass && uhfCtrl.passiveSubsystemEnabled) {
-      const marsClockSecondsPerSceneSecond = (MARS_SOL_CLOCK_MINUTES * 60) / SOL_DURATION
+      const marsClockSecondsPerSceneSecond = (MARS_SOL_CLOCK_MINUTES * 60) / secondsPerSol()
       const marsClockDelta = sceneDelta * marsClockSecondsPerSceneSecond
 
       // Calculate window remaining
       const windowFractionRemaining = activePass.endTimeOfDay - marsTimeOfDay
-      uhfCtrl.windowRemainingSec = windowFractionRemaining * SOL_DURATION // convert to scene-seconds
+      uhfCtrl.windowRemainingSec = sceneSecondsFromSolFraction(windowFractionRemaining)
 
       // Pick next item if not currently transmitting
       if (!currentTxItem) {
@@ -193,7 +194,7 @@ export function createAntennaTickHandler(
     // Next pass countdown
     if (nextPass && !activePass) {
       const fractionUntil = nextPass.startTimeOfDay - marsTimeOfDay
-      uhfCtrl.nextPassInSec = fractionUntil * SOL_DURATION // scene-seconds
+      uhfCtrl.nextPassInSec = sceneSecondsFromSolFraction(fractionUntil)
       refs.uhfNextPassInSec.value = uhfCtrl.nextPassInSec
     } else {
       uhfCtrl.nextPassInSec = 0

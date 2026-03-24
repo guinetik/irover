@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { useOrbitalPasses } from '../useOrbitalPasses'
+import { solFractionFromMarsClockHours } from '@/lib/missionTime'
 import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
 
-const MIN_SPACING = (3 * 60) / MARS_SOL_CLOCK_MINUTES
-const MIN_DURATION = 10 / MARS_SOL_CLOCK_MINUTES
-const MAX_DURATION = 15 / MARS_SOL_CLOCK_MINUTES
+const MIN_SPACING = solFractionFromMarsClockHours(3)
+const MIN_DURATION = solFractionFromMarsClockHours(2)
+const MAX_DURATION = solFractionFromMarsClockHours(3)
 
 describe('useOrbitalPasses', () => {
   const { getPassesForSol, getActivePass, getNextPass } = useOrbitalPasses()
@@ -50,13 +51,13 @@ describe('useOrbitalPasses', () => {
       }
     })
 
-    // ── 5. Pass duration is within 10-15 Mars-clock minutes ─────────────────
-    it('pass duration is between 10 and 15 Mars-clock minutes', () => {
+    // ── 5. Pass duration is within 2-3 Mars-clock hours ─────────────────
+    it('pass duration is between 2 and 3 Mars-clock hours', () => {
       for (const sol of [1, 55, 333]) {
         for (const pass of getPassesForSol(sol)) {
           const durationMinutes = (pass.endTimeOfDay - pass.startTimeOfDay) * MARS_SOL_CLOCK_MINUTES
-          expect(durationMinutes, `duration sol ${sol} pass ${pass.id}`).toBeGreaterThanOrEqual(10 - 1e-9)
-          expect(durationMinutes, `duration sol ${sol} pass ${pass.id}`).toBeLessThanOrEqual(15 + 1e-9)
+          expect(durationMinutes, `duration sol ${sol} pass ${pass.id}`).toBeGreaterThanOrEqual(120 - 1e-9)
+          expect(durationMinutes, `duration sol ${sol} pass ${pass.id}`).toBeLessThanOrEqual(180 + 1e-9)
         }
       }
     })

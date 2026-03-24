@@ -34,6 +34,11 @@ function saveToStorage(rows: ArchivedSAMDiscovery[]): void {
 
 const discoveries = ref<ArchivedSAMDiscovery[]>(loadFromStorage())
 
+/** Clears singleton state. Used by unit tests only. */
+export function resetForTests(): void {
+  discoveries.value = []
+}
+
 export function useSamArchive() {
   const pendingTransmission = computed(() => discoveries.value.filter((s) => !s.transmitted))
 

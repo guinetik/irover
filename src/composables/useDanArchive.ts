@@ -33,6 +33,11 @@ function saveToStorage(rows: ArchivedDANProspect[]): void {
 
 const prospects = ref<ArchivedDANProspect[]>(loadFromStorage())
 
+/** Clears singleton state. Used by unit tests only. */
+export function resetForTests(): void {
+  prospects.value = []
+}
+
 export function useDanArchive() {
   const pendingTransmission = computed(() => prospects.value.filter((s) => !s.transmitted))
 

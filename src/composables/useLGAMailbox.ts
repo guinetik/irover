@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import type { LGAMessage } from '@/types/lgaMailbox'
+import { solFractionFromMarsClockHours } from '@/lib/missionTime'
 
 const STORAGE_KEY = 'mars-lga-mailbox-v1'
 
@@ -58,7 +59,7 @@ export function useLGAMailbox() {
       id: newId(),
       direction: 'sent',
       sol,
-      timeOfDay: (8 * 60) / 1477,
+      timeOfDay: solFractionFromMarsClockHours(8),
       subject: `SOL ${sol} STATUS: NOMINAL`,
       body: 'Systems operational. Battery nominal. All instruments responding.',
       read: true,
@@ -119,8 +120,8 @@ export function useLGAMailbox() {
    * Returns a timeOfDay fraction representing a time between 12:00 and 16:00.
    */
   function incomingMessageTimeOfDay(sol: number): number {
-    const base = (12 * 60) / 1477
-    const range = (4 * 60) / 1477
+    const base = solFractionFromMarsClockHours(12)
+    const range = solFractionFromMarsClockHours(4)
     return base + hashSol(sol + 1013) * range
   }
 

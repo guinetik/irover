@@ -328,7 +328,7 @@
       :messages="lgaMailbox.messages.value"
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
-      style="position: fixed; top: 60px; left: 16px; z-index: 40;"
+      style="position: fixed; top: 160px; left: 10px; z-index: 40;"
     />
     <!-- UHF Uplink panel (shown when UHF antenna selected) -->
     <UHFUplinkPanel
@@ -343,7 +343,7 @@
       :transmitted-this-pass="uhfTransmittedThisPass"
       :uhf-enabled="uhfEnabled"
       :passes="currentSolPasses"
-      style="position: fixed; top: 60px; left: 16px; z-index: 40;"
+      style="position: fixed; top: 160px; left: 10px; z-index: 40;"
     />
     <MastTelemetry
       v-if="isInstrumentActive && (activeInstrumentSlot === 1 || activeInstrumentSlot === 2)"
