@@ -108,6 +108,8 @@ const emit = defineEmits<{
 const TOTAL_PHOTON_BUDGET = 200
 const PHOTON_BASE_SPEED = 3.5
 const DETECTOR_RADIUS = 16
+/** Dead zone radius around rock center — detector hidden, no catches */
+const DEAD_ZONE_RADIUS = 80
 
 // --- Refs ---
 const containerRef = ref<HTMLDivElement | null>(null)
@@ -161,6 +163,7 @@ interface SensorRing {
 // --- Game state (mutable, not reactive for perf) ---
 let mouseX = 0
 let mouseY = 0
+let detectorActive = true
 let photons: Photon[] = []
 let alphaParticles: AlphaParticle[] = []
 let catchFlashes: CatchFlash[] = []
@@ -323,6 +326,12 @@ function spawnAlpha() {
 function update(dt: number) {
   if (!running) return
   gameTime += dt
+
+  // Dead zone: detector hidden near rock center
+  const cx = W / 2
+  const cy = H / 2 - 40
+  const distFromCenter = Math.sqrt((mouseX - cx) ** 2 + (mouseY - cy) ** 2)
+  detectorActive = distFromCenter > DEAD_ZONE_RADIUS
   powerLeft.value = Math.max(0, 1.0 - gameTime / props.durationSec)
   if (powerLeft.value <= 0) { endGame(); return }
 
@@ -352,10 +361,10 @@ function update(dt: number) {
     p.trail.push({ x: p.x, y: p.y })
     if (p.trail.length > 8) p.trail.shift()
 
-    // Hit detection
+    // Hit detection (skip if detector is in the dead zone)
     const dx = p.x - mouseX
     const dy = p.y - mouseY
-    if (Math.sqrt(dx * dx + dy * dy) < DETECTOR_RADIUS + p.size) {
+    if (detectorActive && Math.sqrt(dx * dx + dy * dy) < DETECTOR_RADIUS + p.size) {
       caughtCounts[p.element]++
       totalCaughtLocal++
       totalCaught.value = totalCaughtLocal
@@ -522,8 +531,8 @@ function draw() {
     ctx!.globalAlpha = 1
   })
 
-  // Detector
-  if (running) {
+  // Detector (hidden in dead zone near rock center)
+  if (running && detectorActive) {
     ctx.strokeStyle = 'rgba(232,165,75,0.6)'
     ctx.lineWidth = 2
     ctx.beginPath()
