@@ -36,7 +36,7 @@
           </div>
         </div>
 
-        <div class="prof-footer">[0] CLOSE</div>
+        <div class="prof-footer">[0] or ROVER to close</div>
       </div>
     </Transition>
   </Teleport>
@@ -111,7 +111,7 @@ const modifierRows = computed(() => {
 <style scoped>
 .profile-panel {
   position: fixed;
-  left: 80px;
+  left: 140px;
   top: 50%;
   transform: translateY(-50%);
   width: 200px;

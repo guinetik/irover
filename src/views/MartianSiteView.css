@@ -75,6 +75,18 @@
 }
 
 /* Power HUD + mobility strip — left column, vertically centered */
+/* Rover profile button — above power bar */
+.power-hud-top-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.power-hud-top-controls .wheels-hud-btn {
+  pointer-events: auto;
+}
+
 .power-hud-stack {
   position: fixed;
   left: 8px;

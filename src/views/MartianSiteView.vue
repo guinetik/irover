@@ -429,17 +429,19 @@
       :target-range="mastTargetRange"
     />
     <div v-if="!deploying && !descending" class="power-hud-stack">
-      <button
-        v-if="!isSleeping"
-        type="button"
-        class="rover-profile-btn"
-        :class="{ active: profileOpen }"
-        title="Rover Profile [0]"
-        @click="profileOpen = !profileOpen"
-      >
-        <span class="rover-profile-key font-instrument">0</span>
-        <span class="rover-profile-label">ROVER</span>
-      </button>
+      <div v-if="!isSleeping" class="power-hud-top-controls">
+        <button
+          type="button"
+          class="wheels-hud-btn"
+          :class="{ active: profileOpen }"
+          title="Rover Profile [0]"
+          @click="profileOpen = !profileOpen"
+        >
+          <span class="wheels-hud-key font-instrument">0</span>
+          <span class="wheels-hud-icon">&#x1F6F0;</span>
+          <span class="wheels-hud-name">ROVER</span>
+        </button>
+      </div>
       <PowerHud
         :battery-wh="batteryWh"
         :capacity-wh="capacityWh"
