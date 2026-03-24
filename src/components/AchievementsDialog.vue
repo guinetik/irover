@@ -13,7 +13,7 @@
             <button type="button" class="science-close" aria-label="Close" @click="$emit('close')">&times;</button>
           </div>
           <div class="ach-body">
-            <p v-if="libs.length === 0 && dan.length === 0 && survival.length === 0" class="ach-empty">Loading achievements…</p>
+            <p v-if="libs.length === 0 && dan.length === 0 && survival.length === 0 && rewardTrack.length === 0" class="ach-empty">Loading achievements…</p>
             <template v-else>
               <section v-if="libs.length > 0" class="ach-section">
                 <h3 class="ach-section-title">LIBS calibration</h3>
@@ -28,6 +28,24 @@
                     <div class="ach-text">
                       <div class="ach-row-title">{{ a.title }}</div>
                       <div class="ach-row-desc">{{ isUnlocked(a.id) ? a.description : libsLockedHint(a) }}</div>
+                    </div>
+                    <div class="ach-meta font-instrument">{{ a.type }}</div>
+                  </li>
+                </ul>
+              </section>
+              <section v-if="rewardTrack.length > 0" class="ach-section">
+                <h3 class="ach-section-title">SP reward track</h3>
+                <ul class="ach-list" role="list">
+                  <li
+                    v-for="a in rewardTrack"
+                    :key="a.id"
+                    class="ach-row"
+                    :class="{ 'ach-row--locked': !isUnlocked(a.id) }"
+                  >
+                    <div class="ach-icon-box" aria-hidden="true">{{ isUnlocked(a.id) ? a.icon : '?' }}</div>
+                    <div class="ach-text">
+                      <div class="ach-row-title">{{ a.title }}</div>
+                      <div class="ach-row-desc">{{ isUnlocked(a.id) ? a.description : rewardTrackLockedHint(a) }}</div>
                     </div>
                     <div class="ach-meta font-instrument">{{ a.type }}</div>
                   </li>
@@ -78,6 +96,8 @@
 </template>
 
 <script setup lang="ts">
+import type { RewardTrackMilestone } from '@/lib/rewardTrack'
+
 export interface AchievementBase {
   id: string
   icon: string
@@ -111,6 +131,8 @@ const props = defineProps<{
   totalSp: number
   /** Current mission sol (for survival hints) */
   missionSol: number
+  /** Reward track milestones (compact summary) */
+  rewardTrack: RewardTrackMilestone[]
 }>()
 
 defineEmits<{
@@ -134,6 +156,14 @@ function isUnlocked(id: string): boolean {
  * Hint shown for locked LIBS achievements.
  */
 function libsLockedHint(a: LibsAchievementRow): string {
+  if (props.totalSp >= a.sp) return a.description
+  return `Reach ${a.sp} SP (currently ${props.totalSp}).`
+}
+
+/**
+ * Hint shown for locked reward track milestones.
+ */
+function rewardTrackLockedHint(a: RewardTrackMilestone): string {
   if (props.totalSp >= a.sp) return a.description
   return `Reach ${a.sp} SP (currently ${props.totalSp}).`
 }

@@ -203,7 +203,7 @@
       @queue-for-transmission="handleQueueForTx"
       @dequeue-from-transmission="handleDequeueFromTx"
     />
-    <SciencePointsDialog :open="spLedgerOpen" @close="spLedgerOpen = false" />
+    <SciencePointsDialog :open="spLedgerOpen" @close="spLedgerOpen = false" @open-track="spLedgerOpen = false; rewardTrackOpen = true" />
     <AchievementsDialog
       :open="achievementsOpen"
       :libs="libsAchievements"
@@ -212,7 +212,15 @@
       :unlocked-ids="unlockedAchievementIds"
       :total-sp="totalSP"
       :mission-sol="marsSol"
+      :reward-track="rewardTrackMilestones"
       @close="achievementsOpen = false"
+    />
+    <RewardTrackDialog
+      :open="rewardTrackOpen"
+      :milestones="rewardTrackMilestones"
+      :unlocked-ids="unlockedTrackIds"
+      :total-sp="totalSP"
+      @close="rewardTrackOpen = false"
     />
     <InstrumentCrosshair
       :visible="crosshairVisible"
@@ -427,6 +435,7 @@ import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
 import ScienceLogDialog from '@/components/ScienceLogDialog.vue'
 import SciencePointsDialog from '@/components/SciencePointsDialog.vue'
 import AchievementsDialog from '@/components/AchievementsDialog.vue'
+import RewardTrackDialog from '@/components/RewardTrackDialog.vue'
 import AchievementBanner from '@/components/AchievementBanner.vue'
 import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
@@ -484,6 +493,7 @@ const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects, qu
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
+const rewardTrackOpen = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)

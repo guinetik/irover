@@ -29,6 +29,12 @@
               </li>
             </ul>
           </div>
+          <div class="sp-ledger-footer">
+            <button type="button" class="sp-track-btn" @click="$emit('open-track')">
+              <span class="sp-track-icon" aria-hidden="true">&#x25C6;</span>
+              VIEW REWARD TRACK
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -45,6 +51,7 @@ defineProps<{
 
 defineEmits<{
   close: []
+  'open-track': []
 }>()
 
 const { spLedger } = useSciencePoints()
@@ -60,6 +67,7 @@ const SOURCE_HEADLINE: Record<SPSource, string> = {
   sam: 'SAM',
   survival: 'Mars survival',
   dev: 'Dev console',
+  transmission: 'Transmission',
 }
 
 /**
@@ -234,6 +242,38 @@ function formatTime(atMs: number): string {
 .sp-ledger-time {
   font-size: 11px;
   color: rgba(102, 255, 238, 0.45);
+}
+
+.sp-ledger-footer {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-top: 1px solid rgba(102, 255, 238, 0.15);
+  text-align: center;
+}
+
+.sp-track-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid rgba(102, 255, 238, 0.3);
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.14em;
+  color: #66ffee;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sp-track-btn:hover {
+  border-color: rgba(102, 255, 238, 0.6);
+  background: rgba(102, 255, 238, 0.08);
+}
+
+.sp-track-icon {
+  font-size: 10px;
 }
 
 .science-fade-enter-active,
