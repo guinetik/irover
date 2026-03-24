@@ -206,9 +206,13 @@ export class DrillController extends InstrumentController {
   private collectSample(rock: THREE.Mesh): void {
     const rockType = (rock.userData.rockType as RockTypeId) ?? 'basalt'
     const chemcamAnalyzed = rock.userData.chemcamAnalyzed === true
+    const apxsAnalyzed = rock.userData.apxsAnalyzed === true
 
-    // ChemCam bonus: 1.3x rock weight
-    const res = this.inventory.addRockSample(rockType, rock.uuid, chemcamAnalyzed ? 1.3 : 1.0)
+    // Stacking weight multipliers: ChemCam +30%, APXS +20%
+    let weightMult = 1.0
+    if (chemcamAnalyzed) weightMult += 0.3
+    if (apxsAnalyzed) weightMult += 0.2
+    const res = this.inventory.addRockSample(rockType, rock.uuid, weightMult)
     if (res.ok) {
       this.targeting?.depleteRock(rock)
       this.lastCollected = res.payload
@@ -231,6 +235,27 @@ export class DrillController extends InstrumentController {
             }
           }
           if (drops.length > 0) this.lastTraceDrops = drops
+        }
+      }
+
+      // APXS bonus trace drops — from surface composition dominant elements
+      if (apxsAnalyzed) {
+        const apxsEls = rock.userData.apxsElements as string[] | undefined
+        if (apxsEls && apxsEls.length > 0) {
+          const apxsDrops: { element: string; label: string }[] = []
+          // Drop 1-2 dominant surface elements
+          const dropCount = Math.min(apxsEls.length, 1 + Math.floor(Math.random() * 2))
+          const shuffled = [...apxsEls].sort(() => Math.random() - 0.5)
+          for (let i = 0; i < dropCount; i++) {
+            const el = shuffled[i]
+            const traceRes = this.inventory.addTrace(el)
+            if (traceRes.ok) {
+              apxsDrops.push({ element: el, label: `${el} trace (APXS)` })
+            }
+          }
+          if (apxsDrops.length > 0) {
+            this.lastTraceDrops = [...(this.lastTraceDrops ?? []), ...apxsDrops]
+          }
         }
       }
     } else {

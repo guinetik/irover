@@ -86,8 +86,9 @@ export class APXSController extends InstrumentController {
     this.targeting?.setRoverPosition(pos)
   }
 
-  markAnalyzed(rock: THREE.Mesh): void {
+  markAnalyzed(rock: THREE.Mesh, dominantElements?: string[]): void {
     rock.userData.apxsAnalyzed = true
+    if (dominantElements) rock.userData.apxsElements = dominantElements
   }
 
   override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {

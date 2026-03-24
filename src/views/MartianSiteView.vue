@@ -519,7 +519,7 @@ import APXSMinigame from '@/components/APXSMinigame.vue'
 import APXSResultDialog from '@/components/APXSResultDialog.vue'
 import { useAPXSArchive } from '@/composables/useAPXSArchive'
 import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
-import { generateComposition, computeAPXSSp, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
+import { generateComposition, computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 
 const route = useRoute()
@@ -1062,11 +1062,14 @@ function handleAPXSComplete(result: {
   })
 
   // Mark rock as analyzed immediately (prevent re-analysis while processing)
+  // Store dominant surface elements (>3%) so the drill can drop bonus traces
+  const comp = apxsGameComposition.value!
+  const dominantEls = APXS_ELEMENTS.filter(el => comp[el] > 3).sort((a, b) => comp[b] - comp[a]).slice(0, 4)
   const rover = siteHandle.value?.rover
   if (rover) {
     const apxsInst = rover.instruments.find(i => i.id === 'apxs') as any
     if (apxsInst && 'markAnalyzed' in apxsInst && apxsInst.currentTargetResult) {
-      apxsInst.markAnalyzed(apxsInst.currentTargetResult.rock)
+      apxsInst.markAnalyzed(apxsInst.currentTargetResult.rock, dominantEls)
     }
   }
 
