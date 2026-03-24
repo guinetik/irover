@@ -1,0 +1,115 @@
+import type { Ref } from 'vue'
+import { DrillController, MastCamController } from '@/three/instruments'
+import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import type { SPGain } from '@/composables/useSciencePoints'
+import type SampleToast from '@/components/SampleToast.vue'
+import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+
+export interface DrillTickRefs {
+  crosshairVisible: Ref<boolean>
+  crosshairColor: Ref<'green' | 'red'>
+  crosshairX: Ref<number>
+  crosshairY: Ref<number>
+  drillProgress: Ref<number>
+  isDrilling: Ref<boolean>
+}
+
+export interface DrillTickCallbacks {
+  sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
+  playerMod: (key: keyof ProfileModifiers) => number
+  awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
+}
+
+export interface DrillTickResult {
+  /** True when the drill is actively boring into a rock this frame. Used by the power tick. */
+  rockDrilling: boolean
+}
+
+/**
+ * Creates a tick handler for the drill instrument's active-mode HUD:
+ * - Crosshair tracking + color (green = valid target, red = no target)
+ * - Drill progress bar sync
+ * - Collection toasts, SP awards, trace-element drops
+ * - Lazy `initGameplay` call on first ready frame
+ */
+export function createDrillTickHandler(
+  refs: DrillTickRefs,
+  callbacks: DrillTickCallbacks,
+): SiteTickHandler & { lastResult: DrillTickResult; initIfReady(fctx: SiteFrameContext): void } {
+  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling } = refs
+  const { sampleToastRef, playerMod, awardSP } = callbacks
+
+  const lastResult: DrillTickResult = { rockDrilling: false }
+  let gameplayInitialised = false
+
+  function initIfReady(fctx: SiteFrameContext): void {
+    if (gameplayInitialised) return
+    const drillInst = fctx.rover?.instruments.find(i => i.id === 'drill')
+    if (
+      drillInst instanceof DrillController
+      && drillInst.attached
+      && !drillInst.targeting
+      && fctx.roverReady
+      && fctx.siteScene.rover
+    ) {
+      drillInst.initGameplay(fctx.siteScene.scene, fctx.camera, fctx.siteScene.terrain.getSmallRocks())
+      gameplayInitialised = true
+    }
+  }
+
+  function tick(fctx: SiteFrameContext): void {
+    const { rover: controller, siteScene, camera, thermalZone } = fctx
+
+    if (controller?.mode === 'active' && controller.activeInstrument instanceof DrillController) {
+      const drill = controller.activeInstrument
+      const z = thermalZone
+      const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
+      drill.drillDurationMultiplier = thermalMult / playerMod('analysisSpeed')
+      drill.setRoverPosition(siteScene.rover!.position)
+      crosshairVisible.value = true
+      crosshairColor.value = drill.hasTarget && drill.canCollectCurrentTarget ? 'green' : 'red'
+      drillProgress.value = drill.drillProgress
+      isDrilling.value = drill.isDrilling
+      lastResult.rockDrilling = drill.isDrilling
+
+      if (camera) {
+        const projected = drill.targetWorldPos.clone().project(camera)
+        crosshairX.value = (projected.x * 0.5 + 0.5) * 100
+        crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
+      }
+
+      if (drill.lastInventoryError) {
+        sampleToastRef.value?.showError(drill.lastInventoryError)
+        drill.lastInventoryError = null
+      }
+      if (drill.lastCollected) {
+        const s = drill.lastCollected
+        sampleToastRef.value?.show(s.rockType, s.displayLabel, s.weightKgThisSample)
+        const gain = awardSP('drill', s.rockMeshUuid, s.displayLabel)
+        if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
+        if (drill.lastTraceDrops) {
+          for (const drop of drill.lastTraceDrops) {
+            sampleToastRef.value?.showTrace(drop.element, drop.label)
+          }
+          drill.lastTraceDrops = null
+        }
+        const mcSurvey = controller?.instruments.find(i => i.id === 'mastcam')
+        if (mcSurvey instanceof MastCamController && mcSurvey['overlayMeshes']?.length > 0) {
+          mcSurvey.rebuildOverlays()
+        }
+        drill.lastCollected = null
+      }
+    } else {
+      crosshairVisible.value = false
+      isDrilling.value = false
+      drillProgress.value = 0
+      lastResult.rockDrilling = false
+    }
+  }
+
+  function dispose(): void {
+    // No owned resources
+  }
+
+  return { tick, dispose, lastResult, initIfReady }
+}

@@ -91,6 +91,39 @@ function showTrace(element: string, label: string): void {
   })
 }
 
+function showDAN(message: string): void {
+  push({
+    id: uid(),
+    prefix: 'DAN',
+    label: message,
+    weight: '',
+    color: '#44aaff',
+    variant: 'dan',
+  })
+}
+
+function showPayloadStatus(message: string): void {
+  push({
+    id: uid(),
+    prefix: 'DROP',
+    label: message,
+    weight: '',
+    color: '#ffd27a',
+    variant: 'payload',
+  })
+}
+
+function showPayloadItem(label: string, quantity: number): void {
+  push({
+    id: uid(),
+    prefix: '+',
+    label: `${label} x${quantity}`,
+    weight: '',
+    color: '#ffd27a',
+    variant: 'payload',
+  })
+}
+
 /** Communication event toast (antenna heartbeats, pass notifications, incoming messages) */
 function showComm(message: string): void {
   push({
@@ -119,7 +152,7 @@ function uid(): string {
   return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
 }
 
-defineExpose({ show, showError, showChemCam, showSP, showTrace, showComm, showTransmission })
+defineExpose({ show, showError, showChemCam, showSP, showTrace, showDAN, showPayloadStatus, showPayloadItem, showComm, showTransmission })
 </script>
 
 <style scoped>
@@ -198,6 +231,24 @@ defineExpose({ show, showError, showChemCam, showSP, showTrace, showComm, showTr
 
 .sample-toast.trace .toast-weight {
   color: rgba(204, 136, 255, 0.5);
+}
+
+.sample-toast.dan {
+  background: rgba(5, 15, 35, 0.92);
+  border-color: rgba(68, 170, 255, 0.35);
+}
+
+.sample-toast.dan .toast-label {
+  color: rgba(68, 170, 255, 0.9);
+}
+
+.sample-toast.payload {
+  background: rgba(36, 24, 7, 0.92);
+  border-color: rgba(255, 210, 122, 0.38);
+}
+
+.sample-toast.payload .toast-label {
+  color: rgba(255, 223, 166, 0.96);
 }
 
 .toast-weight {
