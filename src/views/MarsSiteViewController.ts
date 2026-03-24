@@ -253,6 +253,7 @@ export interface MarsSiteViewContext {
   isSleeping: Ref<boolean>
   roverPowerProfile: RoverPowerProfile
   playerMod: (key: keyof ProfileModifiers) => number
+  hasPerk: (perkId: string) => boolean
   tickPower: (deltaSeconds: number, input: PowerTickInput) => void
   tickThermal: (deltaSeconds: number, input: ThermalTickInput) => void
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
@@ -320,6 +321,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     isSleeping,
     roverPowerProfile,
     playerMod,
+    hasPerk,
     tickPower,
     tickThermal,
     sampleToastRef,
@@ -665,7 +667,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         controller.config.moveSpeed = 0
         controller.config.turnSpeed = 0
       } else if (controller && siteScene.sky) {
-        const nightPenalty = 1.0 - nightFactor * 0.5
+        const nightPenaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
+        const nightPenalty = 1.0 - nightFactor * nightPenaltyFactor
         const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
         const speedMult = playerMod('movementSpeed')

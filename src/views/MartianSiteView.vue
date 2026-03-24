@@ -1084,6 +1084,7 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
     isSleeping,
     roverPowerProfile: profile,
     playerMod,
+    hasPerk,
     tickPower,
     tickThermal,
     sampleToastRef,
