@@ -5,6 +5,10 @@
       <span class="sc-time font-instrument">{{ marsTime }}</span>
       <span class="sc-dot" aria-hidden="true">&middot;</span>
       <span class="sc-sol"><span class="sc-sol-label">Sol</span> <span class="font-instrument sc-sol-num">{{ sol }}</span></span>
+      <template v-if="ambientDisplay !== null">
+        <span class="sc-dot" aria-hidden="true">&middot;</span>
+        <span class="sc-ambient" :title="ambientTitle">{{ ambientDisplay }}</span>
+      </template>
     </div>
   </div>
 </template>
@@ -19,7 +23,20 @@ const props = defineProps<{
   timeOfDay: number
   /** 0..1 MarsSky.nightFactor */
   nightFactor?: number
+  /**
+   * Site ambient air temperature (°C), same diurnal curve as the heater thermal readout.
+   * When omitted, the clock hides this segment.
+   */
+  ambientCelsius?: number | null
 }>()
+
+const ambientDisplay = computed(() => {
+  const t = props.ambientCelsius
+  if (t === undefined || t === null || Number.isNaN(t)) return null
+  return `${Math.round(t)}\u00B0C`
+})
+
+const ambientTitle = computed(() => 'Ambient (site air)')
 
 const marsTime = computed(() => {
   const totalMin = (props.timeOfDay % 1) * MARS_SOL_CLOCK_MINUTES
@@ -111,5 +128,13 @@ const icon = computed(() => {
   font-weight: 600;
   letter-spacing: 0.04em;
   color: #d4a574;
+}
+
+.sc-ambient {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: #6b4a30;
+  white-space: nowrap;
 }
 </style>
