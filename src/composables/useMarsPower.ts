@@ -83,8 +83,8 @@ const { mod } = usePlayerProfile()
 /** Effective capacity after rover class + player profile multiplier */
 const capacityWh = computed(() => profile.baseCapacityWh * profile.capacityMult * mod('batteryCapacity'))
 
-/** Initial fill — stressed landing; not a topped-up endgame pack */
-const START_SOC_FRACTION = 0.52
+/** Initial fill — full charge after sky crane descent */
+const START_SOC_FRACTION = 1.0
 const batteryWh = ref(CURIOSITY_PROFILE.baseCapacityWh * START_SOC_FRACTION)
 const generationW = ref(0)
 const consumptionW = ref(0)
