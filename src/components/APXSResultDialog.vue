@@ -17,7 +17,7 @@
               <span class="result-grade-letter" :style="{ color: gradeColor(result.grade) }">
                 {{ result.grade }}
               </span>
-              <span class="result-accuracy">Accuracy: {{ result.accuracy.toFixed(1) }}%</span>
+              <span class="result-accuracy">Accuracy: {{ Math.round(result.accuracy) }}%</span>
             </div>
 
             <!-- Composition chart -->

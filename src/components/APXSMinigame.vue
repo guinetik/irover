@@ -105,9 +105,9 @@ const emit = defineEmits<{
 }>()
 
 // --- Constants ---
-const TOTAL_PHOTON_BUDGET = 320
+const TOTAL_PHOTON_BUDGET = 200
 const PHOTON_BASE_SPEED = 2.0
-const DETECTOR_RADIUS = 30
+const DETECTOR_RADIUS = 20
 
 // --- Refs ---
 const containerRef = ref<HTMLDivElement | null>(null)
