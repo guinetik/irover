@@ -40,7 +40,7 @@ export function resetForTests(): void {
 }
 
 export function useSamArchive() {
-  const pendingTransmission = computed(() => discoveries.value.filter((s) => !s.transmitted))
+  const pendingTransmission = computed(() => discoveries.value.filter((s) => s.queuedForTransmission && !s.transmitted))
 
   function archiveDiscovery(params: {
     discoveryId: string
@@ -90,6 +90,7 @@ export function useSamArchive() {
       latitudeDeg,
       longitudeDeg,
       description: params.description,
+      queuedForTransmission: false,
       transmitted: false,
     }
 
@@ -99,9 +100,25 @@ export function useSamArchive() {
     return row
   }
 
+  function queueForTransmission(archiveId: string): void {
+    const next = discoveries.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, queuedForTransmission: true } : s,
+    )
+    discoveries.value = next
+    saveToStorage(next)
+  }
+
+  function dequeueFromTransmission(archiveId: string): void {
+    const next = discoveries.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, queuedForTransmission: false } : s,
+    )
+    discoveries.value = next
+    saveToStorage(next)
+  }
+
   function markTransmitted(archiveId: string): void {
     const next = discoveries.value.map((s) =>
-      s.archiveId === archiveId ? { ...s, transmitted: true } : s,
+      s.archiveId === archiveId ? { ...s, transmitted: true, queuedForTransmission: false } : s,
     )
     discoveries.value = next
     saveToStorage(next)
@@ -111,6 +128,8 @@ export function useSamArchive() {
     discoveries,
     pendingTransmission,
     archiveDiscovery,
+    queueForTransmission,
+    dequeueFromTransmission,
     markTransmitted,
   }
 }

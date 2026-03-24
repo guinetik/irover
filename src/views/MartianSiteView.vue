@@ -200,6 +200,8 @@
       :dan-prospects="danArchivedProspects"
       :sam-results="samArchivedDiscoveries"
       @close="scienceLogOpen = false"
+      @queue-for-transmission="handleQueueForTx"
+      @dequeue-from-transmission="handleDequeueFromTx"
     />
     <SciencePointsDialog :open="spLedgerOpen" @close="spLedgerOpen = false" />
     <AchievementsDialog
@@ -474,8 +476,8 @@ const siteId = route.params.siteId as string
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
 const siteRover = computed(() => siteHandle.value?.rover ?? null)
-const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra } = useChemCamArchive()
-const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects } = useDanArchive()
+const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra, queueForTransmission: queueChemCamTx, dequeueFromTransmission: dequeueChemCamTx } = useChemCamArchive()
+const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects, queueForTransmission: queueDanTx, dequeueFromTransmission: dequeueDanTx } = useDanArchive()
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
@@ -627,6 +629,18 @@ function toggleHeaterPanel() {
   else siteRover.value.activateInstrument(HEATER_SLOT)
 }
 
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam', archiveId: string) {
+  if (source === 'chemcam') queueChemCamTx(archiveId)
+  else if (source === 'dan') queueDanTx(archiveId)
+  else if (source === 'sam') queueSamTx(archiveId)
+}
+
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam', archiveId: string) {
+  if (source === 'chemcam') dequeueChemCamTx(archiveId)
+  else if (source === 'dan') dequeueDanTx(archiveId)
+  else if (source === 'sam') dequeueSamTx(archiveId)
+}
+
 function handleChemCamAck(readoutId: string) {
   const cc = siteRover.value?.instruments.find(i => i.id === 'chemcam')
   if (cc instanceof ChemCamController) {
@@ -765,7 +779,7 @@ const {
   tick: samTick,
   acknowledgeOldest: samAcknowledgeOldest,
 } = useSamQueue()
-const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries } = useSamArchive()
+const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries, queueForTransmission: queueSamTx, dequeueFromTransmission: dequeueSamTx } = useSamArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 const { landmarks, loadLandmarks } = useMarsData()

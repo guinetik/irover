@@ -30,6 +30,8 @@ export interface ArchivedChemCamSpectrum {
   rockLabel: string
   calibration: number
   peaks: SpectrumPeak[]
-  /** After LGA (or UHF) transmit succeeds — for funding / mission report UI. */
+  /** Player has queued this item for UHF transmission */
+  queuedForTransmission: boolean
+  /** After UHF transmit succeeds — for funding / mission report UI. */
   transmitted: boolean
 }

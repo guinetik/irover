@@ -18,5 +18,7 @@ export interface ArchivedSAMDiscovery {
   latitudeDeg: number
   longitudeDeg: number
   description: string
+  /** Player has queued this item for UHF transmission */
+  queuedForTransmission: boolean
   transmitted: boolean
 }

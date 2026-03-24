@@ -124,7 +124,7 @@ describe('useTransmissionQueue — DAN integration', () => {
     const { useTransmissionQueue } = await import('../useTransmissionQueue')
 
     const dan = useDanArchive()
-    dan.archiveProspect({
+    const p1 = dan.archiveProspect({
       capturedAtMs: 1000,
       capturedSol: 1,
       solAcknowledged: 1,
@@ -135,7 +135,8 @@ describe('useTransmissionQueue — DAN integration', () => {
       waterConfirmed: true,
       waterFraction: 0.6,
     })
-    dan.archiveProspect({
+    dan.queueForTransmission(p1.archiveId)
+    const p2 = dan.archiveProspect({
       capturedAtMs: 2000,
       capturedSol: 1,
       solAcknowledged: 1,
@@ -146,6 +147,7 @@ describe('useTransmissionQueue — DAN integration', () => {
       waterConfirmed: false,
       waterFraction: 0.05,
     })
+    dan.queueForTransmission(p2.archiveId)
 
     const { queue } = useTransmissionQueue()
     const danItems = queue.value.filter((i) => i.source === 'dan')
@@ -166,7 +168,7 @@ describe('useTransmissionQueue — DAN integration', () => {
     const { useTransmissionQueue } = await import('../useTransmissionQueue')
 
     const dan = useDanArchive()
-    dan.archiveProspect({
+    const p = dan.archiveProspect({
       capturedAtMs: 3000,
       capturedSol: 2,
       solAcknowledged: 2,
@@ -177,6 +179,7 @@ describe('useTransmissionQueue — DAN integration', () => {
       waterConfirmed: false,
       waterFraction: 0.1,
     })
+    dan.queueForTransmission(p.archiveId)
 
     const { queue, markTransmitted } = useTransmissionQueue()
     expect(queue.value).toHaveLength(1)
@@ -194,7 +197,7 @@ describe('useTransmissionQueue — SAM integration', () => {
     const { useTransmissionQueue } = await import('../useTransmissionQueue')
 
     const sam = useSamArchive()
-    sam.archiveDiscovery({
+    const d = sam.archiveDiscovery({
       capturedAtMs: 5000,
       capturedSol: 3,
       solAcknowledged: 3,
@@ -205,6 +208,7 @@ describe('useTransmissionQueue — SAM integration', () => {
       rarity: 'rare',
       spEarned: 300,
     })
+    sam.queueForTransmission(d.archiveId)
 
     const { queue } = useTransmissionQueue()
     const samItems = queue.value.filter((i) => i.source === 'sam')
@@ -230,7 +234,7 @@ describe('useTransmissionQueue — FIFO sort', () => {
     const sam = useSamArchive()
 
     // Insert out of chronological order
-    sam.archiveDiscovery({
+    const d1 = sam.archiveDiscovery({
       capturedAtMs: 9000,
       capturedSol: 5,
       solAcknowledged: 5,
@@ -241,7 +245,8 @@ describe('useTransmissionQueue — FIFO sort', () => {
       rarity: 'common',
       spEarned: 50,
     })
-    dan.archiveProspect({
+    sam.queueForTransmission(d1.archiveId)
+    const p1 = dan.archiveProspect({
       capturedAtMs: 1000,
       capturedSol: 1,
       solAcknowledged: 1,
@@ -252,7 +257,8 @@ describe('useTransmissionQueue — FIFO sort', () => {
       waterConfirmed: false,
       waterFraction: 0,
     })
-    sam.archiveDiscovery({
+    dan.queueForTransmission(p1.archiveId)
+    const d2 = sam.archiveDiscovery({
       capturedAtMs: 5000,
       capturedSol: 3,
       solAcknowledged: 3,
@@ -263,6 +269,7 @@ describe('useTransmissionQueue — FIFO sort', () => {
       rarity: 'uncommon',
       spEarned: 150,
     })
+    sam.queueForTransmission(d2.archiveId)
 
     const { queue } = useTransmissionQueue()
     expect(queue.value).toHaveLength(3)

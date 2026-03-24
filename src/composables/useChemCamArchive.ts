@@ -41,6 +41,7 @@ function migrateChemCamArchiveRow(raw: unknown): ArchivedChemCamSpectrum | null 
     rockLabel: typeof o.rockLabel === 'string' ? o.rockLabel : '',
     calibration: typeof o.calibration === 'number' ? o.calibration : 0,
     peaks: Array.isArray(o.peaks) ? (o.peaks as ArchivedChemCamSpectrum['peaks']) : [],
+    queuedForTransmission: o.queuedForTransmission === true,
     transmitted: o.transmitted === true,
   }
 }
@@ -74,7 +75,8 @@ const spectra = ref<ArchivedChemCamSpectrum[]>(loadFromStorage())
  * Call `markTransmitted` when AntennaLG (or UHF) downlink is implemented.
  */
 export function useChemCamArchive() {
-  const pendingTransmission = computed(() => spectra.value.filter((s) => !s.transmitted))
+  /** Items the player has queued for UHF transmission (not yet transmitted) */
+  const pendingTransmission = computed(() => spectra.value.filter((s) => s.queuedForTransmission && !s.transmitted))
 
   /**
    * Call when the player acknowledges a spectrum in the ChemCam panel.
@@ -132,6 +134,7 @@ export function useChemCamArchive() {
       rockLabel: readout.rockLabel,
       calibration: readout.calibration,
       peaks: readout.peaks.map((p) => ({ ...p })),
+      queuedForTransmission: false,
       transmitted: false,
     }
 
@@ -141,12 +144,28 @@ export function useChemCamArchive() {
     return row
   }
 
-  /**
-   * Mark one archived spectrum as downlinked (for future LGA funding flow).
-   */
+  /** Player queues an item for UHF transmission */
+  function queueForTransmission(archiveId: string): void {
+    const next = spectra.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, queuedForTransmission: true } : s,
+    )
+    spectra.value = next
+    saveToStorage(next)
+  }
+
+  /** Player removes an item from the transmission queue */
+  function dequeueFromTransmission(archiveId: string): void {
+    const next = spectra.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, queuedForTransmission: false } : s,
+    )
+    spectra.value = next
+    saveToStorage(next)
+  }
+
+  /** Mark one archived spectrum as successfully transmitted */
   function markTransmitted(archiveId: string): void {
     const next = spectra.value.map((s) =>
-      s.archiveId === archiveId ? { ...s, transmitted: true } : s,
+      s.archiveId === archiveId ? { ...s, transmitted: true, queuedForTransmission: false } : s,
     )
     spectra.value = next
     saveToStorage(next)
@@ -156,6 +175,8 @@ export function useChemCamArchive() {
     spectra,
     pendingTransmission,
     archiveAcknowledgedReadout,
+    queueForTransmission,
+    dequeueFromTransmission,
     markTransmitted,
   }
 }

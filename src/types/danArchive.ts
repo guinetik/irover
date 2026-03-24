@@ -22,6 +22,8 @@ export interface ArchivedDANProspect {
   waterConfirmed: boolean
   /** 0–1 reservoir quality (= signal strength) */
   reservoirQuality: number
-  /** After LGA/UHF transmit — for future funding flow */
+  /** Player has queued this item for UHF transmission */
+  queuedForTransmission: boolean
+  /** After UHF transmit — for future funding flow */
   transmitted: boolean
 }

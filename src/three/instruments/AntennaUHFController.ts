@@ -18,6 +18,8 @@ export class AntennaUHFController extends InstrumentController {
   readonly viewAngle = Math.PI * 1.15    // from behind, slightly left
   readonly viewPitch = 0.2
   override readonly selectionIdlePowerW = 6
+  /** Extra power draw during active transmission (on top of idle) */
+  static readonly TRANSMIT_POWER_W = 12
 
   // Dynamic comms state — set and updated by the tick handler
   passActive = false                                          // currently in a relay window
@@ -30,4 +32,12 @@ export class AntennaUHFController extends InstrumentController {
   transmittedThisPass = 0                                    // count of items transmitted in current pass
   linkStatus: 'RELAY LOCK' | 'WAITING PASS' | 'OFF' = 'WAITING PASS'
   relayOrbiter = ''                                          // set dynamically by tick handler
+
+  /** 6W idle, 18W while actively transmitting */
+  override getPassiveBackgroundPowerW(): number {
+    if (!this.passiveSubsystemEnabled) return 0
+    return this.transmitting
+      ? this.selectionIdlePowerW + AntennaUHFController.TRANSMIT_POWER_W
+      : this.selectionIdlePowerW
+  }
 }
