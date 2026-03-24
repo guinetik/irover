@@ -41,7 +41,13 @@ const ACK_SP = { min: 5, max: 15 }
 /** Track acknowledged readouts to prevent double-count */
 const acknowledgedReadouts = new Set<string>()
 
-export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival' | 'dev'
+/** Track transmitted archive IDs to prevent double-counting bonus SP */
+const transmittedArchiveIds = new Set<string>()
+
+/** Transmission bonus: 50% of original SP as bonus */
+const TRANSMISSION_BONUS_MULT = 0.5
+
+export type SPSource = 'mastcam' | 'chemcam' | 'drill' | 'chemcam-ack' | 'dan' | 'sam' | 'survival' | 'transmission' | 'dev'
 type InstrumentSource = 'mastcam' | 'chemcam' | 'drill'
 
 export interface SPGain {
@@ -166,6 +172,29 @@ export function useSciencePoints() {
     return gain
   }
 
+  /**
+   * Bonus SP awarded when a discovery is transmitted via UHF during an orbital pass.
+   * @param archiveId Unique archive ID (prevents double-counting)
+   * @param baseSP The estimated original SP the discovery earned
+   * @param label Display label for the ledger entry
+   */
+  function awardTransmission(archiveId: string, baseSP: number, label: string): SPGain | null {
+    if (transmittedArchiveIds.has(archiveId)) return null
+    transmittedArchiveIds.add(archiveId)
+
+    const spYieldMult = mod('spYield')
+    const amount = Math.round(Math.floor(baseSP * TRANSMISSION_BONUS_MULT) * spYieldMult)
+    if (amount < 1) return null
+
+    totalSP.value += amount
+    sessionSP.value += amount
+
+    const gain: SPGain = { amount, source: 'transmission', rockLabel: label, bonus: 1.0 }
+    lastGain.value = gain
+    pushLedger(gain)
+    return gain
+  }
+
   function consumeLastGain(): SPGain | null {
     const g = lastGain.value
     lastGain.value = null
@@ -182,6 +211,7 @@ export function useSciencePoints() {
     awardDAN,
     awardSAM,
     awardSurvival,
+    awardTransmission,
     consumeLastGain,
   }
 }
@@ -216,4 +246,5 @@ export function resetSciencePointsForTests(): void {
   scored.chemcam.clear()
   scored.drill.clear()
   acknowledgedReadouts.clear()
+  transmittedArchiveIds.clear()
 }

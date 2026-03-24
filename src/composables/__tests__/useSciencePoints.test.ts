@@ -70,3 +70,63 @@ describe('useSciencePoints ledger', () => {
     expect(devAwardSciencePoints(Number.NaN)).toBeNull()
   })
 })
+
+describe('awardTransmission', () => {
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    resetSciencePointsForTests()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('awards 50% of baseSP as bonus (baseSP=100 → amount=50)', () => {
+    const { awardTransmission, totalSP, sessionSP } = useSciencePoints()
+    const gain = awardTransmission('archive-001', 100, 'Iron Sample')
+    expect(gain).not.toBeNull()
+    expect(gain?.amount).toBe(50)
+    expect(totalSP.value).toBe(50)
+    expect(sessionSP.value).toBe(50)
+  })
+
+  it('is idempotent — same archiveId twice returns null on second call', () => {
+    const { awardTransmission, totalSP } = useSciencePoints()
+    const first = awardTransmission('archive-002', 100, 'Sulfur Sample')
+    expect(first).not.toBeNull()
+    const second = awardTransmission('archive-002', 100, 'Sulfur Sample')
+    expect(second).toBeNull()
+    expect(totalSP.value).toBe(50)
+  })
+
+  it('records in spLedger with source="transmission"', () => {
+    const { awardTransmission, spLedger } = useSciencePoints()
+    awardTransmission('archive-003', 100, 'Clay Sample')
+    expect(spLedger.value).toHaveLength(1)
+    expect(spLedger.value[0]?.source).toBe('transmission')
+    expect(spLedger.value[0]?.detail).toBe('Clay Sample')
+    expect(spLedger.value[0]?.amount).toBe(50)
+  })
+
+  it('returns null for baseSP=0 (floor(0*0.5)=0, amount < 1)', () => {
+    const { awardTransmission } = useSciencePoints()
+    const gain = awardTransmission('archive-004', 0, 'Empty')
+    expect(gain).toBeNull()
+  })
+
+  it('returns null for baseSP=1 (floor(1*0.5)=0, amount < 1)', () => {
+    const { awardTransmission } = useSciencePoints()
+    const gain = awardTransmission('archive-005', 1, 'Tiny')
+    expect(gain).toBeNull()
+  })
+
+  it('sets lastGain correctly on successful transmission', () => {
+    const { awardTransmission, lastGain } = useSciencePoints()
+    awardTransmission('archive-006', 80, 'Organic Sample')
+    expect(lastGain.value).not.toBeNull()
+    expect(lastGain.value?.source).toBe('transmission')
+    expect(lastGain.value?.amount).toBe(40)
+    expect(lastGain.value?.rockLabel).toBe('Organic Sample')
+    expect(lastGain.value?.bonus).toBe(1.0)
+  })
+})

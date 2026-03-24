@@ -200,6 +200,8 @@
       :dan-prospects="danArchivedProspects"
       :sam-results="samArchivedDiscoveries"
       @close="scienceLogOpen = false"
+      @queue-for-transmission="handleQueueForTx"
+      @dequeue-from-transmission="handleDequeueFromTx"
     />
     <SciencePointsDialog :open="spLedgerOpen" @close="spLedgerOpen = false" />
     <AchievementsDialog
@@ -322,6 +324,29 @@
       @select="(slot: number) => siteRover?.activateInstrument(slot)"
       @deselect="siteRover?.activateInstrument(null)"
     />
+    <!-- LGA Mailbox panel (shown when LGA antenna selected) -->
+    <LGAMailbox
+      v-if="!deploying && !descending && activeInstrumentSlot === 11"
+      :messages="lgaMailbox.messages.value"
+      :unread-count="lgaUnreadCount"
+      @mark-read="lgaMailbox.markRead"
+      style="position: fixed; top: 160px; left: 10px; z-index: 40;"
+    />
+    <!-- UHF Uplink panel (shown when UHF antenna selected) -->
+    <UHFUplinkPanel
+      v-if="!deploying && !descending && activeInstrumentSlot === 12"
+      :pass-active="uhfPassActive"
+      :transmitting="uhfTransmitting"
+      :current-orbiter="uhfCurrentOrbiter"
+      :transmission-progress="uhfTransmissionProgress"
+      :queue-length="uhfQueueLength"
+      :window-remaining-sec="uhfWindowRemainingSec"
+      :next-pass-in-sec="uhfNextPassInSec"
+      :transmitted-this-pass="uhfTransmittedThisPass"
+      :uhf-enabled="uhfEnabled"
+      :passes="currentSolPasses"
+      style="position: fixed; top: 160px; left: 10px; z-index: 40;"
+    />
     <MastTelemetry
       v-if="isInstrumentActive && (activeInstrumentSlot === 1 || activeInstrumentSlot === 2)"
       :base-lat="siteLat"
@@ -440,6 +465,10 @@ import {
   type RTGConservationState,
 } from '@/three/instruments'
 import CommToolbar from '@/components/CommToolbar.vue'
+import LGAMailbox from '@/components/LGAMailbox.vue'
+import UHFUplinkPanel from '@/components/UHFUplinkPanel.vue'
+import { useLGAMailbox } from '@/composables/useLGAMailbox'
+import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -447,8 +476,8 @@ const siteId = route.params.siteId as string
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
 const siteRover = computed(() => siteHandle.value?.rover ?? null)
-const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra } = useChemCamArchive()
-const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects } = useDanArchive()
+const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra, queueForTransmission: queueChemCamTx, dequeueFromTransmission: dequeueChemCamTx } = useChemCamArchive()
+const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects, queueForTransmission: queueDanTx, dequeueFromTransmission: dequeueDanTx } = useDanArchive()
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
@@ -496,6 +525,21 @@ const passiveOverlayPatch = computed(() => {
 
 const isInstrumentActive = ref(false)
 const samDialogVisible = ref(false)
+
+// Antenna system refs
+const uhfPassActive = ref(false)
+const uhfTransmitting = ref(false)
+const uhfCurrentOrbiter = ref('')
+const uhfTransmissionProgress = ref(0)
+const uhfQueueLength = ref(0)
+const uhfWindowRemainingSec = ref(0)
+const uhfNextPassInSec = ref(0)
+const uhfTransmittedThisPass = ref(0)
+const lgaUnreadCount = ref(0)
+const uhfEnabled = computed(() => {
+  void passiveUiRevision.value
+  return siteRover.value?.instruments.find(i => i.id === 'antenna-uhf')?.passiveSubsystemEnabled ?? false
+})
 
 // --- DAN state ---
 const danHitAvailable = ref(false)
@@ -583,6 +627,18 @@ function toggleHeaterPanel() {
   if (!siteRover.value || isSleeping.value || wheelsHudBlocked.value) return
   if (activeInstrumentSlot.value === HEATER_SLOT) siteRover.value.activateInstrument(null)
   else siteRover.value.activateInstrument(HEATER_SLOT)
+}
+
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam', archiveId: string) {
+  if (source === 'chemcam') queueChemCamTx(archiveId)
+  else if (source === 'dan') queueDanTx(archiveId)
+  else if (source === 'sam') queueSamTx(archiveId)
+}
+
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam', archiveId: string) {
+  if (source === 'chemcam') dequeueChemCamTx(archiveId)
+  else if (source === 'dan') dequeueDanTx(archiveId)
+  else if (source === 'sam') dequeueSamTx(archiveId)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -705,7 +761,10 @@ const heaterHudButtonTitle = computed(() =>
     : 'Thermal / heater [H]',
 )
 const { mod: playerMod } = usePlayerProfile()
-const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival } = useSciencePoints()
+const { totalSP, sessionSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardSurvival, awardTransmission } = useSciencePoints()
+const lgaMailbox = useLGAMailbox()
+const orbitalPasses = useOrbitalPasses()
+const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
 // --- SAM experiment system ---
 const samExperiments = useSamExperiments()
@@ -720,7 +779,7 @@ const {
   tick: samTick,
   acknowledgeOldest: samAcknowledgeOldest,
 } = useSamQueue()
-const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries } = useSamArchive()
+const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries, queueForTransmission: queueSamTx, dequeueFromTransmission: dequeueSamTx } = useSamArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 const { landmarks, loadLandmarks } = useMarsData()
@@ -998,6 +1057,7 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
     samTick,
     totalSP,
     triggerDanAchievement,
+    awardTransmission,
     onInstrumentActivateRequest: handleActivate,
     onGlobalKeyDown,
     clearPois,
@@ -1065,6 +1125,16 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       heaterW,
       thermalZone,
       samIsProcessing,
+      // Antenna system refs
+      uhfPassActive,
+      uhfTransmitting,
+      uhfCurrentOrbiter,
+      uhfTransmissionProgress,
+      uhfQueueLength,
+      uhfWindowRemainingSec,
+      uhfNextPassInSec,
+      uhfTransmittedThisPass,
+      lgaUnreadCount,
     },
   }
 }

@@ -10,6 +10,16 @@ Two sub-systems built together:
 
 SAM refinement (converting raw samples into science data) is deferred to a future project.
 
+## Coordination with MastCam & ChemCam (survey → chemistry → contact)
+
+**Roles:** **MastCam** = passive **identify** + **highlight** (e.g. wireframe targets for a chosen lithology). **ChemCam** = **standoff elements** so the player has **composition detail before** APXS contact or **SAM** lab work. **APXS** = expensive touch science after you already know *which* rock and (fictionally) why it matters.
+
+**Power fantasy:** MastCam **~3W** survey; ChemCam **12W** burst; **APXS ~6W** sustained — commit in that order when possible.
+
+- **Default:** **`userData.mastcamScanned === true`** **required** before drill fires (see [mastcam-chemcam design](./2026-03-22-mastcam-chemcam-gameplay-design.md) **science pipeline**). If not scanned: crosshair **red**, toast **“SURVEY WITH MASTCAM FIRST”**, no drill progress.
+- **ChemCam → SAM (later):** when SAM gameplay ships, prefer requiring or strongly nudging **`chemcamAnalyzed`** (or equivalent) so the lab is not blind — spec detail lives in mastcam-chemcam ChemCam section.
+- **When to wire:** ideally when MastCam **Tier 4** ships; until then APXS may remain unscanned-gated behind a feature flag or TODO so early builds do not soft-lock.
+
 ## State Machine (Extended)
 
 ```
@@ -23,7 +33,7 @@ In `active` mode:
 - Mouse drag still orbits the camera around the instrument
 - Each instrument controller overrides `handleInput()` for its own behavior
 - ESC returns to `instrument` mode (zoomed view with overlay), not directly to driving
-- The ACTIVATE button in `InstrumentOverlay.vue` emits `activate` — `MartianSiteView.vue` must wire `@activate` to set `controller.mode = 'active'` (currently unwired — fix as part of this work)
+- The ACTIVATE button in `InstrumentOverlay.vue` emits `activate` — `MartianSiteView.vue` wires `@activate` to `controller.enterActiveMode()`
 - Non-APXS instruments: ACTIVATE button is disabled (greyed out) until their gameplay is implemented. The base `InstrumentController` has `readonly canActivate = false`, APXS overrides to `true`.
 
 ## Rock Targeting
@@ -108,39 +118,41 @@ Drill cannot fire when:
 - Target rock already depleted
 - Inventory full — crosshair stays red, overlay shows "INVENTORY FULL" text
 
-## Inventory Data Model
+## Inventory Data Model (as implemented)
 
 ```typescript
+import type { RockTypeId } from '@/three/terrain/RockTypes'
+
 interface Sample {
   id: string
-  type: 'regolith'       // more types in future
-  label: string          // display name, e.g. "Regolith Sample #3"
-  weightKg: number       // 0.5–1.5 kg random
+  type: RockTypeId       // basalt | hematite | olivine | sulfate | mudstone | iron-meteorite
+  label: string          // e.g. "Basalt #3" from ROCK_TYPES[type].label
+  weightKg: number       // random in ROCK_TYPES[type].weightRange
 }
 
 interface Inventory {
   samples: Sample[]
-  capacityKg: number     // 15 kg
+  capacityKg: number     // currently 5 kg (see useInventory)
 }
 ```
 
-- `capacityKg` is fixed at 15 kg
-- `currentWeightKg` is computed (sum of all sample weights)
-- Simple discard: player can select a sample in the inventory panel and press a DUMP button to remove it (prevents permanent lock-out since SAM is deferred)
-- Inventory state lives in a reactive Vue composable (`useInventory`) so both 3D code and UI can access it
+- Rock meshes from [TerrainGenerator.ts](../../../src/three/terrain/TerrainGenerator.ts) store **`userData.rockType`**. [APXSController.ts](../../../src/three/instruments/APXSController.ts) passes that into `addSample(type)`.
+- `currentWeightKg` is computed (sum of sample weights).
+- Discard: DUMP per row in `InventoryPanel.vue` (SAM refinement still deferred).
+- State: reactive composable `useInventory()` shared by 3D and UI.
 
 ## Inventory UI
 
 ### Panel
 
-- Toggled with `Tab` key (accessible from any mode). The `Tab` keydown handler must call `e.preventDefault()` to suppress browser focus navigation.
+- Toggled with **`I`** (accessible from any mode). **`Tab`** is reserved for GDD **UI mode** later — see [gdd-input-modes-design.md](./gdd-input-modes-design.md). The `I` keydown handler must call `e.preventDefault()` when toggling.
 - Fixed position: bottom-left corner
 - Collapsible — shows/hides with transition
 - Matches HUD aesthetic: dark background, `#c4753a` accent, monospace, blur backdrop
 
 ### Content
 
-- Header: "INVENTORY" + weight summary (e.g. "8.2 / 15.0 KG")
+- Header: "INVENTORY" + weight summary (e.g. "2.1 / 5.0 KG" per current capacity)
 - Weight bar: visual fill bar under the header
 - Sample list: compact table rows, each showing:
   - Sample type icon/label
@@ -156,23 +168,26 @@ interface Inventory {
 
 ```
 src/three/instruments/
-├── InstrumentController.ts    (add handleInput, targeting methods)
-├── APXSController.ts          (arm IK, drill logic)
-├── RockTargeting.ts           (new — shared raycaster + targeting)
-└── LaserDrill.ts              (new — beam visual, particles, progress)
+├── InstrumentController.ts
+├── APXSController.ts
+├── RockTargeting.ts
+└── LaserDrill.ts
+
+src/three/terrain/
+├── RockTypes.ts               — catalog, spawn weights, materials
+└── TerrainGenerator.ts        — assigns userData.rockType per mesh
 
 src/composables/
-└── useInventory.ts            (new — reactive inventory state)
+└── useInventory.ts
 
 src/components/
-├── InstrumentCrosshair.vue    (new — center-screen targeting dot)
-└── InventoryPanel.vue         (new — Tab-toggled inventory list)
+├── InstrumentCrosshair.vue
+└── InventoryPanel.vue
 ```
 
 ## What's Deferred
 
 - SAM refinement (converting raw samples to science data)
-- Multiple rock/sample types (basalt, olivine, etc.)
 - Other instrument activations (MastCam scan, ChemCam laser, DAN neutron scan)
 - Sound effects
 - Arm physics/collision with terrain

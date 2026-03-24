@@ -31,6 +31,21 @@ export function sceneSecondsFromMarsClockHours(hours: number): number {
 }
 
 /**
+ * Converts Mars-clock hours to a sol-fraction (0–1 timeOfDay units).
+ * Example: `8` → the fraction of the sol at 08:00 on the HUD clock.
+ */
+export function solFractionFromMarsClockHours(hours: number): number {
+  return (hours * 60) / MARS_SOL_CLOCK_MINUTES
+}
+
+/**
+ * Converts Mars-clock minutes to a sol-fraction (0–1 timeOfDay units).
+ */
+export function solFractionFromMarsClockMinutes(minutes: number): number {
+  return minutes / MARS_SOL_CLOCK_MINUTES
+}
+
+/**
  * RTG and other balance knobs — expressed in mission language, resolved to scene seconds here.
  * Tweak fractions/hours only; do not scatter raw second literals for mission-timed effects.
  */

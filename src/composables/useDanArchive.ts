@@ -33,8 +33,13 @@ function saveToStorage(rows: ArchivedDANProspect[]): void {
 
 const prospects = ref<ArchivedDANProspect[]>(loadFromStorage())
 
+/** Clears singleton state. Used by unit tests only. */
+export function resetForTests(): void {
+  prospects.value = []
+}
+
 export function useDanArchive() {
-  const pendingTransmission = computed(() => prospects.value.filter((s) => !s.transmitted))
+  const pendingTransmission = computed(() => prospects.value.filter((s) => s.queuedForTransmission && !s.transmitted))
 
   function archiveProspect(params: {
     capturedSol: number
@@ -72,6 +77,7 @@ export function useDanArchive() {
       quality: params.quality,
       waterConfirmed: params.waterConfirmed,
       reservoirQuality: params.reservoirQuality,
+      queuedForTransmission: false,
       transmitted: false,
     }
 
@@ -81,9 +87,25 @@ export function useDanArchive() {
     return row
   }
 
+  function queueForTransmission(archiveId: string): void {
+    const next = prospects.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, queuedForTransmission: true } : s,
+    )
+    prospects.value = next
+    saveToStorage(next)
+  }
+
+  function dequeueFromTransmission(archiveId: string): void {
+    const next = prospects.value.map((s) =>
+      s.archiveId === archiveId ? { ...s, queuedForTransmission: false } : s,
+    )
+    prospects.value = next
+    saveToStorage(next)
+  }
+
   function markTransmitted(archiveId: string): void {
     const next = prospects.value.map((s) =>
-      s.archiveId === archiveId ? { ...s, transmitted: true } : s,
+      s.archiveId === archiveId ? { ...s, transmitted: true, queuedForTransmission: false } : s,
     )
     prospects.value = next
     saveToStorage(next)
@@ -93,6 +115,8 @@ export function useDanArchive() {
     prospects,
     pendingTransmission,
     archiveProspect,
+    queueForTransmission,
+    dequeueFromTransmission,
     markTransmitted,
   }
 }

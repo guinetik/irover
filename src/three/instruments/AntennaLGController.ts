@@ -2,8 +2,10 @@ import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 
 /**
- * Low-gain antenna — direct-to-Earth link (status UI only for now).
- * Planned: downlink archived ChemCam spectra from `useChemCamArchive` (pending transmission) for mission funding.
+ * Low-gain antenna — direct-to-Earth link.
+ * Receives mission updates from Earth via the mailbox composable. The tick handler
+ * polls for unread messages each sol, sends a heartbeat once per sol, and sets
+ * `linkStatus` based on whether the passive subsystem is enabled.
  */
 export class AntennaLGController extends InstrumentController {
   readonly id = 'antenna-lg'
@@ -16,11 +18,12 @@ export class AntennaLGController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.0, 0.2, -0.2)
   readonly viewAngle = Math.PI * 0.85    // from behind, slightly right
   readonly viewPitch = 0.25
-  override readonly selectionIdlePowerW = 5
+  override readonly selectionIdlePowerW = 2
 
-  // Fake comms data
-  signalStrength = 72       // percent
-  dataRate = 0.5            // kbps to Earth direct
-  linkStatus = 'CONNECTED'  // CONNECTED | SEARCHING | NO SIGNAL
+  // Mailbox / heartbeat state — managed by tick handler
+  heartbeatSentThisSol = false
+  lastHeartbeatSol = -1
+  unreadCount = 0
+  linkStatus: 'LINKED' | 'OFF' = 'LINKED'
   targetBody = 'EARTH'
 }

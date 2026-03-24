@@ -149,7 +149,7 @@ Note: the `waterIceIndex` coefficient is 0.15 (not 0.3) so that Weak signals rem
     - With current constants: `(120 / 1477) * 180 ≈ 14.6 real seconds`
     - Exposed as `const PROSPECT_DURATION_MARS_HOURS = 2` — tunable if 14.6s feels too short in playtesting
   - Player can look around but cannot drive
-  - **Sleep mode safety:** if sleep triggers during prospecting (battery drops below 15%), the prospect is cancelled, rover is unlocked, DAN is turned off. Toast: "Prospect interrupted — insufficient power."
+  - **Sleep mode safety:** if sleep triggers during prospecting (battery drops below 5%), the prospect is cancelled, rover is unlocked, DAN is turned off. Toast: "Prospect interrupted — insufficient power."
 
 ### Step 4 — Completion
 

@@ -38,7 +38,69 @@
                       @click="selectedId = s.archiveId"
                     >
                       <span class="sai-rock">{{ s.rockLabel }}</span>
-                      <span class="sai-meta font-instrument">SOL {{ s.capturedSol }} · {{ formatShortDate(s.capturedAtMs) }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ s.capturedSol }} · {{ formatShortDate(s.capturedAtMs) }}
+                        <span v-if="s.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="s.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <!-- DAN accordion -->
+              <div v-if="danProspects.length > 0" class="science-accordion science-accordion-dan">
+                <button
+                  type="button"
+                  class="science-acc-head science-acc-head-dan"
+                  :aria-expanded="danExpanded"
+                  aria-controls="science-dan-list"
+                  id="science-dan-trigger"
+                  @click="danExpanded = !danExpanded"
+                >
+                  <span class="science-acc-chev" aria-hidden="true">{{ danExpanded ? '▼' : '▶' }}</span>
+                  <span class="science-acc-label">DAN</span>
+                  <span class="science-acc-badge science-acc-badge-dan font-instrument">{{ danProspects.length }}</span>
+                </button>
+                <ul
+                  v-show="danExpanded"
+                  id="science-dan-list"
+                  class="science-acc-list"
+                  role="list"
+                  aria-labelledby="science-dan-trigger"
+                >
+                  <li v-for="p in sortedDanProspects" :key="p.archiveId">
+                    <button
+                      type="button"
+                      class="science-acc-item"
+                      :class="{ active: p.archiveId === selectedDanId }"
+                      @click="selectedDanId = p.archiveId"
+                    >
+                      <span class="sai-rock">{{ p.quality }} Signal{{ p.waterConfirmed ? ' — WATER' : '' }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ p.capturedSol }} · {{ formatShortDate(p.capturedAtMs) }}
+                        <span v-if="p.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="p.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <!-- SAM accordion -->
+              <div v-if="samResults.length > 0" class="science-accordion science-accordion-sam">
+                <button type="button" class="science-acc-head science-acc-head-sam"
+                  :aria-expanded="samExpanded" @click="samExpanded = !samExpanded">
+                  <span class="science-acc-chev" aria-hidden="true">{{ samExpanded ? '▼' : '▶' }}</span>
+                  <span class="science-acc-label">SAM</span>
+                  <span class="science-acc-badge science-acc-badge-sam font-instrument">{{ samResults.length }}</span>
+                </button>
+                <ul v-show="samExpanded" class="science-acc-list" role="list">
+                  <li v-for="r in sortedSamResults" :key="r.archiveId">
+                    <button type="button" class="science-acc-item"
+                      :class="{ active: r.archiveId === selectedSamId }"
+                      @click="selectedSamId = r.archiveId">
+                      <span class="sai-rock" :style="{ color: RARITY_COLORS[r.rarity] ?? '#888' }">{{ r.discoveryName }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ r.capturedSol }} · {{ r.modeName }}
+                        <span v-if="r.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="r.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
                     </button>
                   </li>
                 </ul>
@@ -143,6 +205,95 @@
                       <div class="sm-row"><dt>Calibration</dt><dd class="sm-instr">{{ Math.round(selected.calibration * 100) }}%</dd></div>
                       <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selected.transmitted ? 'YES' : 'NO' }}</dd></div>
                     </dl>
+                    <div v-if="!selected.transmitted" class="tx-queue-actions">
+                      <button
+                        v-if="!selected.queuedForTransmission"
+                        type="button"
+                        class="tx-queue-btn tx-queue"
+                        @click="emit('queueForTransmission', 'chemcam', selected.archiveId)"
+                      >QUEUE FOR TRANSMISSION</button>
+                      <button
+                        v-else
+                        type="button"
+                        class="tx-queue-btn tx-dequeue"
+                        @click="emit('dequeueFromTransmission', 'chemcam', selected.archiveId)"
+                      >REMOVE FROM QUEUE</button>
+                    </div>
+                    <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
+                </div>
+              </template>
+              <!-- DAN detail -->
+              <template v-if="detailMode === 'dan'">
+                <div v-if="!selectedDan" class="science-detail-hint">Select a prospect in the list.</div>
+                <div v-else class="science-record-body science-dan-detail">
+                  <div class="dan-detail-graphic">
+                    <div class="dan-detail-placeholder">
+                      <div class="dan-detail-icon">&#x2261;</div>
+                      <div class="dan-detail-text">NEUTRON MAP</div>
+                      <div class="dan-detail-sub">Traverse visualization pending</div>
+                    </div>
+                  </div>
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Quality</dt><dd :style="{ color: danQualityColor }">{{ selectedDan.quality }}</dd></div>
+                    <div class="sm-row"><dt>Signal</dt><dd class="sm-instr">{{ Math.round(selectedDan.signalStrength * 100) }}%</dd></div>
+                    <div class="sm-row"><dt>Water</dt><dd :style="{ color: selectedDan.waterConfirmed ? '#44aaff' : '#886a50' }">{{ selectedDan.waterConfirmed ? 'CONFIRMED' : 'INCONCLUSIVE' }}</dd></div>
+                    <div class="sm-row"><dt>Reservoir</dt><dd class="sm-instr">{{ Math.round(selectedDan.reservoirQuality * 100) }}%</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedDan.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Lat / Lon</dt><dd class="sm-instr">{{ formatLatLon(selectedDan.latitudeDeg, selectedDan.longitudeDeg) }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedDan.capturedSol }} · {{ formatUtc(selectedDan.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedDan.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                  <div v-if="!selectedDan.transmitted" class="tx-queue-actions">
+                    <button
+                      v-if="!selectedDan.queuedForTransmission"
+                      type="button"
+                      class="tx-queue-btn tx-queue"
+                      @click="emit('queueForTransmission', 'dan', selectedDan.archiveId)"
+                    >QUEUE FOR TRANSMISSION</button>
+                    <button
+                      v-else
+                      type="button"
+                      class="tx-queue-btn tx-dequeue"
+                      @click="emit('dequeueFromTransmission', 'dan', selectedDan.archiveId)"
+                    >REMOVE FROM QUEUE</button>
+                  </div>
+                  <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
+                </div>
+              </template>
+              <!-- SAM detail -->
+              <template v-if="detailMode === 'sam'">
+                <div v-if="!selectedSam" class="science-detail-hint">Select a discovery in the list.</div>
+                <div v-else class="science-record-body">
+                  <div class="sam-detail-rarity" :style="{ background: RARITY_COLORS[selectedSam.rarity] + '22', borderColor: RARITY_COLORS[selectedSam.rarity] + '44' }">
+                    <span :style="{ color: RARITY_COLORS[selectedSam.rarity] }">{{ selectedSam.rarity.toUpperCase() }} DISCOVERY</span>
+                  </div>
+                  <div class="sam-detail-name">{{ selectedSam.discoveryName }}</div>
+                  <div class="sam-detail-desc">{{ selectedSam.description }}</div>
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Mode</dt><dd>{{ selectedSam.modeName }}</dd></div>
+                    <div class="sm-row"><dt>Sample</dt><dd>{{ selectedSam.sampleLabel }}</dd></div>
+                    <div class="sm-row"><dt>Quality</dt><dd class="sm-instr">{{ selectedSam.quality }}%</dd></div>
+                    <div class="sm-row"><dt>SP Earned</dt><dd class="sm-instr" style="color: #5dc9a5">+{{ selectedSam.spEarned }}</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedSam.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Lat / Lon</dt><dd class="sm-instr">{{ formatLatLon(selectedSam.latitudeDeg, selectedSam.longitudeDeg) }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedSam.capturedSol }} · {{ formatUtc(selectedSam.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedSam.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                  <div v-if="!selectedSam.transmitted" class="tx-queue-actions">
+                    <button
+                      v-if="!selectedSam.queuedForTransmission"
+                      type="button"
+                      class="tx-queue-btn tx-queue"
+                      @click="emit('queueForTransmission', 'sam', selectedSam.archiveId)"
+                    >QUEUE FOR TRANSMISSION</button>
+                    <button
+                      v-else
+                      type="button"
+                      class="tx-queue-btn tx-dequeue"
+                      @click="emit('dequeueFromTransmission', 'sam', selectedSam.archiveId)"
+                    >REMOVE FROM QUEUE</button>
+                  </div>
+                  <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
                 </div>
               </template>
               <!-- DAN detail -->
@@ -211,8 +362,10 @@ const props = defineProps<{
   samResults: ArchivedSAMDiscovery[]
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
+  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam', archiveId: string]
+  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam', archiveId: string]
 }>()
 
 const chemcamExpanded = ref(true)
@@ -765,5 +918,78 @@ function formatLatLon(lat: number, lon: number): string {
 .science-fade-leave-to .science-dialog {
   opacity: 0;
   transform: scale(0.98) translateY(8px);
+}
+
+.sai-tx-tag {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.sai-tx-tag.queued {
+  background: rgba(68, 255, 136, 0.15);
+  color: rgba(68, 255, 136, 0.85);
+  border: 1px solid rgba(68, 255, 136, 0.3);
+}
+.sai-tx-tag.transmitted {
+  background: rgba(102, 255, 238, 0.1);
+  color: rgba(102, 255, 238, 0.5);
+  border: 1px solid rgba(102, 255, 238, 0.15);
+}
+
+.tx-queue-actions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(102, 255, 238, 0.1);
+}
+
+.tx-queue-btn {
+  width: 100%;
+  padding: 8px 16px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tx-queue-btn.tx-queue {
+  background: rgba(68, 255, 136, 0.1);
+  border: 1px solid rgba(68, 255, 136, 0.35);
+  color: rgba(68, 255, 136, 0.9);
+}
+.tx-queue-btn.tx-queue:hover {
+  background: rgba(68, 255, 136, 0.2);
+  border-color: rgba(68, 255, 136, 0.55);
+}
+
+.tx-queue-btn.tx-dequeue {
+  background: rgba(255, 180, 60, 0.08);
+  border: 1px solid rgba(255, 180, 60, 0.3);
+  color: rgba(255, 180, 60, 0.85);
+}
+.tx-queue-btn.tx-dequeue:hover {
+  background: rgba(255, 180, 60, 0.15);
+  border-color: rgba(255, 180, 60, 0.5);
+}
+
+.tx-transmitted-badge {
+  margin-top: 12px;
+  padding: 6px 16px;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: rgba(102, 255, 238, 0.6);
+  border: 1px solid rgba(102, 255, 238, 0.15);
+  border-radius: 4px;
+  background: rgba(102, 255, 238, 0.05);
 }
 </style>

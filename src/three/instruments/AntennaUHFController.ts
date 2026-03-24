@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 
+/**
+ * UHF relay antenna used for science data uplink to orbiting relay satellites
+ * (e.g. MRO, MAVEN). Operates passively in the background, transmitting queued
+ * science data during overhead relay windows.
+ */
 export class AntennaUHFController extends InstrumentController {
   readonly id = 'antenna-uhf'
   readonly name = 'UHF'
@@ -12,12 +17,27 @@ export class AntennaUHFController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.0, 0.15, -0.1)
   readonly viewAngle = Math.PI * 1.15    // from behind, slightly left
   readonly viewPitch = 0.2
-  override readonly selectionIdlePowerW = 8
+  override readonly selectionIdlePowerW = 6
+  /** Extra power draw during active transmission (on top of idle) */
+  static readonly TRANSMIT_POWER_W = 12
 
-  // Fake comms data
-  signalStrength = 95        // percent
-  dataRate = 128             // kbps via orbiter relay
-  linkStatus = 'RELAY LOCK'  // RELAY LOCK | WAITING PASS | NO ORBITER
-  relayOrbiter = 'MRO'      // Mars Reconnaissance Orbiter
-  nextPass = '02:14'         // next overhead pass time
+  // Dynamic comms state — set and updated by the tick handler
+  passActive = false                                          // currently in a relay window
+  transmitting = false                                        // actively sending data
+  currentOrbiter = ''                                        // which orbiter is overhead
+  transmissionProgress = 0                                    // 0-1 for current item being transmitted
+  queueLength = 0                                            // pending items count
+  windowRemainingSec = 0                                     // scene-seconds left in current pass
+  nextPassInSec = 0                                          // scene-seconds countdown to next pass
+  transmittedThisPass = 0                                    // count of items transmitted in current pass
+  linkStatus: 'RELAY LOCK' | 'WAITING PASS' | 'OFF' = 'WAITING PASS'
+  relayOrbiter = ''                                          // set dynamically by tick handler
+
+  /** 6W idle, 18W while actively transmitting */
+  override getPassiveBackgroundPowerW(): number {
+    if (!this.passiveSubsystemEnabled) return 0
+    return this.transmitting
+      ? this.selectionIdlePowerW + AntennaUHFController.TRANSMIT_POWER_W
+      : this.selectionIdlePowerW
+  }
 }
