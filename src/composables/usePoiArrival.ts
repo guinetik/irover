@@ -7,7 +7,7 @@ import type { SiteMissionPoi } from './useSiteMissionPois'
  * before the arrival is confirmed.
  */
 
-const ARRIVAL_RADIUS = 5
+const ARRIVAL_RADIUS = 2.5
 const DWELL_SECONDS = 2
 
 export interface PoiDwellState {
