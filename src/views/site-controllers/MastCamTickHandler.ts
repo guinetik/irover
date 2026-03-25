@@ -4,6 +4,7 @@ import { MastCamController } from '@/three/instruments'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
+import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface MastCamTickRefs {
@@ -25,6 +26,7 @@ export interface MastCamTickRefs {
 export interface MastCamTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
+  playerMod: (key: keyof ProfileModifiers) => number
 }
 
 /**
@@ -44,7 +46,7 @@ export function createMastCamTickHandler(
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
     isDrilling, drillProgress,
   } = refs
-  const { sampleToastRef, awardSP } = callbacks
+  const { sampleToastRef, awardSP, playerMod } = callbacks
 
   let surveyInitialised = false
 
@@ -84,6 +86,7 @@ export function createMastCamTickHandler(
     // Enter survey mode when MastCam is active
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
       const mc = controller.activeInstrument
+      mc.durationMultiplier = 1 / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -93,6 +96,7 @@ export function createMastCamTickHandler(
     // Animate tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
+      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy') * Math.max(0.1, mcInst.durabilityFactor)
       mcInst.updateTagMarkers(simulationTime)
     }
 

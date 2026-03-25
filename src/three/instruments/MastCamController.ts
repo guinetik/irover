@@ -11,7 +11,6 @@ const FOV_MIN = 20
 const FOV_MAX = 65
 const FOV_DEFAULT = 50
 const ZOOM_STEP = 3        // FOV degrees per wheel tick
-const SURVEY_RANGE = 40     // meters — rocks beyond this aren't highlighted
 const SCAN_DURATION = 2.0   // seconds to complete a scan
 const IDLE_POWER_W = 4      // base draw while MastCam is active
 /** Extra draw while E-held scan / tagging (imager + processing — tuned vs small battery) */
@@ -26,6 +25,13 @@ export class MastCamController extends InstrumentController {
   readonly viewAngle = 0.2
   readonly viewPitch = 0.05
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'engineering-components'
+  override readonly usageDecayChance = 0.15
+  override readonly usageDecayAmount = 0.8
+
+  /** Dynamic survey range (meters) — updated each frame from instrumentAccuracy */
+  surveyRange = 5
 
   // Mast head node (for first-person camera position)
   private mastHead: THREE.Object3D | null = null
@@ -52,6 +58,7 @@ export class MastCamController extends InstrumentController {
   // Scan state
   private scanning = false
   private scanProgress = 0
+  durationMultiplier = 1.0
   scanTarget: THREE.Mesh | null = null
   /** Persistent tag markers above scanned rocks — survive mode exit */
   private tagMarkers = new Map<THREE.Mesh, THREE.Mesh>()
@@ -183,12 +190,13 @@ export class MastCamController extends InstrumentController {
     // Scan logic
     if (this.scanning && lookTarget && !lookTarget.userData.mastcamScanned) {
       this.scanTarget = lookTarget
-      this.scanProgress += delta / SCAN_DURATION
+      this.scanProgress += delta / (SCAN_DURATION * this.durationMultiplier)
       if (this.scanProgress >= 1) {
         this.scanTarget.userData.mastcamScanned = true
         this.addTagMarker(this.scanTarget)
         const rockType = (this.scanTarget.userData.rockType as RockTypeId) ?? 'basalt'
         this.onScanComplete?.(this.scanTarget, rockType)
+        this.rollUsageDecay()
         this.scanProgress = 0
         this.scanning = false
         this.rebuildOverlays()
@@ -200,7 +208,7 @@ export class MastCamController extends InstrumentController {
   }
 
   private findLookTarget(): THREE.Mesh | null {
-    const raycaster = new THREE.Raycaster(this.mastOrigin, this.mastLookDir, 0, SURVEY_RANGE)
+    const raycaster = new THREE.Raycaster(this.mastOrigin, this.mastLookDir, 0, this.surveyRange)
     const hits = raycaster.intersectObjects(this.rocks, false)
     for (const hit of hits) {
       const rock = hit.object as THREE.Mesh
@@ -341,7 +349,7 @@ export class MastCamController extends InstrumentController {
       if (rock.userData.depleted) continue
 
       // Distance check from mast
-      if (this.mastWorldPos.distanceTo(rock.position) > SURVEY_RANGE) continue
+      if (this.mastWorldPos.distanceTo(rock.position) > this.surveyRange) continue
 
       // Filter check
       const matches = this.filterType === null || type === this.filterType

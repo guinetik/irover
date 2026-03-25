@@ -12,6 +12,11 @@ export class AntennaLGController extends InstrumentController {
   readonly name = 'LGA'
   readonly slot = 11
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.25
+  override readonly repairComponentId = 'digital-components'
+  override readonly breakThreshold = 5
+  override readonly usageDecayChance = 0.10
+  override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
   readonly focusNodeName = 'antenna_LG'
@@ -20,10 +25,19 @@ export class AntennaLGController extends InstrumentController {
   readonly viewPitch = 0.25
   override readonly selectionIdlePowerW = 2
 
+  /** Set by tick handler to scale power draw down as accuracy improves (1.0 = no bonus) */
+  accuracyMod = 1.0
+
   // Mailbox / heartbeat state — managed by tick handler
   heartbeatSentThisSol = false
   lastHeartbeatSol = -1
   unreadCount = 0
   linkStatus: 'LINKED' | 'OFF' = 'LINKED'
   targetBody = 'EARTH'
+
+  /** 2W idle — divided by accuracyMod (higher accuracy = less draw) */
+  override getPassiveBackgroundPowerW(): number {
+    if (!this.passiveSubsystemEnabled) return 0
+    return this.selectionIdlePowerW / this.accuracyMod
+  }
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-/** Emissive tint (hex) on the instrument’s GLTF focus subtree while its slot is selected or active. */
+/** Emissive tint (hex) on the instrument's GLTF focus subtree while its slot is selected or active. */
 export const INSTRUMENT_SELECTION_GLOW_HEX = 0x40c8f0
 
 const SELECTION_GLOW_INTENSITY_BASE = 0.32
@@ -47,7 +47,7 @@ export abstract class InstrumentController {
   readonly canActivate: boolean = false
 
   /**
-   * Baseline main-bus draw (W) while this instrument’s slot is open — used by the default
+   * Baseline main-bus draw (W) while this instrument's slot is open — used by the default
    * {@link getInstrumentBusPowerW} implementation. Override the getter when draw is dynamic.
    */
   readonly selectionIdlePowerW: number = 0
@@ -71,11 +71,72 @@ export abstract class InstrumentController {
    */
   passiveSubsystemEnabled = true
 
+  // ── Durability system ──────────────────────────────────────────────
+  durabilityPct = 100
+  maxDurability = 100
+  readonly breakThreshold = 25
+  readonly passiveDecayPerSol = 0.25
+  readonly usageDecayChance = 0.20
+  readonly usageDecayAmount = 1.0
+  readonly repairComponentId = 'engineering-components'
+  hazardDecayMultiplier = 1.0
+
   /**
-   * When non-null, the view applies a pulsing emissive on this instrument’s focus subtree while selected.
-   * Set to `null` if the instrument uses conflicting mesh VFX (e.g. RTG overdrive on the same node).
+   * When non-null, the view applies a pulsing emissive on this instrument's focus subtree while selected.
+   * Colour shifts from cyan (healthy) through green/yellow/orange as durability drops.
+   * Subclasses may override with a fixed value or `null` (e.g. RTG overdrive on the same node).
    */
-  readonly selectionHighlightColor: number | null = INSTRUMENT_SELECTION_GLOW_HEX
+  get selectionHighlightColor(): number | null {
+    if (this.durabilityPct >= 85) return 0x40c8f0  // cyan
+    if (this.durabilityPct >= 60) return 0x40f080   // green
+    if (this.durabilityPct >= 40) return 0xf0e040   // yellow
+    if (this.durabilityPct > this.breakThreshold) return 0xf0a030  // orange
+    return 0x804020  // dim brown (broken)
+  }
+
+  get durabilityFactor(): number {
+    return Math.max(0, (this.durabilityPct - this.breakThreshold) / (100 - this.breakThreshold))
+  }
+
+  get operational(): boolean {
+    return this.durabilityPct > this.breakThreshold
+  }
+
+  applyPassiveDecay(solDelta: number): void {
+    if (this.durabilityPct <= this.breakThreshold) return
+    this.durabilityPct = Math.max(
+      this.breakThreshold,
+      this.durabilityPct - this.passiveDecayPerSol * this.hazardDecayMultiplier * solDelta,
+    )
+  }
+
+  rollUsageDecay(): void {
+    if (this.durabilityPct <= this.breakThreshold) return
+    if (Math.random() < this.usageDecayChance) {
+      this.durabilityPct = Math.max(
+        this.breakThreshold,
+        this.durabilityPct - this.usageDecayAmount,
+      )
+    }
+  }
+
+  applyHazardDamage(amount: number): void {
+    this.durabilityPct = Math.max(this.breakThreshold, this.durabilityPct - amount)
+  }
+
+  getRepairCost(): { weldingWire: number; componentId: string; componentQty: number } {
+    const pct = this.durabilityPct
+    if (pct >= 90) return { weldingWire: 1, componentId: this.repairComponentId, componentQty: 0 }
+    if (pct >= 70) return { weldingWire: 2, componentId: this.repairComponentId, componentQty: 1 }
+    if (pct >= 50) return { weldingWire: 3, componentId: this.repairComponentId, componentQty: 2 }
+    return { weldingWire: 4, componentId: this.repairComponentId, componentQty: 3 }
+  }
+
+  repair(): void {
+    if (this.durabilityPct <= this.breakThreshold) return  // permanently broken
+    this.durabilityPct = this.maxDurability
+    this.maxDurability = Math.max(this.breakThreshold + 1, this.maxDurability - 1)
+  }
 
   node: THREE.Object3D | null = null
   attached = false

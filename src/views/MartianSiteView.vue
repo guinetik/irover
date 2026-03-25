@@ -198,6 +198,12 @@
       :apxs-progress-label="apxsCurrentExperiment ? 'APXS — ' + Math.ceil(apxsCurrentExperiment.remainingTimeSec) + 's' : ''"
       :apxs-unread="apxsUnread"
       @apxs-see-results="apxsResultDialogEntry = apxsResults[0] ?? null"
+      :durability-pct="activeDurability?.durabilityPct"
+      :max-durability="activeDurability?.maxDurability"
+      :instrument-operational="activeDurability?.operational"
+      :repair-cost-wire="activeDurability?.repairCost.weldingWire"
+      :repair-cost-component-id="activeDurability?.repairCost.componentId"
+      :repair-cost-component-qty="activeDurability?.repairCost.componentQty"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -255,6 +261,7 @@
       :stacks="inventoryStacks"
       :total-s-p="totalSP"
       :sample-consumption-kg="samExperiments.data.value?.sampleConsumptionKg ?? 0.002"
+      :accuracy-mod="playerMod('instrumentAccuracy')"
       @close="samDialogVisible = false"
       @enqueue="handleSamEnqueue"
     />
@@ -287,6 +294,7 @@
               :rock-type="apxsGameRockType"
               :composition="apxsGameComposition"
               :duration-sec="apxsGameDuration"
+              :accuracy-mod="playerMod('instrumentAccuracy')"
               @complete="handleAPXSComplete"
             />
           </div>
@@ -545,9 +553,12 @@ import { useAPXSArchive } from '@/composables/useAPXSArchive'
 import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { generateComposition, computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
+import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
+
+const { tryRepair, getBySlot } = useInstrumentDurability()
 
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
@@ -571,6 +582,11 @@ const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
 /** Bumped when a passive instrument (DAN/REMS/RAD/comms) toggles STANDBY so the overlay re-reads bus state. */
 const passiveUiRevision = ref(0)
+
+const activeDurability = computed(() => {
+  if (activeInstrumentSlot.value === null) return undefined
+  return getBySlot(activeInstrumentSlot.value)
+})
 
 const passiveOverlayPatch = computed(() => {
   void passiveUiRevision.value
@@ -745,8 +761,15 @@ const wheelsOverlayHud = computed(() => {
 })
 
 function handleInstrumentRepair() {
-  const w = siteRover.value?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
-  if (activeInstrumentSlot.value === WHLS_SLOT && w) w.repair()
+  if (activeInstrumentSlot.value === null) return
+  // Find the instrument ID for the active slot
+  const snap = getBySlot(activeInstrumentSlot.value)
+  if (!snap) return
+  const result = tryRepair(snap.id)
+  if (!result.ok && result.message) {
+    // Show error toast if available
+    sampleToastRef.value?.showError?.(result.message)
+  }
 }
 
 function toggleWheelsPanel() {

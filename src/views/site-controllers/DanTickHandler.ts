@@ -7,6 +7,7 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import { DAN_INITIATE_DURATION_SEC, DAN_PROSPECT_DURATION_MARS_HOURS } from '@/views/MarsSiteViewController'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 
 export interface DanTickRefs {
   siteTerrainParams: Ref<TerrainParams | null>
@@ -28,6 +29,7 @@ export interface DanTickRefs {
 export interface DanTickCallbacks {
   siteId: string
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
+  playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
   triggerDanAchievement: (event: string) => void
   archiveDanProspect: (params: {
@@ -69,7 +71,7 @@ export function createDanTickHandler(
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,
     passiveUiRevision, siteLat, siteLon, roverWorldX, roverWorldZ, roverSpawnXZ,
   } = refs
-  const { siteId, sampleToastRef, awardDAN, triggerDanAchievement, archiveDanProspect } = callbacks
+  const { siteId, sampleToastRef, playerMod, awardDAN, triggerDanAchievement, archiveDanProspect } = callbacks
 
   let danDiscMesh: THREE.Mesh | null = null
   let danConeMesh: THREE.Mesh | null = null
@@ -128,6 +130,7 @@ export function createDanTickHandler(
       danInst.waterIceIndex = siteTerrainParams.value.waterIceIndex ?? 0.1
       danInst.featureType = siteTerrainParams.value.featureType ?? 'plain'
     }
+    danInst.accuracyMod = playerMod('instrumentAccuracy')
     danInst.update(sceneDelta)
 
     danTotalSamples.value = danInst.totalSamples
@@ -205,6 +208,7 @@ export function createDanTickHandler(
             danInst.prospectPhase = 'complete'
             danProspectPhase.value = 'complete'
             danInst.prospectComplete = true
+            danInst.rollUsageDecay()
             triggerDanAchievement('first-prospect')
 
             const gain = awardDAN('DAN prospect complete')

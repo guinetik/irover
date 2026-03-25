@@ -13,6 +13,10 @@ export class SAMController extends InstrumentController {
   readonly viewAngle = 0.1
   readonly viewPitch = 1.1
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'science-components'
+  override readonly usageDecayChance = 0.20
+  override readonly usageDecayAmount = 1.5
   override readonly selectionIdlePowerW = 0  // no idle draw — power only when experiments run
 
   // Cover animation

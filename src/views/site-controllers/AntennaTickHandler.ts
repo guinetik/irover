@@ -8,6 +8,7 @@ import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { useTransmissionQueue, type TransmissionQueueItem } from '@/composables/useTransmissionQueue'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
+import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface AntennaTickRefs {
@@ -26,6 +27,7 @@ export interface AntennaTickRefs {
 export interface AntennaTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardTransmission: (archiveId: string, baseSP: number, label: string) => SPGain | null
+  playerMod: (key: keyof ProfileModifiers) => number
 }
 
 /**
@@ -55,6 +57,7 @@ export function createAntennaTickHandler(
 
     // Update link status
     lgaCtrl.linkStatus = lgaCtrl.passiveSubsystemEnabled ? 'LINKED' : 'OFF'
+    lgaCtrl.accuracyMod = callbacks.playerMod('instrumentAccuracy')
 
     if (!lgaCtrl.passiveSubsystemEnabled) return
 
@@ -100,6 +103,7 @@ export function createAntennaTickHandler(
     uhfCtrl.linkStatus = uhfCtrl.passiveSubsystemEnabled
       ? (uhfCtrl.passActive ? 'RELAY LOCK' : 'WAITING PASS')
       : 'OFF'
+    uhfCtrl.accuracyMod = callbacks.playerMod('instrumentAccuracy')
 
     const { marsSol, marsTimeOfDay, sceneDelta } = fctx
     const activePass = orbitalPasses.getActivePass(marsSol, marsTimeOfDay)
@@ -156,15 +160,17 @@ export function createAntennaTickHandler(
       // Progress current item
       if (currentTxItem) {
         currentTxElapsed += sceneDelta
-        uhfCtrl.transmissionProgress = Math.min(1, currentTxElapsed / currentTxItem.bandwidthSec)
+        const effectiveBandwidth = currentTxItem.bandwidthSec / (callbacks.playerMod('instrumentAccuracy') * Math.max(0.1, uhfCtrl.durabilityFactor))
+        uhfCtrl.transmissionProgress = Math.min(1, currentTxElapsed / effectiveBandwidth)
 
         // Item complete
-        if (currentTxElapsed >= currentTxItem.bandwidthSec) {
+        if (currentTxElapsed >= effectiveBandwidth) {
           txQueue.markTransmitted(currentTxItem)
           const gain = callbacks.awardTransmission(currentTxItem.archiveId, currentTxItem.originalSP, currentTxItem.label)
           if (gain) {
             callbacks.sampleToastRef.value?.showSP?.(gain.amount, 'TRANSMISSION', gain.bonus)
           }
+          uhfCtrl.rollUsageDecay()
           uhfCtrl.transmittedThisPass++
           currentTxItem = null
           currentTxElapsed = 0

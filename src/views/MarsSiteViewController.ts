@@ -55,6 +55,8 @@ import { createOrbitalDropTickHandler } from './site-controllers/OrbitalDropTick
 import { createAntennaTickHandler, type AntennaTickRefs } from './site-controllers/AntennaTickHandler'
 import { createAPXSTickHandler } from './site-controllers/APXSTickHandler'
 import { useSciencePoints } from '@/composables/useSciencePoints'
+import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
+import { secondsPerSol } from '@/lib/missionTime'
 
 /** Seconds to hold position before DAN prospecting begins. */
 export const DAN_INITIATE_DURATION_SEC = 4
@@ -157,8 +159,12 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
       silicateIndex: geo.silicateIndex,
       temperatureMaxK: geo.temperatureMaxK,
       temperatureMinK: geo.temperatureMinK,
+      latDeg: geo.lat,
+      lonDeg: geo.lon,
     }
   }
+  // Landing sites also have lat/lon
+  const latLon = site ? { latDeg: site.lat, lonDeg: site.lon } : {}
   return {
     roughness: 0.4,
     craterDensity: 0.3,
@@ -173,6 +179,7 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
     silicateIndex: 0.3,
     temperatureMaxK: 280,
     temperatureMinK: 160,
+    ...latLon,
   }
 }
 
@@ -411,6 +418,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     remsSurveying,
   } = ctx.refs
 
+  const { syncFromControllers } = useInstrumentDurability()
+
   // --- Three.js core ---
   let renderer: THREE.WebGLRenderer | null = null
   let camera: THREE.PerspectiveCamera | null = null
@@ -459,7 +468,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       roverWorldZ,
       roverSpawnXZ,
     },
-    { siteId, sampleToastRef, awardDAN, triggerDanAchievement, archiveDanProspect },
+    { siteId, sampleToastRef, playerMod, awardDAN, triggerDanAchievement, archiveDanProspect },
   )
 
   const drillHandler = createDrillTickHandler(
@@ -490,7 +499,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       isDrilling: ctx.refs.isDrilling,
       drillProgress: ctx.refs.drillProgress,
     },
-    { sampleToastRef, awardSP },
+    { sampleToastRef, awardSP, playerMod },
   )
 
   const chemCamHandler = createChemCamTickHandler(
@@ -530,6 +539,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     {
       onLaunchMinigame: ctx.onAPXSLaunchMinigame,
       onBlockedByCold: ctx.onAPXSBlockedByCold,
+      playerMod,
     },
   )
 
@@ -560,6 +570,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     {
       sampleToastRef,
       awardTransmission,
+      playerMod,
     },
   )
 
@@ -607,7 +618,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const terrainParams = getTerrainParamsForSite(siteId, landmarks)
     siteTerrainParams.value = terrainParams
 
-    siteScene = new SiteScene('glb')
+    siteScene = new SiteScene('elevation')
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
 
     // Procedural Mars environment map — gives PBR metals something to reflect
@@ -688,6 +699,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       const rawDelta = clock.getDelta()
       const sceneDelta = gameClock.getSceneDelta(rawDelta)
+      const solDelta = sceneDelta / secondsPerSol()
       const skyDelta = gameClock.getSkyDelta(rawDelta)
       gameClock.missionCooldowns.tick(sceneDelta)
       simulationTime += sceneDelta
@@ -730,8 +742,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
         const speedMult = playerMod('movementSpeed')
-        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * speedMult
-        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * speedMult
+        const wheelsCtrl = controller.instruments.find(i => i.id === 'wheels')
+        const wheelsDurability = Math.max(0.1, wheelsCtrl?.durabilityFactor ?? 1.0)
+        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * speedMult * wheelsDurability
+        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * speedMult * wheelsDurability
       }
 
       // --- Core rover update + position sync ---
@@ -739,6 +753,14 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         controller.criticalPowerMobilitySuspended = isSleeping.value
       }
       controller?.update(sceneDelta)
+      if (controller) {
+        for (const inst of controller.instruments) {
+          inst.applyPassiveDecay(solDelta)
+        }
+      }
+      if (controller) {
+        syncFromControllers(controller.instruments)
+      }
       roverHeading.value = controller?.heading ?? 0
       {
         const moving = roverReady && controller ? (controller.isMoving ?? false) : false

@@ -42,7 +42,7 @@ export function useSamExperiments() {
     return table[String(modesCompleted)] ?? 1.0
   }
 
-  function rollDiscovery(modeId: string, sampleId: string, quality: number): {
+  function rollDiscovery(modeId: string, sampleId: string, quality: number, accuracyMod = 1.0): {
     discovery: SAMDiscovery
     spReward: number
     sideProducts: { itemId: string; quantity: number }[]
@@ -52,12 +52,29 @@ export function useSamExperiments() {
     const weights = yieldTable[sampleId]?.[modeId]
     if (!weights) return null
 
+    // Scale rare/legendary weights by instrumentAccuracy modifier, redistribute excess from common
+    const boostedLegendary = weights.legendary * accuracyMod
+    const boostedRare = weights.rare * accuracyMod
+    const legendaryGain = boostedLegendary - weights.legendary
+    const rareGain = boostedRare - weights.rare
+    const totalGain = legendaryGain + rareGain
+    const adjustedCommon = Math.max(0, weights.common - totalGain)
+    const adjustedUncommon = totalGain > weights.common
+      ? Math.max(0, weights.uncommon - (totalGain - weights.common))
+      : weights.uncommon
+    const adjustedWeights: Record<DiscoveryRarity, number> = {
+      legendary: boostedLegendary,
+      rare: boostedRare,
+      uncommon: adjustedUncommon,
+      common: adjustedCommon,
+    }
+
     // Roll rarity — check from rarest to most common
     const roll = Math.random() * 100
     let rarity: DiscoveryRarity = 'common'
     let cumulative = 0
     for (const r of ['legendary', 'rare', 'uncommon', 'common'] as DiscoveryRarity[]) {
-      cumulative += weights[r]
+      cumulative += adjustedWeights[r]
       if (roll < cumulative) { rarity = r; break }
     }
 

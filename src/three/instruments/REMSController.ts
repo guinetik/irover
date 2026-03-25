@@ -13,6 +13,10 @@ export class REMSController extends InstrumentController {
   readonly name = 'REMS'
   readonly slot = REMS_SLOT
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'science-components'
+  override readonly usageDecayChance = 0.10
+  override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
   /** Lower mast assembly that carries the REMS booms in `nasa_curiosity_clean.glb`. */

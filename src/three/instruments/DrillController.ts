@@ -26,6 +26,10 @@ export class DrillController extends InstrumentController {
   readonly viewAngle = Math.PI * 0.4
   readonly viewPitch = 0.3
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.25
+  override readonly repairComponentId = 'engineering-components'
+  override readonly usageDecayChance = 0.25
+  override readonly usageDecayAmount = 1.5
   /** Arm electronics / turret — sustained drilling is billed separately on the power tick. */
   override readonly selectionIdlePowerW = 6
 
@@ -67,6 +71,9 @@ export class DrillController extends InstrumentController {
   get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
   get hasTarget(): boolean { return this.currentTarget !== null }
   get isInventoryFull(): boolean { return this.inventory.isFull.value }
+
+  /** Instrument accuracy modifier — scales trace element drop count (set each frame by tick handler). */
+  accuracyMod = 1.0
 
   /** Set drill duration multiplier (e.g. 1.25 in COLD thermal zone) */
   set drillDurationMultiplier(v: number) {
@@ -216,6 +223,7 @@ export class DrillController extends InstrumentController {
     if (res.ok) {
       this.targeting?.depleteRock(rock)
       this.lastCollected = res.payload
+      this.rollUsageDecay()
 
       // ChemCam trace element drops — pick from detected peaks
       this.lastTraceDrops = null
@@ -225,7 +233,7 @@ export class DrillController extends InstrumentController {
           const drops: { element: string; label: string }[] = []
           // Drop 1-3 random identified elements (skip "??")
           const identified = peaks.filter(p => p.element !== '??')
-          const dropCount = Math.min(identified.length, 1 + Math.floor(Math.random() * 3))
+          const dropCount = Math.min(identified.length, 1 + Math.floor(Math.random() * 3 * this.accuracyMod))
           const shuffled = [...identified].sort(() => Math.random() - 0.5)
           for (let i = 0; i < dropCount; i++) {
             const el = shuffled[i].element
@@ -244,7 +252,7 @@ export class DrillController extends InstrumentController {
         if (apxsEls && apxsEls.length > 0) {
           const apxsDrops: { element: string; label: string }[] = []
           // Drop 1-2 dominant surface elements
-          const dropCount = Math.min(apxsEls.length, 1 + Math.floor(Math.random() * 2))
+          const dropCount = Math.min(apxsEls.length, 1 + Math.floor(Math.random() * 2 * this.accuracyMod))
           const shuffled = [...apxsEls].sort(() => Math.random() - 0.5)
           for (let i = 0; i < dropCount; i++) {
             const el = shuffled[i]
