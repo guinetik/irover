@@ -352,12 +352,13 @@
       v-if="!deploying && !descending"
       :active-slot="activeInstrumentSlot"
       :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('antenna-uhf')"
+      :lga-alert="lgaUnreadCount > 0 && activeInstrumentSlot !== 11"
       @select="(slot: number) => siteRover?.activateInstrument(slot)"
       @deselect="siteRover?.activateInstrument(null)"
     />
-    <!-- LGA Mailbox panel (shown when LGA antenna selected) -->
+    <!-- LGA Mailbox panel (shown when LGA selected OR when there are unread messages) -->
     <LGAMailbox
-      v-if="!deploying && !descending && activeInstrumentSlot === 11"
+      v-if="!deploying && !descending && (activeInstrumentSlot === 11 || lgaUnreadCount > 0)"
       :messages="lgaMailbox.messages.value"
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
