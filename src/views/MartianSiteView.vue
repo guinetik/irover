@@ -362,7 +362,7 @@
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
       @open-message="handleOpenMessage"
-      style="position: fixed; top: 168px; left: 10px; z-index: 40;"
+      style="position: fixed; top: 58px; left: 62px; z-index: 40;"
     />
     <!-- UHF Uplink panel (shown when UHF antenna selected) -->
     <UHFUplinkPanel
