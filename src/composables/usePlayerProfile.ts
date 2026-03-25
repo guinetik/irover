@@ -375,18 +375,18 @@ function clearProfile(): void {
  * archetype + foundation + patron + reward track.
  */
 function recomputeModifiers(): void {
-  profile.origin = chosenOrigin.value
-  profile.motivation = chosenMotivation.value
-  if (!chosenArchetype.value || !chosenFoundation.value || !chosenPatron.value) {
-    profile.archetype = null
-    profile.foundation = null
-    profile.patron = null
-    Object.assign(profile.modifiers, resolveModifiers(rewardTrackLayer.value))
-    return
-  }
+  // Always sync identity fields from refs
   profile.archetype = chosenArchetype.value
   profile.foundation = chosenFoundation.value
   profile.patron = chosenPatron.value
+  profile.origin = chosenOrigin.value
+  profile.motivation = chosenMotivation.value
+
+  // Modifiers require all three combat choices; otherwise neutral + reward track only
+  if (!chosenArchetype.value || !chosenFoundation.value || !chosenPatron.value) {
+    Object.assign(profile.modifiers, resolveModifiers(rewardTrackLayer.value))
+    return
+  }
   Object.assign(
     profile.modifiers,
     resolveModifiers(
