@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { APXSController } from '@/three/instruments'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
 
@@ -24,6 +25,7 @@ export interface APXSTickRefs {
 export interface APXSTickCallbacks {
   onLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onBlockedByCold: () => void
+  playerMod: (key: keyof ProfileModifiers) => number
 }
 
 export function createAPXSTickHandler(
@@ -31,7 +33,7 @@ export function createAPXSTickHandler(
   callbacks: APXSTickCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
-  const { onLaunchMinigame, onBlockedByCold } = callbacks
+  const { onLaunchMinigame, onBlockedByCold, playerMod } = callbacks
   let gameplayInitialised = false
   let countdownTimer = 0
   let coldToastCooldown = 0
@@ -67,7 +69,7 @@ export function createAPXSTickHandler(
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
-      const duration = APXS_THERMAL_DURATION[thermalZone] ?? 25
+      const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) / playerMod('analysisSpeed')
 
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {

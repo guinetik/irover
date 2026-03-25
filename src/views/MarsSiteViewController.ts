@@ -157,8 +157,12 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
       silicateIndex: geo.silicateIndex,
       temperatureMaxK: geo.temperatureMaxK,
       temperatureMinK: geo.temperatureMinK,
+      latDeg: geo.lat,
+      lonDeg: geo.lon,
     }
   }
+  // Landing sites also have lat/lon
+  const latLon = site ? { latDeg: site.lat, lonDeg: site.lon } : {}
   return {
     roughness: 0.4,
     craterDensity: 0.3,
@@ -173,6 +177,7 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
     silicateIndex: 0.3,
     temperatureMaxK: 280,
     temperatureMinK: 160,
+    ...latLon,
   }
 }
 
@@ -490,7 +495,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       isDrilling: ctx.refs.isDrilling,
       drillProgress: ctx.refs.drillProgress,
     },
-    { sampleToastRef, awardSP },
+    { sampleToastRef, awardSP, playerMod },
   )
 
   const chemCamHandler = createChemCamTickHandler(
@@ -530,6 +535,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     {
       onLaunchMinigame: ctx.onAPXSLaunchMinigame,
       onBlockedByCold: ctx.onAPXSBlockedByCold,
+      playerMod,
     },
   )
 
@@ -607,7 +613,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const terrainParams = getTerrainParamsForSite(siteId, landmarks)
     siteTerrainParams.value = terrainParams
 
-    siteScene = new SiteScene('glb')
+    siteScene = new SiteScene('elevation')
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
 
     // Procedural Mars environment map — gives PBR metals something to reflect
