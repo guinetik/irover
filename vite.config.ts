@@ -25,6 +25,13 @@ export default defineConfig({
   },
   server: {
     port: 9969,
+    proxy: {
+      '/mars-elevation': {
+        target: 'https://mw1.google.com/mw-planetary/mars/elevation',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/mars-elevation/, ''),
+      },
+    },
   },
   test: {
     include: ['src/**/*.test.ts'],

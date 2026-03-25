@@ -50,7 +50,7 @@ export class DANController extends InstrumentController {
   readonly viewAngle = Math.PI * 0.5
   readonly viewPitch = 0.15
   readonly selectionIdlePowerW = 10
-  override readonly selectionHighlightColor = 0x44ccff
+  override get selectionHighlightColor(): number | null { return 0x44ccff }
 
   // --- Sampling state ---
   private sampleTimer = 0

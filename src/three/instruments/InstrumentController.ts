@@ -74,11 +74,11 @@ export abstract class InstrumentController {
   // ── Durability system ──────────────────────────────────────────────
   durabilityPct = 100
   maxDurability = 100
-  readonly breakThreshold = 25
-  readonly passiveDecayPerSol = 0.25
-  readonly usageDecayChance = 0.20
-  readonly usageDecayAmount = 1.0
-  readonly repairComponentId = 'engineering-components'
+  readonly breakThreshold: number = 25
+  readonly passiveDecayPerSol: number = 0.25
+  readonly usageDecayChance: number = 0.20
+  readonly usageDecayAmount: number = 1.0
+  readonly repairComponentId: string = 'engineering-components'
   hazardDecayMultiplier = 1.0
 
   /**
