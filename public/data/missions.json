@@ -63,7 +63,7 @@
       "name": "First Core Sample",
       "patron": null,
       "description": "Use the drill to extract a core sample from a rock.",
-      "briefing": "Spectroscopy can only tell us so much from the surface. We need to look inside. Select the drill [3], drive up to a rock, and hold [E] to bore in. You can drill any rock — but rocks you've already tagged with MastCam and analyzed with ChemCam will yield bonus science points. The sample goes into your inventory for SAM analysis later.",
+      "briefing": "Spectroscopy can only tell us so much from the surface. We need to look inside. Select the drill [3], drive up to a rock, and hold [E] to bore in. Important: drilling a rock you've scanned with MastCam and ChemCam first yields far better results — trace elements, rare minerals, and components you won't get from an unscanned rock. The full MastCam → ChemCam → Drill pipeline is how you get the good stuff. The sample goes into your inventory for SAM analysis later.",
       "reward": { "sp": 40 },
       "unlocks": ["apxs"],
       "chain": "m06-apxs",
