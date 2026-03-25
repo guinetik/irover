@@ -19,6 +19,8 @@ export class REMSController extends InstrumentController {
   override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
+  /** Start OFF — player activates during REMS mission. */
+  override passiveSubsystemEnabled = false
   /** Lower mast assembly that carries the REMS booms in `nasa_curiosity_clean.glb`. */
   readonly focusNodeName = 'mast_01.001'
   readonly altNodeNames = ['mast_01001']
