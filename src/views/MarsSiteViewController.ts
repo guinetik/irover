@@ -464,7 +464,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       roverWorldZ,
       roverSpawnXZ,
     },
-    { siteId, sampleToastRef, awardDAN, triggerDanAchievement, archiveDanProspect },
+    { siteId, sampleToastRef, playerMod, awardDAN, triggerDanAchievement, archiveDanProspect },
   )
 
   const drillHandler = createDrillTickHandler(

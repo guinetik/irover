@@ -70,6 +70,8 @@ export class DANController extends InstrumentController {
   drillSitePosition: THREE.Vector3 | null = null
   reservoirQuality = 0
   prospectStrength = 0
+  /** Instrument accuracy modifier from player profile (1.0 = baseline). */
+  accuracyMod = 1.0
 
   // --- Rover state (set by view each frame) ---
   private roverPos = new THREE.Vector3()
@@ -136,7 +138,10 @@ export class DANController extends InstrumentController {
   }
 
   rollWater(): boolean {
-    const chance = DANController.waterChance(this.prospectStrength, this.waterIceIndex)
+    const chance = Math.min(
+      DANController.waterChance(this.prospectStrength, this.waterIceIndex) * this.accuracyMod,
+      1.0,
+    )
     return Math.random() < chance
   }
 
