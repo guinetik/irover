@@ -296,17 +296,18 @@ function wireArchiveCheckers(): void {
   const { discoveries } = useSamArchive()
   const { analyses } = useAPXSArchive()
 
-  // gather: count rock samples in inventory
+  // gather: count items in inventory
+  // itemId "rock-sample" is special — matches any rock-category item
   registerChecker('gather', (p) => {
-    if (p.subtype === 'rock-sample') {
+    if (p.itemId === 'rock-sample') {
       const rockCount = stacks.value
         .filter((s) => INVENTORY_CATALOG[s.itemId]?.category === 'rock')
         .reduce((sum, s) => sum + s.quantity, 0)
-      return rockCount >= (p.count ?? 1)
+      return rockCount >= (p.quantity ?? 1)
     }
     if (p.itemId) {
       const stack = stacks.value.find((s) => s.itemId === p.itemId)
-      return (stack?.quantity ?? 0) >= (p.count ?? 1)
+      return (stack?.quantity ?? 0) >= (p.quantity ?? 1)
     }
     return false
   })
