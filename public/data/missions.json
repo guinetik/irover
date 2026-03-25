@@ -104,7 +104,7 @@
       "description": "Run a sample through the SAM instrument suite for detailed chemical analysis.",
       "briefing": "You've collected samples, you've scanned them — now let's cook them. SAM is your onboard laboratory. Load a sample and run an experiment. Pick your analysis mode carefully — each one reveals different secrets.",
       "reward": { "sp": 50 },
-      "unlocks": ["uhf"],
+      "unlocks": ["antenna-uhf"],
       "chain": "m09-transmit",
       "objectives": [
         { "id": "sam-1", "type": "sam-experiment", "label": "Complete a SAM experiment", "params": { "mode": "any" }, "sequential": false }

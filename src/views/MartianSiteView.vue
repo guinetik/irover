@@ -351,7 +351,7 @@
     <CommToolbar
       v-if="!deploying && !descending"
       :active-slot="activeInstrumentSlot"
-      :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('uhf')"
+      :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('antenna-uhf')"
       @select="(slot: number) => siteRover?.activateInstrument(slot)"
       @deselect="siteRover?.activateInstrument(null)"
     />

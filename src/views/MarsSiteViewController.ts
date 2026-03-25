@@ -839,7 +839,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Sync instrument gating from mission unlocks ---
       if (controller && !playerProfile.sandbox) {
-        const ALWAYS_ALLOWED = ['rems', 'rad', 'heater', 'wheels', 'lga']
+        const ALWAYS_ALLOWED = ['rems', 'rad', 'heater', 'wheels', 'antenna-lg']
         const allowed = new Set([...ALWAYS_ALLOWED, ...missions.unlockedInstruments.value])
         controller.allowedInstrumentIds = allowed
       } else if (controller) {
