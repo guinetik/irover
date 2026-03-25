@@ -9,6 +9,7 @@ import { useDanArchive } from './useDanArchive'
 import { useSamArchive } from './useSamArchive'
 import { useAPXSArchive } from './useAPXSArchive'
 import { INVENTORY_CATALOG } from '@/types/inventory'
+import { getMastCamTagCount, getTotalMastCamTags } from './useMastCamTags'
 
 const STORAGE_KEY = 'mars-missions-v1'
 
@@ -362,6 +363,12 @@ function wireArchiveCheckers(): void {
       count += analyses.value.filter((a) => a.transmitted).length
     }
     return count >= (p.count ?? 1)
+  })
+
+  // mastcam-tag: count tagged rocks by type
+  registerChecker('mastcam-tag', (p) => {
+    if (p.rockType === 'any') return getTotalMastCamTags() >= (p.count ?? 1)
+    return getMastCamTagCount(p.rockType) >= (p.count ?? 1)
   })
 
   // rtg-overdrive: flag set externally when player triggers overdrive
