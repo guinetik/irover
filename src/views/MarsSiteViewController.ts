@@ -55,6 +55,7 @@ import { createOrbitalDropTickHandler } from './site-controllers/OrbitalDropTick
 import { createAntennaTickHandler, type AntennaTickRefs } from './site-controllers/AntennaTickHandler'
 import { createAPXSTickHandler } from './site-controllers/APXSTickHandler'
 import { useSciencePoints } from '@/composables/useSciencePoints'
+import { secondsPerSol } from '@/lib/missionTime'
 
 /** Seconds to hold position before DAN prospecting begins. */
 export const DAN_INITIATE_DURATION_SEC = 4
@@ -695,6 +696,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       const rawDelta = clock.getDelta()
       const sceneDelta = gameClock.getSceneDelta(rawDelta)
+      const solDelta = sceneDelta / secondsPerSol()
       const skyDelta = gameClock.getSkyDelta(rawDelta)
       gameClock.missionCooldowns.tick(sceneDelta)
       simulationTime += sceneDelta
@@ -746,6 +748,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         controller.criticalPowerMobilitySuspended = isSleeping.value
       }
       controller?.update(sceneDelta)
+      if (controller) {
+        for (const inst of controller.instruments) {
+          inst.applyPassiveDecay(solDelta)
+        }
+      }
       roverHeading.value = controller?.heading ?? 0
       {
         const moving = roverReady && controller ? (controller.isMoving ?? false) : false
