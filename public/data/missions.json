@@ -5,8 +5,8 @@
       "id": "m01-triangulate",
       "name": "Triangulate Position",
       "patron": null,
-      "description": "Navigate to three survey markers to establish your position on the Martian surface.",
-      "briefing": "Rover, we're receiving your signal but need to confirm coordinates. We've placed three transponder markers in a triangle around your landing zone. Drive to each one so we can triangulate your exact position.",
+      "description": "Standard post-landing position calibration using three transponder markers.",
+      "briefing": "Telemetry's coming in — descent trajectory looks nominal but we need ground-truth coordinates before we clear you for operations. Three transponder stakes were deployed ahead of your landing. WASD to drive, mouse to orbit the camera. Hit all three markers so we can lock your position fix. Routine procedure.",
       "reward": { "sp": 25 },
       "unlocks": ["rtg"],
       "chain": "m02-rtg",
@@ -18,10 +18,10 @@
     },
     {
       "id": "m02-rtg",
-      "name": "RTG Management",
+      "name": "RTG Shakedown",
       "patron": null,
-      "description": "Learn to manage your radioisotope thermoelectric generator — your primary power source on Mars.",
-      "briefing": "Good news — triangulation confirms your position. Now let's get your power systems online. Your RTG is your lifeline out here. Head to the supply cache we dropped nearby and retrieve the calibration rods. Then open the RTG panel and test the emergency overdrive — it's a short burst that tops off your battery. After that, head to the rock outcrop we've marked for your next assignment.",
+      "description": "Verify RTG power output and test emergency overdrive mode.",
+      "briefing": "Position fix confirmed. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — we'll need that position for your next assignment.",
       "reward": { "sp": 30 },
       "unlocks": ["mastcam"],
       "chain": "m03-mastcam",
@@ -34,49 +34,50 @@
     },
     {
       "id": "m03-mastcam",
-      "name": "MastCam Survey",
+      "name": "MastCam Calibration",
       "patron": null,
-      "description": "Use the MastCam to photograph and classify rocks in your vicinity.",
-      "briefing": "Your MastCam is now online. The science team needs a visual survey of your landing area. Use MastCam to photograph and tag at least three different rock formations. This will help us plan your traverse route.",
+      "description": "Verify MastCam optical survey system by tagging terrain samples.",
+      "briefing": "MastCam is online and the optics look clean. Time to calibrate. Select MastCam [1] — it puts you in survey mode where rocks in range get highlighted. Pan toward a rock and hold the scan until the tag locks. Each tagged rock gets a persistent floating label with its type classification. Tag at least three so we can verify the classifier against ground-truth. These tags feed directly into ChemCam and Drill targeting later — MastCam is always the first step in the science pipeline.",
       "reward": { "sp": 35 },
       "unlocks": ["chemcam"],
       "chain": "m04-chemcam",
       "objectives": [
-        { "id": "mc-1", "type": "mastcam-tag", "label": "Photograph 3 rocks", "params": { "rockType": "any", "count": 3 }, "sequential": false }
+        { "id": "mc-1", "type": "mastcam-tag", "label": "Tag 3 rocks with MastCam", "params": { "rockType": "any", "count": 3 }, "sequential": false }
       ]
     },
     {
       "id": "m04-chemcam",
-      "name": "ChemCam Analysis",
+      "name": "ChemCam Verification",
       "patron": null,
-      "description": "Use ChemCam LIBS spectroscopy on a MastCam-tagged rock to identify its mineral composition.",
-      "briefing": "Great survey work. Now let's find out what those rocks are made of. Your ChemCam fires a laser that vaporizes a tiny spot on the surface — we read the plasma glow to identify minerals. Here's the key: ChemCam can only target rocks you've already tagged with MastCam. Select ChemCam [2], aim at one of your tagged rocks (look for the floating labels), and fire. After the laser pulse, wait for the spectrum to process — then acknowledge the readout.",
+      "description": "Test LIBS spectroscopy on a MastCam-tagged target.",
+      "briefing": "MastCam classifier checks out. Now let's verify ChemCam — the laser-induced breakdown spectrometer. Select ChemCam [2] and aim at one of your tagged rocks (the floating labels mark valid targets). ChemCam can only fire at rocks MastCam has already classified — that's by design, not a bug. The laser vaporizes a pinpoint on the surface and we read the plasma emission spectrum. After the pulse completes, acknowledge the readout so we can log the mineral profile. One clean spectrum is all we need to clear the instrument.",
       "reward": { "sp": 40 },
       "unlocks": ["drill"],
       "chain": "m05-drill",
       "objectives": [
-        { "id": "cc-1", "type": "chemcam", "label": "Perform a LIBS analysis on any rock", "params": { "rockType": "any" }, "sequential": false }
+        { "id": "cc-1", "type": "chemcam", "label": "Complete a LIBS analysis", "params": { "rockType": "any" }, "sequential": false }
       ]
     },
     {
       "id": "m05-drill",
-      "name": "First Core Sample",
+      "name": "Core Sample Extraction",
       "patron": null,
-      "description": "Use the drill to extract a core sample from a rock.",
-      "briefing": "Spectroscopy can only tell us so much from the surface. We need to look inside. Select the drill [3], drive up to a rock, and hold [E] to bore in. Important: drilling a rock you've scanned with MastCam and ChemCam first yields far better results — trace elements, rare minerals, and components you won't get from an unscanned rock. The full MastCam → ChemCam → Drill pipeline is how you get the good stuff. The sample goes into your inventory for SAM analysis later.",
+      "description": "Test the rotary percussive drill and run a power shunt recovery.",
+      "briefing": "Spectrometer is nominal. Next up: the drill. Select it [3], drive within range of a rock, and hold [E] to bore in. Here's something important for your workflow: rocks you've already processed through MastCam and ChemCam yield significantly better drill results — trace elements, rare minerals, and specialty components that unscanned rocks simply don't produce. The MastCam → ChemCam → Drill pipeline is how you extract real value. After drilling, your battery will be running low. Open the RTG panel [7] and engage the power shunt — it stows the drive motors and dumps thermal headroom into the main bus for an immediate recharge. We need to verify that system too.",
       "reward": { "sp": 40 },
       "unlocks": ["apxs"],
       "chain": "m06-apxs",
       "objectives": [
-        { "id": "dr-1", "type": "gather", "label": "Collect a rock sample", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": false }
+        { "id": "dr-1", "type": "gather", "label": "Drill and collect a rock sample", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": true },
+        { "id": "dr-2", "type": "rtg-shunt", "label": "Engage power shunt to recharge", "params": {}, "sequential": true }
       ]
     },
     {
       "id": "m06-apxs",
-      "name": "APXS Elemental Scan",
+      "name": "APXS Contact Analysis",
       "patron": null,
-      "description": "Deploy the APXS sensor against a rock for elemental composition analysis.",
-      "briefing": "Now that you can drill, let's complement that with elemental analysis. The Alpha Particle X-Ray Spectrometer gives us a detailed chemical fingerprint. Place it against any rock and run a scan.",
+      "description": "Deploy the Alpha Particle X-Ray Spectrometer for elemental composition.",
+      "briefing": "Drill checks out, power shunt verified. The APXS is next — your contact-science instrument. It uses alpha particles and X-rays to measure the elemental composition of a rock surface. Unlike ChemCam which works at range, APXS needs to be pressed directly against the target. Select APXS [4], drive close to a rock, and deploy. The analysis takes a bit longer than LIBS but gives you a complete elemental breakdown — different data, complementary to the spectrum. One clean analysis to verify calibration.",
       "reward": { "sp": 45 },
       "unlocks": ["dan"],
       "chain": "m07-dan",
@@ -86,41 +87,41 @@
     },
     {
       "id": "m07-dan",
-      "name": "DAN Prospecting",
+      "name": "DAN Subsurface Probe",
       "patron": null,
-      "description": "Use the Dynamic Albedo of Neutrons instrument to prospect for subsurface water ice.",
-      "briefing": "Water is the key to everything out here — fuel, life support, future missions. Your DAN instrument fires neutrons into the ground and measures the bounce-back to detect hydrogen. Run a prospect sweep.",
+      "description": "Calibrate the Dynamic Albedo of Neutrons instrument for water ice detection.",
+      "briefing": "All surface instruments check out. Time to look underground. DAN fires neutrons into the regolith and measures the scatter pattern to detect hydrogen — which means water ice. Select DAN [5] — it runs a passive background scan as you drive, building a signal map. When you see a strong return, stop and hold position to let it lock in a prospect. We need at least one confirmed water-ice signature for the calibration baseline. The data feeds directly into mission planning for future water extraction sites.",
       "reward": { "sp": 45 },
       "unlocks": ["sam"],
       "chain": "m08-sam",
       "objectives": [
-        { "id": "dan-1", "type": "dan-prospect", "label": "Find a location with water ice signal", "params": { "minWaterChance": 0.3 }, "sequential": false }
+        { "id": "dan-1", "type": "dan-prospect", "label": "Confirm a water ice detection", "params": { "minWaterChance": 0.3 }, "sequential": false }
       ]
     },
     {
       "id": "m08-sam",
-      "name": "SAM Laboratory",
+      "name": "SAM Lab Checkout",
       "patron": null,
-      "description": "Run a sample through the SAM instrument suite for detailed chemical analysis.",
-      "briefing": "You've collected samples, you've scanned them — now let's cook them. SAM is your onboard laboratory. Load a sample and run an experiment. Pick your analysis mode carefully — each one reveals different secrets.",
+      "description": "Run a full sample analysis cycle through the SAM instrument suite.",
+      "briefing": "Surface ops are verified. Last instrument: SAM — your onboard analytical laboratory. This is where drill samples become real science. Open SAM [6], load one of your collected samples, choose an analysis mode, and run the experiment. Each mode reveals different chemistry: pyrolysis bakes the sample and reads the volatiles, wet chemistry dissolves it for isotope ratios, and so on. The results determine the science value of your discovery. One complete run clears the lab for regular operations.",
       "reward": { "sp": 50 },
       "unlocks": ["antenna-uhf"],
       "chain": "m09-transmit",
       "objectives": [
-        { "id": "sam-1", "type": "sam-experiment", "label": "Complete a SAM experiment", "params": { "mode": "any" }, "sequential": false }
+        { "id": "sam-1", "type": "sam-experiment", "label": "Run a SAM experiment", "params": { "mode": "any" }, "sequential": false }
       ]
     },
     {
       "id": "m09-transmit",
-      "name": "First Transmission",
+      "name": "First Data Uplink",
       "patron": null,
-      "description": "Transmit your collected science data back to Earth via the UHF antenna during an orbital pass.",
-      "briefing": "Outstanding work, Rover. You've built up quite a dataset. But science isn't science until it's shared. Queue your findings for transmission and beam them home via UHF during the next orbital pass. Earth is waiting.",
+      "description": "Transmit collected science data to Earth via UHF relay during an orbital pass.",
+      "briefing": "All instruments are verified and your archive is building up nicely. But none of this counts until Earth receives it. Open the UHF antenna [T] and queue your science data for transmission. UHF relay works through orbital passes — the Mars Reconnaissance Orbiter flies overhead on a regular schedule, and your uplink window is limited. Each item takes bandwidth proportional to its complexity. Get at least one dataset transmitted so we can confirm the end-to-end pipeline. After this, you're fully operational — pre-ops checkout complete.",
       "reward": { "sp": 50 },
       "unlocks": [],
       "chain": null,
       "objectives": [
-        { "id": "tx-1", "type": "transmit", "label": "Transmit science data to Earth", "params": { "count": 1 }, "sequential": false }
+        { "id": "tx-1", "type": "transmit", "label": "Transmit data via UHF", "params": { "count": 1 }, "sequential": false }
       ]
     }
   ]

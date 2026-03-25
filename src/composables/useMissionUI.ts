@@ -52,6 +52,18 @@ export function useMissionUI(deps: {
     previousUnlocked = [...curr]
   }, { immediate: true })
 
+  // Dismiss highlight when instrument is selected (keyboard or click)
+  watch(activeInstrumentSlot, (slot) => {
+    if (slot == null || newlyUnlockedInstruments.value.length === 0) return
+    // Resolve slot to instrument id via the controller
+    const rover = siteHandle.value?.rover
+    if (!rover) return
+    const inst = rover.instruments.find((i) => i.slot === slot)
+    if (inst && newlyUnlockedInstruments.value.includes(inst.id)) {
+      newlyUnlockedInstruments.value = newlyUnlockedInstruments.value.filter((id) => id !== inst.id)
+    }
+  })
+
   // --- Computed ---
   const trackedMission = computed<MissionState | null>(() =>
     activeMissions.value.find((m) => m.missionId === trackedMissionId.value) ?? null,

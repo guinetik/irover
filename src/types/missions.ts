@@ -8,6 +8,7 @@ export type ObjectiveType =
   | 'dan-prospect'
   | 'transmit'
   | 'rtg-overdrive'
+  | 'rtg-shunt'
 
 export interface ObjectiveDef {
   id: string
