@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import * as THREE from 'three'
 import { MastCamController } from '@/three/instruments'
 import { ROCK_TYPES } from '@/three/terrain/RockTypes'
+import { recordMastCamTag } from '@/composables/useMastCamTags'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
@@ -75,6 +76,7 @@ export function createMastCamTickHandler(
         const label = ROCK_TYPES[rockType]?.label ?? 'Unknown'
         const gain = awardSP('mastcam', rock.uuid, label)
         if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
+        recordMastCamTag(rockType)
       }
       surveyInitialised = true
     }

@@ -51,7 +51,7 @@ export interface MartianSiteAchievementsOptions {
   unlockedTrackIds: Ref<string[]>
   rewardTrackPrevSP: Ref<number>
   loadRewardTrack: (milestones: RewardTrackMilestone[]) => void | Promise<void>
-  trackModifiers: ComputedRef<ProfileModifiers>
+  trackModifiers: ComputedRef<Partial<ProfileModifiers>>
   applyRewardTrack: (partial: Partial<ProfileModifiers>) => void
   awardSurvival: (detail: string, baseSp: number) => SPGain
 }

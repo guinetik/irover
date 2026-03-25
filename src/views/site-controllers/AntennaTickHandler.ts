@@ -5,7 +5,8 @@ import { AntennaLGController } from '@/three/instruments/AntennaLGController'
 import { AntennaUHFController } from '@/three/instruments/AntennaUHFController'
 import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
-import { useTransmissionQueue, type TransmissionQueueItem } from '@/composables/useTransmissionQueue'
+import { useTransmissionQueue } from '@/composables/useTransmissionQueue'
+import type { TransmissionQueueItem } from '@/types/transmissionQueue'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
@@ -59,6 +60,10 @@ export function createAntennaTickHandler(
     lgaCtrl.linkStatus = lgaCtrl.passiveSubsystemEnabled ? 'LINKED' : 'OFF'
     lgaCtrl.accuracyMod = callbacks.playerMod('instrumentAccuracy')
 
+    // Always sync unread count (mission pushMessage can add messages while LGA is off)
+    lgaCtrl.unreadCount = mailbox.unreadCount.value
+    refs.lgaUnreadCount.value = mailbox.unreadCount.value
+
     if (!lgaCtrl.passiveSubsystemEnabled) return
 
     const { marsSol, marsTimeOfDay } = fctx
@@ -77,17 +82,8 @@ export function createAntennaTickHandler(
       callbacks.sampleToastRef.value?.showComm?.(`Heartbeat sent — Sol ${marsSol}`)
     }
 
-    // Incoming message
-    if (mailbox.hasIncomingMessage(marsSol)) {
-      const deliveryTime = mailbox.incomingMessageTimeOfDay(marsSol)
-      if (marsTimeOfDay >= deliveryTime) {
-        const before = mailbox.unreadCount.value
-        mailbox.receiveMessage(marsSol, deliveryTime)
-        if (mailbox.unreadCount.value > before) {
-          callbacks.sampleToastRef.value?.showComm?.('Message from Mission Control')
-        }
-      }
-    }
+    // Incoming messages are now delivered by the mission system via pushMessage().
+    // The old deterministic test messages (receiveMessage / hasIncomingMessage) are removed.
 
     // Update controller state
     lgaCtrl.unreadCount = mailbox.unreadCount.value

@@ -93,6 +93,14 @@ export function useLGAMailbox() {
     saveToStorage(next)
   }
 
+  /** Push an arbitrary message into the mailbox (e.g. from mission system). */
+  function pushMessage(msg: Omit<LGAMessage, 'id' | 'read'>): void {
+    const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const next = [...messages.value, { ...msg, id, read: false }]
+    messages.value = next
+    saveToStorage(next)
+  }
+
   /** Mark a single message as read by id. */
   function markRead(messageId: string): void {
     const next = messages.value.map((m) => (m.id === messageId ? { ...m, read: true } : m))
@@ -130,6 +138,7 @@ export function useLGAMailbox() {
     unreadCount,
     sendHeartbeat,
     receiveMessage,
+    pushMessage,
     markRead,
     markAllRead,
     hasIncomingMessage,

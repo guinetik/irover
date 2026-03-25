@@ -15,6 +15,11 @@
       <SiteCompass :heading="roverHeading" :pois="compassPois" />
     </div>
     <div class="hud-actions">
+      <button class="mission-log-btn" @click="$emit('open-mission-log')">
+        <span class="ml-icon">&#x25CE;</span>
+        <span class="ml-label">MISSIONS</span>
+        <span v-if="activeMissionCount > 0" class="ml-badge">{{ activeMissionCount }}</span>
+      </button>
       <button
         type="button"
         class="ach-counter"
@@ -73,14 +78,16 @@ withDefaults(
     showScienceButton: boolean
     achievementsExpanded: boolean
     spLedgerExpanded: boolean
+    activeMissionCount?: number
   }>(),
-  { compassPois: () => [], currentNightFactor: 0 },
+  { compassPois: () => [], currentNightFactor: 0, activeMissionCount: 0 },
 )
 
 defineEmits<{
   'open-achievements': []
   'open-sp-ledger': []
   'open-science-log': []
+  'open-mission-log': []
 }>()
 
 const router = useRouter()
@@ -134,6 +141,66 @@ function goBack(): void {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.mission-log-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+  background: rgba(196, 149, 106, 0.1);
+  border: 1px solid rgba(196, 149, 106, 0.35);
+  border-radius: 4px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.mission-log-btn:hover {
+  background: rgba(196, 149, 106, 0.16);
+  border-color: rgba(232, 176, 96, 0.45);
+}
+
+.mission-log-btn:focus {
+  outline: none;
+}
+
+.mission-log-btn:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(10, 6, 4, 0.95),
+    0 0 0 4px rgba(232, 176, 96, 0.45);
+}
+
+.ml-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: #e8b060;
+}
+
+.ml-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  color: #e8b060;
+}
+
+.ml-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+  color: #0a0604;
+  background: #e8b060;
+  border-radius: 8px;
 }
 
 .ach-counter {

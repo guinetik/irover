@@ -175,6 +175,8 @@ export interface PlayerProfile {
   patron: PatronId | null
   /** Final stacked modifiers as multipliers (1.0 = no change, 1.15 = +15%) */
   modifiers: ProfileModifiers
+  /** True until character creation is completed; enables unrestricted play */
+  sandbox: boolean
 }
 
 /**
@@ -213,6 +215,7 @@ export function createPlayerProfile(
       FOUNDATIONS[foundation].modifiers,
       PATRONS[patron].modifiers,
     ),
+    sandbox: false,
   }
 }
 
@@ -223,6 +226,7 @@ export function createNeutralProfile(): PlayerProfile {
     foundation: null,
     patron: null,
     modifiers: { ...NEUTRAL_MODIFIERS },
+    sandbox: false,
   }
 }
 

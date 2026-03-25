@@ -25,9 +25,11 @@
       :show-science-button="hasScienceDiscoveries && !deploying && !descending"
       :achievements-expanded="achievementsOpen"
       :sp-ledger-expanded="spLedgerOpen"
+      :active-mission-count="activeMissions.length"
       @open-achievements="achievementsOpen = true"
       @open-sp-ledger="spLedgerOpen = true"
       @open-science-log="scienceLogOpen = true"
+      @open-mission-log="handleOpenMissionLog"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <RoverDeployOverlays
@@ -90,7 +92,10 @@
         :sam-unread="samUnread"
         :apxs-unread="apxsUnread"
         :dan-scanning="!!(siteRover?.instruments.find(i => i.id === 'dan') as DANController | undefined)?.passiveSubsystemEnabled"
-        @select="(slot: number) => { if (!isSleeping) siteRover?.activateInstrument(slot) }"
+        :unlocked-instruments="unlockedInstruments"
+        :sandbox="playerProfile.sandbox"
+        :newly-unlocked="newlyUnlockedInstruments"
+        @select="(slot: number) => { if (!isSleeping) { siteRover?.activateInstrument(slot); const inst = siteRover?.instruments.find(i => i.slot === slot); if (inst) dismissNewlyUnlocked(inst.id) } }"
         @deselect="siteRover?.activateInstrument(null)"
         @toggle-inventory="inventoryOpen = !inventoryOpen"
       />
@@ -176,6 +181,34 @@
       :total-sp="totalSP"
       @close="rewardTrackOpen = false"
     />
+    <MessageDialog
+      :message="openedMessage"
+      :mission-accepted="missionAccepted"
+      @close="handleCloseMessage"
+      @accept-mission="handleAcceptMission"
+    />
+    <MissionLogDialog
+      :open="missionLogOpen"
+      :active-missions="activeMissions"
+      :completed-missions="completedMissions"
+      :tracked-mission-id="trackedMissionId"
+      :get-def="getMissionDef"
+      :get-obj-label="getObjLabel"
+      @close="handleCloseMissionLog"
+      @track="handleTrackMission"
+    />
+    <MissionTracker
+      v-if="!deploying && !descending"
+      :mission="trackedMission"
+      :mission-def="trackedMissionDef"
+      :is-eligible="(objId: string) => trackedMissionId ? isObjectiveEligible(trackedMissionId, objId) : false"
+      :lga-active="lgaActive"
+      :transmit-progress="transmitProgress"
+      :dwell-poi-id="activeDwellPoiId"
+      :dwell-progress="activeDwellProgress"
+      @untrack="handleUntrack"
+      @transmit="handleMissionTransmit"
+    />
     <InstrumentCrosshair
       :visible="crosshairVisible"
       :color="crosshairColor"
@@ -223,6 +256,7 @@
     />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
+    <MissionCompleteBanner ref="missionCompleteRef" />
     <Teleport to="body">
       <Transition name="science-fade">
         <div v-if="apxsMinigameOpen && apxsGameComposition" class="science-overlay">
@@ -317,16 +351,19 @@
     <CommToolbar
       v-if="!deploying && !descending"
       :active-slot="activeInstrumentSlot"
+      :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('antenna-uhf')"
+      :lga-alert="lgaUnreadCount > 0 && activeInstrumentSlot !== 11"
       @select="(slot: number) => siteRover?.activateInstrument(slot)"
       @deselect="siteRover?.activateInstrument(null)"
     />
-    <!-- LGA Mailbox panel (shown when LGA antenna selected) -->
+    <!-- LGA Mailbox panel (shown when LGA selected OR when there are unread messages) -->
     <LGAMailbox
-      v-if="!deploying && !descending && activeInstrumentSlot === 11"
+      v-if="!deploying && !descending && (activeInstrumentSlot === 11 || lgaUnreadCount > 0)"
       :messages="lgaMailbox.messages.value"
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
-      style="position: fixed; top: 168px; left: 10px; z-index: 40;"
+      @open-message="handleOpenMessage"
+      style="position: fixed; top: 58px; left: 76px; z-index: 40;"
     />
     <!-- UHF Uplink panel (shown when UHF antenna selected) -->
     <UHFUplinkPanel
@@ -442,6 +479,7 @@ import SciencePointsDialog from '@/components/SciencePointsDialog.vue'
 import AchievementsDialog from '@/components/AchievementsDialog.vue'
 import RewardTrackDialog from '@/components/RewardTrackDialog.vue'
 import AchievementBanner from '@/components/AchievementBanner.vue'
+import MissionCompleteBanner from '@/components/MissionCompleteBanner.vue'
 import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
@@ -494,6 +532,12 @@ import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
+import { useMissionUI } from '@/composables/useMissionUI'
+import { useMissions } from '@/composables/useMissions'
+import type { LGAMessage } from '@/types/lgaMailbox'
+import MessageDialog from '@/components/MessageDialog.vue'
+import MissionLogDialog from '@/components/MissionLogDialog.vue'
+import MissionTracker from '@/components/MissionTracker.vue'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -777,6 +821,7 @@ const chemcamPhaseLabel = computed(() => {
 })
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const achievementRef = ref<InstanceType<typeof AchievementBanner> | null>(null)
+const missionCompleteRef = ref<InstanceType<typeof MissionCompleteBanner> | null>(null)
 const orbitalDrops = useOrbitalDrops()
 const siteLat = ref(0)
 const siteLon = ref(0)
@@ -899,6 +944,27 @@ const {
 
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
+
+// --- Mission UI (extracted to composable) ---
+const mission = useMissionUI({
+  siteHandle,
+  roverWorldX,
+  roverWorldZ,
+  marsSol,
+  activeInstrumentSlot,
+  onMissionComplete: (name, sp, unlock) => {
+    missionCompleteRef.value?.show(name, sp, unlock)
+  },
+})
+const {
+  missionLogOpen, openedMessage,
+  activeMissions, completedMissions, trackedMissionId, unlockedInstruments, transmitProgress,
+  trackedMission, trackedMissionDef, activeDwellPoiId, activeDwellProgress, lgaActive, missionAccepted,
+  getMissionDef, getObjLabel, isObjectiveEligible,
+  handleAcceptMission, handleMissionTransmit, handleOpenMessage, handleCloseMessage,
+  handleOpenMissionLog, handleCloseMissionLog, handleTrackMission, handleUntrack,
+  newlyUnlockedInstruments, dismissNewlyUnlocked,
+} = mission
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
 // --- SAM experiment system ---
@@ -1130,9 +1196,8 @@ const showHeaterOverdriveConfirm = ref(false)
 const showConservationConfirm = ref(false)
 const orbitalDropInteractHint = computed(() => {
   if (deploying.value || descending.value || isSleeping.value) return ''
-  if (siteRover.value?.mode !== 'driving') return ''
   if (!orbitalDrops.nearbyDrop.value) return ''
-  return 'PAYLOAD IN RANGE · PRESS E TO OPEN'
+  return 'PAYLOAD IN RANGE \u00b7 PRESS F TO COLLECT'
 })
 const centerHintText = computed(() => {
   if (!deploying.value && !descending.value && activeInstrumentSlot.value === null && rtgPhase.value === 'idle' && rtgConservationMode.value !== 'active' && !controlsHintDismissed.value) {
@@ -1156,9 +1221,14 @@ function handleActivate() {
   } else if (siteRover.value.activeInstrument instanceof HeaterController) {
     showHeaterOverdriveConfirm.value = true
   } else {
-    const passive = siteRover.value.activeInstrument?.passiveSubsystemOnly
+    const inst = siteRover.value.activeInstrument
+    const passive = inst?.passiveSubsystemOnly
     siteRover.value.enterActiveMode()
     if (passive) passiveUiRevision.value++
+    // Notify mission system when REMS is activated
+    if (inst?.id === 'rems' && inst.passiveSubsystemEnabled) {
+      useMissions().notifyRemsActivated()
+    }
   }
 }
 
@@ -1169,6 +1239,8 @@ function confirmOverdrive() {
   if (rtg instanceof RTGController) {
     rtg.activateOverdrive()
     siteRover.value.activateInstrument(null)
+    // Notify mission system that overdrive was used
+    useMissions().notifyRtgOverdrive()
   }
 }
 
@@ -1203,6 +1275,7 @@ function confirmConservation() {
   if (rtg instanceof RTGController && rtg.activateConservation()) {
     fillBatteryFull()
     siteRover.value.activateInstrument(null)
+    useMissions().notifyRtgShunt()
   }
 }
 
@@ -1228,7 +1301,7 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if (e.code === 'Digit0' || e.code === 'Backquote') {
     profileOpen.value = !profileOpen.value
   }
-  if (e.code === 'KeyE' && !e.repeat && siteRover.value?.mode === 'driving' && orbitalDrops.nearbyDrop.value) {
+  if (e.code === 'KeyF' && !e.repeat && orbitalDrops.nearbyDrop.value) {
     e.preventDefault()
     handleOrbitalDropOpen()
   }

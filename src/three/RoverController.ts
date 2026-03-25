@@ -87,6 +87,16 @@ export class RoverController {
   // Rover heading (Y rotation) — model rotated PI so "forward" = +Z in model space
   heading = 0
 
+  /**
+   * Camera look heading — the direction the camera faces, in the same convention as `heading`.
+   * Use this for the compass so POI dots align with what the player sees on screen.
+   */
+  get cameraHeading(): number {
+    // Camera is at orbitAngle offset from rover, looking back at rover.
+    // Camera forward = orbitAngle + PI (camera looks opposite to its orbit position).
+    return this.orbitAngle + Math.PI
+  }
+
   // Orbit angle around the rover (mouse drag)
   private orbitAngle = Math.PI
   private orbitPitch = 0.3 // slight downward look
@@ -121,6 +131,9 @@ export class RoverController {
   mode: 'driving' | 'instrument' | 'active' = 'driving'
   activeInstrument: InstrumentController | null = null
   instruments: InstrumentController[] = []
+
+  /** If set, keyboard shortcuts only activate instruments whose id is in this set (or always-available ones). */
+  allowedInstrumentIds: Set<string> | null = null
 
   /**
    * Set each frame from the site when critical battery sleep is active: no translation billing,
@@ -351,6 +364,9 @@ export class RoverController {
       const instrument = this.instruments.find(i => i.slot === slot)
       if (!instrument || instrument === this.activeInstrument) return
 
+      // Mission gating: only allow unlocked instruments via keyboard
+      if (this.allowedInstrumentIds && !this.allowedInstrumentIds.has(instrument.id)) return
+
       // When RTG overdrive/cooldown is active, only RTG itself can be selected
       const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
       if (rtg?.instrumentsLocked && instrument !== rtg) return
@@ -408,6 +424,7 @@ export class RoverController {
     const instrument = this.instruments.find(i => i.slot === slot)
     if (instrument) {
       if (!instrument.operational) return
+      if (this.allowedInstrumentIds && !this.allowedInstrumentIds.has(instrument.id)) return
       this.setInstrument(instrument)
     }
   }

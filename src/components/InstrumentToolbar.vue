@@ -1,10 +1,10 @@
 <template>
   <div class="instrument-toolbar">
     <button
-      v-for="inst in instruments"
+      v-for="inst in visibleInstruments"
       :key="inst.slot"
       class="instrument-slot"
-      :class="{ active: activeSlot === inst.slot }"
+      :class="{ active: activeSlot === inst.slot, 'newly-unlocked': newlyUnlocked?.includes(inst.id) }"
       @click="handleClick(inst.slot)"
     >
       <span class="slot-key font-instrument">{{ inst.slot }}</span>
@@ -31,6 +31,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   activeSlot: number | null
   inventoryOpen?: boolean
@@ -38,6 +40,9 @@ const props = defineProps<{
   danScanning?: boolean
   samUnread?: number
   apxsUnread?: number
+  unlockedInstruments: string[]
+  sandbox: boolean
+  newlyUnlocked?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -64,6 +69,22 @@ const instruments: ToolbarInstrument[] = [
   { slot: 8, id: 'rems',    name: 'REMS', icon: '\u2602' },
   { slot: 9, id: 'rad',     name: 'RAD',  icon: '\u2622' },
 ]
+
+// Only REMS and RAD appear in the instrument toolbar and are always available.
+// Wheels and Heater are handled outside the toolbar (always active).
+// LGA/UHF are in the CommToolbar, not here.
+// RAD is always available (passive dosimeter, no gating).
+// REMS is unlocked by m01 completion.
+const ALWAYS_AVAILABLE = ['rad']
+
+const visibleInstruments = computed(() => {
+  if (props.sandbox) return instruments
+  return instruments.filter(
+    (inst) =>
+      ALWAYS_AVAILABLE.includes(inst.id) ||
+      props.unlockedInstruments.includes(inst.id)
+  )
+})
 
 function handleClick(slot: number) {
   if (props.activeSlot === slot) {
@@ -114,6 +135,17 @@ function handleClick(slot: number) {
   background: rgba(196, 117, 58, 0.15);
   border-color: rgba(196, 117, 58, 0.6);
   box-shadow: 0 0 8px rgba(196, 117, 58, 0.2);
+}
+
+.instrument-slot.newly-unlocked {
+  border-color: rgba(102, 255, 238, 0.6);
+  box-shadow: 0 0 10px rgba(102, 255, 238, 0.3);
+  animation: tool-unlock-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tool-unlock-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(102, 255, 238, 0.2); }
+  50% { box-shadow: 0 0 14px rgba(102, 255, 238, 0.5); }
 }
 
 .slot-key {

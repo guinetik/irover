@@ -4,8 +4,8 @@
       v-for="comm in comms"
       :key="comm.slot"
       class="comm-slot"
-      :class="{ active: activeSlot === comm.slot }"
-      @click="handleClick(comm.slot)"
+      :class="{ active: activeSlot === comm.slot, disabled: comm.slot === 12 && !uhfUnlocked, 'lga-alert': comm.slot === 11 && lgaAlert }"
+      @click="!(comm.slot === 12 && !uhfUnlocked) && handleClick(comm.slot)"
     >
       <span class="comm-key">{{ comm.key }}</span>
       <span class="comm-icon">{{ comm.icon }}</span>
@@ -15,9 +15,14 @@
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  activeSlot: number | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    activeSlot: number | null
+    uhfUnlocked?: boolean
+    lgaAlert?: boolean
+  }>(),
+  { uhfUnlocked: true, lgaAlert: false },
+)
 
 const emit = defineEmits<{
   select: [slot: number]
@@ -73,6 +78,21 @@ function handleClick(slot: number) {
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+}
+
+.comm-slot.lga-alert {
+  border-color: rgba(230, 160, 60, 0.7);
+  animation: lga-blink 1s ease-in-out infinite;
+}
+
+@keyframes lga-blink {
+  0%, 100% { box-shadow: 0 0 4px rgba(230, 160, 60, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(230, 160, 60, 0.6); background: rgba(230, 160, 60, 0.12); }
+}
+
+.comm-slot.disabled {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .comm-slot:hover {

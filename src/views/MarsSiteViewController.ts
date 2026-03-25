@@ -48,7 +48,13 @@ import {
 import type { SiteFrameContext } from './site-controllers/SiteFrameContext'
 import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTickHandlers'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
+import { useMissions } from '@/composables/useMissions'
+import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
+import { useLGAMailbox } from '@/composables/useLGAMailbox'
+import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { secondsPerSol } from '@/lib/missionTime'
+import { updateWaypointMarkers, setWaypointMarkerProgress } from '@/three/WaypointMarkers'
+import { tickPoiArrivals, getPoiDwellProgress } from '@/composables/usePoiArrival'
 
 /** Seconds to hold position before DAN prospecting begins. */
 export const DAN_INITIATE_DURATION_SEC = 4
@@ -391,6 +397,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
+  const missions = useMissions()
+  const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
+  const { pois: missionPoisRef } = useSiteMissionPois()
+  const { pushMessage } = useLGAMailbox()
+  const { profile: playerProfile } = usePlayerProfile()
 
   // --- Three.js core ---
   let renderer: THREE.WebGLRenderer | null = null
@@ -407,6 +418,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
   let lastSkyTimeOfDay = -1
   let roverSpawnCaptured = false
+  let firstMissionDelivered = false
 
   const tickHandlers = createMarsSiteTickHandlers(ctx)
   const {
@@ -506,6 +518,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     if (controller) {
       controller.instruments = instrumentControllers
     }
+
+    // --- Mission system init ---
+    const missionsData = await fetch('/data/missions.json').then((r) => r.json())
+    loadCatalog(missionsData)
+    wireArchiveCheckers()
 
     if (import.meta.env.DEV) {
       disposeOrbitalDropDebugApi = installOrbitalDropDebugApi({
@@ -607,7 +624,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       if (controller) {
         syncFromControllers(controller.instruments)
       }
-      roverHeading.value = controller?.heading ?? 0
+      roverHeading.value = controller?.cameraHeading ?? 0
       {
         const moving = roverReady && controller ? (controller.isMoving ?? false) : false
         if (moving !== roverIsMoving.value) roverIsMoving.value = moving
@@ -626,6 +643,22 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         }
         roverSpawnCaptured = true
       }
+
+      // --- POI dwell detection + mission objective checks ---
+      tickPoiArrivals(roverWorldX.value, roverWorldZ.value, missionPoisRef.value, sceneDelta)
+      // Update waypoint marker colors based on dwell progress
+      for (const poi of missionPoisRef.value) {
+        const progress = getPoiDwellProgress(poi.id)
+        if (progress > 0) setWaypointMarkerProgress(poi.id, progress)
+      }
+      checkAllObjectives(
+        roverWorldX.value,
+        roverWorldZ.value,
+        missionPoisRef.value,
+        marsSol.value,
+      )
+      tickTransmit(sceneDelta, marsSol.value)
+      updateWaypointMarkers(simulationTime)
 
       // --- Delegated ticks ---
       orbitalDropHandler.tick(fctx)
@@ -769,6 +802,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         gameClock.notifyRoverReady()
       }
 
+      // --- First mission delivery (one-shot, works with skip-intro too) ---
+      if (roverReady && !firstMissionDelivered) {
+        firstMissionDelivered = true
+        if (
+          !playerProfile.sandbox &&
+          missions.activeMissions.value.length === 0 &&
+          missions.completedMissions.value.length === 0
+        ) {
+          const firstDef = missions.catalog.value[0]
+          if (firstDef) {
+            pushMessage({
+              direction: 'received',
+              sol: marsSol.value,
+              timeOfDay: marsTimeOfDay.value,
+              subject: firstDef.name,
+              body: firstDef.briefing,
+              type: 'mission',
+              from: firstDef.patron ?? 'Mission Control',
+              missionId: firstDef.id,
+            })
+          }
+        }
+      }
+
       // --- Instrument attach (idempotent) ---
       if (roverReady && siteScene.rover && controller && !controller.instruments[0]?.attached) {
         controller.instruments.forEach(i => {
@@ -778,6 +835,15 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
             i.attach(siteScene!.rover!)
           }
         })
+      }
+
+      // --- Sync instrument gating from mission unlocks ---
+      if (controller && !playerProfile.sandbox) {
+        const ALWAYS_ALLOWED = ['rad', 'heater', 'wheels', 'antenna-lg']
+        const allowed = new Set([...ALWAYS_ALLOWED, ...missions.unlockedInstruments.value])
+        controller.allowedInstrumentIds = allowed
+      } else if (controller) {
+        controller.allowedInstrumentIds = null // sandbox: everything allowed
       }
 
       // --- Lazy instrument init (delegated to handlers) ---

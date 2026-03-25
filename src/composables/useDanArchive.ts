@@ -43,40 +43,51 @@ export function useDanArchive() {
 
   function archiveProspect(params: {
     capturedSol: number
+    capturedAtMs?: number
+    /** @deprecated no-op, kept for test compatibility */ solAcknowledged?: number
     siteId: string
-    siteLatDeg: number
-    siteLonDeg: number
-    roverWorldX: number
-    roverWorldZ: number
-    roverSpawnX: number
-    roverSpawnZ: number
+    siteLatDeg?: number
+    siteLonDeg?: number
+    roverWorldX?: number
+    roverWorldZ?: number
+    roverSpawnX?: number
+    roverSpawnZ?: number
     siteUnitsPerMeter?: number
-    signalStrength: number
+    signalStrength?: number
     quality: 'Weak' | 'Moderate' | 'Strong'
     waterConfirmed: boolean
-    reservoirQuality: number
+    reservoirQuality?: number
+    /** @deprecated use reservoirQuality */ waterFraction?: number
+    /** @deprecated use siteLatDeg/siteLonDeg */ latitudeDeg?: number
+    /** @deprecated use siteLatDeg/siteLonDeg */ longitudeDeg?: number
   }): ArchivedDANProspect {
+    const siteLatDeg = params.siteLatDeg ?? params.latitudeDeg ?? 0
+    const siteLonDeg = params.siteLonDeg ?? params.longitudeDeg ?? 0
+    const roverWorldX = params.roverWorldX ?? 0
+    const roverWorldZ = params.roverWorldZ ?? 0
+    const roverSpawnX = params.roverSpawnX ?? 0
+    const roverSpawnZ = params.roverSpawnZ ?? 0
     const { latitudeDeg, longitudeDeg } = approximateLatLonFromTangentOffset(
-      params.siteLatDeg,
-      params.siteLonDeg,
-      params.roverWorldX - params.roverSpawnX,
-      params.roverWorldZ - params.roverSpawnZ,
+      siteLatDeg,
+      siteLonDeg,
+      roverWorldX - roverSpawnX,
+      roverWorldZ - roverSpawnZ,
       params.siteUnitsPerMeter ?? 1,
     )
 
     const row: ArchivedDANProspect = {
       archiveId: newArchiveId(),
       capturedSol: params.capturedSol,
-      capturedAtMs: Date.now(),
+      capturedAtMs: params.capturedAtMs ?? Date.now(),
       siteId: params.siteId,
       latitudeDeg,
       longitudeDeg,
-      roverWorldX: params.roverWorldX,
-      roverWorldZ: params.roverWorldZ,
-      signalStrength: params.signalStrength,
+      roverWorldX,
+      roverWorldZ,
+      signalStrength: params.signalStrength ?? 0,
       quality: params.quality,
       waterConfirmed: params.waterConfirmed,
-      reservoirQuality: params.reservoirQuality,
+      reservoirQuality: params.reservoirQuality ?? 0,
       queuedForTransmission: false,
       transmitted: false,
     }

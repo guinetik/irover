@@ -12,20 +12,25 @@ describe('sitePoiBearing', () => {
     expect(normalizeCompassDeg(450)).toBeCloseTo(90, 5)
   })
 
-  it('roverHeadingRadToCompassDeg: 0 rad → 0° (north / −Z)', () => {
+  it('roverHeadingRadToCompassDeg: 0 rad → 0°', () => {
     expect(roverHeadingRadToCompassDeg(0)).toBeCloseTo(0, 5)
   })
 
-  it('worldBearingDegToPoi: POI on −Z from rover is 0°', () => {
-    expect(worldBearingDegToPoi(0, 0, 0, -50)).toBeCloseTo(0, 5)
+  // Rover forward = +Z (heading 0), so POI on +Z = straight ahead = 0°
+  it('worldBearingDegToPoi: POI on +Z from rover is 0° (forward)', () => {
+    expect(worldBearingDegToPoi(0, 0, 0, 50)).toBeCloseTo(0, 5)
   })
 
-  it('worldBearingDegToPoi: POI on +X from rover is 90° (east)', () => {
+  it('worldBearingDegToPoi: POI on +X from rover is 90° (right)', () => {
     expect(worldBearingDegToPoi(0, 0, 100, 0)).toBeCloseTo(90, 5)
   })
 
-  it('worldBearingDegToPoi: POI on +Z from rover is 180° (south)', () => {
-    expect(worldBearingDegToPoi(0, 0, 0, 80)).toBeCloseTo(180, 5)
+  it('worldBearingDegToPoi: POI on −Z from rover is 180° (behind)', () => {
+    expect(worldBearingDegToPoi(0, 0, 0, -80)).toBeCloseTo(180, 5)
+  })
+
+  it('worldBearingDegToPoi: POI on −X from rover is 270° (left)', () => {
+    expect(worldBearingDegToPoi(0, 0, -100, 0)).toBeCloseTo(270, 5)
   })
 
   it('signedRelativeBearingDeg: shortest turn', () => {

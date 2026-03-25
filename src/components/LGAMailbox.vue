@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   markRead: [messageId: string]
+  'open-message': [message: LGAMessage]
 }>()
 
 const activeTab = ref<'inbox' | 'sent'>('inbox')
@@ -24,6 +25,7 @@ function toggleMessage(msg: LGAMessage) {
   } else {
     expandedId.value = msg.id
     if (!msg.read) emit('markRead', msg.id)
+    emit('open-message', msg)
   }
 }
 
@@ -73,12 +75,13 @@ function formatTimeOfDay(tod: number): string {
       >
         <div class="msg-row">
           <span class="msg-dot" :class="{ unread: !msg.read }">●</span>
+          <span v-if="msg.type === 'mission'" class="msg-mission-badge">[M]</span>
           <span class="msg-subject">{{ msg.subject }}</span>
         </div>
         <div class="msg-meta">
           SOL {{ msg.sol }} — {{ formatTimeOfDay(msg.timeOfDay) }}
         </div>
-        <div v-if="expandedId === msg.id" class="msg-body">
+        <div class="msg-body-preview">
           {{ msg.body }}
         </div>
       </div>
@@ -193,6 +196,14 @@ function formatTimeOfDay(tod: number): string {
   text-shadow: 0 0 4px rgba(136, 204, 255, 0.5);
 }
 
+.msg-mission-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: #ffcc44;
+  letter-spacing: 0.04em;
+  font-weight: bold;
+}
+
 .msg-subject {
   color: rgba(200, 200, 220, 0.7);
   white-space: nowrap;
@@ -212,15 +223,15 @@ function formatTimeOfDay(tod: number): string {
   font-family: var(--font-instrument);
 }
 
-.msg-body {
-  margin-top: 6px;
-  padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  color: rgba(200, 200, 220, 0.6);
+.msg-body-preview {
+  margin-top: 2px;
+  padding-left: 12px;
+  color: rgba(200, 200, 220, 0.35);
   font-family: var(--font-instrument);
-  font-size: 10px;
-  line-height: 1.4;
-  white-space: pre-wrap;
+  font-size: 9px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

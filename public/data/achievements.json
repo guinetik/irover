@@ -199,7 +199,7 @@
       "description": "Your driving algorithms are optimizing. Paths feel smoother.",
       "type": "REWARD TRACK",
       "modifierKey": "movementSpeed",
-      "modifierValue": 0.05
+      "modifierValue": 2.05
     },
     {
       "sp": 35,
