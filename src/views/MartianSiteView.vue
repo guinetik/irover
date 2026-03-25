@@ -547,9 +547,12 @@ import { useAPXSArchive } from '@/composables/useAPXSArchive'
 import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { generateComposition, computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
+import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
+
+const { tryRepair, getBySlot } = useInstrumentDurability()
 
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
@@ -747,8 +750,15 @@ const wheelsOverlayHud = computed(() => {
 })
 
 function handleInstrumentRepair() {
-  const w = siteRover.value?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
-  if (activeInstrumentSlot.value === WHLS_SLOT && w) w.repair()
+  if (activeInstrumentSlot.value === null) return
+  // Find the instrument ID for the active slot
+  const snap = getBySlot(activeInstrumentSlot.value)
+  if (!snap) return
+  const result = tryRepair(snap.id)
+  if (!result.ok && result.message) {
+    // Show error toast if available
+    sampleToastRef.value?.showError?.(result.message)
+  }
 }
 
 function toggleWheelsPanel() {

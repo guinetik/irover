@@ -55,6 +55,7 @@ import { createOrbitalDropTickHandler } from './site-controllers/OrbitalDropTick
 import { createAntennaTickHandler, type AntennaTickRefs } from './site-controllers/AntennaTickHandler'
 import { createAPXSTickHandler } from './site-controllers/APXSTickHandler'
 import { useSciencePoints } from '@/composables/useSciencePoints'
+import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import { secondsPerSol } from '@/lib/missionTime'
 
 /** Seconds to hold position before DAN prospecting begins. */
@@ -417,6 +418,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     remsSurveying,
   } = ctx.refs
 
+  const { syncFromControllers } = useInstrumentDurability()
+
   // --- Three.js core ---
   let renderer: THREE.WebGLRenderer | null = null
   let camera: THREE.PerspectiveCamera | null = null
@@ -754,6 +757,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         for (const inst of controller.instruments) {
           inst.applyPassiveDecay(solDelta)
         }
+      }
+      if (controller) {
+        syncFromControllers(controller.instruments)
       }
       roverHeading.value = controller?.heading ?? 0
       {
