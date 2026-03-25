@@ -9,6 +9,8 @@ import rockTextureUrl from "@/assets/texture1.jpg?url";
 import dustTextureUrl from "@/assets/texture2.jpg?url";
 import { RockFactory, type RockCollider } from "./RockFactory";
 import { GlbTerrainGenerator } from "./GlbTerrainGenerator";
+import { MarsGlobalTerrainGenerator } from "./MarsGlobalTerrainGenerator";
+import { ElevationTerrainGenerator } from "./ElevationTerrainGenerator";
 
 const GRID_SIZE = 256;
 const SCALE = 800;
@@ -76,6 +78,10 @@ export interface TerrainParams {
   silicateIndex: number;
   temperatureMaxK: number;
   temperatureMinK: number;
+  /** Landmark latitude in degrees (-90..90) */
+  latDeg?: number;
+  /** Landmark longitude in degrees (-180..180, east-positive) */
+  lonDeg?: number;
 }
 
 /** Common interface for all terrain generators. */
@@ -94,10 +100,12 @@ export interface ITerrainGenerator {
   dispose(): void
 }
 
-export type TerrainGeneratorType = 'default' | 'glb'
+export type TerrainGeneratorType = 'default' | 'glb' | 'mars-global' | 'elevation'
 
 /** Creates a terrain generator by type. */
 export function createTerrainGenerator(type: TerrainGeneratorType = 'default'): ITerrainGenerator {
+  if (type === 'elevation') return new ElevationTerrainGenerator()
+  if (type === 'mars-global') return new MarsGlobalTerrainGenerator()
   if (type === 'glb') return new GlbTerrainGenerator()
   return new DefaultTerrainGenerator()
 }
