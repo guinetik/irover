@@ -311,10 +311,10 @@ function wireArchiveCheckers(): void {
     return false
   })
 
-  // chemcam: count spectra matching rock type
+  // chemcam: count spectra matching rock type ('any' matches all)
   registerChecker('chemcam', (p) => {
     const matching = spectra.value.filter((s) => {
-      if (p.rockType && s.rockType !== p.rockType) return false
+      if (p.rockType && p.rockType !== 'any' && s.rockType !== p.rockType) return false
       return true
     })
     return matching.length >= (p.count ?? 1)
@@ -332,7 +332,7 @@ function wireArchiveCheckers(): void {
   // sam-experiment: check for discoveries with matching mode
   registerChecker('sam-experiment', (p) => {
     const matching = discoveries.value.filter((d) => {
-      if (p.mode && d.modeId !== p.mode) return false
+      if (p.mode && p.mode !== 'any' && d.modeId !== p.mode) return false
       return true
     })
     return matching.length >= (p.count ?? 1)
@@ -341,7 +341,7 @@ function wireArchiveCheckers(): void {
   // apxs: count analyses matching rock type
   registerChecker('apxs', (p) => {
     const matching = analyses.value.filter((a) => {
-      if (p.rockType && a.rockType !== p.rockType) return false
+      if (p.rockType && p.rockType !== 'any' && a.rockType !== p.rockType) return false
       return true
     })
     return matching.length >= (p.count ?? 1)
