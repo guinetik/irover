@@ -996,7 +996,7 @@ function handleAcceptMission(missionId: string | undefined) {
     goToObjs.forEach((obj, i) => {
       // Place markers in a ring around the rover, 60-120 units out
       const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-      const dist = 80 + (i % 3) * 20
+      const dist = 20 + (i % 3) * 10
       const px = Math.max(-380, Math.min(380, rx + Math.cos(angle) * dist))
       const pz = Math.max(-380, Math.min(380, rz + Math.sin(angle) * dist))
       upsertPoi({
