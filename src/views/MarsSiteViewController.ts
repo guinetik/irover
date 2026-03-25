@@ -48,6 +48,8 @@ import {
 import type { SiteFrameContext } from './site-controllers/SiteFrameContext'
 import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTickHandlers'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
+import { useMissions } from '@/composables/useMissions'
+import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { secondsPerSol } from '@/lib/missionTime'
 
 /** Seconds to hold position before DAN prospecting begins. */
@@ -391,6 +393,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
+  const { loadCatalog, wireArchiveCheckers, checkAllObjectives } = useMissions()
+  const { pois: missionPoisRef } = useSiteMissionPois()
 
   // --- Three.js core ---
   let renderer: THREE.WebGLRenderer | null = null
@@ -506,6 +510,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     if (controller) {
       controller.instruments = instrumentControllers
     }
+
+    // --- Mission system init ---
+    const missionsData = await fetch('/data/missions.json').then((r) => r.json())
+    loadCatalog(missionsData)
+    wireArchiveCheckers()
 
     if (import.meta.env.DEV) {
       disposeOrbitalDropDebugApi = installOrbitalDropDebugApi({
@@ -626,6 +635,14 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         }
         roverSpawnCaptured = true
       }
+
+      // --- Mission objective checks ---
+      checkAllObjectives(
+        roverWorldX.value,
+        roverWorldZ.value,
+        missionPoisRef.value,
+        marsSol.value,
+      )
 
       // --- Delegated ticks ---
       orbitalDropHandler.tick(fctx)

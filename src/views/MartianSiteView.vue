@@ -25,9 +25,11 @@
       :show-science-button="hasScienceDiscoveries && !deploying && !descending"
       :achievements-expanded="achievementsOpen"
       :sp-ledger-expanded="spLedgerOpen"
+      :active-mission-count="activeMissions.length"
       @open-achievements="achievementsOpen = true"
       @open-sp-ledger="spLedgerOpen = true"
       @open-science-log="scienceLogOpen = true"
+      @open-mission-log="missionLogOpen = true"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <RoverDeployOverlays
@@ -90,6 +92,8 @@
         :sam-unread="samUnread"
         :apxs-unread="apxsUnread"
         :dan-scanning="!!(siteRover?.instruments.find(i => i.id === 'dan') as DANController | undefined)?.passiveSubsystemEnabled"
+        :unlocked-instruments="unlockedInstruments"
+        :sandbox="playerProfile.sandbox"
         @select="(slot: number) => { if (!isSleeping) siteRover?.activateInstrument(slot) }"
         @deselect="siteRover?.activateInstrument(null)"
         @toggle-inventory="inventoryOpen = !inventoryOpen"
@@ -175,6 +179,32 @@
       :unlocked-ids="unlockedTrackIds"
       :total-sp="totalSP"
       @close="rewardTrackOpen = false"
+    />
+    <MessageDialog
+      :message="openedMessage"
+      :mission-accepted="!!(openedMessage?.missionId && (
+        activeMissions.some(m => m.missionId === openedMessage?.missionId) ||
+        completedMissions.some(m => m.missionId === openedMessage?.missionId)
+      ))"
+      @close="openedMessage = null"
+      @accept-mission="handleAcceptMission"
+    />
+    <MissionLogDialog
+      :open="missionLogOpen"
+      :active-missions="activeMissions"
+      :completed-missions="completedMissions"
+      :tracked-mission-id="trackedMissionId"
+      :get-def="getMissionDef"
+      :get-obj-label="getObjLabel"
+      @close="missionLogOpen = false"
+      @track="(id: string) => { trackedMissionId = id }"
+    />
+    <MissionTracker
+      v-if="!deploying && !descending"
+      :mission="trackedMission"
+      :mission-def="trackedMissionDef"
+      :is-eligible="(objId: string) => trackedMissionId ? isObjectiveEligible(trackedMissionId, objId) : false"
+      @untrack="trackedMissionId = null"
     />
     <InstrumentCrosshair
       :visible="crosshairVisible"
@@ -317,6 +347,7 @@
     <CommToolbar
       v-if="!deploying && !descending"
       :active-slot="activeInstrumentSlot"
+      :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('uhf')"
       @select="(slot: number) => siteRover?.activateInstrument(slot)"
       @deselect="siteRover?.activateInstrument(null)"
     />
@@ -326,6 +357,7 @@
       :messages="lgaMailbox.messages.value"
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
+      @open-message="(msg: LGAMessage) => { openedMessage = msg }"
       style="position: fixed; top: 168px; left: 10px; z-index: 40;"
     />
     <!-- UHF Uplink panel (shown when UHF antenna selected) -->
@@ -494,6 +526,11 @@ import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
+import { useMissions } from '@/composables/useMissions'
+import type { LGAMessage } from '@/types/lgaMailbox'
+import MessageDialog from '@/components/MessageDialog.vue'
+import MissionLogDialog from '@/components/MissionLogDialog.vue'
+import MissionTracker from '@/components/MissionTracker.vue'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -899,6 +936,45 @@ const {
 
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
+
+const {
+  activeMissions,
+  completedMissions,
+  trackedMissionId,
+  unlockedInstruments,
+  loadCatalog,
+  accept,
+  checkAllObjectives,
+  isObjectiveEligible,
+  getMissionDef,
+  wireArchiveCheckers,
+} = useMissions()
+
+// Mission UI state
+const missionLogOpen = ref(false)
+const openedMessage = ref<LGAMessage | null>(null)
+
+// Computed for tracked mission
+const trackedMission = computed(() =>
+  activeMissions.value.find((m) => m.missionId === trackedMissionId.value) ?? null
+)
+const trackedMissionDef = computed(() =>
+  trackedMissionId.value ? getMissionDef(trackedMissionId.value) ?? null : null
+)
+
+// Helper for MissionLogDialog
+function getObjLabel(missionId: string, objectiveId: string): string {
+  const def = getMissionDef(missionId)
+  return def?.objectives.find((o) => o.id === objectiveId)?.label ?? ''
+}
+
+// Mission acceptance handler
+function handleAcceptMission(missionId: string | undefined) {
+  if (!missionId) return
+  const sol = marsSol.value
+  accept(missionId, sol)
+  openedMessage.value = null
+}
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
 // --- SAM experiment system ---
