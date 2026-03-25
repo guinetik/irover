@@ -79,7 +79,7 @@ export function getRtgPhaseSceneSeconds(): {
 } {
   if (rtgTutorialMode) {
     return {
-      overdriveBurst: 8,          // 8 seconds burst — enough to see the waypoint appear
+      overdriveBurst: 30,         // 30 seconds burst — tutorial pace
       overdriveInstrumentLock: 3,  // 3 seconds cooldown
       overdriveRecharge: 3,        // 3 seconds recharge
       powerShuntEffect: 5,

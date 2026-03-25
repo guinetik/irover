@@ -44,7 +44,7 @@
       "objectives": [
         { "id": "mc-1", "type": "mastcam-tag", "label": "Photograph a basalt formation", "params": { "rockType": "basalt" }, "sequential": false },
         { "id": "mc-2", "type": "mastcam-tag", "label": "Photograph a mudstone outcrop", "params": { "rockType": "mudstone" }, "sequential": false },
-        { "id": "mc-3", "type": "mastcam-tag", "label": "Photograph a sandstone layer", "params": { "rockType": "sandstone" }, "sequential": false }
+        { "id": "mc-3", "type": "mastcam-tag", "label": "Photograph a hematite deposit", "params": { "rockType": "hematite" }, "sequential": false }
       ]
     },
     {
