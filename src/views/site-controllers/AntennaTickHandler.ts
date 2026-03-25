@@ -60,6 +60,10 @@ export function createAntennaTickHandler(
     lgaCtrl.linkStatus = lgaCtrl.passiveSubsystemEnabled ? 'LINKED' : 'OFF'
     lgaCtrl.accuracyMod = callbacks.playerMod('instrumentAccuracy')
 
+    // Always sync unread count (mission pushMessage can add messages while LGA is off)
+    lgaCtrl.unreadCount = mailbox.unreadCount.value
+    refs.lgaUnreadCount.value = mailbox.unreadCount.value
+
     if (!lgaCtrl.passiveSubsystemEnabled) return
 
     const { marsSol, marsTimeOfDay } = fctx
