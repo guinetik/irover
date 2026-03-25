@@ -111,6 +111,7 @@ export function createChemCamTickHandler(
       const cc = controller.activeInstrument
       cc.currentSP = totalSP
       cc.currentSol = marsSol
+      cc.accuracyMod = playerMod('instrumentAccuracy')
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax

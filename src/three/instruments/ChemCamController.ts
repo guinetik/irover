@@ -93,6 +93,8 @@ export class ChemCamController extends InstrumentController {
   shotsMax = SHOTS_MAX
   /** External multiplier on sequence duration (thermal + player buffs). <1 = faster. */
   durationMultiplier = 1.0
+  /** Higher accuracy = lower active power draw. Set each frame from player profile. */
+  accuracyMod = 1.0
   /** Current total SP — set by view each frame for calibration curve */
   currentSP = 0
   /** Mission sol — set by view each frame; stamped on new readouts at capture. */
@@ -165,8 +167,8 @@ export class ChemCamController extends InstrumentController {
   /** Power draw depends on phase */
   get powerDrawW(): number {
     switch (this.phase) {
-      case 'PULSE_TRAIN': return PULSE_POWER_W
-      case 'INTEGRATING': return INTEGRATE_POWER_W
+      case 'PULSE_TRAIN': return PULSE_POWER_W / this.accuracyMod
+      case 'INTEGRATING': return INTEGRATE_POWER_W / this.accuracyMod
       case 'ARMED': return IDLE_POWER_W
       default: return 0
     }
