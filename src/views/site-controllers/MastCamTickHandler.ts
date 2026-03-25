@@ -96,6 +96,7 @@ export function createMastCamTickHandler(
     // Animate tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
+      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy')
       mcInst.updateTagMarkers(simulationTime)
     }
 
