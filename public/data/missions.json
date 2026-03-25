@@ -23,7 +23,7 @@
       "description": "Learn to manage your radioisotope thermoelectric generator — your primary power source on Mars.",
       "briefing": "Good news — triangulation confirms your position. Now let's get your power systems online. Your RTG is your lifeline out here. Head to the supply cache we dropped nearby and retrieve the calibration rods. Then open the RTG panel and test the emergency overdrive — it's a short burst that tops off your battery. After that, head to the rock outcrop we've marked for your next assignment.",
       "reward": { "sp": 30 },
-      "unlocks": [],
+      "unlocks": ["mastcam"],
       "chain": "m03-mastcam",
       "objectives": [
         { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },
@@ -39,7 +39,7 @@
       "description": "Use the MastCam to photograph and classify rocks in your vicinity.",
       "briefing": "Your MastCam is now online. The science team needs a visual survey of your landing area. Use MastCam to photograph and tag at least three different rock formations. This will help us plan your traverse route.",
       "reward": { "sp": 35 },
-      "unlocks": ["mastcam"],
+      "unlocks": ["chemcam"],
       "chain": "m04-chemcam",
       "objectives": [
         { "id": "mc-1", "type": "mastcam-tag", "label": "Photograph 3 rocks", "params": { "rockType": "any", "count": 3 }, "sequential": false }
@@ -52,7 +52,7 @@
       "description": "Fire the ChemCam laser at a rock to perform LIBS spectroscopy.",
       "briefing": "MastCam survey looks great. Time to bring the big gun online — literally. Your ChemCam fires a laser that vaporizes rock, and we analyze the plasma spectrum remotely. Find a rock and give it a zap.",
       "reward": { "sp": 40 },
-      "unlocks": ["chemcam"],
+      "unlocks": ["drill"],
       "chain": "m05-drill",
       "objectives": [
         { "id": "cc-1", "type": "chemcam", "label": "Perform a LIBS analysis on any rock", "params": { "rockType": "any" }, "sequential": false }
@@ -65,7 +65,7 @@
       "description": "Drill into a rock and collect your first core sample.",
       "briefing": "Spectroscopy can only tell us so much from the surface. We need to look inside. Use the drill to extract a core sample from any rock. The sample will go into your inventory for later analysis.",
       "reward": { "sp": 40 },
-      "unlocks": ["drill"],
+      "unlocks": ["apxs"],
       "chain": "m06-apxs",
       "objectives": [
         { "id": "dr-1", "type": "gather", "label": "Collect a rock sample", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": false }
@@ -78,7 +78,7 @@
       "description": "Deploy the APXS sensor against a rock for elemental composition analysis.",
       "briefing": "Now that you can drill, let's complement that with elemental analysis. The Alpha Particle X-Ray Spectrometer gives us a detailed chemical fingerprint. Place it against any rock and run a scan.",
       "reward": { "sp": 45 },
-      "unlocks": ["apxs"],
+      "unlocks": ["dan"],
       "chain": "m07-dan",
       "objectives": [
         { "id": "apxs-1", "type": "apxs", "label": "Complete an APXS analysis", "params": { "rockType": "any" }, "sequential": false }
@@ -91,7 +91,7 @@
       "description": "Use the Dynamic Albedo of Neutrons instrument to prospect for subsurface water ice.",
       "briefing": "Water is the key to everything out here — fuel, life support, future missions. Your DAN instrument fires neutrons into the ground and measures the bounce-back to detect hydrogen. Run a prospect sweep.",
       "reward": { "sp": 45 },
-      "unlocks": ["dan"],
+      "unlocks": ["sam"],
       "chain": "m08-sam",
       "objectives": [
         { "id": "dan-1", "type": "dan-prospect", "label": "Find a location with water ice signal", "params": { "minWaterChance": 0.3 }, "sequential": false }
@@ -104,7 +104,7 @@
       "description": "Run a sample through the SAM instrument suite for detailed chemical analysis.",
       "briefing": "You've collected samples, you've scanned them — now let's cook them. SAM is your onboard laboratory. Load a sample and run an experiment. Pick your analysis mode carefully — each one reveals different secrets.",
       "reward": { "sp": 50 },
-      "unlocks": ["sam"],
+      "unlocks": ["uhf"],
       "chain": "m09-transmit",
       "objectives": [
         { "id": "sam-1", "type": "sam-experiment", "label": "Complete a SAM experiment", "params": { "mode": "any" }, "sequential": false }
@@ -117,7 +117,7 @@
       "description": "Transmit your collected science data back to Earth via the UHF antenna during an orbital pass.",
       "briefing": "Outstanding work, Rover. You've built up quite a dataset. But science isn't science until it's shared. Queue your findings for transmission and beam them home via UHF during the next orbital pass. Earth is waiting.",
       "reward": { "sp": 50 },
-      "unlocks": ["uhf"],
+      "unlocks": [],
       "chain": null,
       "objectives": [
         { "id": "tx-1", "type": "transmit", "label": "Transmit science data to Earth", "params": { "count": 1 }, "sequential": false }
