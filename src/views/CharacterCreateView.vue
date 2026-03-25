@@ -1,4 +1,6 @@
 <template>
+  <div class="create-root">
+  <canvas ref="terminalCanvas" class="terminal-canvas" />
   <div class="create-view">
     <header v-if="currentStep <= 5" class="header">
       <p class="org">MARS EXPLORATION CONSORTIUM — OPERATOR APPLICATION PORTAL v7.3.1</p>
@@ -61,10 +63,11 @@
       >[ NEXT &gt; ]</button>
     </footer>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerProfile, type ArchetypeId, type FoundationId, type OriginId, type MotivationId } from '@/composables/usePlayerProfile'
 import StepArchetype from '@/components/create/StepArchetype.vue'
@@ -75,6 +78,27 @@ import StepPosition from '@/components/create/StepPosition.vue'
 import type { PositionId } from '@/components/create/StepPosition.vue'
 import ProcessingSequence from '@/components/create/ProcessingSequence.vue'
 import AcceptanceScreen from '@/components/create/AcceptanceScreen.vue'
+import { TerminalScene } from '@/three/terminal/TerminalScene'
+
+const terminalCanvas = ref<HTMLCanvasElement | null>(null)
+let terminalScene: TerminalScene | null = null
+
+onMounted(async () => {
+  if (!terminalCanvas.value) return
+  const canvas = terminalCanvas.value
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * Math.min(window.devicePixelRatio, 2)
+  canvas.height = rect.height * Math.min(window.devicePixelRatio, 2)
+  terminalScene = new TerminalScene(rect.width / rect.height)
+  await terminalScene.init(canvas, (phase) => {
+    console.log('Phase:', phase)
+  })
+  terminalScene.startLoop()
+})
+
+onUnmounted(() => {
+  terminalScene?.dispose()
+})
 
 const router = useRouter()
 const { setProfile, setIdentity } = usePlayerProfile()
@@ -115,7 +139,23 @@ function onAccept(): void {
 </script>
 
 <style scoped>
+.create-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.terminal-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
 .create-view {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: flex;

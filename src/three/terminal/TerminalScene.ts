@@ -90,6 +90,26 @@ export class TerminalScene {
     wrapper.rotation.copy(this.modelStartRot)
     this.model = wrapper
     this.scene.add(this.model)
+
+    // --- DEBUG: remove after calibration ---
+    console.log('=== TERMINAL GLB DEBUG ===')
+    const debugModel = gltf.scene
+    debugModel.traverse((child: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh) {
+        const childBox = new THREE.Box3().setFromObject(child)
+        console.log(`Mesh: "${child.name}"`, {
+          min: childBox.min.toArray().map((n: number) => +n.toFixed(3)),
+          max: childBox.max.toArray().map((n: number) => +n.toFixed(3)),
+        })
+      }
+    })
+    const wrapperBox = new THREE.Box3().setFromObject(this.model)
+    console.log('Wrapper bounds:', {
+      min: wrapperBox.min.toArray().map((n: number) => +n.toFixed(3)),
+      max: wrapperBox.max.toArray().map((n: number) => +n.toFixed(3)),
+      size: wrapperBox.getSize(new THREE.Vector3()).toArray().map((n: number) => +n.toFixed(3)),
+    })
+    console.log('=== END DEBUG ===')
   }
 
   startLoop(): void {
