@@ -69,6 +69,41 @@ export function useMissionUI(deps: {
     )),
   )
 
+  // --- POI reveal logic ---
+  // Pre-computed positions for go-to objectives (stored at accept time, revealed progressively)
+  const plannedPoiPositions = new Map<string, { x: number; z: number; label: string }>()
+  const revealedPoiIds = new Set<string>()
+
+  function revealEligiblePois(missionId: string): void {
+    const def = getMissionDef(missionId)
+    const state = activeMissions.value.find((m) => m.missionId === missionId)
+    if (!def || !state) return
+
+    for (let i = 0; i < def.objectives.length; i++) {
+      const objDef = def.objectives[i]
+      if (objDef.type !== 'go-to') continue
+      const objState = state.objectives[i]
+      if (objState.done) continue // already completed
+
+      const poiId = objDef.params.poiId
+      if (revealedPoiIds.has(poiId)) continue // already visible
+
+      // Only reveal if this objective is eligible (sequential gating)
+      if (!isObjectiveEligible(missionId, objDef.id)) continue
+
+      const pos = plannedPoiPositions.get(poiId)
+      if (!pos) continue
+
+      revealedPoiIds.add(poiId)
+      upsertPoi({ id: poiId, label: pos.label, x: pos.x, z: pos.z, color: '#66ffee' })
+      const scene = siteHandle.value?.siteScene
+      if (scene) {
+        const groundY = scene.terrain.heightAt(pos.x, pos.z)
+        addWaypointMarker(poiId, pos.x, pos.z, groundY, scene.scene)
+      }
+    }
+  }
+
   // --- Helpers ---
   function getObjLabel(missionId: string, objectiveId: string): string {
     const def = getMissionDef(missionId)
@@ -88,41 +123,31 @@ export function useMissionUI(deps: {
       const rx = roverWorldX.value
       const rz = roverWorldZ.value
       const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
+
+      // Pre-compute positions for all go-to POIs
       goToObjs.forEach((obj, i) => {
         const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-        // First POI close (8u), later ones progressively farther (up to 40u)
         const dist = 8 + i * 15
         const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
         const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
-        upsertPoi({
-          id: obj.params.poiId,
-          label: obj.label,
-          x: px,
-          z: pz,
-          color: '#66ffee',
-        })
-        const scene = siteHandle.value?.siteScene
-        if (scene) {
-          const groundY = scene.terrain.heightAt(px, pz)
-          addWaypointMarker(obj.params.poiId, px, pz, groundY, scene.scene)
-        }
+        plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
       })
 
-      // Spawn orbital drops at go-to POIs for any gather objectives
+      // Only reveal POIs for currently eligible objectives
+      revealEligiblePois(missionId)
+
+      // Spawn orbital drops at the first go-to POI for any gather objectives
       const gatherObjs = def.objectives.filter((o) => o.type === 'gather')
       if (gatherObjs.length > 0 && goToObjs.length > 0) {
-        const rx2 = roverWorldX.value
-        const rz2 = roverWorldZ.value
-        const angle0 = (0 / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-        const dist0 = 8
-        const dropX = Math.max(-390, Math.min(390, rx2 + Math.cos(angle0) * dist0))
-        const dropZ = Math.max(-390, Math.min(390, rz2 + Math.sin(angle0) * dist0))
-        for (const gather of gatherObjs) {
-          try {
-            siteHandle.value?.spawnOrbitalDropItem(gather.params.itemId, {
-              x: dropX, z: dropZ, quantity: gather.params.quantity ?? 1,
-            })
-          } catch { /* scene not ready */ }
+        const firstPos = plannedPoiPositions.get(goToObjs[0].params.poiId)
+        if (firstPos) {
+          for (const gather of gatherObjs) {
+            try {
+              siteHandle.value?.spawnOrbitalDropItem(gather.params.itemId, {
+                x: firstPos.x, z: firstPos.z, quantity: gather.params.quantity ?? 1,
+              })
+            } catch { /* scene not ready */ }
+          }
         }
       }
     }
@@ -161,7 +186,7 @@ export function useMissionUI(deps: {
 
   // --- Watchers ---
 
-  // Clean up POIs + 3D markers as individual objectives complete
+  // Clean up completed POIs + reveal next eligible POIs
   watch(
     () => activeMissions.value.map((m) => m.objectives.map((o) => o.done)),
     () => {
@@ -169,15 +194,19 @@ export function useMissionUI(deps: {
       for (const state of activeMissions.value) {
         const def = getMissionDef(state.missionId)
         if (!def) continue
+        // Remove completed go-to POIs
         for (let i = 0; i < state.objectives.length; i++) {
           if (!state.objectives[i].done) continue
           const objDef = def.objectives[i]
           if (objDef?.type === 'go-to' && objDef.params.poiId) {
             removePoi(objDef.params.poiId)
             clearPoiArrival(objDef.params.poiId)
+            revealedPoiIds.delete(objDef.params.poiId)
             if (scene) removeWaypointMarker(objDef.params.poiId, scene.scene)
           }
         }
+        // Reveal newly eligible go-to POIs (next in sequence)
+        revealEligiblePois(state.missionId)
       }
     },
     { deep: true },
@@ -192,6 +221,8 @@ export function useMissionUI(deps: {
       for (const obj of def.objectives) {
         if (obj.type === 'go-to' && obj.params.poiId) {
           removePoi(obj.params.poiId)
+          plannedPoiPositions.delete(obj.params.poiId)
+          revealedPoiIds.delete(obj.params.poiId)
           if (scene) removeWaypointMarker(obj.params.poiId, scene.scene)
         }
       }
