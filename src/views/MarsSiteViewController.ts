@@ -50,6 +50,8 @@ import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTic
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import { useMissions } from '@/composables/useMissions'
 import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
+import { useLGAMailbox } from '@/composables/useLGAMailbox'
+import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { secondsPerSol } from '@/lib/missionTime'
 
 /** Seconds to hold position before DAN prospecting begins. */
@@ -393,8 +395,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
-  const { loadCatalog, wireArchiveCheckers, checkAllObjectives } = useMissions()
+  const missions = useMissions()
+  const { loadCatalog, wireArchiveCheckers, checkAllObjectives } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
+  const { pushMessage } = useLGAMailbox()
+  const { profile: playerProfile } = usePlayerProfile()
 
   // --- Three.js core ---
   let renderer: THREE.WebGLRenderer | null = null
@@ -411,6 +416,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
   let lastSkyTimeOfDay = -1
   let roverSpawnCaptured = false
+  let firstMissionDelivered = false
 
   const tickHandlers = createMarsSiteTickHandlers(ctx)
   const {
@@ -784,6 +790,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       if (roverReady && !gameClock.roverClockRunning.value) {
         gameClock.notifyRoverReady()
+      }
+
+      // --- First mission delivery (one-shot, works with skip-intro too) ---
+      if (roverReady && !firstMissionDelivered) {
+        firstMissionDelivered = true
+        if (
+          !playerProfile.sandbox &&
+          missions.activeMissions.value.length === 0 &&
+          missions.completedMissions.value.length === 0
+        ) {
+          const firstDef = missions.catalog.value[0]
+          if (firstDef) {
+            pushMessage({
+              direction: 'received',
+              sol: marsSol.value,
+              timeOfDay: marsTimeOfDay.value,
+              subject: firstDef.name,
+              body: firstDef.briefing,
+              type: 'mission',
+              from: firstDef.patron ?? 'Mission Control',
+              missionId: firstDef.id,
+            })
+          }
+        }
       }
 
       // --- Instrument attach (idempotent) ---

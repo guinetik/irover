@@ -226,7 +226,7 @@ export function createNeutralProfile(): PlayerProfile {
     foundation: null,
     patron: null,
     modifiers: { ...NEUTRAL_MODIFIERS },
-    sandbox: true,
+    sandbox: false,
   }
 }
 
