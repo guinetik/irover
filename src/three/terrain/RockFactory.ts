@@ -11,9 +11,8 @@ import {
   pickRockType,
 } from './RockTypes'
 import type { TerrainParams } from './TerrainGenerator'
+import { generateRockDistribution, type RockSpawn, type GolombekConfig } from './GolombekDistribution'
 
-const ROCK_COUNT = 1200
-const BOULDER_COUNT = 50
 const SCALE = 800
 
 export interface RockCollider {
@@ -23,16 +22,22 @@ export interface RockCollider {
   height: number
 }
 
+/** Spatial grid cell size — should be >= the largest rock radius. */
+const GRID_CELL = 8
+
 /**
  * Handles loading, building, and spawning all rocks and boulders on the terrain.
- * Pulls geometry from rocks.glb (with per-type mineral textures) and a small
- * procedural pool for variety.
+ * Uses the Golombek-Rapp exponential model (Golombek & Rapp 1997, Golombek et al. 2003/2021)
+ * for scientifically accurate size-frequency distributions, spatial clustering
+ * around crater ejecta, and biome-appropriate rock morphology.
  */
 export class RockFactory {
   /** All spawned rock/boulder meshes. */
   readonly rocks: THREE.Mesh[] = []
   /** Collision shapes for rover interaction. */
   readonly colliders: RockCollider[] = []
+  /** Spatial hash grid for fast per-frame collision lookups. */
+  private grid = new Map<number, number[]>()
 
   private rockGeoMap = new Map<RockTypeId, THREE.BufferGeometry[]>()
   private rockMatMap = new Map<RockTypeId, THREE.MeshStandardMaterial>()
@@ -40,6 +45,8 @@ export class RockFactory {
   private glbMatMap = new Map<RockTypeId, THREE.MeshStandardMaterial>()
   /** All GLB rock geometries from rocks.glb. */
   private glbRockGeos: THREE.BufferGeometry[] = []
+  /** Bottom Y of each normalized GLB geometry (for ground placement). */
+  private glbRockBottomY: number[] = []
   private glbRockReady: Promise<void>
   private boulderGeos: THREE.BufferGeometry[] = []
   private textures: THREE.Texture[] = []
@@ -110,6 +117,9 @@ export class RockFactory {
           geo.computeVertexNormals()
         }
 
+        // Record the actual bottom Y after normalization for precise ground placement
+        geo.computeBoundingBox()
+        this.glbRockBottomY.push(geo.boundingBox!.min.y)
         this.glbRockGeos.push(geo)
       })
     }).catch(() => {
@@ -123,33 +133,29 @@ export class RockFactory {
   }
 
   /**
-   * Spawns all rocks and boulders into the target group.
-   * @param params Terrain params for geology-driven type distribution.
+   * Spawns rocks using the Golombek-Rapp exponential size-frequency distribution.
+   *
+   * Instead of flat ROCK_COUNT with random sizes, this method:
+   *  1. Computes biome-specific rock abundance (k) from terrain params
+   *  2. Generates rock diameters following F_k(D) = k·exp[−q(k)·D]
+   *  3. Clusters rocks around crater ejecta halos (r^-3 falloff)
+   *  4. Applies biome-appropriate H/D ratios and burial fractions
+   *
+   * @param params Terrain params for geology-driven distribution.
    * @param heightAt Function to query terrain height at (x, z).
    * @param group Target group to add meshes to.
+   * @param config Optional performance/range overrides.
    */
   spawn(
     params: TerrainParams,
     heightAt: (x: number, z: number) => number,
     group: THREE.Group,
+    config?: GolombekConfig,
   ): void {
-    const { seed, featureType } = params
-    const rng = new SimplexNoise(seed)
+    // ── Generate scientifically-grounded rock distribution ──────────────
+    const distribution = generateRockDistribution(params, SCALE, config)
 
-    // Site-aware count multipliers
-    let rockMultiplier = 1.0
-    let boulderMultiplier = 1.0
-    if (featureType === 'polar-cap') {
-      rockMultiplier = 0.5
-      boulderMultiplier = 0.5
-    } else if (featureType === 'canyon') {
-      rockMultiplier = 1.5
-      boulderMultiplier = 1.5
-    } else if (featureType === 'plain') {
-      rockMultiplier = 0.8
-      boulderMultiplier = 0.5
-    }
-
+    // ── Geology-driven mineral type distribution ───────────────────────
     const spawnDist = buildSpawnDistribution({
       basalt: params.basalt,
       ironOxide: params.ironOxide,
@@ -158,84 +164,137 @@ export class RockFactory {
       dustCover: params.dustCover,
     })
 
-    // --- Rocks ---
-    const rockCount = Math.floor(ROCK_COUNT * rockMultiplier)
-    for (let i = 0; i < rockCount; i++) {
-      const rx = (rng.n2(i * 1.7, 3.1) + 1) * 0.5 * SCALE - SCALE / 2
-      const rz = (rng.n2(7.9, i * 2.3) + 1) * 0.5 * SCALE - SCALE / 2
-      const sc = 0.5 + (rng.n2(i * 0.3, i * 0.7) + 1) * 1.0
+    const rng = new SimplexNoise(params.seed + 500)
 
+    // ── Spawn each rock from the distribution ─────────────────────────
+    for (let i = 0; i < distribution.length; i++) {
+      const spawn = distribution[i]
+
+      // Pick mineral type from geological composition
       const typeRand = (rng.n2(i * 2.9, i * 1.3) + 1) * 0.5
       const typeId = pickRockType(spawnDist, typeRand)
-      const typeScaleY = ROCK_TYPE_LIST.find(t => t.id === typeId)!.geometry.scaleY
 
-      // 90% GLB, 10% procedural for extra variety
+      // Diameter threshold: large rocks (>= 2.0) use boulder pool
+      const isBoulder = spawn.diameter >= 2.0
+
+      // 90% GLB, 10% procedural for visual variety
       const useGlb = this.glbRockGeos.length > 0 && (i % 10 !== 0)
+
       let geo: THREE.BufferGeometry
       let mat: THREE.MeshStandardMaterial
-      let scaleY: number
-      if (useGlb) {
+
+      if (isBoulder) {
+        // Boulder geometry selection
+        const pool = useGlb ? this.glbRockGeos : this.boulderGeos
+        const bGeoIdx = i % pool.length
+        geo = pool[bGeoIdx]
+        mat = useGlb ? this.glbMatMap.get(typeId)! : this.rockMatMap.get(typeId)!
+      } else if (useGlb) {
         geo = this.glbRockGeos[i % this.glbRockGeos.length]
         mat = this.glbMatMap.get(typeId)!
-        scaleY = 0.5 + Math.sin(i * 1.7) * 0.25
       } else {
         const typeGeos = this.rockGeoMap.get(typeId)!
         geo = typeGeos[i % typeGeos.length]
         mat = this.rockMatMap.get(typeId)!
-        scaleY = typeScaleY
       }
 
       const rock = new THREE.Mesh(geo, mat)
       rock.userData.rockType = typeId
+      rock.userData.isEjecta = spawn.isEjecta
+      rock.userData.golombekDiameter = spawn.diameter
 
-      const ry = heightAt(rx, rz) + (useGlb ? sc * scaleY * 0.35 : -sc * 0.05)
-
-      rock.position.set(rx, ry, rz)
+      // ── Scale from diameter + H/D ratio ───────────────────────────
+      const sc = spawn.diameter
+      const scaleY = spawn.heightRatio
       rock.scale.set(sc, sc * scaleY, sc)
-      const tiltRange = useGlb ? 0.08 : 0.5
-      rock.rotation.set(Math.random() * tiltRange, Math.random() * Math.PI * 2, Math.random() * tiltRange)
-      rock.castShadow = true
-      group.add(rock)
-      this.rocks.push(rock)
-      this.colliders.push({ x: rx, z: rz, radius: sc * 0.6, height: sc * 0.35 })
-    }
 
-    // --- Boulders ---
-    const boulderRng = new SimplexNoise(seed + 200)
-    const boulderCount = Math.floor(BOULDER_COUNT * boulderMultiplier)
-    for (let i = 0; i < boulderCount; i++) {
-      const bx = (boulderRng.n2(i * 2.3, 5.3) + 1) * 0.5 * SCALE - SCALE / 2
-      const bz = (boulderRng.n2(11.7, i * 3.1) + 1) * 0.5 * SCALE - SCALE / 2
-      let sc = 2.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.5
+      // ── Position: terrain height with burial offset ───────────────
+      const rx = spawn.x
+      const rz = spawn.z
+      let ry: number
 
-      if (featureType === 'volcano' && i % 4 === 0) {
-        sc = 4.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.0
+      if (useGlb) {
+        const geoIdx = i % this.glbRockGeos.length
+        const bottomY = this.glbRockBottomY[geoIdx]
+        // Base placement: bottom of mesh on terrain
+        ry = heightAt(rx, rz) - bottomY * sc * scaleY
+        // Burial: sink rock into terrain
+        ry -= spawn.burial * sc * scaleY * 0.5
+        // Slight additional embed for natural look
+        ry -= sc * scaleY * 0.08
+      } else {
+        ry = heightAt(rx, rz)
+        ry -= spawn.burial * sc * scaleY * 0.4
+        ry -= sc * 0.05
       }
 
-      const bTypeRand = (boulderRng.n2(i * 3.7, i * 2.1) + 1) * 0.5
-      const bTypeId = pickRockType(spawnDist, bTypeRand)
+      rock.position.set(rx, ry, rz)
 
-      const useGlbBoulder = this.glbRockGeos.length > 0
-      const boulderPool = useGlbBoulder ? this.glbRockGeos : this.boulderGeos
-      const bMat = useGlbBoulder
-        ? this.glbMatMap.get(bTypeId)!
-        : this.rockMatMap.get(bTypeId)!
-      const boulder = new THREE.Mesh(boulderPool[i % boulderPool.length], bMat)
-      const by = heightAt(bx, bz) + (useGlbBoulder ? sc * 0.15 : -sc * 0.1)
-
-      boulder.position.set(bx, by, bz)
-      boulder.scale.set(sc, sc * 0.5, sc * 0.8)
-      const bTilt = useGlbBoulder ? 0.08 : 0.3
-      boulder.rotation.set(
-        boulderRng.n2(i * 1.1, 0) * bTilt,
-        boulderRng.n2(0, i * 1.1) * Math.PI * 2,
-        boulderRng.n2(i * 0.7, i * 0.3) * bTilt,
+      // ── Rotation: subtle tilt, full Y rotation ────────────────────
+      const tiltRange = useGlb ? 0.08 : 0.5
+      rock.rotation.set(
+        (rng.n2(i * 1.1, 0) + 1) * 0.5 * tiltRange,
+        (rng.n2(0, i * 1.1) + 1) * 0.5 * Math.PI * 2,
+        (rng.n2(i * 0.7, i * 0.3) + 1) * 0.5 * tiltRange,
       )
-      boulder.castShadow = true
-      boulder.receiveShadow = true
-      group.add(boulder)
-      this.rocks.push(boulder)
-      this.colliders.push({ x: bx, z: bz, radius: sc * 0.7, height: sc * 0.4 })
+
+      rock.castShadow = true
+      if (isBoulder) rock.receiveShadow = true
+
+      group.add(rock)
+      this.rocks.push(rock)
+
+      // Collider uses the actual diameter for collision radius
+      this.colliders.push({
+        x: rx,
+        z: rz,
+        radius: sc * 0.5,
+        height: sc * scaleY * (1 - spawn.burial * 0.5),
+      })
+      this.gridInsert(this.colliders.length - 1)
+    }
+  }
+
+  /**
+   * Returns colliders near (x, z) using the spatial grid.
+   * Only checks the 9 surrounding cells — O(1) average vs O(n) linear scan.
+   */
+  getCollidersNear(x: number, z: number): RockCollider[] {
+    const cx = Math.floor(x / GRID_CELL)
+    const cz = Math.floor(z / GRID_CELL)
+    const result: RockCollider[] = []
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const key = ((cx + dx) * 73856093) ^ ((cz + dz) * 19349663)
+        const indices = this.grid.get(key)
+        if (indices) {
+          for (const idx of indices) {
+            result.push(this.colliders[idx])
+          }
+        }
+      }
+    }
+    return result
+  }
+
+  /** Inserts a collider index into the spatial grid. */
+  private gridInsert(idx: number): void {
+    const c = this.colliders[idx]
+    // Insert into all cells the rock overlaps (center + radius)
+    const minCx = Math.floor((c.x - c.radius) / GRID_CELL)
+    const maxCx = Math.floor((c.x + c.radius) / GRID_CELL)
+    const minCz = Math.floor((c.z - c.radius) / GRID_CELL)
+    const maxCz = Math.floor((c.z + c.radius) / GRID_CELL)
+    for (let gx = minCx; gx <= maxCx; gx++) {
+      for (let gz = minCz; gz <= maxCz; gz++) {
+        const key = (gx * 73856093) ^ (gz * 19349663)
+        let cell = this.grid.get(key)
+        if (!cell) {
+          cell = []
+          this.grid.set(key, cell)
+        }
+        cell.push(idx)
+      }
     }
   }
 
@@ -254,6 +313,7 @@ export class RockFactory {
     }
     this.rocks.length = 0
     this.colliders.length = 0
+    this.grid.clear()
   }
 
   private createBoulderGeometries(): THREE.BufferGeometry[] {
