@@ -6,6 +6,10 @@ export class RADController extends InstrumentController {
   readonly name = 'RAD'
   readonly slot = 9
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'science-components'
+  override readonly usageDecayChance = 0.10
+  override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
   /** Start STANDBY until the player ACTIVATEs (matches DAN / UHF opt-in). */

@@ -11,6 +11,10 @@ export class AntennaUHFController extends InstrumentController {
   readonly name = 'UHF'
   readonly slot = 12
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.25
+  override readonly repairComponentId = 'digital-components'
+  override readonly usageDecayChance = 0.15
+  override readonly usageDecayAmount = 0.8
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
   /** Relay hardware off until the player ACTIVATEs (higher idle + burst draw). */

@@ -38,6 +38,10 @@ export class RoverWheelsController extends InstrumentController {
    */
   readonly viewPitch = 0.1
   override readonly canActivate = false
+  override readonly passiveDecayPerSol = 0.15
+  override readonly repairComponentId = 'mechatronics-components'
+  override readonly usageDecayChance = 0.15
+  override readonly usageDecayAmount = 0.5
   /**
    * No main-bus draw for merely opening the WHLS card — mobility is billed only while translating
    * via {@link getDrivePowerW} in the site power tick (`driveMotorW`).
@@ -50,23 +54,15 @@ export class RoverWheelsController extends InstrumentController {
    */
   baseDriveW = 5
 
-  /** 0 = broken (no traction / no billed drive power); 100 = nominal. */
-  durabilityPct = 100
-
   /** Upgrade tier for future track efficiency (each step +5% modeled draw ceiling). */
   upgradeLevel = 0
-
-  /** True when durability allows drive and motor bus load. */
-  get operational(): boolean {
-    return this.durabilityPct > 0
-  }
 
   /**
    * Scales billed motor power from wear and placeholder upgrade track.
    */
   get powerEfficiency(): number {
     if (!this.operational) return 0
-    const wear = this.durabilityPct / 100
+    const wear = this.durabilityFactor
     const upg = 1 + this.upgradeLevel * 0.05
     return Math.min(1.25, wear * upg)
   }
@@ -76,13 +72,6 @@ export class RoverWheelsController extends InstrumentController {
    */
   getDrivePowerW(): number {
     return this.baseDriveW * this.powerEfficiency
-  }
-
-  /**
-   * Restore mobility hardware to full health (resource costs can be added later).
-   */
-  repair(): void {
-    this.durabilityPct = 100
   }
 
   /**

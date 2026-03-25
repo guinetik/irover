@@ -26,6 +26,10 @@ export class DrillController extends InstrumentController {
   readonly viewAngle = Math.PI * 0.4
   readonly viewPitch = 0.3
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.25
+  override readonly repairComponentId = 'engineering-components'
+  override readonly usageDecayChance = 0.25
+  override readonly usageDecayAmount = 1.5
   /** Arm electronics / turret — sustained drilling is billed separately on the power tick. */
   override readonly selectionIdlePowerW = 6
 
@@ -219,6 +223,7 @@ export class DrillController extends InstrumentController {
     if (res.ok) {
       this.targeting?.depleteRock(rock)
       this.lastCollected = res.payload
+      this.rollUsageDecay()
 
       // ChemCam trace element drops — pick from detected peaks
       this.lastTraceDrops = null

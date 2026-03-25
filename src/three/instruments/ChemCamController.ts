@@ -85,6 +85,10 @@ export class ChemCamController extends InstrumentController {
   readonly viewAngle = 0.2
   readonly viewPitch = 0.4
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'science-components'
+  override readonly usageDecayChance = 0.25
+  override readonly usageDecayAmount = 1.2
 
   // --- Phase machine ---
   phase: ChemCamPhase = 'ARMED'
@@ -382,6 +386,7 @@ export class ChemCamController extends InstrumentController {
 
     this.readouts.push(readout)
     this.onReady?.(readout)
+    this.rollUsageDecay()
   }
 
   markRead(readoutId: string): void {

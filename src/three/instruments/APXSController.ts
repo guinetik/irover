@@ -29,6 +29,10 @@ export class APXSController extends InstrumentController {
   readonly viewAngle = Math.PI * 0.4
   readonly viewPitch = 0.3
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'science-components'
+  override readonly usageDecayChance = 0.20
+  override readonly usageDecayAmount = 1.0
   /** Turret / detector idle while the card is open (orbit). */
   override readonly selectionIdlePowerW = 5
   /** Contact-science style load stub while active (no sample logic yet). */

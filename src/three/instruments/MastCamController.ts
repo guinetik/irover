@@ -25,6 +25,10 @@ export class MastCamController extends InstrumentController {
   readonly viewAngle = 0.2
   readonly viewPitch = 0.05
   override readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'engineering-components'
+  override readonly usageDecayChance = 0.15
+  override readonly usageDecayAmount = 0.8
 
   /** Dynamic survey range (meters) — updated each frame from instrumentAccuracy */
   surveyRange = 5
@@ -192,6 +196,7 @@ export class MastCamController extends InstrumentController {
         this.addTagMarker(this.scanTarget)
         const rockType = (this.scanTarget.userData.rockType as RockTypeId) ?? 'basalt'
         this.onScanComplete?.(this.scanTarget, rockType)
+        this.rollUsageDecay()
         this.scanProgress = 0
         this.scanning = false
         this.rebuildOverlays()

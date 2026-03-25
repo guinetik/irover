@@ -36,6 +36,10 @@ export class DANController extends InstrumentController {
   readonly name = 'DAN'
   readonly slot = 5
   readonly canActivate = true
+  override readonly passiveDecayPerSol = 0.40
+  override readonly repairComponentId = 'science-components'
+  override readonly usageDecayChance = 0.15
+  override readonly usageDecayAmount = 0.8
   readonly billsPassiveBackgroundPower = true
   readonly passiveSubsystemOnly = true
   /** Higher bus draw than REMS/RAD — start STANDBY until the player ACTIVATEs. */
