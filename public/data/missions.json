@@ -27,7 +27,7 @@
       "chain": "m03-mastcam",
       "objectives": [
         { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },
-        { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "calibration-rod", "quantity": 1 }, "sequential": true }
+        { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true }
       ]
     },
     {

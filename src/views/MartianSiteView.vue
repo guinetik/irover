@@ -1063,6 +1063,25 @@ function handleAcceptMission(missionId: string | undefined) {
         addWaypointMarker(obj.params.poiId, px, pz, groundY, scene.scene)
       }
     })
+
+    // Spawn orbital drops at go-to POIs for any gather objectives in this mission
+    // (e.g. "go to supply cache" + "collect engineering components")
+    const gatherObjs = def.objectives.filter((o) => o.type === 'gather')
+    if (gatherObjs.length > 0 && goToObjs.length > 0) {
+      // Spawn items at the first go-to POI location
+      const firstPoi = goToObjs[0]
+      const angle0 = (0 / goToObjs.length) * Math.PI * 2 - Math.PI / 2
+      const dist0 = 8
+      const dropX = Math.max(-390, Math.min(390, rx + Math.cos(angle0) * dist0))
+      const dropZ = Math.max(-390, Math.min(390, rz + Math.sin(angle0) * dist0))
+      for (const gather of gatherObjs) {
+        try {
+          siteHandle.value?.spawnOrbitalDropItem(gather.params.itemId, {
+            x: dropX, z: dropZ, quantity: gather.params.quantity ?? 1,
+          })
+        } catch { /* scene not ready */ }
+      }
+    }
   }
 
   openedMessage.value = null
