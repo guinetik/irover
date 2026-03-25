@@ -8,7 +8,7 @@
       "description": "Navigate to three survey markers to establish your position on the Martian surface.",
       "briefing": "Rover, we're receiving your signal but need to confirm coordinates. We've placed three transponder markers in a triangle around your landing zone. Drive to each one so we can triangulate your exact position.",
       "reward": { "sp": 25 },
-      "unlocks": [],
+      "unlocks": ["rtg"],
       "chain": "m02-rtg",
       "objectives": [
         { "id": "tri-1", "type": "go-to", "label": "Reach marker Alpha", "params": { "poiId": "tri-alpha" }, "sequential": false },
@@ -23,7 +23,7 @@
       "description": "Learn to manage your radioisotope thermoelectric generator — your primary power source on Mars.",
       "briefing": "Good news — triangulation confirms your position. Now let's get your power systems online. Your RTG is your lifeline out here. Head to the supply cache we dropped nearby and retrieve the calibration rods. Then open the RTG panel and test the emergency overdrive — it's a short burst that tops off your battery. After that, head to the rock outcrop we've marked for your next assignment.",
       "reward": { "sp": 30 },
-      "unlocks": ["rtg"],
+      "unlocks": [],
       "chain": "m03-mastcam",
       "objectives": [
         { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },

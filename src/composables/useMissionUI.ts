@@ -40,6 +40,17 @@ export function useMissionUI(deps: {
   // --- UI state ---
   const missionLogOpen = ref(false)
   const openedMessage = ref<LGAMessage | null>(null)
+  const newlyUnlockedInstruments = ref<string[]>([])
+  let previousUnlocked: string[] = []
+
+  // Track newly unlocked instruments — highlight them until player clicks one
+  watch(unlockedInstruments, (curr) => {
+    const fresh = curr.filter((id) => !previousUnlocked.includes(id))
+    if (fresh.length > 0) {
+      newlyUnlockedInstruments.value = [...newlyUnlockedInstruments.value, ...fresh]
+    }
+    previousUnlocked = [...curr]
+  }, { immediate: true })
 
   // --- Computed ---
   const trackedMission = computed<MissionState | null>(() =>
@@ -180,6 +191,10 @@ export function useMissionUI(deps: {
     trackedMissionId.value = id
   }
 
+  function dismissNewlyUnlocked(instrumentId: string) {
+    newlyUnlockedInstruments.value = newlyUnlockedInstruments.value.filter((id) => id !== instrumentId)
+  }
+
   function handleUntrack() {
     trackedMissionId.value = null
   }
@@ -271,5 +286,7 @@ export function useMissionUI(deps: {
     handleCloseMissionLog,
     handleTrackMission,
     handleUntrack,
+    newlyUnlockedInstruments,
+    dismissNewlyUnlocked,
   }
 }

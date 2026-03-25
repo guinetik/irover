@@ -4,7 +4,7 @@
       v-for="inst in visibleInstruments"
       :key="inst.slot"
       class="instrument-slot"
-      :class="{ active: activeSlot === inst.slot }"
+      :class="{ active: activeSlot === inst.slot, 'newly-unlocked': newlyUnlocked?.includes(inst.id) }"
       @click="handleClick(inst.slot)"
     >
       <span class="slot-key font-instrument">{{ inst.slot }}</span>
@@ -42,6 +42,7 @@ const props = defineProps<{
   apxsUnread?: number
   unlockedInstruments: string[]
   sandbox: boolean
+  newlyUnlocked?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -132,6 +133,17 @@ function handleClick(slot: number) {
   background: rgba(196, 117, 58, 0.15);
   border-color: rgba(196, 117, 58, 0.6);
   box-shadow: 0 0 8px rgba(196, 117, 58, 0.2);
+}
+
+.instrument-slot.newly-unlocked {
+  border-color: rgba(102, 255, 238, 0.6);
+  box-shadow: 0 0 10px rgba(102, 255, 238, 0.3);
+  animation: tool-unlock-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes tool-unlock-pulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(102, 255, 238, 0.2); }
+  50% { box-shadow: 0 0 14px rgba(102, 255, 238, 0.5); }
 }
 
 .slot-key {

@@ -94,7 +94,8 @@
         :dan-scanning="!!(siteRover?.instruments.find(i => i.id === 'dan') as DANController | undefined)?.passiveSubsystemEnabled"
         :unlocked-instruments="unlockedInstruments"
         :sandbox="playerProfile.sandbox"
-        @select="(slot: number) => { if (!isSleeping) siteRover?.activateInstrument(slot) }"
+        :newly-unlocked="newlyUnlockedInstruments"
+        @select="(slot: number) => { if (!isSleeping) { siteRover?.activateInstrument(slot); const inst = siteRover?.instruments.find(i => i.slot === slot); if (inst) dismissNewlyUnlocked(inst.id) } }"
         @deselect="siteRover?.activateInstrument(null)"
         @toggle-inventory="inventoryOpen = !inventoryOpen"
       />
@@ -961,6 +962,7 @@ const {
   getMissionDef, getObjLabel, isObjectiveEligible,
   handleAcceptMission, handleMissionTransmit, handleOpenMessage, handleCloseMessage,
   handleOpenMissionLog, handleCloseMissionLog, handleTrackMission, handleUntrack,
+  newlyUnlockedInstruments, dismissNewlyUnlocked,
 } = mission
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
