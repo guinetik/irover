@@ -46,15 +46,7 @@ import {
 } from '@/three/instruments'
 
 import type { SiteFrameContext } from './site-controllers/SiteFrameContext'
-import { createRoverVfxTickHandler } from './site-controllers/RoverVfxTickHandler'
-import { createDanTickHandler } from './site-controllers/DanTickHandler'
-import { createDrillTickHandler } from './site-controllers/DrillTickHandler'
-import { createMastCamTickHandler } from './site-controllers/MastCamTickHandler'
-import { createChemCamTickHandler } from './site-controllers/ChemCamTickHandler'
-import { createOrbitalDropTickHandler } from './site-controllers/OrbitalDropTickHandler'
-import { createAntennaTickHandler, type AntennaTickRefs } from './site-controllers/AntennaTickHandler'
-import { createAPXSTickHandler } from './site-controllers/APXSTickHandler'
-import { useSciencePoints } from '@/composables/useSciencePoints'
+import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTickHandlers'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import { secondsPerSol } from '@/lib/missionTime'
 
@@ -359,18 +351,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     tickThermal,
     tickRemsWeather,
     sampleToastRef,
-    upsertPoi,
-    removePoi,
-    setFocusPoi,
-    focusPoiId,
-    awardDAN,
-    awardSP,
-    archiveDanProspect,
     samTick,
     apxsTick,
     totalSP,
-    triggerDanAchievement,
-    awardTransmission,
     onInstrumentActivateRequest,
     onGlobalKeyDown,
     clearPois,
@@ -400,20 +383,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     activeInstrumentSlot,
     internalTempC,
     ambientEffectiveC,
-    heaterW,
     heaterEffectiveW,
     thermalZone,
     samIsProcessing,
-    // Antenna system refs
-    uhfPassActive,
-    uhfTransmitting,
-    uhfCurrentOrbiter,
-    uhfTransmissionProgress,
-    uhfQueueLength,
-    uhfWindowRemainingSec,
-    uhfNextPassInSec,
-    uhfTransmittedThisPass,
-    lgaUnreadCount,
     remsHud,
     remsSurveying,
   } = ctx.refs
@@ -436,143 +408,17 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let lastSkyTimeOfDay = -1
   let roverSpawnCaptured = false
 
-  // --- Tick handlers ---
-  const roverVfxHandler = createRoverVfxTickHandler({
-    rtgPhase: ctx.refs.rtgPhase,
-    rtgPhaseProgress: ctx.refs.rtgPhaseProgress,
-    rtgConservationMode: ctx.refs.rtgConservationMode,
-    rtgConservationProgress01: ctx.refs.rtgConservationProgress01,
-    rtgOverdriveReady: ctx.refs.rtgOverdriveReady,
-    rtgConservationReady: ctx.refs.rtgConservationReady,
-    rtgConservationCdLabel: ctx.refs.rtgConservationCdLabel,
-    rtgConservationCooldownTitle: ctx.refs.rtgConservationCooldownTitle,
-    heaterOverdriveReady: ctx.refs.heaterOverdriveReady,
-    heaterHeatBoostActive: ctx.refs.heaterHeatBoostActive,
-    heaterHeatBoostProgressElapsed01: ctx.refs.heaterHeatBoostProgressElapsed01,
-  })
-
-  const danHandler = createDanTickHandler(
-    {
-      siteTerrainParams,
-      danTotalSamples: ctx.refs.danTotalSamples,
-      danHitAvailable: ctx.refs.danHitAvailable,
-      danProspectPhase: ctx.refs.danProspectPhase,
-      danProspectProgress: ctx.refs.danProspectProgress,
-      danSignalStrength: ctx.refs.danSignalStrength,
-      danWaterResult: ctx.refs.danWaterResult,
-      danDialogVisible: ctx.refs.danDialogVisible,
-      passiveUiRevision,
-      siteLat,
-      siteLon,
-      roverWorldX,
-      roverWorldZ,
-      roverSpawnXZ,
-    },
-    { siteId, sampleToastRef, playerMod, awardDAN, triggerDanAchievement, archiveDanProspect },
-  )
-
-  const drillHandler = createDrillTickHandler(
-    {
-      crosshairVisible: ctx.refs.crosshairVisible,
-      crosshairColor: ctx.refs.crosshairColor,
-      crosshairX: ctx.refs.crosshairX,
-      crosshairY: ctx.refs.crosshairY,
-      drillProgress: ctx.refs.drillProgress,
-      isDrilling: ctx.refs.isDrilling,
-    },
-    { sampleToastRef, playerMod, awardSP },
-  )
-
-  const mastCamHandler = createMastCamTickHandler(
-    {
-      mastcamFilterLabel: ctx.refs.mastcamFilterLabel,
-      mastcamScanning: ctx.refs.mastcamScanning,
-      mastcamScanProgress: ctx.refs.mastcamScanProgress,
-      mastPan: ctx.refs.mastPan,
-      mastTilt: ctx.refs.mastTilt,
-      mastFov: ctx.refs.mastFov,
-      mastTargetRange: ctx.refs.mastTargetRange,
-      crosshairVisible: ctx.refs.crosshairVisible,
-      crosshairColor: ctx.refs.crosshairColor,
-      crosshairX: ctx.refs.crosshairX,
-      crosshairY: ctx.refs.crosshairY,
-      isDrilling: ctx.refs.isDrilling,
-      drillProgress: ctx.refs.drillProgress,
-    },
-    { sampleToastRef, awardSP, playerMod },
-  )
-
-  const chemCamHandler = createChemCamTickHandler(
-    {
-      chemCamUnreadCount: ctx.refs.chemCamUnreadCount,
-      chemcamPhase: ctx.refs.chemcamPhase,
-      chemcamShotsRemaining: ctx.refs.chemcamShotsRemaining,
-      chemcamShotsMax: ctx.refs.chemcamShotsMax,
-      chemcamProgressPct: ctx.refs.chemcamProgressPct,
-      chemCamOverlaySequenceActive: ctx.refs.chemCamOverlaySequenceActive,
-      chemCamOverlaySequenceProgress: ctx.refs.chemCamOverlaySequenceProgress,
-      chemCamOverlaySequenceLabel: ctx.refs.chemCamOverlaySequenceLabel,
-      chemCamOverlaySequencePulse: ctx.refs.chemCamOverlaySequencePulse,
-      mastPan: ctx.refs.mastPan,
-      mastTilt: ctx.refs.mastTilt,
-      mastFov: ctx.refs.mastFov,
-      mastTargetRange: ctx.refs.mastTargetRange,
-      crosshairVisible: ctx.refs.crosshairVisible,
-      crosshairColor: ctx.refs.crosshairColor,
-      crosshairX: ctx.refs.crosshairX,
-      crosshairY: ctx.refs.crosshairY,
-      isDrilling: ctx.refs.isDrilling,
-      drillProgress: ctx.refs.drillProgress,
-    },
-    { sampleToastRef, playerMod, awardSP },
-  )
-
-  const apxsHandler = createAPXSTickHandler(
-    {
-      crosshairVisible: ctx.refs.crosshairVisible,
-      crosshairColor: ctx.refs.crosshairColor,
-      crosshairX: ctx.refs.crosshairX,
-      crosshairY: ctx.refs.crosshairY,
-      apxsCountdown: ctx.refs.apxsCountdown,
-      apxsState: ctx.refs.apxsState,
-    },
-    {
-      onLaunchMinigame: ctx.onAPXSLaunchMinigame,
-      onBlockedByCold: ctx.onAPXSBlockedByCold,
-      playerMod,
-    },
-  )
-
-  const orbitalDropHandler = createOrbitalDropTickHandler({
-    orbitalDrops,
-    sampleToastRef,
-    roverWorldX,
-    roverWorldZ,
-    upsertPoi,
-    removePoi,
-    setFocusPoi,
-    focusPoiId,
-  })
-
-  const antennaHandler = createAntennaTickHandler(
-    {
-      uhfPassActive,
-      uhfTransmitting,
-      uhfCurrentOrbiter,
-      uhfTransmissionProgress,
-      uhfQueueLength,
-      uhfWindowRemainingSec,
-      uhfNextPassInSec,
-      uhfTransmittedThisPass,
-      lgaUnreadCount,
-      passiveUiRevision,
-    },
-    {
-      sampleToastRef,
-      awardTransmission,
-      playerMod,
-    },
-  )
+  const tickHandlers = createMarsSiteTickHandlers(ctx)
+  const {
+    roverVfxHandler,
+    danHandler,
+    drillHandler,
+    mastCamHandler,
+    chemCamHandler,
+    apxsHandler,
+    orbitalDropHandler,
+    antennaHandler,
+  } = tickHandlers
 
   // --- Resize ---
 
@@ -1007,15 +853,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     if (animationId) cancelAnimationFrame(animationId)
     window.removeEventListener('keydown', onGlobalKeyDown)
 
-    // Dispose handlers
-    roverVfxHandler.dispose()
-    danHandler.dispose()
-    drillHandler.dispose()
-    apxsHandler.dispose()
-    mastCamHandler.dispose()
-    chemCamHandler.dispose()
-    orbitalDropHandler.dispose()
-    antennaHandler.dispose()
+    tickHandlers.disposeAll()
 
     controller?.dispose()
     if (cameraFillLight && siteScene) {

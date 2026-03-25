@@ -30,34 +30,11 @@
       @open-science-log="scienceLogOpen = true"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
-    <Transition name="deploy-fade">
-      <div v-if="descending" class="deploy-overlay" key="descent">
-        <div class="deploy-content">
-          <div class="deploy-label descent-label">SKY CRANE DESCENT</div>
-          <div class="deploy-altitude">TOUCHDOWN IMMINENT</div>
-        </div>
-      </div>
-    </Transition>
-    <Transition name="deploy-fade">
-      <div v-if="deploying" class="deploy-overlay" key="deploy">
-        <div class="deploy-content">
-          <div class="deploy-label">DEPLOYING ROVER SYSTEMS</div>
-          <div class="deploy-steps">
-            <div class="deploy-step" :class="{ active: deployProgress > 0.0 }">SUSPENSION</div>
-            <div class="deploy-step" :class="{ active: deployProgress > 0.10 }">ARM</div>
-            <div class="deploy-step" :class="{ active: deployProgress > 0.20 }">MAST</div>
-            <div class="deploy-step" :class="{ active: deployProgress > 0.30 }">ANTENNA</div>
-            <div class="deploy-step" :class="{ active: deployProgress > 0.40 }">COVERS</div>
-            <div class="deploy-step" :class="{ active: deployProgress > 0.48 }">WHEELS</div>
-            <div class="deploy-step" :class="{ active: deployProgress > 0.72 }">STEERING TEST</div>
-          </div>
-          <div class="deploy-bar-track">
-            <div class="deploy-bar-fill" :style="{ width: (deployProgress * 100) + '%' }" />
-          </div>
-          <div class="deploy-pct font-instrument">{{ Math.round(deployProgress * 100) }}%</div>
-        </div>
-      </div>
-    </Transition>
+    <RoverDeployOverlays
+      :descending="descending"
+      :deploying="deploying"
+      :deploy-progress="deployProgress"
+    />
     <Transition name="deploy-fade">
       <div v-if="apxsState === 'counting'" class="apxs-countdown-overlay" key="apxs-countdown">
         <div class="apxs-countdown-card">
@@ -66,74 +43,34 @@
         </div>
       </div>
     </Transition>
+    <RtgStatusBanners
+      :rtg-phase="rtgPhase"
+      :rtg-phase-progress="rtgPhaseProgress"
+      :rtg-conservation-mode="rtgConservationMode"
+      :rtg-conservation-progress01="rtgConservationProgress01"
+      :rtg-conservation-cd-label="rtgConservationCdLabel"
+      :heater-heat-boost-active="heaterHeatBoostActive"
+      :heater-heat-boost-progress-elapsed01="heaterHeatBoostProgressElapsed01"
+    />
     <Transition name="deploy-fade">
-      <div v-if="rtgPhase === 'overdrive'" class="rtg-banner overdrive" key="rtg-overdrive">
-        <span class="rtg-banner-icon">&#x26A1;</span>
-        <span class="rtg-banner-text">OVERDRIVE ACTIVE</span>
-        <div class="rtg-banner-bar"><div class="rtg-banner-fill" :style="{ width: (1 - rtgPhaseProgress) * 100 + '%' }" /></div>
-      </div>
-      <div v-else-if="rtgPhase === 'cooldown'" class="rtg-banner cooldown" key="rtg-cooldown">
-        <span class="rtg-banner-icon">&#x23F3;</span>
-        <span class="rtg-banner-text">RTG COOLDOWN &mdash; INSTRUMENTS LOCKED</span>
-        <div class="rtg-banner-bar"><div class="rtg-banner-fill cooldown" :style="{ width: (1 - rtgPhaseProgress) * 100 + '%' }" /></div>
-      </div>
-      <div v-else-if="rtgConservationMode === 'active'" class="rtg-banner conservation" key="rtg-shunt">
-        <span class="rtg-banner-icon">&#x26AB;</span>
-        <span class="rtg-banner-text">POWER SHUNT &mdash; DRIVE OFFLINE &middot; &minus;50% LOAD</span>
-        <div class="rtg-banner-bar"><div class="rtg-banner-fill conservation" :style="{ width: (1 - rtgConservationProgress01) * 100 + '%' }" /></div>
-      </div>
-      <div v-else-if="rtgConservationMode === 'cooldown'" class="rtg-banner shunt-cooldown" key="rtg-shunt-cd">
-        <span class="rtg-banner-icon">&#x23F3;</span>
-        <span class="rtg-banner-text">SHUNT RECHARGE &mdash; {{ rtgConservationCdLabel }}</span>
-        <div class="rtg-banner-bar"><div class="rtg-banner-fill shunt-cd" :style="{ width: (1 - rtgConservationProgress01) * 100 + '%' }" /></div>
-      </div>
-      <div v-else-if="heaterHeatBoostActive" class="rtg-banner overdrive heater-od-banner" key="heater-overdrive-heat">
-        <span class="rtg-banner-icon">&#x2668;</span>
-        <span class="rtg-banner-text">HEATER OVERDRIVE &mdash; DOUBLE THERMAL OUTPUT</span>
-        <div class="rtg-banner-bar"><div class="rtg-banner-fill" :style="{ width: (1 - heaterHeatBoostProgressElapsed01) * 100 + '%' }" /></div>
-      </div>
+      <ChemCamActiveHud
+        v-if="isInstrumentActive && activeInstrumentSlot === 2"
+        :shots-remaining="chemcamShotsRemaining"
+        :shots-max="chemcamShotsMax"
+        :phase="chemcamPhase"
+        :phase-label="chemcamPhaseLabel"
+        :progress-pct="chemcamProgressPct"
+        :unread-count="chemCamUnreadCount"
+        @see-results="showChemCamResults = true"
+      />
     </Transition>
     <Transition name="deploy-fade">
-      <div v-if="isInstrumentActive && activeInstrumentSlot === 2" class="chemcam-hud">
-        <div class="cc-strip">
-          <span class="cc-label">CHEMCAM</span>
-          <span class="cc-divider">|</span>
-          <span class="cc-shots"><span class="font-instrument">{{ chemcamShotsRemaining }}/{{ chemcamShotsMax }}</span> SHOTS</span>
-          <span class="cc-divider">|</span>
-          <span class="cc-phase" :class="chemcamPhase.toLowerCase()">{{ chemcamPhaseLabel }}</span>
-          <span class="cc-divider">|</span>
-          <span class="cc-hint">A/D pan · W/S tilt · Scroll zoom · hold E fire</span>
-        </div>
-        <div v-if="chemcamPhase === 'PULSE_TRAIN' || chemcamPhase === 'INTEGRATING'" class="cc-progress-bar">
-          <div class="cc-progress-fill" :class="chemcamPhase.toLowerCase().replace('_','-')" :style="{ width: chemcamProgressPct + '%' }" />
-          <span class="cc-progress-label">{{ chemcamPhase === 'PULSE_TRAIN' ? 'FIRING...' : 'INTEGRATING...' }}</span>
-        </div>
-        <Transition name="deploy-fade">
-          <div v-if="chemCamUnreadCount > 0" class="cc-results-row">
-            <span class="cc-results-hint">SPECTRUM READY</span>
-            <button
-              type="button"
-              class="cc-btn-see-results"
-              @click="showChemCamResults = true"
-            >SEE RESULTS <span class="cc-results-badge font-instrument">{{ chemCamUnreadCount }}</span></button>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
-    <Transition name="deploy-fade">
-      <div v-if="isInstrumentActive && activeInstrumentSlot === 1" class="mastcam-hud">
-        <div class="mc-strip">
-          <span class="mc-label">MASTCAM</span>
-          <span class="mc-divider">|</span>
-          <span class="mc-filter">SURVEY: {{ mastcamFilterLabel }}</span>
-          <span class="mc-divider">|</span>
-          <span class="mc-hint">A/D pan &middot; W/S tilt &middot; Scroll zoom &middot; Q filter &middot; Hold E scan</span>
-        </div>
-        <div v-if="mastcamScanning" class="mc-scan-bar">
-          <div class="mc-scan-fill" :style="{ width: mastcamScanProgress * 100 + '%' }" />
-          <span class="mc-scan-label">SCANNING...</span>
-        </div>
-      </div>
+      <MastCamActiveHud
+        v-if="isInstrumentActive && activeInstrumentSlot === 1"
+        :filter-label="mastcamFilterLabel"
+        :scanning="mastcamScanning"
+        :scan-progress="mastcamScanProgress"
+      />
     </Transition>
     <Transition name="deploy-fade">
       <div
@@ -475,7 +412,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, onMounted, onUnmounted, shallowRef } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
 import { MARS_TIME_OF_DAY_06_00, SOL_DURATION, MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
 import {
@@ -490,9 +427,13 @@ import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 import {
   createMarsSiteViewController,
   formatRtgShuntCooldownLabel,
-  type MarsSiteViewContext,
   type MarsSiteViewControllerHandle,
 } from '@/views/MarsSiteViewController'
+import { buildMarsSiteViewContext } from '@/views/martianSiteViewContext'
+import ChemCamActiveHud from '@/components/ChemCamActiveHud.vue'
+import MastCamActiveHud from '@/components/MastCamActiveHud.vue'
+import RtgStatusBanners from '@/components/RtgStatusBanners.vue'
+import RoverDeployOverlays from '@/components/RoverDeployOverlays.vue'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
@@ -523,8 +464,7 @@ import { useSiteRemsWeather } from '@/composables/useSiteRemsWeather'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useSciencePoints } from '@/composables/useSciencePoints'
 import { useRewardTrack } from '@/composables/useRewardTrack'
-import type { RewardTrackMilestone } from '@/lib/rewardTrack'
-import { milestonesUnlockedBetween } from '@/lib/rewardTrack'
+import { useMartianSiteAchievements } from '@/composables/useMartianSiteAchievements'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
 import { getInventoryItemDef, INVENTORY_CATALOG } from '@/types/inventory'
@@ -551,7 +491,7 @@ import APXSMinigame from '@/components/APXSMinigame.vue'
 import APXSResultDialog from '@/components/APXSResultDialog.vue'
 import { useAPXSArchive } from '@/composables/useAPXSArchive'
 import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
-import { generateComposition, computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
+import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 
@@ -930,6 +870,33 @@ const heaterHudButtonTitle = computed(() =>
 const { mod: playerMod, applyRewardTrack, profile: playerProfile, ARCHETYPES, FOUNDATIONS, PATRONS } = usePlayerProfile()
 const { totalSP, sessionSP, chemcamSP, lastGain, award: awardSP, awardAck, awardDAN, awardSAM, awardAPXS, awardSurvival, awardTransmission } = useSciencePoints()
 const { milestones: rewardTrackMilestones, loaded: rewardTrackLoaded, trackModifiers, unlockedPerks, unlockedTrackIds, prevSP: rewardTrackPrevSP, hasPerk, loadRewardTrack } = useRewardTrack()
+
+const {
+  libsAchievements,
+  danAchievements,
+  survivalAchievements,
+  unlockedAchievementIds,
+  totalAchievementCount,
+  unlockedAchievementCount,
+  triggerDanAchievement,
+  triggerSamAchievement,
+  triggerAPXSAchievement,
+} = useMartianSiteAchievements({
+  achievementRef,
+  sampleToastRef,
+  chemcamSP,
+  totalSP,
+  marsSol,
+  rewardTrackMilestones,
+  rewardTrackLoaded,
+  unlockedTrackIds,
+  rewardTrackPrevSP,
+  loadRewardTrack,
+  trackModifiers,
+  applyRewardTrack,
+  awardSurvival,
+})
+
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
@@ -977,88 +944,16 @@ const { landmarks, loadLandmarks } = useMarsData()
 
 const siteTerrainParams = ref<TerrainParams | null>(null)
 
-// --- Achievements ---
-interface Achievement { id: string; icon: string; title: string; description: string; type: string }
-interface LibsAchievement extends Achievement { sp: number }
-interface DanAchievement extends Achievement { event: string }
-interface SurvivalAchievement extends Achievement { minSol: number; spReward: number }
-const libsAchievements = ref<LibsAchievement[]>([])
-const danAchievements = ref<DanAchievement[]>([])
-const survivalAchievements = ref<SurvivalAchievement[]>([])
-const samAchievementsData = ref<{ id: string; event: string; icon: string; title: string; description: string; type: string }[]>([])
-const apxsAchievementsData = ref<{ id: string; event: string; icon: string; title: string; description: string; type: string }[]>([])
-
-// APXS achievement counters
+/** Cumulative APXS stats for event-based achievements (composable holds per-event triggers). */
 const apxsAnalysisCount = ref(0)
 const apxsAnomalyCount = ref(0)
 const apxsSGradeCount = ref(0)
-/** Unlocked achievement ids this session (reactive so the HUD counter updates). */
-const unlockedAchievementIds = ref<string[]>([])
-
-const totalAchievementCount = computed(
-  () =>
-    libsAchievements.value.length +
-    danAchievements.value.length +
-    survivalAchievements.value.length +
-    samAchievementsData.value.length +
-    apxsAchievementsData.value.length +
-    rewardTrackMilestones.value.length,
-)
-const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
 
 let apxsCompositionData: Record<string, Record<string, number>> = {}
 fetch('/data/apxs-compositions.json')
   .then(r => r.json())
   .then((data: Record<string, Record<string, number>>) => { apxsCompositionData = data })
   .catch(() => {})
-
-fetch('/data/achievements.json')
-  .then(r => r.json())
-  .then(
-    (data: {
-      'libs-calibration'?: LibsAchievement[]
-      'dan-prospecting'?: DanAchievement[]
-      'mars-survival'?: SurvivalAchievement[]
-      'sam-analysis'?: { id: string; event: string; icon: string; title: string; description: string; type: string }[]
-      'apxs-analysis'?: { id: string; event: string; icon: string; title: string; description: string; type: string }[]
-      'reward-track'?: RewardTrackMilestone[]
-    }) => {
-      libsAchievements.value = data['libs-calibration'] ?? []
-      danAchievements.value = data['dan-prospecting'] ?? []
-      survivalAchievements.value = data['mars-survival'] ?? []
-      samAchievementsData.value = data['sam-analysis'] ?? []
-      apxsAchievementsData.value = data['apxs-analysis'] ?? []
-      if (data['reward-track']) loadRewardTrack(data['reward-track'])
-    },
-  )
-  .catch(() => {})
-
-function triggerDanAchievement(event: string): void {
-  for (const ach of danAchievements.value) {
-    if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
-      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
-      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
-    }
-  }
-}
-
-function triggerSamAchievement(event: string): void {
-  for (const ach of samAchievementsData.value) {
-    if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
-      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
-      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
-    }
-  }
-}
-
-function triggerAPXSAchievement(event: string): void {
-  for (const ach of apxsAchievementsData.value) {
-    if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
-      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
-      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
-    }
-  }
-}
 
 function handleSamEnqueue(entry: Omit<SamQueueEntry, 'id'>): void {
   const { consumeItem } = useInventory()
@@ -1230,53 +1125,6 @@ function handleAPXSAcknowledge(): void {
 
 // APXS results shown via SEE RESULTS button on instrument card, not auto-opened
 
-watchEffect(() => {
-  const sp = chemcamSP.value
-  for (const ach of libsAchievements.value) {
-    if (sp >= ach.sp && !unlockedAchievementIds.value.includes(ach.id)) {
-      unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
-      achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
-    }
-  }
-})
-
-// --- Reward track banner watcher ---
-watchEffect(() => {
-  if (!rewardTrackLoaded.value || rewardTrackMilestones.value.length === 0) return
-  const sp = totalSP.value
-  const prev = rewardTrackPrevSP.value
-  if (sp <= prev) return
-
-  const crossed = milestonesUnlockedBetween(prev, sp, rewardTrackMilestones.value)
-  for (const m of crossed) {
-    if (!unlockedTrackIds.value.includes(m.id)) {
-      unlockedTrackIds.value = [...unlockedTrackIds.value, m.id]
-      unlockedAchievementIds.value = [...unlockedAchievementIds.value, m.id]
-      achievementRef.value?.show(m.icon, m.title, m.description, m.type)
-    }
-  }
-  rewardTrackPrevSP.value = sp
-})
-
-// --- Reward track modifier sync ---
-watchEffect(() => {
-  applyRewardTrack(trackModifiers.value)
-})
-
-watchEffect(() => {
-  const sol = marsSol.value
-  void survivalAchievements.value
-  const pending = survivalAchievements.value
-    .filter((a) => sol >= a.minSol && !unlockedAchievementIds.value.includes(a.id))
-    .sort((a, b) => a.minSol - b.minSol)
-  for (const ach of pending) {
-    unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
-    const gain = awardSurvival(`Survival: ${ach.title}`, ach.spReward)
-    achievementRef.value?.show(ach.icon, ach.title, `${ach.description} (+${gain.amount} SP)`, ach.type)
-    sampleToastRef.value?.showSP(gain.amount, 'SURVIVAL', gain.bonus)
-  }
-})
-
 const showOverdriveConfirm = ref(false)
 const showHeaterOverdriveConfirm = ref(false)
 const showConservationConfirm = ref(false)
@@ -1386,8 +1234,8 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   }
 }
 
-function buildMarsSiteViewContext(): MarsSiteViewContext {
-  return {
+function createSiteControllerContext() {
+  return buildMarsSiteViewContext({
     siteId,
     canvasRef,
     loadLandmarks,
@@ -1414,20 +1262,14 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
     totalSP,
     triggerDanAchievement,
     awardTransmission,
-    onAPXSLaunchMinigame: (rockMeshUuid, rockType, rockLabel, durationSec) => {
-      const baseWeights = apxsCompositionData[rockType] ?? apxsCompositionData['basalt'] ?? {}
-      const comp = generateComposition(baseWeights)
-      apxsGameRockUuid.value = rockMeshUuid
-      apxsGameRockType.value = rockType
-      apxsGameRockLabel.value = rockLabel
-      apxsGameComposition.value = comp
-      apxsGameDuration.value = durationSec
-      apxsMinigameOpen.value = true
-      apxsState.value = 'playing'
-    },
-    onAPXSBlockedByCold: () => {
-      sampleToastRef.value?.showError('Too cold for APXS — warm up first')
-    },
+    getApxsCompositionWeights: () => apxsCompositionData,
+    apxsGameRockUuid,
+    apxsGameRockType,
+    apxsGameRockLabel,
+    apxsGameComposition,
+    apxsGameDuration,
+    apxsMinigameOpen,
+    apxsState,
     onInstrumentActivateRequest: handleActivate,
     onGlobalKeyDown,
     clearPois,
@@ -1501,7 +1343,6 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       samIsProcessing,
       apxsCountdown,
       apxsState,
-      // Antenna system refs
       uhfPassActive,
       uhfTransmitting,
       uhfCurrentOrbiter,
@@ -1517,11 +1358,11 @@ function buildMarsSiteViewContext(): MarsSiteViewContext {
       remsStormActiveText,
       remsSurveying,
     },
-  }
+  })
 }
 
 onMounted(async () => {
-  const handle = createMarsSiteViewController(buildMarsSiteViewContext())
+  const handle = createMarsSiteViewController(createSiteControllerContext())
   await handle.mount()
   siteHandle.value = handle
 })
