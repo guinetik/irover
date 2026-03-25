@@ -92,6 +92,7 @@ const props = defineProps<{
   rockType: string
   composition: APXSComposition
   durationSec: number
+  accuracyMod?: number
 }>()
 
 const emit = defineEmits<{
@@ -362,9 +363,10 @@ function update(dt: number) {
     if (p.trail.length > 8) p.trail.shift()
 
     // Hit detection (skip if detector is in the dead zone)
+    const effectiveRadius = DETECTOR_RADIUS * (props.accuracyMod ?? 1.0)
     const dx = p.x - mouseX
     const dy = p.y - mouseY
-    if (detectorActive && Math.sqrt(dx * dx + dy * dy) < DETECTOR_RADIUS + p.size) {
+    if (detectorActive && Math.sqrt(dx * dx + dy * dy) < effectiveRadius + p.size) {
       caughtCounts[p.element]++
       totalCaughtLocal++
       totalCaught.value = totalCaughtLocal
@@ -533,10 +535,11 @@ function draw() {
 
   // Detector (hidden in dead zone near rock center)
   if (running && detectorActive) {
+    const drawRadius = DETECTOR_RADIUS * (props.accuracyMod ?? 1.0)
     ctx.strokeStyle = 'rgba(232,165,75,0.6)'
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.arc(mouseX, mouseY, DETECTOR_RADIUS, 0, Math.PI * 2)
+    ctx.arc(mouseX, mouseY, drawRadius, 0, Math.PI * 2)
     ctx.stroke()
 
     // Crosshair
@@ -550,16 +553,16 @@ function draw() {
     ctx.stroke()
 
     // Detector fill
-    const dg = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, DETECTOR_RADIUS)
+    const dg = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, drawRadius)
     dg.addColorStop(0, 'rgba(232,165,75,0.06)')
     dg.addColorStop(1, 'rgba(232,165,75,0)')
     ctx.fillStyle = dg
     ctx.beginPath()
-    ctx.arc(mouseX, mouseY, DETECTOR_RADIUS, 0, Math.PI * 2)
+    ctx.arc(mouseX, mouseY, drawRadius, 0, Math.PI * 2)
     ctx.fill()
 
     // Pulsing outer ring
-    const pr = DETECTOR_RADIUS + Math.sin(gameTime * 4) * 3
+    const pr = drawRadius + Math.sin(gameTime * 4) * 3
     ctx.strokeStyle = `rgba(232,165,75,${0.15 + Math.sin(gameTime * 4) * 0.05})`
     ctx.lineWidth = 1
     ctx.setLineDash([3, 6])

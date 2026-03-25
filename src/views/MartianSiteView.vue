@@ -287,6 +287,7 @@
               :rock-type="apxsGameRockType"
               :composition="apxsGameComposition"
               :duration-sec="apxsGameDuration"
+              :accuracy-mod="playerMod('instrumentAccuracy')"
               @complete="handleAPXSComplete"
             />
           </div>
