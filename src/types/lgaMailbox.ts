@@ -6,4 +6,7 @@ export interface LGAMessage {
   subject: string
   body: string
   read: boolean
+  type?: 'info' | 'mission' | 'alert'
+  from?: string
+  missionId?: string
 }
