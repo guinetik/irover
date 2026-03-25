@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <div class="hero">
-      <h1 class="title">MARS ROVERS</h1>
+      <h1 class="title">I, ROVER</h1>
       <p class="subtitle">Explore the Red Planet</p>
       <button class="cta" @click="$router.push('/globe')">BEGIN MISSION</button>
     </div>

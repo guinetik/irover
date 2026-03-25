@@ -218,26 +218,6 @@ export function createDanTickHandler(
             danInst.waterConfirmed = hasWater
             danWaterResult.value = hasWater
 
-            // Place cone marker at prospect site
-            const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
-            const coneGeo = new THREE.ConeGeometry(0.2, 0.5, 8)
-            const coneMat = new THREE.MeshBasicMaterial({ color: hasWater ? 0x44aaff : 0xaaaaaa })
-            danConeMesh = new THREE.Mesh(coneGeo, coneMat)
-            danConeMesh.position.copy(conePos)
-            danConeMesh.position.y += 0.25
-            siteScene?.scene.add(danConeMesh)
-            danInst.drillSitePosition = conePos.clone()
-            danInst.reservoirQuality = danInst.prospectStrength
-
-            if (hasWater) {
-              sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
-              triggerDanAchievement('water-confirmed')
-              const bonusGain = awardDAN('DAN water confirmed')
-              if (bonusGain) sampleToastRef.value?.showSP(bonusGain.amount, 'WATER CONFIRMED', bonusGain.bonus)
-            } else {
-              sampleToastRef.value?.showDAN('Analysis inconclusive — hydrogen likely mineral-bound')
-            }
-
             archiveDanProspect({
               capturedSol: marsSol,
               siteId,
@@ -253,14 +233,47 @@ export function createDanTickHandler(
               reservoirQuality: danInst.prospectStrength,
             })
 
-            // Keep disc as a completed site marker (hidden by default, shown when DAN selected)
-            if (danDiscMesh) {
-              danDiscMesh.visible = false
-              ;(danDiscMesh.material as THREE.MeshBasicMaterial).color.set(hasWater ? 0x44aaff : 0x666688)
-              ;(danDiscMesh.material as THREE.MeshBasicMaterial).opacity = 0.15
-              danCompletedDiscs.push(danDiscMesh)
-              danDiscMesh = null
+            if (hasWater) {
+              // Place cone marker only for confirmed water
+              const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
+              const coneGeo = new THREE.ConeGeometry(0.2, 0.5, 8)
+              const coneMat = new THREE.MeshBasicMaterial({ color: 0x44aaff })
+              danConeMesh = new THREE.Mesh(coneGeo, coneMat)
+              danConeMesh.position.copy(conePos)
+              danConeMesh.position.y += 0.25
+              siteScene?.scene.add(danConeMesh)
+              danInst.drillSitePosition = conePos.clone()
+              danInst.reservoirQuality = danInst.prospectStrength
+
+              sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
+              triggerDanAchievement('water-confirmed')
+              const bonusGain = awardDAN('DAN water confirmed')
+              if (bonusGain) sampleToastRef.value?.showSP(bonusGain.amount, 'WATER CONFIRMED', bonusGain.bonus)
+
+              // Keep disc as a completed water site marker
+              if (danDiscMesh) {
+                danDiscMesh.visible = false
+                ;(danDiscMesh.material as THREE.MeshBasicMaterial).color.set(0x44aaff)
+                ;(danDiscMesh.material as THREE.MeshBasicMaterial).opacity = 0.15
+                danCompletedDiscs.push(danDiscMesh)
+                danDiscMesh = null
+              }
+            } else {
+              // Inconclusive — clear everything and reset so a new prospect can start
+              sampleToastRef.value?.showDAN('Analysis inconclusive — hydrogen likely mineral-bound. Keep searching.')
+
+              if (danDiscMesh) {
+                siteScene?.scene.remove(danDiscMesh)
+                danDiscMesh.geometry.dispose()
+                ;(danDiscMesh.material as THREE.Material).dispose()
+                danDiscMesh = null
+              }
+              danInst.prospectPhase = 'idle'
+              danInst.prospectComplete = false
+              danProspectPhase.value = 'idle'
+              danProspectProgress.value = 0
             }
+
             danInst.pendingHit = null
             danHitAvailable.value = false
             if (controller) controller.config.moveSpeed = 5
