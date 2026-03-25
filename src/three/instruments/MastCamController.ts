@@ -52,6 +52,7 @@ export class MastCamController extends InstrumentController {
   // Scan state
   private scanning = false
   private scanProgress = 0
+  durationMultiplier = 1.0
   scanTarget: THREE.Mesh | null = null
   /** Persistent tag markers above scanned rocks — survive mode exit */
   private tagMarkers = new Map<THREE.Mesh, THREE.Mesh>()
@@ -183,7 +184,7 @@ export class MastCamController extends InstrumentController {
     // Scan logic
     if (this.scanning && lookTarget && !lookTarget.userData.mastcamScanned) {
       this.scanTarget = lookTarget
-      this.scanProgress += delta / SCAN_DURATION
+      this.scanProgress += delta / (SCAN_DURATION * this.durationMultiplier)
       if (this.scanProgress >= 1) {
         this.scanTarget.userData.mastcamScanned = true
         this.addTagMarker(this.scanTarget)
