@@ -407,6 +407,7 @@ export class RoverController {
     }
     const instrument = this.instruments.find(i => i.slot === slot)
     if (instrument) {
+      if (!instrument.operational) return
       this.setInstrument(instrument)
     }
   }
@@ -432,6 +433,8 @@ export class RoverController {
 
   enterActiveMode(): void {
     if (this.mode !== 'instrument' || !this.activeInstrument?.canActivate) return
+    // Block activation of broken instruments
+    if (!this.activeInstrument.operational) return
     // Block activation for non-RTG instruments during overdrive/cooldown
     const rtg = this.instruments.find(i => i instanceof RTGController) as RTGController | undefined
     if (rtg?.instrumentsLocked && this.activeInstrument !== rtg) return

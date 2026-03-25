@@ -86,7 +86,7 @@ export function createMastCamTickHandler(
     // Enter survey mode when MastCam is active
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
       const mc = controller.activeInstrument
-      mc.durationMultiplier = 1 / playerMod('analysisSpeed')
+      mc.durationMultiplier = 1 / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -96,7 +96,7 @@ export function createMastCamTickHandler(
     // Animate tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
-      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy')
+      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy') * Math.max(0.1, mcInst.durabilityFactor)
       mcInst.updateTagMarkers(simulationTime)
     }
 

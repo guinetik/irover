@@ -88,7 +88,7 @@ export function createChemCamTickHandler(
       if (ccInst.isSequenceAdvancing) {
         const z = thermalZone
         const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
-        ccInst.durationMultiplier = thermalMult / playerMod('analysisSpeed')
+        ccInst.durationMultiplier = thermalMult / (playerMod('analysisSpeed') * Math.max(0.1, ccInst.durabilityFactor))
       }
       const showCardProgress =
         activeInstrumentSlot === 2 && !chemCamIsActiveInstrument
@@ -111,7 +111,7 @@ export function createChemCamTickHandler(
       const cc = controller.activeInstrument
       cc.currentSP = totalSP
       cc.currentSol = marsSol
-      cc.accuracyMod = playerMod('instrumentAccuracy')
+      cc.accuracyMod = playerMod('instrumentAccuracy') * cc.durabilityFactor
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax

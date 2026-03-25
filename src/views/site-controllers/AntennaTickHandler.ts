@@ -160,7 +160,7 @@ export function createAntennaTickHandler(
       // Progress current item
       if (currentTxItem) {
         currentTxElapsed += sceneDelta
-        const effectiveBandwidth = currentTxItem.bandwidthSec / callbacks.playerMod('instrumentAccuracy')
+        const effectiveBandwidth = currentTxItem.bandwidthSec / (callbacks.playerMod('instrumentAccuracy') * Math.max(0.1, uhfCtrl.durabilityFactor))
         uhfCtrl.transmissionProgress = Math.min(1, currentTxElapsed / effectiveBandwidth)
 
         // Item complete

@@ -69,7 +69,7 @@ export function createAPXSTickHandler(
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
-      const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) / playerMod('analysisSpeed')
+      const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) / (playerMod('analysisSpeed') * Math.max(0.1, apxs.durabilityFactor))
 
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {

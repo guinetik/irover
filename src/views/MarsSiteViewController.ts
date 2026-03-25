@@ -739,8 +739,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
         const speedMult = playerMod('movementSpeed')
-        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * speedMult
-        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * speedMult
+        const wheelsCtrl = controller.instruments.find(i => i.id === 'wheels')
+        const wheelsDurability = Math.max(0.1, wheelsCtrl?.durabilityFactor ?? 1.0)
+        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * speedMult * wheelsDurability
+        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * speedMult * wheelsDurability
       }
 
       // --- Core rover update + position sync ---
