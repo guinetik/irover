@@ -82,17 +82,8 @@ export function createAntennaTickHandler(
       callbacks.sampleToastRef.value?.showComm?.(`Heartbeat sent — Sol ${marsSol}`)
     }
 
-    // Incoming message
-    if (mailbox.hasIncomingMessage(marsSol)) {
-      const deliveryTime = mailbox.incomingMessageTimeOfDay(marsSol)
-      if (marsTimeOfDay >= deliveryTime) {
-        const before = mailbox.unreadCount.value
-        mailbox.receiveMessage(marsSol, deliveryTime)
-        if (mailbox.unreadCount.value > before) {
-          callbacks.sampleToastRef.value?.showComm?.('Message from Mission Control')
-        }
-      }
-    }
+    // Incoming messages are now delivered by the mission system via pushMessage().
+    // The old deterministic test messages (receiveMessage / hasIncomingMessage) are removed.
 
     // Update controller state
     lgaCtrl.unreadCount = mailbox.unreadCount.value
