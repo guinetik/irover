@@ -29,7 +29,7 @@
       @open-achievements="achievementsOpen = true"
       @open-sp-ledger="spLedgerOpen = true"
       @open-science-log="scienceLogOpen = true"
-      @open-mission-log="missionLogOpen = true"
+      @open-mission-log="handleOpenMissionLog"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <RoverDeployOverlays
@@ -182,11 +182,8 @@
     />
     <MessageDialog
       :message="openedMessage"
-      :mission-accepted="!!(openedMessage?.missionId && (
-        activeMissions.some(m => m.missionId === openedMessage?.missionId) ||
-        completedMissions.some(m => m.missionId === openedMessage?.missionId)
-      ))"
-      @close="openedMessage = null"
+      :mission-accepted="missionAccepted"
+      @close="handleCloseMessage"
       @accept-mission="handleAcceptMission"
     />
     <MissionLogDialog
@@ -196,19 +193,19 @@
       :tracked-mission-id="trackedMissionId"
       :get-def="getMissionDef"
       :get-obj-label="getObjLabel"
-      @close="missionLogOpen = false"
-      @track="(id: string) => { trackedMissionId = id }"
+      @close="handleCloseMissionLog"
+      @track="handleTrackMission"
     />
     <MissionTracker
       v-if="!deploying && !descending"
       :mission="trackedMission"
       :mission-def="trackedMissionDef"
       :is-eligible="(objId: string) => trackedMissionId ? isObjectiveEligible(trackedMissionId, objId) : false"
-      :lga-active="activeInstrumentSlot === 11"
+      :lga-active="lgaActive"
       :transmit-progress="transmitProgress"
       :dwell-poi-id="activeDwellPoiId"
       :dwell-progress="activeDwellProgress"
-      @untrack="trackedMissionId = null"
+      @untrack="handleUntrack"
       @transmit="handleMissionTransmit"
     />
     <InstrumentCrosshair
@@ -362,7 +359,7 @@
       :messages="lgaMailbox.messages.value"
       :unread-count="lgaUnreadCount"
       @mark-read="lgaMailbox.markRead"
-      @open-message="(msg: LGAMessage) => { openedMessage = msg }"
+      @open-message="handleOpenMessage"
       style="position: fixed; top: 168px; left: 10px; z-index: 40;"
     />
     <!-- UHF Uplink panel (shown when UHF antenna selected) -->
@@ -531,13 +528,11 @@ import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
-import { useMissions } from '@/composables/useMissions'
+import { useMissionUI } from '@/composables/useMissionUI'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
-import { addWaypointMarker, removeWaypointMarker, clearWaypointMarkers } from '@/three/WaypointMarkers'
-import { usePoiArrival, clearPoiArrival } from '@/composables/usePoiArrival'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -944,148 +939,22 @@ const {
 const lgaMailbox = useLGAMailbox()
 const orbitalPasses = useOrbitalPasses()
 
+// --- Mission UI (extracted to composable) ---
+const mission = useMissionUI({
+  siteHandle,
+  roverWorldX,
+  roverWorldZ,
+  marsSol,
+  activeInstrumentSlot,
+})
 const {
-  activeMissions,
-  completedMissions,
-  trackedMissionId,
-  unlockedInstruments,
-  loadCatalog,
-  accept,
-  checkAllObjectives,
-  isObjectiveEligible,
-  getMissionDef,
-  wireArchiveCheckers,
-  startTransmitCompletion,
-  transmitProgress,
-} = useMissions()
-
-const { dwellStates } = usePoiArrival()
-
-// Mission UI state
-const missionLogOpen = ref(false)
-const openedMessage = ref<LGAMessage | null>(null)
-
-// Computed for tracked mission
-const trackedMission = computed(() =>
-  activeMissions.value.find((m) => m.missionId === trackedMissionId.value) ?? null
-)
-const trackedMissionDef = computed(() =>
-  trackedMissionId.value ? getMissionDef(trackedMissionId.value) ?? null : null
-)
-
-// POI dwell progress for the active dwelling POI (shown in tracker)
-const activeDwellPoiId = computed(() => {
-  const dwelling = dwellStates.value.find((s) => s.progress > 0 && !s.arrived)
-  return dwelling?.poiId ?? null
-})
-const activeDwellProgress = computed(() => {
-  const dwelling = dwellStates.value.find((s) => s.progress > 0 && !s.arrived)
-  return dwelling?.progress ?? 0
-})
-
-function handleMissionTransmit() {
-  if (!trackedMissionId.value) return
-  startTransmitCompletion(trackedMissionId.value, marsSol.value)
-}
-
-// Clean up POIs + 3D markers as individual objectives complete
-watch(
-  () => activeMissions.value.map((m) => m.objectives.map((o) => o.done)),
-  () => {
-    const scene = siteHandle.value?.siteScene
-    for (const state of activeMissions.value) {
-      const def = getMissionDef(state.missionId)
-      if (!def) continue
-      for (let i = 0; i < state.objectives.length; i++) {
-        if (!state.objectives[i].done) continue
-        const objDef = def.objectives[i]
-        if (objDef?.type === 'go-to' && objDef.params.poiId) {
-          removePoi(objDef.params.poiId)
-          clearPoiArrival(objDef.params.poiId)
-          if (scene) removeWaypointMarker(objDef.params.poiId, scene.scene)
-        }
-      }
-    }
-  },
-  { deep: true },
-)
-
-// Clean up any remaining markers when missions complete
-watch(completedMissions, (completed) => {
-  const scene = siteHandle.value?.siteScene
-  for (const state of completed) {
-    const def = getMissionDef(state.missionId)
-    if (!def) continue
-    for (const obj of def.objectives) {
-      if (obj.type === 'go-to' && obj.params.poiId) {
-        removePoi(obj.params.poiId)
-        if (scene) removeWaypointMarker(obj.params.poiId, scene.scene)
-      }
-    }
-  }
-})
-
-// Helper for MissionLogDialog
-function getObjLabel(missionId: string, objectiveId: string): string {
-  const def = getMissionDef(missionId)
-  return def?.objectives.find((o) => o.id === objectiveId)?.label ?? ''
-}
-
-// Mission acceptance handler
-function handleAcceptMission(missionId: string | undefined) {
-  if (!missionId) return
-  const sol = marsSol.value
-  accept(missionId, sol)
-
-  // Register POIs for go-to objectives so they show on the compass
-  const def = getMissionDef(missionId)
-  if (def) {
-    const rx = roverWorldX.value
-    const rz = roverWorldZ.value
-    const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
-    goToObjs.forEach((obj, i) => {
-      // Place markers in a ring around the rover, 60-120 units out
-      const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-      const dist = 8 + i * 5
-      const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
-      const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
-      upsertPoi({
-        id: obj.params.poiId,
-        label: obj.label,
-        x: px,
-        z: pz,
-        color: '#66ffee',
-      })
-      // Place 3D marker in the scene
-      const scene = siteHandle.value?.siteScene
-      if (scene) {
-        const groundY = scene.terrain.heightAt(px, pz)
-        addWaypointMarker(obj.params.poiId, px, pz, groundY, scene.scene)
-      }
-    })
-
-    // Spawn orbital drops at go-to POIs for any gather objectives in this mission
-    // (e.g. "go to supply cache" + "collect engineering components")
-    const gatherObjs = def.objectives.filter((o) => o.type === 'gather')
-    if (gatherObjs.length > 0 && goToObjs.length > 0) {
-      // Spawn items at the first go-to POI location
-      const firstPoi = goToObjs[0]
-      const angle0 = (0 / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-      const dist0 = 8
-      const dropX = Math.max(-390, Math.min(390, rx + Math.cos(angle0) * dist0))
-      const dropZ = Math.max(-390, Math.min(390, rz + Math.sin(angle0) * dist0))
-      for (const gather of gatherObjs) {
-        try {
-          siteHandle.value?.spawnOrbitalDropItem(gather.params.itemId, {
-            x: dropX, z: dropZ, quantity: gather.params.quantity ?? 1,
-          })
-        } catch { /* scene not ready */ }
-      }
-    }
-  }
-
-  openedMessage.value = null
-}
+  missionLogOpen, openedMessage,
+  activeMissions, completedMissions, trackedMissionId, unlockedInstruments, transmitProgress,
+  trackedMission, trackedMissionDef, activeDwellPoiId, activeDwellProgress, lgaActive, missionAccepted,
+  getMissionDef, getObjLabel, isObjectiveEligible,
+  handleAcceptMission, handleMissionTransmit, handleOpenMessage, handleCloseMessage,
+  handleOpenMissionLog, handleCloseMissionLog, handleTrackMission, handleUntrack,
+} = mission
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
 // --- SAM experiment system ---
@@ -1317,9 +1186,8 @@ const showHeaterOverdriveConfirm = ref(false)
 const showConservationConfirm = ref(false)
 const orbitalDropInteractHint = computed(() => {
   if (deploying.value || descending.value || isSleeping.value) return ''
-  if (siteRover.value?.mode !== 'driving') return ''
   if (!orbitalDrops.nearbyDrop.value) return ''
-  return 'PAYLOAD IN RANGE · PRESS E TO OPEN'
+  return 'PAYLOAD IN RANGE \u00b7 PRESS F TO COLLECT'
 })
 const centerHintText = computed(() => {
   if (!deploying.value && !descending.value && activeInstrumentSlot.value === null && rtgPhase.value === 'idle' && rtgConservationMode.value !== 'active' && !controlsHintDismissed.value) {
@@ -1415,7 +1283,7 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if (e.code === 'Digit0' || e.code === 'Backquote') {
     profileOpen.value = !profileOpen.value
   }
-  if (e.code === 'KeyE' && !e.repeat && siteRover.value?.mode === 'driving' && orbitalDrops.nearbyDrop.value) {
+  if (e.code === 'KeyF' && !e.repeat && orbitalDrops.nearbyDrop.value) {
     e.preventDefault()
     handleOrbitalDropOpen()
   }
