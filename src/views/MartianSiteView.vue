@@ -255,6 +255,7 @@
     />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
+    <MissionCompleteBanner ref="missionCompleteRef" />
     <Teleport to="body">
       <Transition name="science-fade">
         <div v-if="apxsMinigameOpen && apxsGameComposition" class="science-overlay">
@@ -476,6 +477,7 @@ import SciencePointsDialog from '@/components/SciencePointsDialog.vue'
 import AchievementsDialog from '@/components/AchievementsDialog.vue'
 import RewardTrackDialog from '@/components/RewardTrackDialog.vue'
 import AchievementBanner from '@/components/AchievementBanner.vue'
+import MissionCompleteBanner from '@/components/MissionCompleteBanner.vue'
 import MastTelemetry from '@/components/MastTelemetry.vue'
 import InstrumentCrosshair from '@/components/InstrumentCrosshair.vue'
 import InventoryPanel from '@/components/InventoryPanel.vue'
@@ -816,6 +818,7 @@ const chemcamPhaseLabel = computed(() => {
 })
 const sampleToastRef = ref<InstanceType<typeof SampleToast> | null>(null)
 const achievementRef = ref<InstanceType<typeof AchievementBanner> | null>(null)
+const missionCompleteRef = ref<InstanceType<typeof MissionCompleteBanner> | null>(null)
 const orbitalDrops = useOrbitalDrops()
 const siteLat = ref(0)
 const siteLon = ref(0)
@@ -946,6 +949,9 @@ const mission = useMissionUI({
   roverWorldZ,
   marsSol,
   activeInstrumentSlot,
+  onMissionComplete: (name, sp, unlock) => {
+    missionCompleteRef.value?.show(name, sp, unlock)
+  },
 })
 const {
   missionLogOpen, openedMessage,

@@ -17,6 +17,7 @@ export function useMissionUI(deps: {
   roverWorldZ: Ref<number>
   marsSol: Ref<number>
   activeInstrumentSlot: Ref<number | null>
+  onMissionComplete?: (name: string, sp: number, unlock: string | null) => void
 }) {
   const { siteHandle, roverWorldX, roverWorldZ, marsSol, activeInstrumentSlot } = deps
 
@@ -177,10 +178,10 @@ export function useMissionUI(deps: {
     { deep: true },
   )
 
-  // Clean up any remaining markers when missions complete
-  watch(completedMissions, (completed) => {
+  // Clean up markers + fire completion callback when missions complete
+  watch(completedMissions, (curr, prev) => {
     const scene = siteHandle.value?.siteScene
-    for (const state of completed) {
+    for (const state of curr) {
       const def = getMissionDef(state.missionId)
       if (!def) continue
       for (const obj of def.objectives) {
@@ -188,6 +189,15 @@ export function useMissionUI(deps: {
           removePoi(obj.params.poiId)
           if (scene) removeWaypointMarker(obj.params.poiId, scene.scene)
         }
+      }
+    }
+    // Fire callback for newly completed missions
+    if (curr.length > (prev?.length ?? 0) && deps.onMissionComplete) {
+      const newest = curr[curr.length - 1]
+      const def = getMissionDef(newest.missionId)
+      if (def) {
+        const unlockLabel = def.unlocks.length > 0 ? def.unlocks.join(', ').toUpperCase() : null
+        deps.onMissionComplete(def.name, def.reward.sp ?? 0, unlockLabel)
       }
     }
   })
