@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useMissions } from '../useMissions'
+import type { MissionCatalog } from '@/types/missions'
 
 // --- Minimal localStorage mock for Node environment ---
 const store: Record<string, string> = {}
@@ -11,7 +12,7 @@ const localStorageMock = {
 }
 vi.stubGlobal('localStorage', localStorageMock)
 
-const mockMissions = {
+const mockMissions: MissionCatalog = {
   version: 1,
   missions: [
     {
@@ -118,7 +119,7 @@ describe('useMissions', () => {
   })
 
   it('sequential objective is skipped if prior not done', () => {
-    const seqMissions = {
+    const seqMissions: MissionCatalog = {
       version: 1,
       missions: [{
         id: 'seq-test',

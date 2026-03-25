@@ -13,7 +13,7 @@
           </div>
           <div class="msg-footer">
             <template v-if="message.type === 'mission' && !missionAccepted">
-              <button class="msg-btn msg-btn-accept" @click="$emit('accept-mission', message.missionId)">
+              <button class="msg-btn msg-btn-accept" @click="$emit('accept-mission', message.missionId ?? '')">
                 ACCEPT MISSION
               </button>
               <button class="msg-btn msg-btn-later" @click="$emit('close')">

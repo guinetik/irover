@@ -138,7 +138,7 @@ function isNextPass(pass: { id: string; orbiter: string; startTimeOfDay: number;
   return nonPastPasses.length > 0 && nonPastPasses[0].id === pass.id
 }
 
-function isPastPass(pass: { startTimeOfDay: number; endTimeOfDay: number }): boolean {
+function isPastPass(pass: { id: string; startTimeOfDay: number; endTimeOfDay: number }): boolean {
   // A pass is considered past if it comes before the next pass in the list.
   // Without scene time, we use nextPassInSec: if nextPassInSec is large, earlier
   // passes in the list are past. We simply mark passes earlier in the array than

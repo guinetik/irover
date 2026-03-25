@@ -215,6 +215,7 @@ export function createPlayerProfile(
       FOUNDATIONS[foundation].modifiers,
       PATRONS[patron].modifiers,
     ),
+    sandbox: false,
   }
 }
 
