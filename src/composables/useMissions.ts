@@ -377,11 +377,15 @@ function wireArchiveCheckers(): void {
 
   // rtg-shunt: flag set externally when player activates power shunt
   registerChecker('rtg-shunt', () => rtgShuntTriggered.value)
+
+  // rems-activate: flag set externally when player turns on REMS
+  registerChecker('rems-activate', () => remsActivated.value)
 }
 
 /** Set to true when the player activates RTG overdrive (called from view layer). */
 const rtgOverdriveTriggered = ref(false)
 const rtgShuntTriggered = ref(false)
+const remsActivated = ref(false)
 
 function notifyRtgOverdrive(): void {
   rtgOverdriveTriggered.value = true
@@ -391,9 +395,14 @@ function notifyRtgShunt(): void {
   rtgShuntTriggered.value = true
 }
 
+function notifyRemsActivated(): void {
+  remsActivated.value = true
+}
+
 function resetForTests(): void {
   rtgOverdriveTriggered.value = false
   rtgShuntTriggered.value = false
+  remsActivated.value = false
   catalog.value = []
   missionStates.value = []
   trackedMissionId.value = null
@@ -422,6 +431,7 @@ export function useMissions() {
     wireArchiveCheckers,
     notifyRtgOverdrive,
     notifyRtgShunt,
+    notifyRemsActivated,
     getMissionDef,
     resetForTests,
   }

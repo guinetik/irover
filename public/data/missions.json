@@ -8,8 +8,8 @@
       "description": "Standard post-landing position calibration using three transponder markers.",
       "briefing": "Telemetry's coming in — descent trajectory looks nominal but we need ground-truth coordinates before we clear you for operations. Three transponder stakes were deployed ahead of your landing. WASD to drive, mouse to orbit the camera. Hit all three markers so we can lock your position fix. Routine procedure.",
       "reward": { "sp": 25 },
-      "unlocks": ["rtg"],
-      "chain": "m02-rtg",
+      "unlocks": ["rems"],
+      "chain": "m02-rems",
       "objectives": [
         { "id": "tri-1", "type": "go-to", "label": "Reach marker Alpha", "params": { "poiId": "tri-alpha" }, "sequential": false },
         { "id": "tri-2", "type": "go-to", "label": "Reach marker Beta", "params": { "poiId": "tri-beta" }, "sequential": false },
@@ -17,14 +17,27 @@
       ]
     },
     {
-      "id": "m02-rtg",
+      "id": "m02-rems",
+      "name": "REMS Weather Station",
+      "patron": null,
+      "description": "Activate the environmental monitoring station and transmit a baseline weather report.",
+      "briefing": "Position locked. Before we go any further — weather. Mars doesn't give warnings. Dust storms can drop visibility to zero and bury your solar margin in minutes. Temperature swings of 80°C between day and night will kill your battery if you're not watching. Your REMS station monitors pressure, temperature, humidity, wind speed, and UV radiation in real time. Select REMS [8] and activate it. Once it's running, it'll alert you to incoming weather events — dust storms, cold snaps, pressure drops. You need this data streaming before we clear you for instrument operations. It's non-negotiable.",
+      "reward": { "sp": 20 },
+      "unlocks": ["rtg"],
+      "chain": "m03-rtg",
+      "objectives": [
+        { "id": "rems-1", "type": "rems-activate", "label": "Activate REMS weather station", "params": {}, "sequential": false }
+      ]
+    },
+    {
+      "id": "m03-rtg",
       "name": "RTG Shakedown",
       "patron": null,
       "description": "Verify RTG power output and test emergency overdrive mode.",
-      "briefing": "Position fix confirmed. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — we'll need that position for your next assignment.",
+      "briefing": "REMS is streaming — good. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — we'll need that position for your next assignment.",
       "reward": { "sp": 30 },
       "unlocks": ["mastcam"],
-      "chain": "m03-mastcam",
+      "chain": "m04-mastcam",
       "objectives": [
         { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },
         { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true },
@@ -33,86 +46,86 @@
       ]
     },
     {
-      "id": "m03-mastcam",
+      "id": "m04-mastcam",
       "name": "MastCam Calibration",
       "patron": null,
       "description": "Verify MastCam optical survey system by tagging terrain samples.",
       "briefing": "MastCam is online and the optics look clean. Time to calibrate. Select MastCam [1] — it puts you in survey mode where rocks in range get highlighted. Pan toward a rock and hold the scan until the tag locks. Each tagged rock gets a persistent floating label with its type classification. Tag at least three so we can verify the classifier against ground-truth. These tags feed directly into ChemCam and Drill targeting later — MastCam is always the first step in the science pipeline.",
       "reward": { "sp": 35 },
       "unlocks": ["chemcam"],
-      "chain": "m04-chemcam",
+      "chain": "m05-chemcam",
       "objectives": [
         { "id": "mc-1", "type": "mastcam-tag", "label": "Tag 3 rocks with MastCam", "params": { "rockType": "any", "count": 3 }, "sequential": false }
       ]
     },
     {
-      "id": "m04-chemcam",
+      "id": "m05-chemcam",
       "name": "ChemCam Verification",
       "patron": null,
       "description": "Test LIBS spectroscopy on a MastCam-tagged target.",
       "briefing": "MastCam classifier checks out. Now let's verify ChemCam — the laser-induced breakdown spectrometer. Select ChemCam [2] and aim at one of your tagged rocks (the floating labels mark valid targets). ChemCam can only fire at rocks MastCam has already classified — that's by design, not a bug. The laser vaporizes a pinpoint on the surface and we read the plasma emission spectrum. After the pulse completes, acknowledge the readout so we can log the mineral profile. One clean spectrum is all we need to clear the instrument.",
       "reward": { "sp": 40 },
       "unlocks": ["drill"],
-      "chain": "m05-drill",
+      "chain": "m06-drill",
       "objectives": [
         { "id": "cc-1", "type": "chemcam", "label": "Complete a LIBS analysis", "params": { "rockType": "any" }, "sequential": false }
       ]
     },
     {
-      "id": "m05-drill",
+      "id": "m06-drill",
       "name": "Core Sample Extraction",
       "patron": null,
       "description": "Test the rotary percussive drill and run a power shunt recovery.",
       "briefing": "Spectrometer is nominal. Next up: the drill. Select it [3], drive within range of a rock, and hold [E] to bore in. Here's something important for your workflow: rocks you've already processed through MastCam and ChemCam yield significantly better drill results — trace elements, rare minerals, and specialty components that unscanned rocks simply don't produce. The MastCam → ChemCam → Drill pipeline is how you extract real value. After drilling, your battery will be running low. Open the RTG panel [7] and engage the power shunt — it stows the drive motors and dumps thermal headroom into the main bus for an immediate recharge. We need to verify that system too.",
       "reward": { "sp": 40 },
       "unlocks": ["apxs"],
-      "chain": "m06-apxs",
+      "chain": "m07-apxs",
       "objectives": [
         { "id": "dr-1", "type": "gather", "label": "Drill and collect a rock sample", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": true },
         { "id": "dr-2", "type": "rtg-shunt", "label": "Engage power shunt to recharge", "params": {}, "sequential": true }
       ]
     },
     {
-      "id": "m06-apxs",
+      "id": "m07-apxs",
       "name": "APXS Contact Analysis",
       "patron": null,
       "description": "Deploy the Alpha Particle X-Ray Spectrometer for elemental composition.",
       "briefing": "Drill checks out, power shunt verified. The APXS is next — your contact-science instrument. It uses alpha particles and X-rays to measure the elemental composition of a rock surface. Unlike ChemCam which works at range, APXS needs to be pressed directly against the target. Select APXS [4], drive close to a rock, and deploy. The analysis takes a bit longer than LIBS but gives you a complete elemental breakdown — different data, complementary to the spectrum. One clean analysis to verify calibration.",
       "reward": { "sp": 45 },
       "unlocks": ["dan"],
-      "chain": "m07-dan",
+      "chain": "m08-dan",
       "objectives": [
         { "id": "apxs-1", "type": "apxs", "label": "Complete an APXS analysis", "params": { "rockType": "any" }, "sequential": false }
       ]
     },
     {
-      "id": "m07-dan",
+      "id": "m08-dan",
       "name": "DAN Subsurface Probe",
       "patron": null,
       "description": "Calibrate the Dynamic Albedo of Neutrons instrument for water ice detection.",
       "briefing": "All surface instruments check out. Time to look underground. DAN fires neutrons into the regolith and measures the scatter pattern to detect hydrogen — which means water ice. Select DAN [5] — it runs a passive background scan as you drive, building a signal map. When you see a strong return, stop and hold position to let it lock in a prospect. We need at least one confirmed water-ice signature for the calibration baseline. The data feeds directly into mission planning for future water extraction sites.",
       "reward": { "sp": 45 },
       "unlocks": ["sam"],
-      "chain": "m08-sam",
+      "chain": "m09-sam",
       "objectives": [
         { "id": "dan-1", "type": "dan-prospect", "label": "Confirm a water ice detection", "params": { "minWaterChance": 0.3 }, "sequential": false }
       ]
     },
     {
-      "id": "m08-sam",
+      "id": "m09-sam",
       "name": "SAM Lab Checkout",
       "patron": null,
       "description": "Run a full sample analysis cycle through the SAM instrument suite.",
       "briefing": "Surface ops are verified. Last instrument: SAM — your onboard analytical laboratory. This is where drill samples become real science. Open SAM [6], load one of your collected samples, choose an analysis mode, and run the experiment. Each mode reveals different chemistry: pyrolysis bakes the sample and reads the volatiles, wet chemistry dissolves it for isotope ratios, and so on. The results determine the science value of your discovery. One complete run clears the lab for regular operations.",
       "reward": { "sp": 50 },
       "unlocks": ["antenna-uhf"],
-      "chain": "m09-transmit",
+      "chain": "m10-transmit",
       "objectives": [
         { "id": "sam-1", "type": "sam-experiment", "label": "Run a SAM experiment", "params": { "mode": "any" }, "sequential": false }
       ]
     },
     {
-      "id": "m09-transmit",
+      "id": "m10-transmit",
       "name": "First Data Uplink",
       "patron": null,
       "description": "Transmit collected science data to Earth via UHF relay during an orbital pass.",

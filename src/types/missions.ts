@@ -9,6 +9,7 @@ export type ObjectiveType =
   | 'transmit'
   | 'rtg-overdrive'
   | 'rtg-shunt'
+  | 'rems-activate'
 
 export interface ObjectiveDef {
   id: string

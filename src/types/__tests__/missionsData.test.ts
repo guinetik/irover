@@ -4,7 +4,7 @@ import catalogJson from '../../../public/data/missions.json'
 
 const VALID_OBJECTIVE_TYPES: ObjectiveType[] = [
   'go-to', 'gather', 'sam-experiment', 'apxs',
-  'mastcam-tag', 'chemcam', 'dan-prospect', 'transmit', 'rtg-overdrive', 'rtg-shunt',
+  'mastcam-tag', 'chemcam', 'dan-prospect', 'transmit', 'rtg-overdrive', 'rtg-shunt', 'rems-activate',
 ]
 
 describe('missions.json', () => {
@@ -14,7 +14,7 @@ describe('missions.json', () => {
     expect(catalog.version).toBe(1)
   })
 
-  it('has at least 9 tutorial missions', () => {
+  it('has at least 10 tutorial missions', () => {
     expect(catalog.missions.length).toBeGreaterThanOrEqual(9)
   })
 

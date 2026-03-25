@@ -1221,9 +1221,14 @@ function handleActivate() {
   } else if (siteRover.value.activeInstrument instanceof HeaterController) {
     showHeaterOverdriveConfirm.value = true
   } else {
-    const passive = siteRover.value.activeInstrument?.passiveSubsystemOnly
+    const inst = siteRover.value.activeInstrument
+    const passive = inst?.passiveSubsystemOnly
     siteRover.value.enterActiveMode()
     if (passive) passiveUiRevision.value++
+    // Notify mission system when REMS is activated
+    if (inst?.id === 'rems' && inst.passiveSubsystemEnabled) {
+      useMissions().notifyRemsActivated()
+    }
   }
 }
 

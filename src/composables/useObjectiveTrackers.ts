@@ -21,6 +21,7 @@ const checkers: Record<string, ObjectiveChecker> = {
   'transmit': (_p) => false,
   'rtg-overdrive': (_p) => false,
   'rtg-shunt': (_p) => false,
+  'rems-activate': (_p) => false,
 }
 
 export function checkObjective(

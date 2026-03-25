@@ -73,7 +73,9 @@ const instruments: ToolbarInstrument[] = [
 // Only REMS and RAD appear in the instrument toolbar and are always available.
 // Wheels and Heater are handled outside the toolbar (always active).
 // LGA/UHF are in the CommToolbar, not here.
-const ALWAYS_AVAILABLE = ['rems', 'rad']
+// RAD is always available (passive dosimeter, no gating).
+// REMS is unlocked by m01 completion.
+const ALWAYS_AVAILABLE = ['rad']
 
 const visibleInstruments = computed(() => {
   if (props.sandbox) return instruments
