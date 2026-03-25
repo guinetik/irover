@@ -53,6 +53,7 @@ import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { secondsPerSol } from '@/lib/missionTime'
+import { updateWaypointMarkers } from '@/three/WaypointMarkers'
 
 /** Seconds to hold position before DAN prospecting begins. */
 export const DAN_INITIATE_DURATION_SEC = 4
@@ -649,6 +650,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         missionPoisRef.value,
         marsSol.value,
       )
+      updateWaypointMarkers(simulationTime)
 
       // --- Delegated ticks ---
       orbitalDropHandler.tick(fctx)

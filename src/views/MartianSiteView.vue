@@ -531,6 +531,7 @@ import type { LGAMessage } from '@/types/lgaMailbox'
 import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
+import { addWaypointMarker, removeWaypointMarker, clearWaypointMarkers } from '@/three/WaypointMarkers'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -962,14 +963,37 @@ const trackedMissionDef = computed(() =>
   trackedMissionId.value ? getMissionDef(trackedMissionId.value) ?? null : null
 )
 
-// Clean up POIs when missions complete
+// Clean up POIs + 3D markers as individual objectives complete
+watch(
+  () => activeMissions.value.map((m) => m.objectives.map((o) => o.done)),
+  () => {
+    const scene = siteHandle.value?.siteScene
+    for (const state of activeMissions.value) {
+      const def = getMissionDef(state.missionId)
+      if (!def) continue
+      for (let i = 0; i < state.objectives.length; i++) {
+        if (!state.objectives[i].done) continue
+        const objDef = def.objectives[i]
+        if (objDef?.type === 'go-to' && objDef.params.poiId) {
+          removePoi(objDef.params.poiId)
+          if (scene) removeWaypointMarker(objDef.params.poiId, scene.scene)
+        }
+      }
+    }
+  },
+  { deep: true },
+)
+
+// Clean up any remaining markers when missions complete
 watch(completedMissions, (completed) => {
+  const scene = siteHandle.value?.siteScene
   for (const state of completed) {
     const def = getMissionDef(state.missionId)
     if (!def) continue
     for (const obj of def.objectives) {
       if (obj.type === 'go-to' && obj.params.poiId) {
         removePoi(obj.params.poiId)
+        if (scene) removeWaypointMarker(obj.params.poiId, scene.scene)
       }
     }
   }
@@ -996,9 +1020,9 @@ function handleAcceptMission(missionId: string | undefined) {
     goToObjs.forEach((obj, i) => {
       // Place markers in a ring around the rover, 60-120 units out
       const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-      const dist = 20 + (i % 3) * 10
-      const px = Math.max(-380, Math.min(380, rx + Math.cos(angle) * dist))
-      const pz = Math.max(-380, Math.min(380, rz + Math.sin(angle) * dist))
+      const dist = 8 + i * 5
+      const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
+      const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
       upsertPoi({
         id: obj.params.poiId,
         label: obj.label,
@@ -1006,6 +1030,12 @@ function handleAcceptMission(missionId: string | undefined) {
         z: pz,
         color: '#66ffee',
       })
+      // Place 3D marker in the scene
+      const scene = siteHandle.value?.siteScene
+      if (scene) {
+        const groundY = scene.terrain.heightAt(px, pz)
+        addWaypointMarker(obj.params.poiId, px, pz, groundY, scene.scene)
+      }
     })
   }
 

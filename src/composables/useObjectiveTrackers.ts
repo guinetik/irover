@@ -18,7 +18,7 @@ function poiDistance(ctx: CheckerContext, poiId: string): number {
 }
 
 const checkers: Record<string, ObjectiveChecker> = {
-  'go-to': (p, ctx) => poiDistance(ctx, p.poiId) < 5,
+  'go-to': (p, ctx) => poiDistance(ctx, p.poiId) < 10,
   'gather': (_p) => false,
   'sam-experiment': (_p) => false,
   'apxs': (_p) => false,
