@@ -3,10 +3,48 @@
     <div class="hero">
       <h1 class="title">I, ROVER</h1>
       <p class="subtitle">Explore the Red Planet</p>
-      <button class="cta" @click="$router.push('/globe')">BEGIN MISSION</button>
+      <div class="actions">
+        <button v-if="continueTarget" class="cta" @click="router.push(continueTarget)">
+          CONTINUE
+        </button>
+        <button class="cta" :class="{ secondary: continueTarget }" @click="startNew">
+          {{ continueTarget ? 'NEW MISSION' : 'BEGIN MISSION' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { usePlayerProfile } from '@/composables/usePlayerProfile'
+import { useActiveSite } from '@/composables/useActiveSite'
+
+const router = useRouter()
+const { profile, clearProfile } = usePlayerProfile()
+const { activeSite, clear: clearSite } = useActiveSite()
+
+const continueTarget = computed<string | null>(() => {
+  // No profile at all — no continue
+  if (!profile.archetype) return null
+
+  // Creation done but no patron
+  if (!profile.patron) return '/patron'
+
+  // Profile complete + active site
+  if (activeSite.value) return `/site/${activeSite.value.siteId}`
+
+  // Profile complete, no site
+  return '/globe'
+})
+
+function startNew(): void {
+  clearProfile()
+  clearSite()
+  router.push('/create')
+}
+</script>
 
 <style scoped>
 .home {
@@ -46,8 +84,16 @@
   animation: fadeUp 1s ease-out 0.3s both;
 }
 
-.cta {
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   margin-top: 48px;
+  animation: fadeUp 0.8s ease-out 0.6s both;
+}
+
+.cta {
   padding: 12px 56px;
   font-size: 11px;
   font-weight: 600;
@@ -59,13 +105,24 @@
   border-radius: 0;
   cursor: pointer;
   transition: border-color 0.3s ease, color 0.3s ease, background 0.3s ease;
-  animation: fadeUp 0.8s ease-out 0.6s both;
 }
 
 .cta:hover {
   border-color: rgba(255, 255, 255, 0.45);
   color: rgba(255, 255, 255, 0.95);
   background: rgba(255, 255, 255, 0.04);
+}
+
+.cta.secondary {
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 10px;
+  padding: 8px 40px;
+}
+
+.cta.secondary:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 @keyframes fadeUp {
