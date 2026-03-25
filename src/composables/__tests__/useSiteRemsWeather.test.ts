@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { windFromDegToCompass, useSiteRemsWeather } from '@/composables/useSiteRemsWeather'
+import {
+  peakStormWindMs,
+  windFromDegToCompass,
+  useSiteRemsWeather,
+} from '@/composables/useSiteRemsWeather'
 import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
 
 describe('windFromDegToCompass', () => {
@@ -77,5 +81,12 @@ describe('useSiteRemsWeather', () => {
     expect(h.windMs).toBeGreaterThan(0)
     expect(h.humidityPct).toBeGreaterThan(0)
     expect(h.windDirCompass.length).toBeGreaterThan(0)
+    expect(h.dustStormPhase).toBe('none')
+    expect(h.dustStormLevel).toBeNull()
+  })
+
+  it('peak storm wind scales with level and dust', () => {
+    expect(peakStormWindMs(1, 0.2, 0)).toBeGreaterThan(25)
+    expect(peakStormWindMs(5, 0.9, 1)).toBeGreaterThan(peakStormWindMs(2, 0.2, 1))
   })
 })

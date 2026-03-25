@@ -72,6 +72,12 @@
               <div class="ov-stat-label">UV</div>
               <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.uvIndex.toFixed(1) }}</div>
             </div>
+            <div
+              v-if="remsHud.dustStormLevel != null"
+              class="ov-rems-dust-storm"
+            >
+              Dust storm L{{ remsHud.dustStormLevel }} — {{ remsDustStormLabel }}
+            </div>
           </template>
           <div v-else class="ov-rems-offline">Ambient sensing off — ACTIVATE REMS for pressure, humidity, air temp, wind, and storm alerts.</div>
         </div>
@@ -247,7 +253,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue'
 import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
-import type { RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
+import { DUST_STORM_LEVEL_LABELS, type RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
 
 export interface InstrumentData {
   slot: number
@@ -562,6 +568,12 @@ const thermalZoneColor = computed(() =>
 const thermalZoneBg = computed(() =>
   ZONE_BGS[props.thermal?.zone ?? 'OPTIMAL'] ?? 'rgba(0,0,0,0.3)',
 )
+
+const remsDustStormLabel = computed(() => {
+  const L = props.remsHud?.dustStormLevel
+  if (L == null) return ''
+  return DUST_STORM_LEVEL_LABELS[L] ?? ''
+})
 </script>
 
 <style scoped>
@@ -934,6 +946,20 @@ const thermalZoneBg = computed(() =>
   line-height: 1.35;
   color: rgba(196, 149, 106, 0.75);
   padding: 4px 0 2px;
+}
+
+.ov-rems-dust-storm {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e8a878;
+  background: rgba(196, 80, 40, 0.12);
+  border: 1px solid rgba(232, 140, 80, 0.35);
+  border-radius: 4px;
 }
 
 .ov-btn-dan-prospect {
