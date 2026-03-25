@@ -1,7 +1,7 @@
 <template>
   <div class="instrument-toolbar">
     <button
-      v-for="inst in instruments"
+      v-for="inst in visibleInstruments"
       :key="inst.slot"
       class="instrument-slot"
       :class="{ active: activeSlot === inst.slot }"
@@ -31,6 +31,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   activeSlot: number | null
   inventoryOpen?: boolean
@@ -38,6 +40,8 @@ const props = defineProps<{
   danScanning?: boolean
   samUnread?: number
   apxsUnread?: number
+  unlockedInstruments: string[]
+  sandbox: boolean
 }>()
 
 const emit = defineEmits<{
@@ -64,6 +68,20 @@ const instruments: ToolbarInstrument[] = [
   { slot: 8, id: 'rems',    name: 'REMS', icon: '\u2602' },
   { slot: 9, id: 'rad',     name: 'RAD',  icon: '\u2622' },
 ]
+
+// Only REMS and RAD appear in the instrument toolbar and are always available.
+// Wheels and Heater are handled outside the toolbar (always active).
+// LGA/UHF are in the CommToolbar, not here.
+const ALWAYS_AVAILABLE = ['rems', 'rad']
+
+const visibleInstruments = computed(() => {
+  if (props.sandbox) return instruments
+  return instruments.filter(
+    (inst) =>
+      ALWAYS_AVAILABLE.includes(inst.id) ||
+      props.unlockedInstruments.includes(inst.id)
+  )
+})
 
 function handleClick(slot: number) {
   if (props.activeSlot === slot) {
