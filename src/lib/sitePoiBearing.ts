@@ -17,6 +17,13 @@ export function roverHeadingRadToCompassDeg(headingRad: number): number {
 
 /**
  * Absolute compass bearing from the rover to a ground point (world XZ), same convention as the HUD.
+ *
+ * Rover coordinate system:
+ * - Forward = +Z (model rotated PI), heading 0 faces +Z
+ * - Heading increases CCW (KeyA = left = +heading)
+ * - Compass convention: (-heading * 180/PI) converts to CW degrees
+ *
+ * We need the bearing angle in the same CW-degree space as the compass heading.
  */
 export function worldBearingDegToPoi(
   roverX: number,
@@ -26,8 +33,10 @@ export function worldBearingDegToPoi(
 ): number {
   const dx = poiX - roverX
   const dz = poiZ - roverZ
-  const h = Math.atan2(-dx, -dz)
-  return normalizeCompassDeg((-h * 180) / Math.PI)
+  // atan2(-dx, dz) gives CW angle from +Z toward -X.
+  // Negating converts to the same CW-degree space as roverHeadingRadToCompassDeg.
+  const rad = Math.atan2(-dx, dz)
+  return normalizeCompassDeg(-rad * 180 / Math.PI)
 }
 
 /**
