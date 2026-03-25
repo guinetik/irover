@@ -298,6 +298,19 @@ export function createNeutralProfile(): PlayerProfile {
   }
 }
 
+// --- localStorage persistence ---
+
+const STORAGE_KEY = 'mars-profile-v1'
+
+interface StoredProfile {
+  archetype: ArchetypeId | null
+  foundation: FoundationId | null
+  patron: PatronId | null
+  origin: OriginId | null
+  motivation: MotivationId | null
+  sandbox: boolean
+}
+
 // --- Singleton reactive state ---
 
 const profile = reactive<PlayerProfile>(createNeutralProfile())
@@ -309,6 +322,53 @@ const chosenPatron = ref<PatronId | null>(null)
 const chosenOrigin = ref<OriginId | null>(null)
 const chosenMotivation = ref<MotivationId | null>(null)
 const rewardTrackLayer = ref<Partial<ProfileModifiers>>({})
+
+function saveToStorage(): void {
+  try {
+    const data: StoredProfile = {
+      archetype: chosenArchetype.value,
+      foundation: chosenFoundation.value,
+      patron: chosenPatron.value,
+      origin: chosenOrigin.value,
+      motivation: chosenMotivation.value,
+      sandbox: profile.sandbox,
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {
+    // Storage unavailable (SSR, private mode quota, etc.) — silently ignore
+  }
+}
+
+function hydrateProfile(): void {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return
+    const data = JSON.parse(raw) as StoredProfile
+    chosenArchetype.value = data.archetype ?? null
+    chosenFoundation.value = data.foundation ?? null
+    chosenPatron.value = data.patron ?? null
+    chosenOrigin.value = data.origin ?? null
+    chosenMotivation.value = data.motivation ?? null
+    profile.sandbox = data.sandbox ?? false
+    recomputeModifiers()
+  } catch {
+    // Corrupt or missing data — leave profile at defaults
+  }
+}
+
+function clearProfile(): void {
+  chosenArchetype.value = null
+  chosenFoundation.value = null
+  chosenPatron.value = null
+  chosenOrigin.value = null
+  chosenMotivation.value = null
+  recomputeModifiers()
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // Storage unavailable — silently ignore
+  }
+}
 
 /**
  * Recompute profile modifiers from all four sources:
@@ -351,6 +411,7 @@ export function usePlayerProfile() {
     chosenFoundation.value = foundation
     chosenPatron.value = patron
     recomputeModifiers()
+    saveToStorage()
   }
 
   /**
@@ -360,6 +421,7 @@ export function usePlayerProfile() {
   function applyRewardTrack(partial: Partial<ProfileModifiers>): void {
     rewardTrackLayer.value = partial
     recomputeModifiers()
+    saveToStorage()
   }
 
   function setIdentity(origin: OriginId, motivation: MotivationId): void {
@@ -367,6 +429,7 @@ export function usePlayerProfile() {
     chosenMotivation.value = motivation
     profile.origin = origin
     profile.motivation = motivation
+    saveToStorage()
   }
 
   /** Convenience: get a single modifier multiplier */
@@ -379,6 +442,8 @@ export function usePlayerProfile() {
     setProfile,
     setIdentity,
     applyRewardTrack,
+    hydrateProfile,
+    clearProfile,
     mod,
     ARCHETYPES,
     FOUNDATIONS,
@@ -387,3 +452,6 @@ export function usePlayerProfile() {
     MOTIVATIONS,
   }
 }
+
+// Hydrate from storage on module load
+hydrateProfile()

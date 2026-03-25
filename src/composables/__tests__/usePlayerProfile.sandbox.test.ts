@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   usePlayerProfile,
   ORIGINS,
@@ -6,6 +6,16 @@ import {
   type OriginId,
   type MotivationId,
 } from '../usePlayerProfile'
+
+// --- Minimal localStorage mock for Node environment ---
+const store: Record<string, string> = {}
+const localStorageMock = {
+  getItem: (key: string) => store[key] ?? null,
+  setItem: (key: string, value: string) => { store[key] = value },
+  removeItem: (key: string) => { delete store[key] },
+  clear: () => { Object.keys(store).forEach((k) => delete store[k]) },
+}
+vi.stubGlobal('localStorage', localStorageMock)
 
 describe('PlayerProfile origin & motivation', () => {
   it('profile has origin and motivation fields defaulting to null', () => {
@@ -45,5 +55,51 @@ describe('PlayerProfile sandbox flag', () => {
     expect(profile.sandbox).toBe(true)
     // Reset for other tests
     profile.sandbox = false
+  })
+})
+
+describe('PlayerProfile localStorage persistence', () => {
+  beforeEach(() => {
+    localStorage.removeItem('mars-profile-v1')
+    const { setProfile, setIdentity } = usePlayerProfile()
+    setProfile(null, null, null)
+    setIdentity(null as any, null as any)
+  })
+
+  it('saves profile to localStorage on setProfile', () => {
+    const { setProfile } = usePlayerProfile()
+    setProfile('maker', 'technologist', 'trc')
+    const stored = JSON.parse(localStorage.getItem('mars-profile-v1')!)
+    expect(stored.archetype).toBe('maker')
+    expect(stored.foundation).toBe('technologist')
+    expect(stored.patron).toBe('trc')
+  })
+
+  it('saves identity to localStorage on setIdentity', () => {
+    const { setIdentity } = usePlayerProfile()
+    setIdentity('earth', 'commute')
+    const stored = JSON.parse(localStorage.getItem('mars-profile-v1')!)
+    expect(stored.origin).toBe('earth')
+    expect(stored.motivation).toBe('commute')
+  })
+
+  it('hydrates profile from localStorage on init', () => {
+    localStorage.setItem(
+      'mars-profile-v1',
+      JSON.stringify({
+        archetype: 'maker',
+        foundation: 'technologist',
+        patron: 'trc',
+        origin: 'earth',
+        motivation: 'legacy',
+        sandbox: false,
+      }),
+    )
+    const { hydrateProfile, profile } = usePlayerProfile()
+    hydrateProfile()
+    expect(profile.archetype).toBe('maker')
+    expect(profile.origin).toBe('earth')
+    expect(profile.motivation).toBe('legacy')
+    expect(profile.modifiers.movementSpeed).toBe(1.05)
   })
 })
