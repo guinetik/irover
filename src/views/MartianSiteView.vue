@@ -198,6 +198,12 @@
       :apxs-progress-label="apxsCurrentExperiment ? 'APXS — ' + Math.ceil(apxsCurrentExperiment.remainingTimeSec) + 's' : ''"
       :apxs-unread="apxsUnread"
       @apxs-see-results="apxsResultDialogEntry = apxsResults[0] ?? null"
+      :durability-pct="activeDurability?.durabilityPct"
+      :max-durability="activeDurability?.maxDurability"
+      :instrument-operational="activeDurability?.operational"
+      :repair-cost-wire="activeDurability?.repairCost.weldingWire"
+      :repair-cost-component-id="activeDurability?.repairCost.componentId"
+      :repair-cost-component-qty="activeDurability?.repairCost.componentQty"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -576,6 +582,11 @@ const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
 /** Bumped when a passive instrument (DAN/REMS/RAD/comms) toggles STANDBY so the overlay re-reads bus state. */
 const passiveUiRevision = ref(0)
+
+const activeDurability = computed(() => {
+  if (activeInstrumentSlot.value === null) return undefined
+  return getBySlot(activeInstrumentSlot.value)
+})
 
 const passiveOverlayPatch = computed(() => {
   void passiveUiRevision.value

@@ -117,6 +117,23 @@
           </div>
         </div>
 
+        <!-- Durability bar (all instruments) -->
+        <div v-if="durabilityPct !== undefined && durabilityPct < 100" class="ov-durability">
+          <div class="ov-durability-row">
+            <span class="ov-durability-label">DURABILITY</span>
+            <span class="ov-durability-value" :style="{ color: durabilityColor }">{{ Math.round(durabilityPct) }}%</span>
+            <span v-if="maxDurability < 100" class="ov-durability-max">/ {{ Math.round(maxDurability) }}%</span>
+          </div>
+          <div class="ov-durability-bar-track">
+            <div class="ov-durability-bar-fill" :style="{ width: durabilityPct + '%', background: durabilityColor }" />
+          </div>
+        </div>
+
+        <!-- Broken state -->
+        <div v-if="instrumentOperational === false" class="ov-broken">
+          PERMANENTLY DAMAGED
+        </div>
+
         <!-- Hint -->
         <div class="ov-hint">{{ instrument.hint }}</div>
 
@@ -225,7 +242,15 @@
             >ACTIVATE</button>
           </template>
           <div class="ov-btn-row">
-            <button class="ov-btn-secondary" @click="$emit('repair')">REPAIR</button>
+            <button class="ov-btn-secondary" @click="$emit('repair')"
+              :disabled="instrumentOperational === false"
+            >
+              REPAIR
+              <span v-if="(repairCostWire ?? 0) > 0" class="ov-repair-cost">
+                {{ repairCostWire }}W
+                <template v-if="(repairCostComponentQty ?? 0) > 0"> + {{ repairCostComponentQty }}C</template>
+              </span>
+            </button>
             <button
               class="ov-btn-secondary"
               :class="{ active: upgradeOpen }"
@@ -459,6 +484,12 @@ const props = withDefaults(
     apxsProgressPct?: number
     apxsProgressLabel?: string
     apxsUnread?: number
+    durabilityPct?: number
+    maxDurability?: number
+    instrumentOperational?: boolean
+    repairCostWire?: number
+    repairCostComponentId?: string
+    repairCostComponentQty?: number
   }>(),
   {
     canActivate: true,
@@ -489,6 +520,12 @@ const props = withDefaults(
     apxsProgressPct: 0,
     apxsProgressLabel: '',
     apxsUnread: 0,
+    durabilityPct: 100,
+    maxDurability: 100,
+    instrumentOperational: true,
+    repairCostWire: 0,
+    repairCostComponentId: '',
+    repairCostComponentQty: 0,
   },
 )
 
@@ -573,6 +610,15 @@ const remsDustStormLabel = computed(() => {
   const L = props.remsHud?.dustStormLevel
   if (L == null) return ''
   return DUST_STORM_LEVEL_LABELS[L] ?? ''
+})
+
+const durabilityColor = computed(() => {
+  const pct = props.durabilityPct ?? 100
+  if (pct >= 85) return '#40c8f0'   // cyan
+  if (pct >= 60) return '#40f080'   // green
+  if (pct >= 40) return '#f0e040'   // yellow
+  if (pct > 25) return '#f0a030'    // orange
+  return '#804020'                   // dim brown
 })
 </script>
 
@@ -1046,5 +1092,57 @@ const remsDustStormLabel = computed(() => {
 
 .ov-sam-block {
   padding: 0 16px 8px;
+}
+
+.ov-durability {
+  padding: 4px 16px 2px;
+}
+.ov-durability-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.ov-durability-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(196, 117, 58, 0.6);
+}
+.ov-durability-value {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ov-durability-max {
+  font-size: 10px;
+  color: rgba(196, 117, 58, 0.35);
+}
+.ov-durability-bar-track {
+  height: 3px;
+  background: rgba(196, 117, 58, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ov-durability-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.ov-broken {
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #804020;
+  background: rgba(128, 64, 32, 0.1);
+  border: 1px solid rgba(128, 64, 32, 0.2);
+  border-radius: 4px;
+  margin: 4px 16px;
+}
+.ov-repair-cost {
+  font-size: 9px;
+  color: rgba(196, 117, 58, 0.5);
+  margin-left: 4px;
 }
 </style>
