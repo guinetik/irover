@@ -208,6 +208,7 @@ export function createDanTickHandler(
             danInst.prospectPhase = 'complete'
             danProspectPhase.value = 'complete'
             danInst.prospectComplete = true
+            danInst.rollUsageDecay()
             triggerDanAchievement('first-prospect')
 
             const gain = awardDAN('DAN prospect complete')

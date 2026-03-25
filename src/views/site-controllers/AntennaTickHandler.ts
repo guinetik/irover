@@ -170,6 +170,7 @@ export function createAntennaTickHandler(
           if (gain) {
             callbacks.sampleToastRef.value?.showSP?.(gain.amount, 'TRANSMISSION', gain.bonus)
           }
+          uhfCtrl.rollUsageDecay()
           uhfCtrl.transmittedThisPass++
           currentTxItem = null
           currentTxElapsed = 0

@@ -88,6 +88,7 @@ export function createAPXSTickHandler(
         apxsCountdown.value = Math.ceil(countdownTimer)
         if (countdownTimer <= 0) {
           apxsState.value = 'launching'
+          apxs.rollUsageDecay()
           const target = apxs.currentTargetResult!
           const rockType = target.rockType
           const rockLabel = target.rock.userData.rockLabel ?? rockType
