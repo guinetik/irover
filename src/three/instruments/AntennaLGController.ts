@@ -20,10 +20,19 @@ export class AntennaLGController extends InstrumentController {
   readonly viewPitch = 0.25
   override readonly selectionIdlePowerW = 2
 
+  /** Set by tick handler to scale power draw down as accuracy improves (1.0 = no bonus) */
+  accuracyMod = 1.0
+
   // Mailbox / heartbeat state — managed by tick handler
   heartbeatSentThisSol = false
   lastHeartbeatSol = -1
   unreadCount = 0
   linkStatus: 'LINKED' | 'OFF' = 'LINKED'
   targetBody = 'EARTH'
+
+  /** 2W idle — divided by accuracyMod (higher accuracy = less draw) */
+  override getPassiveBackgroundPowerW(): number {
+    if (!this.passiveSubsystemEnabled) return 0
+    return this.selectionIdlePowerW / this.accuracyMod
+  }
 }

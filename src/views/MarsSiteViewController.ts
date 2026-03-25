@@ -566,6 +566,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     {
       sampleToastRef,
       awardTransmission,
+      playerMod,
     },
   )
 

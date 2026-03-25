@@ -23,6 +23,9 @@ export class AntennaUHFController extends InstrumentController {
   /** Extra power draw during active transmission (on top of idle) */
   static readonly TRANSMIT_POWER_W = 12
 
+  /** Set by tick handler to scale power draw down as accuracy improves (1.0 = no bonus) */
+  accuracyMod = 1.0
+
   // Dynamic comms state — set and updated by the tick handler
   passActive = false                                          // currently in a relay window
   transmitting = false                                        // actively sending data
@@ -35,11 +38,12 @@ export class AntennaUHFController extends InstrumentController {
   linkStatus: 'RELAY LOCK' | 'WAITING PASS' | 'OFF' = 'OFF'
   relayOrbiter = ''                                          // set dynamically by tick handler
 
-  /** 6W idle, 18W while actively transmitting */
+  /** 6W idle, 18W while actively transmitting — divided by accuracyMod (higher accuracy = less draw) */
   override getPassiveBackgroundPowerW(): number {
     if (!this.passiveSubsystemEnabled) return 0
-    return this.transmitting
+    const base = this.transmitting
       ? this.selectionIdlePowerW + AntennaUHFController.TRANSMIT_POWER_W
       : this.selectionIdlePowerW
+    return base / this.accuracyMod
   }
 }
