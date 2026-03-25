@@ -5,6 +5,7 @@ import { useMissions } from './useMissions'
 import { usePoiArrival, clearPoiArrival } from './usePoiArrival'
 import { useSiteMissionPois } from './useSiteMissionPois'
 import { addWaypointMarker, removeWaypointMarker } from '@/three/WaypointMarkers'
+import { setRtgTutorialMode } from '@/lib/missionTime'
 import type { MarsSiteViewControllerHandle } from '@/views/MarsSiteViewController'
 
 /**
@@ -79,6 +80,9 @@ export function useMissionUI(deps: {
     if (!missionId) return
     accept(missionId, marsSol.value)
 
+    // Enable tutorial-short RTG durations for the RTG mission
+    if (missionId === 'm02-rtg') setRtgTutorialMode(true)
+
     const def = getMissionDef(missionId)
     if (def) {
       const rx = roverWorldX.value
@@ -86,7 +90,8 @@ export function useMissionUI(deps: {
       const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
       goToObjs.forEach((obj, i) => {
         const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-        const dist = 8 + i * 5
+        // First POI close (8u), later ones progressively farther (up to 40u)
+        const dist = 8 + i * 15
         const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
         const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
         upsertPoi({
@@ -192,12 +197,13 @@ export function useMissionUI(deps: {
       }
     }
     // Fire callback for newly completed missions
-    if (curr.length > (prev?.length ?? 0) && deps.onMissionComplete) {
+    if (curr.length > (prev?.length ?? 0)) {
       const newest = curr[curr.length - 1]
+      if (newest.missionId === 'm02-rtg') setRtgTutorialMode(false)
       const def = getMissionDef(newest.missionId)
       if (def) {
         const unlockLabel = def.unlocks.length > 0 ? def.unlocks.join(', ').toUpperCase() : null
-        deps.onMissionComplete(def.name, def.reward.sp ?? 0, unlockLabel)
+        deps.onMissionComplete?.(def.name, def.reward.sp ?? 0, unlockLabel)
       }
     }
   })

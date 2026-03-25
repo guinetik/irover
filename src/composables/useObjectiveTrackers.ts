@@ -19,6 +19,7 @@ const checkers: Record<string, ObjectiveChecker> = {
   'chemcam': (_p) => false,
   'dan-prospect': (_p) => false,
   'transmit': (_p) => false,
+  'rtg-overdrive': (_p) => false,
 }
 
 export function checkObjective(

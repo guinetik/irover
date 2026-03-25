@@ -363,9 +363,20 @@ function wireArchiveCheckers(): void {
     }
     return count >= (p.count ?? 1)
   })
+
+  // rtg-overdrive: flag set externally when player triggers overdrive
+  registerChecker('rtg-overdrive', () => rtgOverdriveTriggered.value)
+}
+
+/** Set to true when the player activates RTG overdrive (called from view layer). */
+const rtgOverdriveTriggered = ref(false)
+
+function notifyRtgOverdrive(): void {
+  rtgOverdriveTriggered.value = true
 }
 
 function resetForTests(): void {
+  rtgOverdriveTriggered.value = false
   catalog.value = []
   missionStates.value = []
   trackedMissionId.value = null
@@ -392,6 +403,7 @@ export function useMissions() {
     startTransmitCompletion,
     tickTransmit,
     wireArchiveCheckers,
+    notifyRtgOverdrive,
     getMissionDef,
     resetForTests,
   }

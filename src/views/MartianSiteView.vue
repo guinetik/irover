@@ -531,6 +531,7 @@ import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId 
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import { useMissionUI } from '@/composables/useMissionUI'
+import { useMissions } from '@/composables/useMissions'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
@@ -1230,6 +1231,8 @@ function confirmOverdrive() {
   if (rtg instanceof RTGController) {
     rtg.activateOverdrive()
     siteRover.value.activateInstrument(null)
+    // Notify mission system that overdrive was used
+    useMissions().notifyRtgOverdrive()
   }
 }
 

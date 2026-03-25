@@ -21,13 +21,15 @@
       "name": "RTG Management",
       "patron": null,
       "description": "Learn to manage your radioisotope thermoelectric generator — your primary power source on Mars.",
-      "briefing": "Good news — triangulation confirms your position. Now let's get your power systems online. Your RTG is your lifeline out here. Head to the supply cache we dropped nearby and retrieve the calibration rods, then activate the RTG panel to run a startup sequence.",
+      "briefing": "Good news — triangulation confirms your position. Now let's get your power systems online. Your RTG is your lifeline out here. Head to the supply cache we dropped nearby and retrieve the calibration rods. Then open the RTG panel and test the emergency overdrive — it's a short burst that tops off your battery. After that, head to the rock outcrop we've marked for your next assignment.",
       "reward": { "sp": 30 },
       "unlocks": ["rtg"],
       "chain": "m03-mastcam",
       "objectives": [
         { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },
-        { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true }
+        { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true },
+        { "id": "rtg-3", "type": "rtg-overdrive", "label": "Test emergency overdrive", "params": {}, "sequential": true },
+        { "id": "rtg-4", "type": "go-to", "label": "Drive to the rock outcrop", "params": { "poiId": "rock-outcrop-01" }, "sequential": true }
       ]
     },
     {

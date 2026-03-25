@@ -62,6 +62,13 @@ export const RTG_MISSION_DURATIONS = {
   powerShuntRecoveryMarsClockHours: 24,
 } as const
 
+/** When true, RTG overdrive durations are shortened to a few seconds for the tutorial mission. */
+let rtgTutorialMode = false
+
+export function setRtgTutorialMode(on: boolean): void {
+  rtgTutorialMode = on
+}
+
 /** Scene-second lengths for RTG timers (use with {@link missionCooldowns}). */
 export function getRtgPhaseSceneSeconds(): {
   overdriveBurst: number
@@ -70,6 +77,15 @@ export function getRtgPhaseSceneSeconds(): {
   powerShuntEffect: number
   powerShuntRecovery: number
 } {
+  if (rtgTutorialMode) {
+    return {
+      overdriveBurst: 3,          // 3 seconds burst
+      overdriveInstrumentLock: 2,  // 2 seconds cooldown
+      overdriveRecharge: 2,        // 2 seconds recharge
+      powerShuntEffect: 3,
+      powerShuntRecovery: 3,
+    }
+  }
   const d = RTG_MISSION_DURATIONS
   return {
     overdriveBurst: sceneSecondsFromMarsClockHours(d.overdriveBurstMarsClockHours),

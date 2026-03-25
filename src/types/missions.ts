@@ -7,6 +7,7 @@ export type ObjectiveType =
   | 'chemcam'
   | 'dan-prospect'
   | 'transmit'
+  | 'rtg-overdrive'
 
 export interface ObjectiveDef {
   id: string
