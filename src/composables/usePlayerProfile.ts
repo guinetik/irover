@@ -102,6 +102,68 @@ export const FOUNDATIONS: Record<FoundationId, FoundationDef> = {
   },
 }
 
+// --- Origins (Step 3 — flavor only, no modifiers) ---
+
+export type OriginId = 'earth' | 'metropolis' | 'lunar'
+
+export interface OriginDef {
+  id: OriginId
+  name: string
+  description: string
+}
+
+export const ORIGINS: Record<OriginId, OriginDef> = {
+  earth: {
+    id: 'earth',
+    name: 'Earth',
+    description:
+      'Born and raised on the homeworld. You know what real weather feels like. Familiar with natural terrain, organic geology, and open skies.',
+  },
+  metropolis: {
+    id: 'metropolis',
+    name: 'Metropolis Colony',
+    description:
+      "A generation station in the belt. Steel floors, recycled air, artificial gravity. You've never seen a horizon that wasn't a viewport.",
+  },
+  lunar: {
+    id: 'lunar',
+    name: 'Lunar Settlement',
+    description:
+      'Low gravity, long shadows, and silence. The Moon teaches patience. You understand regolith. You understand isolation.',
+  },
+}
+
+// --- Motivations (Step 2 — flavor only, no modifiers) ---
+
+export type MotivationId = 'legacy' | 'therapist' | 'commute'
+
+export interface MotivationDef {
+  id: MotivationId
+  name: string
+  description: string
+}
+
+export const MOTIVATIONS: Record<MotivationId, MotivationDef> = {
+  legacy: {
+    id: 'legacy',
+    name: 'Legacy',
+    description:
+      "I believe humanity's future depends on becoming a multi-planetary species, and I want to contribute to that legacy.",
+  },
+  therapist: {
+    id: 'therapist',
+    name: 'Therapist',
+    description:
+      "My therapist suggested I find a hobby that 'gets me out of the house.' This seemed like the logical extreme.",
+  },
+  commute: {
+    id: 'commute',
+    name: 'Commute',
+    description:
+      "I heard the commute is only 7 months and there's no traffic.",
+  },
+}
+
 // --- Patrons (Mission Sponsorship) ---
 
 export type PatronId = 'trc' | 'isf' | 'msi'
@@ -173,6 +235,8 @@ export interface PlayerProfile {
   archetype: ArchetypeId | null
   foundation: FoundationId | null
   patron: PatronId | null
+  origin: OriginId | null
+  motivation: MotivationId | null
   /** Final stacked modifiers as multipliers (1.0 = no change, 1.15 = +15%) */
   modifiers: ProfileModifiers
   /** True until character creation is completed; enables unrestricted play */
@@ -210,6 +274,8 @@ export function createPlayerProfile(
     archetype,
     foundation,
     patron,
+    origin: null,
+    motivation: null,
     modifiers: resolveModifiers(
       ARCHETYPES[archetype].modifiers,
       FOUNDATIONS[foundation].modifiers,
@@ -225,6 +291,8 @@ export function createNeutralProfile(): PlayerProfile {
     archetype: null,
     foundation: null,
     patron: null,
+    origin: null,
+    motivation: null,
     modifiers: { ...NEUTRAL_MODIFIERS },
     sandbox: false,
   }
@@ -238,6 +306,8 @@ const profile = reactive<PlayerProfile>(createNeutralProfile())
 const chosenArchetype = ref<ArchetypeId | null>(null)
 const chosenFoundation = ref<FoundationId | null>(null)
 const chosenPatron = ref<PatronId | null>(null)
+const chosenOrigin = ref<OriginId | null>(null)
+const chosenMotivation = ref<MotivationId | null>(null)
 const rewardTrackLayer = ref<Partial<ProfileModifiers>>({})
 
 /**
@@ -245,6 +315,8 @@ const rewardTrackLayer = ref<Partial<ProfileModifiers>>({})
  * archetype + foundation + patron + reward track.
  */
 function recomputeModifiers(): void {
+  profile.origin = chosenOrigin.value
+  profile.motivation = chosenMotivation.value
   if (!chosenArchetype.value || !chosenFoundation.value || !chosenPatron.value) {
     profile.archetype = null
     profile.foundation = null
@@ -290,6 +362,13 @@ export function usePlayerProfile() {
     recomputeModifiers()
   }
 
+  function setIdentity(origin: OriginId, motivation: MotivationId): void {
+    chosenOrigin.value = origin
+    chosenMotivation.value = motivation
+    profile.origin = origin
+    profile.motivation = motivation
+  }
+
   /** Convenience: get a single modifier multiplier */
   function mod(key: keyof ProfileModifiers): number {
     return profile.modifiers[key]
@@ -298,10 +377,13 @@ export function usePlayerProfile() {
   return {
     profile,
     setProfile,
+    setIdentity,
     applyRewardTrack,
     mod,
     ARCHETYPES,
     FOUNDATIONS,
     PATRONS,
+    ORIGINS,
+    MOTIVATIONS,
   }
 }
