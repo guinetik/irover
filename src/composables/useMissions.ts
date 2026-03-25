@@ -268,6 +268,22 @@ function tickTransmit(dt: number, currentSol: number): void {
     const missionId = transmitting.value
     transmitting.value = null
     transmitProgress.value = 0
+
+    // Send completion report to outbox
+    const def = getMissionDef(missionId)
+    if (def) {
+      const { pushMessage } = useLGAMailbox()
+      pushMessage({
+        direction: 'sent',
+        sol: currentSol,
+        timeOfDay: 0.5,
+        subject: `MISSION COMPLETE: ${def.name}`,
+        body: `All objectives fulfilled. Transmitting results to Mission Control for ${def.reward.sp ?? 0} SP.`,
+        type: 'info',
+        from: 'Rover',
+      })
+    }
+
     complete(missionId, currentSol)
   }
 }
