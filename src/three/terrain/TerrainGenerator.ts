@@ -5,19 +5,10 @@ import terrainVert from '@/three/shaders/terrain.vert.glsl?raw'
 import terrainFrag from '@/three/shaders/terrain.frag.glsl?raw'
 import rockTextureUrl from '@/assets/texture1.jpg?url'
 import dustTextureUrl from '@/assets/texture2.jpg?url'
-import {
-  ROCK_TYPE_LIST,
-  type RockTypeId,
-  createRockGeometry,
-  createRockMaterial,
-  buildSpawnDistribution,
-  pickRockType,
-} from './RockTypes'
+import { RockFactory } from './RockFactory'
 
 const GRID_SIZE = 256
 const SCALE = 800
-const ROCK_COUNT = 1200
-const BOULDER_COUNT = 50
 
 /** Map orbital textures grouped by feature type for cross-site blending. */
 const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {
@@ -67,80 +58,21 @@ export class TerrainGenerator {
   private terrainMesh: THREE.Mesh | null = null
   /** Exposed for dynamic sun direction updates */
   terrainMaterial: THREE.ShaderMaterial | null = null
-  private rocks: THREE.Mesh[] = []
   private mountains: THREE.Mesh[] = []
-  /** Rock positions, radii, and heights for collision/climbing */
-  rockColliders: { x: number; z: number; radius: number; height: number }[] = []
-  private rockGeoMap = new Map<RockTypeId, THREE.BufferGeometry>()
-  private rockMatMap = new Map<RockTypeId, THREE.MeshStandardMaterial>()
-  private boulderGeos: THREE.BufferGeometry[] = []
   private textures: THREE.Texture[] = []
+
+  /** Rock/boulder spawner — owns geometry pools, materials, and placement. */
+  readonly rockSpawner = new RockFactory()
+
+  /** Rock positions, radii, and heights for collision/climbing */
+  get rockColliders() { return this.rockSpawner.colliders }
 
   readonly group = new THREE.Group()
 
-  constructor() {
-    const texLoader = new THREE.TextureLoader()
-
-    for (const rt of ROCK_TYPE_LIST) {
-      const tex = texLoader.load(`/${rt.textureFile}`)
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-      tex.minFilter = THREE.LinearMipmapLinearFilter
-      tex.magFilter = THREE.LinearFilter
-      tex.colorSpace = THREE.SRGBColorSpace
-      this.textures.push(tex)
-
-      this.rockGeoMap.set(rt.id, createRockGeometry(rt, true))
-      this.rockMatMap.set(rt.id, createRockMaterial(rt, tex))
-    }
-
-    this.boulderGeos = this.createBoulderGeometries()
-  }
-
-  private createBoulderGeometries(): THREE.BufferGeometry[] {
-    const geos: THREE.BufferGeometry[] = []
-
-    // Rounded boulder
-    geos.push(new THREE.DodecahedronGeometry(1.0, 1))
-
-    // Angular slab
-    const slab = new THREE.BoxGeometry(1.0, 0.6, 1.2, 2, 2, 2)
-    this.displaceVertices(slab, 0.15)
-    geos.push(slab)
-
-    // Jagged spike
-    const spike = new THREE.ConeGeometry(0.7, 1.4, 6, 2)
-    this.displaceVertices(spike, 0.12)
-    geos.push(spike)
-
-    // Flat tabletop
-    const table = new THREE.CylinderGeometry(0.8, 1.0, 0.5, 7, 2)
-    this.displaceVertices(table, 0.1)
-    geos.push(table)
-
-    // Lumpy icosphere
-    const lump = new THREE.IcosahedronGeometry(1.0, 1)
-    this.displaceVertices(lump, 0.25)
-    geos.push(lump)
-
-    return geos
-  }
-
-  private displaceVertices(geo: THREE.BufferGeometry, amount: number) {
-    const pos = geo.attributes.position
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i)
-      const y = pos.getY(i)
-      const z = pos.getZ(i)
-      const noise = Math.sin(x * 5.1) * Math.cos(y * 3.7) * Math.sin(z * 4.3)
-      pos.setX(i, x + noise * amount)
-      pos.setY(i, y + noise * amount * 0.6)
-      pos.setZ(i, z + noise * amount)
-    }
-    geo.computeVertexNormals()
-  }
-
-  generate(params: TerrainParams) {
+  async generate(params: TerrainParams) {
     this.dispose()
+
+    await this.rockSpawner.ready()
 
     this.heightmap = this.genHeightmap(params)
 
@@ -153,7 +85,7 @@ export class TerrainGenerator {
     }
 
     this.buildTerrainMesh(params)
-    this.buildRocks(params)
+    this.rockSpawner.spawn(params, (x, z) => this.terrainHeightAt(x, z), this.group)
     this.buildMountains(params)
   }
 
@@ -557,94 +489,6 @@ export class TerrainGenerator {
     this.group.add(this.terrainMesh)
   }
 
-  private buildRocks(params: TerrainParams) {
-    const { seed, featureType } = params
-    const rng = new SimplexNoise(seed)
-
-    // Site-aware rock count multipliers
-    let rockMultiplier = 1.0
-    let boulderMultiplier = 1.0
-    if (featureType === 'polar-cap') {
-      rockMultiplier = 0.5
-      boulderMultiplier = 0.5
-    } else if (featureType === 'canyon') {
-      rockMultiplier = 1.5
-      boulderMultiplier = 1.5
-    } else if (featureType === 'plain') {
-      rockMultiplier = 0.8
-      boulderMultiplier = 0.5
-    }
-
-    // Build spawn distribution from landmark geological indices
-    const spawnDist = buildSpawnDistribution({
-      basalt: params.basalt,
-      ironOxide: params.ironOxide,
-      silicateIndex: params.silicateIndex,
-      waterIceIndex: params.waterIceIndex,
-      dustCover: params.dustCover,
-    })
-
-    const rockCount = Math.floor(ROCK_COUNT * rockMultiplier)
-    for (let i = 0; i < rockCount; i++) {
-      const rx = (rng.n2(i * 1.7, 0) + 1) * 0.5 * SCALE - SCALE / 2
-      const rz = (rng.n2(0, i * 1.7) + 1) * 0.5 * SCALE - SCALE / 2
-      const sc = 0.3 + (rng.n2(i * 0.3, i * 0.7) + 1) * 0.8
-
-      // Seeded random for deterministic type selection
-      const typeRand = (rng.n2(i * 2.9, i * 1.3) + 1) * 0.5
-      const typeId = pickRockType(spawnDist, typeRand)
-      const typeGeo = this.rockGeoMap.get(typeId)!
-      const typeMat = this.rockMatMap.get(typeId)!
-      const typeScaleY = ROCK_TYPE_LIST.find(t => t.id === typeId)!.geometry.scaleY
-
-      const rock = new THREE.Mesh(typeGeo, typeMat)
-      rock.userData.rockType = typeId
-
-      const ry = this.terrainHeightAt(rx, rz) - sc * 0.05
-
-      rock.position.set(rx, ry, rz)
-      rock.scale.set(sc, sc * typeScaleY, sc)
-      rock.rotation.set(Math.random() * 0.5, Math.random() * Math.PI * 2, Math.random() * 0.5)
-      rock.castShadow = true
-      this.group.add(rock)
-      this.rocks.push(rock)
-      this.rockColliders.push({ x: rx, z: rz, radius: sc * 0.6, height: sc * 0.35 })
-    }
-
-    // Boulders — large textured obstacles, type picked from biome distribution
-    const boulderRng = new SimplexNoise(seed + 200)
-    const boulderCount = Math.floor(BOULDER_COUNT * boulderMultiplier)
-    for (let i = 0; i < boulderCount; i++) {
-      const bx = (boulderRng.n2(i * 2.3, 0.7) + 1) * 0.5 * SCALE - SCALE / 2
-      const bz = (boulderRng.n2(0.7, i * 2.3) + 1) * 0.5 * SCALE - SCALE / 2
-      let sc = 2.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.5
-
-      if (featureType === 'volcano' && i % 4 === 0) {
-        sc = 4.0 + (boulderRng.n2(i * 0.5, i * 0.9) + 1) * 2.0
-      }
-
-      const bTypeRand = (boulderRng.n2(i * 3.7, i * 2.1) + 1) * 0.5
-      const bTypeId = pickRockType(spawnDist, bTypeRand)
-      const bMat = this.rockMatMap.get(bTypeId)!
-
-      const boulder = new THREE.Mesh(this.boulderGeos[i % this.boulderGeos.length], bMat)
-      const by = this.terrainHeightAt(bx, bz) - sc * 0.1
-
-      boulder.position.set(bx, by, bz)
-      boulder.scale.set(sc, sc * 0.5, sc * 0.8)
-      boulder.rotation.set(
-        boulderRng.n2(i * 1.1, 0) * 0.3,
-        boulderRng.n2(0, i * 1.1) * Math.PI * 2,
-        boulderRng.n2(i * 0.7, i * 0.3) * 0.3,
-      )
-      boulder.castShadow = true
-      boulder.receiveShadow = true
-      this.group.add(boulder)
-      this.rocks.push(boulder)
-      this.rockColliders.push({ x: bx, z: bz, radius: sc * 0.7, height: sc * 0.4 })
-    }
-  }
-
   private buildMountains(params: TerrainParams) {
     const { seed, elevation, featureType, waterIceIndex } = params
     const rng = new SimplexNoise(seed + 300)
@@ -893,7 +737,7 @@ export class TerrainGenerator {
 
   /** Returns only small rocks (excludes boulders with scale >= 2.0) */
   getSmallRocks(): THREE.Mesh[] {
-    return this.rocks.filter(r => r.scale.x < 2.0)
+    return this.rockSpawner.getSmallRocks()
   }
 
   dispose() {
@@ -903,15 +747,7 @@ export class TerrainGenerator {
     }
     this.textures.forEach((t) => t.dispose())
     this.textures = []
-    this.rocks.forEach((r) => {
-      // Depleted rocks have cloned materials that need disposal
-      if (r.userData._depletedMat) {
-        ;(r.material as THREE.Material).dispose()
-      }
-      this.group.remove(r)
-    })
-    this.rocks = []
-    this.rockColliders = []
+    this.rockSpawner.clear(this.group)
     this.mountains.forEach((m) => {
       m.geometry.dispose()
       this.group.remove(m)

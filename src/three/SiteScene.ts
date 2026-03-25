@@ -132,7 +132,7 @@ export class SiteScene {
     this.sky = new MarsSky(this.scene)
 
     // Terrain
-    this.terrain.generate(params)
+    await this.terrain.generate(params)
     this.scene.add(this.terrain.group)
 
     // Dust particles
