@@ -72,6 +72,7 @@ const props = defineProps<{
   stacks: InventoryStack[]
   totalSP: number
   sampleConsumptionKg: number
+  accuracyMod?: number
 }>()
 
 const emit = defineEmits<{
@@ -135,7 +136,7 @@ function onReagentConfirm(sampleId: string) {
 }
 
 function onMiniGameComplete(quality: number) {
-  const roll = samExp.rollDiscovery(selectedModeId.value!, selectedSampleId.value!, quality)
+  const roll = samExp.rollDiscovery(selectedModeId.value!, selectedSampleId.value!, quality, props.accuracyMod ?? 1.0)
   if (!roll) return
 
   const mode = samExp.modes.value.find(m => m.id === selectedModeId.value)!

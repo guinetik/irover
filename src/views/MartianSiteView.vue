@@ -255,6 +255,7 @@
       :stacks="inventoryStacks"
       :total-s-p="totalSP"
       :sample-consumption-kg="samExperiments.data.value?.sampleConsumptionKg ?? 0.002"
+      :accuracy-mod="playerMod('instrumentAccuracy')"
       @close="samDialogVisible = false"
       @enqueue="handleSamEnqueue"
     />
