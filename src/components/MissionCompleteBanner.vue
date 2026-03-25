@@ -48,7 +48,8 @@ defineExpose({ show })
 <style scoped>
 .mc-overlay {
   position: fixed;
-  top: 120px;
+  top: 50%;
+  margin-top: -60px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 52;
@@ -137,10 +138,10 @@ defineExpose({ show })
 }
 .mc-fade-enter-from {
   opacity: 0;
-  transform: translateX(-50%) translateY(-20px) scale(0.95);
+  transform: translateX(-50%) scale(0.9);
 }
 .mc-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-10px);
+  transform: translateX(-50%) scale(0.95);
 }
 </style>
