@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   markRead: [messageId: string]
+  'open-message': [message: LGAMessage]
 }>()
 
 const activeTab = ref<'inbox' | 'sent'>('inbox')
@@ -24,6 +25,7 @@ function toggleMessage(msg: LGAMessage) {
   } else {
     expandedId.value = msg.id
     if (!msg.read) emit('markRead', msg.id)
+    emit('open-message', msg)
   }
 }
 
@@ -73,6 +75,7 @@ function formatTimeOfDay(tod: number): string {
       >
         <div class="msg-row">
           <span class="msg-dot" :class="{ unread: !msg.read }">●</span>
+          <span v-if="msg.type === 'mission'" class="msg-mission-badge">[M]</span>
           <span class="msg-subject">{{ msg.subject }}</span>
         </div>
         <div class="msg-meta">
@@ -191,6 +194,14 @@ function formatTimeOfDay(tod: number): string {
 .msg-dot.unread {
   color: #88ccff;
   text-shadow: 0 0 4px rgba(136, 204, 255, 0.5);
+}
+
+.msg-mission-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: #ffcc44;
+  letter-spacing: 0.04em;
+  font-weight: bold;
 }
 
 .msg-subject {
