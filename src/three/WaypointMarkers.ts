@@ -111,6 +111,25 @@ export function clearWaypointMarkers(scene: THREE.Scene): void {
   markers.length = 0
 }
 
+const ARRIVAL_COLOR = new THREE.Color(0xffcc44) // gold when arriving
+const BASE_COLOR = new THREE.Color(MARKER_COLOR)
+const lerpColor = new THREE.Color()
+
+/**
+ * Transition a marker's color based on dwell progress (0 = cyan, 1 = gold).
+ */
+export function setWaypointMarkerProgress(id: string, progress: number): void {
+  const marker = markers.find((m) => m.id === id)
+  if (!marker) return
+  lerpColor.copy(BASE_COLOR).lerp(ARRIVAL_COLOR, progress)
+  marker.group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      const mat = child.material as THREE.MeshBasicMaterial
+      mat.color.copy(lerpColor)
+    }
+  })
+}
+
 /**
  * Animate markers (call each frame). Pulses the ring and rotates the diamond.
  */

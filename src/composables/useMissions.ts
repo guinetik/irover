@@ -37,7 +37,11 @@ function persist(): void {
 
 // --- Derived ---
 const activeMissions = computed(() =>
-  missionStates.value.filter((s) => s.status === 'active'),
+  missionStates.value.filter((s) => s.status === 'active' || s.status === 'awaiting-transmit'),
+)
+
+const awaitingTransmit = computed(() =>
+  missionStates.value.filter((s) => s.status === 'awaiting-transmit'),
 )
 
 const completedMissions = computed(() =>
@@ -117,7 +121,7 @@ function complete(missionId: string, currentSol: number): void {
   if (idx === -1) return
 
   const state = missionStates.value[idx]
-  if (state.status !== 'active') return
+  if (state.status !== 'active' && state.status !== 'awaiting-transmit') return
 
   // Mark all objectives done
   for (const obj of state.objectives) {
@@ -231,9 +235,40 @@ function checkAllObjectives(
       }
     }
 
-    if (allDone) {
-      complete(state.missionId, currentSol)
+    if (allDone && state.status === 'active') {
+      // All objectives done — await LGA transmission to complete
+      state.status = 'awaiting-transmit'
+      missionStates.value = [...missionStates.value]
+      persist()
     }
+  }
+}
+
+/**
+ * Transmit mission completion via LGA. Called when player activates transmit
+ * on a mission in awaiting-transmit state. Returns true if transmission started.
+ */
+const transmitting = ref<string | null>(null) // missionId currently transmitting
+const transmitProgress = ref(0)
+
+function startTransmitCompletion(missionId: string, currentSol: number): boolean {
+  const state = getMissionState(missionId)
+  if (!state || state.status !== 'awaiting-transmit') return false
+  if (transmitting.value) return false // already transmitting
+
+  transmitting.value = missionId
+  transmitProgress.value = 0
+  return true
+}
+
+function tickTransmit(dt: number, currentSol: number): void {
+  if (!transmitting.value) return
+  transmitProgress.value = Math.min(transmitProgress.value + dt / 2, 1) // 2 second transmit
+  if (transmitProgress.value >= 1) {
+    const missionId = transmitting.value
+    transmitting.value = null
+    transmitProgress.value = 0
+    complete(missionId, currentSol)
   }
 }
 
@@ -327,14 +362,19 @@ export function useMissions() {
     missionStates,
     trackedMissionId,
     activeMissions,
+    awaitingTransmit,
     completedMissions,
     unlockedInstruments,
+    transmitting,
+    transmitProgress,
     loadCatalog,
     accept,
     markObjectiveDone,
     complete,
     isObjectiveEligible,
     checkAllObjectives,
+    startTransmitCompletion,
+    tickTransmit,
     wireArchiveCheckers,
     getMissionDef,
     resetForTests,

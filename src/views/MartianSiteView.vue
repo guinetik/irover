@@ -204,7 +204,12 @@
       :mission="trackedMission"
       :mission-def="trackedMissionDef"
       :is-eligible="(objId: string) => trackedMissionId ? isObjectiveEligible(trackedMissionId, objId) : false"
+      :lga-active="activeInstrumentSlot === 11"
+      :transmit-progress="transmitProgress"
+      :dwell-poi-id="activeDwellPoiId"
+      :dwell-progress="activeDwellProgress"
       @untrack="trackedMissionId = null"
+      @transmit="handleMissionTransmit"
     />
     <InstrumentCrosshair
       :visible="crosshairVisible"
@@ -532,6 +537,7 @@ import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
 import { addWaypointMarker, removeWaypointMarker, clearWaypointMarkers } from '@/three/WaypointMarkers'
+import { usePoiArrival, clearPoiArrival } from '@/composables/usePoiArrival'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -949,7 +955,11 @@ const {
   isObjectiveEligible,
   getMissionDef,
   wireArchiveCheckers,
+  startTransmitCompletion,
+  transmitProgress,
 } = useMissions()
+
+const { dwellStates } = usePoiArrival()
 
 // Mission UI state
 const missionLogOpen = ref(false)
@@ -962,6 +972,21 @@ const trackedMission = computed(() =>
 const trackedMissionDef = computed(() =>
   trackedMissionId.value ? getMissionDef(trackedMissionId.value) ?? null : null
 )
+
+// POI dwell progress for the active dwelling POI (shown in tracker)
+const activeDwellPoiId = computed(() => {
+  const dwelling = dwellStates.value.find((s) => s.progress > 0 && !s.arrived)
+  return dwelling?.poiId ?? null
+})
+const activeDwellProgress = computed(() => {
+  const dwelling = dwellStates.value.find((s) => s.progress > 0 && !s.arrived)
+  return dwelling?.progress ?? 0
+})
+
+function handleMissionTransmit() {
+  if (!trackedMissionId.value) return
+  startTransmitCompletion(trackedMissionId.value, marsSol.value)
+}
 
 // Clean up POIs + 3D markers as individual objectives complete
 watch(
@@ -976,6 +1001,7 @@ watch(
         const objDef = def.objectives[i]
         if (objDef?.type === 'go-to' && objDef.params.poiId) {
           removePoi(objDef.params.poiId)
+          clearPoiArrival(objDef.params.poiId)
           if (scene) removeWaypointMarker(objDef.params.poiId, scene.scene)
         }
       }

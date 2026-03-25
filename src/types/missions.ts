@@ -45,7 +45,7 @@ export interface ObjectiveState {
 
 export interface MissionState {
   missionId: string
-  status: 'active' | 'completed'
+  status: 'active' | 'awaiting-transmit' | 'completed'
   acceptedAtSol: number
   completedAtSol?: number
   objectives: ObjectiveState[]

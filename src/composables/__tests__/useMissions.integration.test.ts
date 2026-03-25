@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useMissions } from '../useMissions'
+import { tickPoiArrivals, resetPoiArrivalsForTests } from '../usePoiArrival'
 import type { SiteMissionPoi } from '../useSiteMissionPois'
 import type { MissionCatalog } from '@/types/missions'
 
@@ -43,27 +44,43 @@ describe('Mission lifecycle integration', () => {
     localStorage.clear()
     const { resetForTests, loadCatalog } = useMissions()
     resetForTests()
+    resetPoiArrivalsForTests()
     loadCatalog(catalog)
   })
 
-  it('full lifecycle: accept -> check objectives -> auto-complete', () => {
-    const { accept, activeMissions, completedMissions, unlockedInstruments, checkAllObjectives } = useMissions()
+  it('full lifecycle: accept -> dwell at POIs -> awaiting-transmit -> transmit -> complete', () => {
+    const { accept, activeMissions, completedMissions, unlockedInstruments, checkAllObjectives, startTransmitCompletion, tickTransmit } = useMissions()
 
     accept('int-01', 1)
     expect(activeMissions.value.length).toBe(1)
 
     // Rover not near any POI
+    tickPoiArrivals(0, 0, pois, 2.0)
     checkAllObjectives(0, 0, pois, 1)
     expect(activeMissions.value[0].objectives[0].done).toBe(false)
 
-    // Rover reaches POI A
+    // Rover dwells at POI A for 2 seconds
+    tickPoiArrivals(10, 10, pois, 1.0)
+    tickPoiArrivals(10, 10, pois, 1.0)
     checkAllObjectives(10, 10, pois, 1)
     expect(activeMissions.value[0].objectives[0].done).toBe(true)
     expect(activeMissions.value[0].objectives[1].done).toBe(false)
 
-    // Rover reaches POI B
+    // Rover dwells at POI B for 2 seconds
+    tickPoiArrivals(50, 50, pois, 1.0)
+    tickPoiArrivals(50, 50, pois, 1.0)
     checkAllObjectives(50, 50, pois, 2)
-    // All objectives done -> auto-completed
+
+    // All objectives done -> awaiting transmit (not auto-completed)
+    expect(activeMissions.value[0].status).toBe('awaiting-transmit')
+    expect(completedMissions.value.length).toBe(0)
+
+    // Start transmit and tick for 2 seconds
+    startTransmitCompletion('int-01', 2)
+    tickTransmit(1.0, 2)
+    tickTransmit(1.0, 2)
+
+    // Now completed
     expect(completedMissions.value.length).toBe(1)
     expect(unlockedInstruments.value).toContain('mastcam')
   })
@@ -72,7 +89,6 @@ describe('Mission lifecycle integration', () => {
     const { accept } = useMissions()
     accept('int-01', 1)
 
-    // Singleton refs persist - verify state is still there
     const { activeMissions } = useMissions()
     expect(activeMissions.value.length).toBe(1)
   })

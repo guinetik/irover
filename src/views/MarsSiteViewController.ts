@@ -53,7 +53,8 @@ import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { secondsPerSol } from '@/lib/missionTime'
-import { updateWaypointMarkers } from '@/three/WaypointMarkers'
+import { updateWaypointMarkers, setWaypointMarkerProgress } from '@/three/WaypointMarkers'
+import { tickPoiArrivals, getPoiDwellProgress } from '@/composables/usePoiArrival'
 
 /** Seconds to hold position before DAN prospecting begins. */
 export const DAN_INITIATE_DURATION_SEC = 4
@@ -397,7 +398,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
   const { syncFromControllers } = useInstrumentDurability()
   const missions = useMissions()
-  const { loadCatalog, wireArchiveCheckers, checkAllObjectives } = missions
+  const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
   const { pushMessage } = useLGAMailbox()
   const { profile: playerProfile } = usePlayerProfile()
@@ -643,13 +644,20 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         roverSpawnCaptured = true
       }
 
-      // --- Mission objective checks ---
+      // --- POI dwell detection + mission objective checks ---
+      tickPoiArrivals(roverWorldX.value, roverWorldZ.value, missionPoisRef.value, sceneDelta)
+      // Update waypoint marker colors based on dwell progress
+      for (const poi of missionPoisRef.value) {
+        const progress = getPoiDwellProgress(poi.id)
+        if (progress > 0) setWaypointMarkerProgress(poi.id, progress)
+      }
       checkAllObjectives(
         roverWorldX.value,
         roverWorldZ.value,
         missionPoisRef.value,
         marsSol.value,
       )
+      tickTransmit(sceneDelta, marsSol.value)
       updateWaypointMarkers(simulationTime)
 
       // --- Delegated ticks ---
