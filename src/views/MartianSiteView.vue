@@ -962,6 +962,19 @@ const trackedMissionDef = computed(() =>
   trackedMissionId.value ? getMissionDef(trackedMissionId.value) ?? null : null
 )
 
+// Clean up POIs when missions complete
+watch(completedMissions, (completed) => {
+  for (const state of completed) {
+    const def = getMissionDef(state.missionId)
+    if (!def) continue
+    for (const obj of def.objectives) {
+      if (obj.type === 'go-to' && obj.params.poiId) {
+        removePoi(obj.params.poiId)
+      }
+    }
+  }
+})
+
 // Helper for MissionLogDialog
 function getObjLabel(missionId: string, objectiveId: string): string {
   const def = getMissionDef(missionId)
@@ -973,6 +986,29 @@ function handleAcceptMission(missionId: string | undefined) {
   if (!missionId) return
   const sol = marsSol.value
   accept(missionId, sol)
+
+  // Register POIs for go-to objectives so they show on the compass
+  const def = getMissionDef(missionId)
+  if (def) {
+    const rx = roverWorldX.value
+    const rz = roverWorldZ.value
+    const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
+    goToObjs.forEach((obj, i) => {
+      // Place markers in a ring around the rover, 60-120 units out
+      const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
+      const dist = 80 + (i % 3) * 20
+      const px = Math.max(-380, Math.min(380, rx + Math.cos(angle) * dist))
+      const pz = Math.max(-380, Math.min(380, rz + Math.sin(angle) * dist))
+      upsertPoi({
+        id: obj.params.poiId,
+        label: obj.label,
+        x: px,
+        z: pz,
+        color: '#66ffee',
+      })
+    })
+  }
+
   openedMessage.value = null
 }
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
