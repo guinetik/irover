@@ -66,6 +66,7 @@ export function createDrillTickHandler(
       const z = thermalZone
       const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
       drill.drillDurationMultiplier = thermalMult / playerMod('analysisSpeed')
+      drill.accuracyMod = playerMod('instrumentAccuracy')
       drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
       crosshairColor.value = drill.hasTarget && drill.canCollectCurrentTarget ? 'green' : 'red'
