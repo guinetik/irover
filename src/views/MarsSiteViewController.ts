@@ -607,7 +607,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const terrainParams = getTerrainParamsForSite(siteId, landmarks)
     siteTerrainParams.value = terrainParams
 
-    siteScene = new SiteScene()
+    siteScene = new SiteScene('glb')
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
 
     // Procedural Mars environment map — gives PBR metals something to reflect

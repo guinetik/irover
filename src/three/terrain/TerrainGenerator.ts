@@ -3,9 +3,12 @@ import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUti
 import { SimplexNoise } from "./SimplexNoise";
 import terrainVert from "@/three/shaders/terrain.vert.glsl?raw";
 import terrainFrag from "@/three/shaders/terrain.frag.glsl?raw";
+import mountainVert from "@/three/shaders/mountain.vert.glsl?raw";
+import mountainFrag from "@/three/shaders/mountain.frag.glsl?raw";
 import rockTextureUrl from "@/assets/texture1.jpg?url";
 import dustTextureUrl from "@/assets/texture2.jpg?url";
-import { RockFactory } from "./RockFactory";
+import { RockFactory, type RockCollider } from "./RockFactory";
+import { GlbTerrainGenerator } from "./GlbTerrainGenerator";
 
 const GRID_SIZE = 256;
 const SCALE = 800;
@@ -75,7 +78,31 @@ export interface TerrainParams {
   temperatureMinK: number;
 }
 
-export class TerrainGenerator {
+/** Common interface for all terrain generators. */
+export interface ITerrainGenerator {
+  readonly group: THREE.Group
+  readonly rockSpawner: RockFactory
+  terrainMaterial: THREE.ShaderMaterial | null
+  get rockColliders(): RockCollider[]
+  get scale(): number
+  generate(params: TerrainParams): Promise<void>
+  heightAt(x: number, z: number): number
+  terrainHeightAt(x: number, z: number): number
+  normalAt(x: number, z: number): THREE.Vector3
+  slopeAt(x: number, z: number): number
+  getSmallRocks(): THREE.Mesh[]
+  dispose(): void
+}
+
+export type TerrainGeneratorType = 'default' | 'glb'
+
+/** Creates a terrain generator by type. */
+export function createTerrainGenerator(type: TerrainGeneratorType = 'default'): ITerrainGenerator {
+  if (type === 'glb') return new GlbTerrainGenerator()
+  return new DefaultTerrainGenerator()
+}
+
+export class DefaultTerrainGenerator implements ITerrainGenerator {
   private heightmap: Float32Array | null = null;
   private heightMin = 0;
   private heightMax = 0;
@@ -558,39 +585,50 @@ export class TerrainGenerator {
     const rng = new SimplexNoise(seed + 300);
     const elev = Math.max(0.25, elevation);
 
-    // Site-aware palette
-    let nearColor: number;
-    let midColor: number;
+    // Site-aware color palettes
+    let baseColor: THREE.Color;
+    let peakColor: THREE.Color;
+    let hazeColor: THREE.Color;
     if (waterIceIndex > 0.7) {
-      nearColor = 0x7088a0;
-      midColor = 0x7a90a8;
-    } else if (featureType === "volcano") {
-      nearColor = 0x3a2520;
-      midColor = 0x4a3028;
-    } else if (featureType === "canyon") {
-      nearColor = 0x6a3a25;
-      midColor = 0x7a4a30;
+      baseColor = new THREE.Color(0x6a7888);
+      peakColor = new THREE.Color(0xa0b0c0);
+      hazeColor = new THREE.Color(0x8098a8);
+    } else if (featureType === 'volcano') {
+      baseColor = new THREE.Color(0x4a3028);
+      peakColor = new THREE.Color(0x6a5040);
+      hazeColor = new THREE.Color(0x2a1810);
+    } else if (featureType === 'canyon') {
+      baseColor = new THREE.Color(0x7a4830);
+      peakColor = new THREE.Color(0xa07858);
+      hazeColor = new THREE.Color(0x4a2818);
     } else {
-      nearColor = 0x5a3d2a;
-      midColor = 0x6a4d35;
+      baseColor = new THREE.Color(0x6a4830);
+      peakColor = new THREE.Color(0x9a7858);
+      hazeColor = new THREE.Color(0x3a2010);
     }
-    const farColor = waterIceIndex > 0.7 ? 0x8090a0 : 0x7a5a40;
 
-    const nearMat = new THREE.MeshStandardMaterial({
-      color: nearColor,
-      roughness: 0.95,
-      metalness: 0.05,
-    });
-    const midMat = new THREE.MeshStandardMaterial({
-      color: midColor,
-      roughness: 0.96,
-      metalness: 0.03,
-    });
-    const farMat = new THREE.MeshStandardMaterial({
-      color: farColor,
-      roughness: 0.98,
-      metalness: 0.0,
-    });
+    const sunDir = new THREE.Vector3(50, 80, 30).normalize();
+
+    // Create shader materials for each ring distance
+    const createMountainMat = (hazeStart: number, hazeEnd: number, maxH: number) =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uBaseColor: { value: baseColor },
+          uPeakColor: { value: peakColor },
+          uHazeColor: { value: hazeColor },
+          uSunDirection: { value: sunDir },
+          uMaxHeight: { value: maxH },
+          uHazeStart: { value: hazeStart },
+          uHazeEnd: { value: hazeEnd },
+        },
+        vertexShader: mountainVert,
+        fragmentShader: mountainFrag,
+        fog: false,
+      });
+
+    const nearMat = createMountainMat(SCALE * 0.5, SCALE * 0.9, 100);
+    const midMat = createMountainMat(SCALE * 0.4, SCALE * 0.85, 130);
+    const farMat = createMountainMat(SCALE * 0.3, SCALE * 0.8, 160);
 
     // Helper to place one mountain
     const placeMountain = (
@@ -598,7 +636,7 @@ export class TerrainGenerator {
       dist: number,
       height: number,
       width: number,
-      mat: THREE.MeshStandardMaterial,
+      mat: THREE.ShaderMaterial,
       idx: number,
     ) => {
       const mx = Math.cos(angle) * dist;
@@ -686,23 +724,23 @@ export class TerrainGenerator {
     let geo: THREE.BufferGeometry;
 
     if (shapeType === 0) {
-      // Jagged peak
-      geo = new THREE.ConeGeometry(baseWidth, peakHeight, 12, 8);
+      // Jagged peak — more radial and height segments for smoother silhouette
+      geo = new THREE.ConeGeometry(baseWidth, peakHeight, 24, 16);
     } else if (shapeType === 1) {
       // Mesa / butte with steep walls
       geo = new THREE.CylinderGeometry(
         baseWidth * 0.5,
         baseWidth,
         peakHeight * 0.7,
-        10,
-        6,
+        20,
+        12,
       );
     } else if (shapeType === 2) {
       // Broad dome (half-sphere stretched tall)
       geo = new THREE.SphereGeometry(
         baseWidth,
-        12,
-        8,
+        24,
+        16,
         0,
         Math.PI * 2,
         0,
@@ -711,20 +749,20 @@ export class TerrainGenerator {
       geo.scale(1, peakHeight / baseWidth, 1);
     } else if (shapeType === 3) {
       // Twin peaks — two merged cones
-      const geo1 = new THREE.ConeGeometry(baseWidth * 0.65, peakHeight, 10, 6);
+      const geo1 = new THREE.ConeGeometry(baseWidth * 0.65, peakHeight, 20, 12);
       const geo2 = new THREE.ConeGeometry(
         baseWidth * 0.55,
         peakHeight * 0.85,
-        10,
-        6,
+        20,
+        12,
       );
       geo2.translate(baseWidth * 0.5, -peakHeight * 0.08, baseWidth * 0.2);
-      this.displaceMountainVertices(geo1, baseWidth * 0.18, i);
-      this.displaceMountainVertices(geo2, baseWidth * 0.18, i + 50);
+      this.displaceMountainVertices(geo1, baseWidth * 0.25, i);
+      this.displaceMountainVertices(geo2, baseWidth * 0.25, i + 50);
       const merged = BufferGeometryUtils.mergeGeometries([geo1, geo2]);
       geo1.dispose();
       geo2.dispose();
-      if (!merged) return new THREE.ConeGeometry(baseWidth, peakHeight, 10, 6);
+      if (!merged) return new THREE.ConeGeometry(baseWidth, peakHeight, 20, 12);
       geo = merged;
       geo.computeVertexNormals();
       return geo;
@@ -734,13 +772,13 @@ export class TerrainGenerator {
         baseWidth * 2.5,
         peakHeight,
         baseWidth * 0.5,
+        16,
+        16,
         8,
-        8,
-        4,
       );
     }
 
-    this.displaceMountainVertices(geo, baseWidth * 0.18, i);
+    this.displaceMountainVertices(geo, baseWidth * 0.25, i);
     geo.computeVertexNormals();
     return geo;
   }
@@ -756,31 +794,37 @@ export class TerrainGenerator {
   ): void {
     const pos = geo.attributes.position;
     const s = seed * 0.37;
+    // Scale frequencies relative to displacement amount so detail matches mountain size
+    const freqScale = 1.0 / Math.max(amount, 1);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
       const z = pos.getZ(i);
 
-      // Large ridges
-      const n1 = Math.sin(x * 0.08 + s) * Math.cos(z * 0.06 + s * 0.7) * 1.0;
+      // Large ridge deformation
+      const n1 = Math.sin(x * 0.05 * freqScale + s) * Math.cos(z * 0.04 * freqScale + s * 0.7) * 1.0;
       // Medium crags
-      const n2 =
-        Math.sin(x * 0.18 + y * 0.12 + s * 1.3) * Math.cos(z * 0.15 + s) * 0.5;
+      const n2 = Math.sin(x * 0.12 * freqScale + y * 0.08 * freqScale + s * 1.3) *
+        Math.cos(z * 0.10 * freqScale + s) * 0.55;
       // Fine jagged detail
-      const n3 =
-        Math.sin(x * 0.4 + z * 0.35 + s * 2.1) *
-        Math.cos(y * 0.3 + x * 0.25) *
-        0.25;
+      const n3 = Math.sin(x * 0.25 * freqScale + z * 0.22 * freqScale + s * 2.1) *
+        Math.cos(y * 0.18 * freqScale + x * 0.15 * freqScale) * 0.3;
+      // Very fine erosion texture
+      const n4 = Math.sin(x * 0.5 * freqScale + s * 3.1) *
+        Math.cos(z * 0.45 * freqScale + y * 0.3 * freqScale) * 0.15;
       // Vertical cliff bands (abs creates sharp edges)
-      const cliff = Math.abs(Math.sin(y * 0.12 + x * 0.04 + s * 0.5)) * 0.4;
+      const cliff = Math.abs(Math.sin(y * 0.08 * freqScale + x * 0.03 * freqScale + s * 0.5)) * 0.35;
 
-      const noise = n1 + n2 + n3 + cliff;
+      const noise = n1 + n2 + n3 + n4 + cliff;
 
-      // Displace radially outward, with less Y displacement to keep height coherent
+      // Height-dependent: less displacement near peaks (sharper tips)
+      // and at the base (stable ground line)
       const len = Math.sqrt(x * x + z * z) || 1;
-      pos.setX(i, x + (x / len) * noise * amount);
-      pos.setY(i, y + noise * amount * 0.3);
-      pos.setZ(i, z + (z / len) * noise * amount);
+      const heightFactor = 0.5 + Math.sin(y * 0.03 + 1.0) * 0.5;
+
+      pos.setX(i, x + (x / len) * noise * amount * heightFactor);
+      pos.setY(i, y + noise * amount * 0.25 * heightFactor);
+      pos.setZ(i, z + (z / len) * noise * amount * heightFactor);
     }
   }
 

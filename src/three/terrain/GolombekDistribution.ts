@@ -266,6 +266,8 @@ const GAME_TO_MARS = 1.0
 export interface GolombekConfig {
   /** Override max rock count for performance tuning */
   maxRocks?: number
+  /** Minimum rock count — ensures enough rocks for gameplay */
+  minRocks?: number
   /** Minimum diameter in game meters */
   minDiameter?: number
   /** Maximum diameter in game meters */
@@ -283,6 +285,7 @@ export function generateRockDistribution(
   config: GolombekConfig = {},
 ): RockSpawn[] {
   const maxRocks = config.maxRocks ?? MAX_ROCKS
+  const minRocks = config.minRocks ?? 200
   const minD = config.minDiameter ?? MIN_DIAMETER
   const maxD = config.maxDiameter ?? MAX_DIAMETER
 
@@ -310,7 +313,7 @@ export function generateRockDistribution(
   const realCount = realDensity * terrainArea
 
   // Scale to performance budget, preserving the SIZE DISTRIBUTION shape
-  const targetCount = Math.min(maxRocks, Math.max(50, Math.floor(realCount)))
+  const targetCount = Math.min(maxRocks, Math.max(minRocks, Math.floor(realCount)))
 
   // ── Step 3: Generate ejecta craters for spatial clustering ───────────────
   const craters = generateEjectaCraters(params, scale, rng)
@@ -326,7 +329,7 @@ export function generateRockDistribution(
   // ── Step 6: Spawn rocks ─────────────────────────────────────────────────
   const spawns: RockSpawn[] = []
   let attempts = 0
-  const maxAttempts = targetCount * 3  // Allow rejection sampling
+  const maxAttempts = targetCount * 8  // Allow more rejection sampling headroom
 
   while (spawns.length < targetCount && attempts < maxAttempts) {
     attempts++

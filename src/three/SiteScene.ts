@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { TerrainGenerator, type TerrainParams } from './terrain/TerrainGenerator'
+import { createTerrainGenerator, type ITerrainGenerator, type TerrainParams, type TerrainGeneratorType } from './terrain/TerrainGenerator'
 import { DustParticles } from './DustParticles'
 import { MarsSky } from './MarsSky'
 import { RoverTrails } from './RoverTrails'
@@ -58,8 +58,12 @@ export interface SiteSceneInitOptions {
 
 export class SiteScene {
   readonly scene = new THREE.Scene()
-  readonly terrain = new TerrainGenerator()
+  readonly terrain: ITerrainGenerator
   sky: MarsSky | null = null
+
+  constructor(terrainType?: TerrainGeneratorType) {
+    this.terrain = createTerrainGenerator(terrainType)
+  }
   dust: DustParticles | null = null
   trails: RoverTrails | null = null
   rover: THREE.Group | null = null
