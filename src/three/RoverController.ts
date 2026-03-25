@@ -87,6 +87,16 @@ export class RoverController {
   // Rover heading (Y rotation) — model rotated PI so "forward" = +Z in model space
   heading = 0
 
+  /**
+   * Camera look heading — the direction the camera faces, in the same convention as `heading`.
+   * Use this for the compass so POI dots align with what the player sees on screen.
+   */
+  get cameraHeading(): number {
+    // Camera is at orbitAngle offset from rover, looking back at rover.
+    // Camera forward = orbitAngle + PI (camera looks opposite to its orbit position).
+    return this.orbitAngle + Math.PI
+  }
+
   // Orbit angle around the rover (mouse drag)
   private orbitAngle = Math.PI
   private orbitPitch = 0.3 // slight downward look

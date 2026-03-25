@@ -14,11 +14,11 @@ describe('useObjectiveTrackers', () => {
     ]
 
     it('returns true after dwelling near POI for 2 seconds', () => {
-      // Simulate 2 seconds of being near the POI
-      tickPoiArrivals(103, 200, pois, 1.0)
-      tickPoiArrivals(103, 200, pois, 1.0)
+      // Simulate 2 seconds of being within arrival radius (2.5 units)
+      tickPoiArrivals(101, 200, pois, 1.0)
+      tickPoiArrivals(101, 200, pois, 1.0)
       const result = checkObjective('go-to', { poiId: 'tri-alpha' }, {
-        roverX: 103, roverZ: 200, pois,
+        roverX: 101, roverZ: 200, pois,
       })
       expect(result).toBe(true)
     })
@@ -26,7 +26,7 @@ describe('useObjectiveTrackers', () => {
     it('returns false before dwell time completes', () => {
       tickPoiArrivals(103, 200, pois, 0.5)
       const result = checkObjective('go-to', { poiId: 'tri-alpha' }, {
-        roverX: 103, roverZ: 200, pois,
+        roverX: 101, roverZ: 200, pois,
       })
       expect(result).toBe(false)
     })
@@ -44,7 +44,7 @@ describe('useObjectiveTrackers', () => {
       tickPoiArrivals(0, 0, pois, 0.1) // walk away — resets
       tickPoiArrivals(103, 200, pois, 1.0) // back, but only 1s
       const result = checkObjective('go-to', { poiId: 'tri-alpha' }, {
-        roverX: 103, roverZ: 200, pois,
+        roverX: 101, roverZ: 200, pois,
       })
       expect(result).toBe(false)
     })

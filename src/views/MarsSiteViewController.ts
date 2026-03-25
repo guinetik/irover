@@ -624,7 +624,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       if (controller) {
         syncFromControllers(controller.instruments)
       }
-      roverHeading.value = controller?.heading ?? 0
+      roverHeading.value = controller?.cameraHeading ?? 0
       {
         const moving = roverReady && controller ? (controller.isMoving ?? false) : false
         if (moving !== roverIsMoving.value) roverIsMoving.value = moving
