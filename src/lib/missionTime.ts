@@ -79,11 +79,11 @@ export function getRtgPhaseSceneSeconds(): {
 } {
   if (rtgTutorialMode) {
     return {
-      overdriveBurst: 3,          // 3 seconds burst
-      overdriveInstrumentLock: 2,  // 2 seconds cooldown
-      overdriveRecharge: 2,        // 2 seconds recharge
-      powerShuntEffect: 3,
-      powerShuntRecovery: 3,
+      overdriveBurst: 8,          // 8 seconds burst — enough to see the waypoint appear
+      overdriveInstrumentLock: 3,  // 3 seconds cooldown
+      overdriveRecharge: 3,        // 3 seconds recharge
+      powerShuntEffect: 5,
+      powerShuntRecovery: 5,
     }
   }
   const d = RTG_MISSION_DURATIONS
