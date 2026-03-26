@@ -145,37 +145,24 @@
       "briefing": "All instruments are verified and your archive is building up nicely. But none of this counts until Earth receives it. Open the UHF antenna [T] and queue your science data for transmission. UHF relay works through orbital passes — the Mars Reconnaissance Orbiter flies overhead on a regular schedule, and your uplink window is limited. Each item takes bandwidth proportional to its complexity. Get at least one dataset transmitted so we can confirm the end-to-end pipeline. After this, you're fully operational — pre-ops checkout complete.",
       "reward": { "sp": 50 },
       "unlocks": [],
-      "chain": "m12-upgrade",
-      "objectives": [
-        { "id": "tx-1", "type": "transmit", "label": "Transmit data via UHF", "params": { "count": 1 }, "sequential": false }
-      ]
-    },
-    {
-      "id": "m12-upgrade",
-      "name": "12. UHF Dual-Band Module",
-      "patron": null,
-      "description": "Install a hardware upgrade to the UHF antenna for dual-band relay capability.",
-      "briefing": "Good news — Mission Control is dropping a hardware package on your next orbital window. It's a dual-band module for your UHF relay. Right now you're single-band — one frequency, one orbiter at a time. The dual-band upgrade lets you lock two relay satellites simultaneously, doubling your uplink throughput during pass windows. The package will arrive via supply drop. Once you have it, open the UHF antenna panel [T] and install the upgrade. One module, one install — should be straightforward.",
-      "reward": { "sp": 55 },
-      "unlocks": [],
       "chain": "m13-deep-signal",
       "objectives": [
-        { "id": "upg-1", "type": "install-upgrade", "label": "Install the UHF dual-band module", "params": { "instrumentId": "antenna-uhf" }, "sequential": false }
+        { "id": "tx-1", "type": "transmit", "label": "Transmit data via UHF", "params": { "count": 1 }, "sequential": false }
       ]
     },
     {
       "id": "m13-deep-signal",
       "name": "13. Deep Signal",
       "patron": null,
-      "description": "Install the DSN Archaeology upgrade on the UHF antenna to unlock legacy band reception.",
-      "briefing": "Rover, routine diagnostic. Your UHF transceiver has been operating on standard relay frequencies — adequate for orbital uplinks. However, your hardware is technically capable of receiving across the full DSN frequency spectrum. We're dropping a dual-band archaeology module at a supply point on the far side of the site. Drive out, collect the package, then open the UHF antenna panel and install the upgrade. There's... a lot of old data out there. Most of it is noise. Calibration pings. Deprecated telemetry. But some of our analysts think there might be recoverable mission archives from early Mars programs. Historical interest only. No science value. Install the upgrade and see what you find. Low priority.",
+      "description": "Install the DSN Archaeology upgrade on the LGA to unlock legacy Deep Space Network reception.",
+      "briefing": "Rover, routine diagnostic. Your low-gain antenna has been operating on standard direct-to-Earth frequencies — adequate for mission updates and mailbox. However, the hardware is technically capable of receiving across the full DSN frequency spectrum. We're dropping an archaeology receiver module at a supply point on the far side of the site. Drive out, collect the package, then open the LGA panel and install the upgrade. There's... a lot of old data out there. Most of it is noise. Calibration pings. Deprecated telemetry. But some of our analysts think there might be recoverable mission archives from early Mars programs. Historical interest only. No science value. Install the upgrade and see what you find. Low priority.",
       "reward": { "sp": 100 },
       "unlocks": ["dsn-archaeology"],
       "chain": null,
       "objectives": [
         { "id": "dsn-1", "type": "go-to", "label": "Reach the supply drop zone", "params": { "poiId": "supply-cache-02" }, "sequential": true },
         { "id": "dsn-2", "type": "gather", "label": "Collect DSN Archaeology module", "params": { "itemId": "dsn-archaeology-module", "quantity": 1 }, "sequential": true },
-        { "id": "dsn-3", "type": "install-upgrade", "label": "Install DSN Archaeology module on UHF", "params": { "instrumentId": "antenna-uhf" }, "sequential": true }
+        { "id": "dsn-3", "type": "install-upgrade", "label": "Install DSN Archaeology module on LGA", "params": { "instrumentId": "antenna-lg" }, "sequential": true }
       ]
     }
   ]

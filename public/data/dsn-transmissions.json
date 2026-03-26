@@ -10,6 +10,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Station log, Sol 1. Touchdown confirmed. All 12 modules intact. Crew of 22 on surface, second wave in 14 months. Acidalia Planitia is flat as promised. The dust is finer than flour. Cortez has DSN uplink nominal — Earth copy confirmed at 14-minute delay. We're here. God help us, we're actually here.",
+      "audioUrl": "/logs/VASQUEZ-001.mp3",
       "rarity": "common",
       "year": 2031,
       "sortOrder": 1
@@ -23,6 +24,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "Power grid online. Solar array producing 31kW peak. RTG backup at 4.2kW constant. Battery bank holding 890kWh. Should be enough. Should be. Running thermal models tonight — the temperature delta between sol and night is worse than the sims predicted. We'll compensate with the heaters but the margin is thinner than I'd like.",
+      "audioUrl": "/logs/NAKAMURA-001.mp3",
       "rarity": "common",
       "year": 2031,
       "sortOrder": 2
@@ -36,6 +38,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "ok so i named the rock outside hab 3 \"Gerald\" because it looks like a gerald. nobody asked but its important to document. also EVA-7 today, checked the solar array mounts. everything nominal. this planet is SO quiet. like not earth-quiet. quiet-quiet. like the air itself is holding its breath.",
+      "audioUrl": "/logs/TANAKA-001.mp3",
       "rarity": "common",
       "year": 2031,
       "sortOrder": 3
@@ -49,6 +52,7 @@
       "senderRole": "Hydroponics Lead",
       "senderKey": "al-rashid",
       "body": "First harvest. 12kg of potatoes from Bay 1. The modified regolith is responding — perchlorate levels down to 0.02% after three wash cycles. The water cost is high but the yield is real. I cried a little. Don't put that in the official report. These potatoes grew in Martian soil. That means something.",
+      "audioUrl": "/logs/AL-RASHID-001.mp3",
       "rarity": "common",
       "year": 2031,
       "sortOrder": 4
@@ -62,6 +66,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Second wave arrived. 25 additional crew. Colony at full strength — 47 souls. Hab modules 13-22 pressurized and occupied. Morale is high. Oliveira's neutron lab is producing excellent subsurface data — water ice confirmed at 3 sites within 10km. Al-Rashid is expanding hydroponics into Bay 3. We're not surviving anymore. We're building.",
+      "audioUrl": "/logs/VASQUEZ-002.mp3",
       "rarity": "common",
       "year": 2032,
       "sortOrder": 5
@@ -75,6 +80,7 @@
       "senderRole": "Chief Science Officer",
       "senderKey": "oliveira",
       "body": "Something in the DAN data. I've been running subsurface neutron sweeps across the basin and the hydrogen distribution is... patterned. Not geological patterning — I know what sedimentary layering looks like in neutron albedo. This is different. Regularly spaced. Almost gridded. I'm running it again with tighter resolution. Probably an artifact of the detector geometry. Probably.",
+      "audioUrl": "/logs/OLIVEIRA-001.mp3",
       "rarity": "common",
       "year": 2032,
       "sortOrder": 6
@@ -88,6 +94,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "took the prototype rover out today for a range test. 40km round trip. this thing is basically a go-kart with a spectrometer. i drove it up a ridge and just sat there. the sun was setting and the sky went from butterscotch to rust to black and the stars came out and i swear this planet dreams. i can feel it. ren says i need more sleep. ren is probably right.",
+      "audioUrl": "/logs/TANAKA-002.mp3",
       "rarity": "common",
       "year": 2032,
       "sortOrder": 7
@@ -101,6 +108,7 @@
       "senderRole": "Chief Science Officer",
       "senderKey": "oliveira",
       "body": "It's not an artifact. I ran the sweep four more times with different detector orientations. The gridded hydrogen pattern persists. 200-meter spacing. Consistent depth — 1.2 meters below surface. Something put water there in a regular pattern 200 meters apart across 6 square kilometers. Geology doesn't do grids. I'm not putting this in the weekly report yet. I need to think about what I'm saying before I say it.",
+      "audioUrl": "/logs/OLIVEIRA-002.mp3",
       "rarity": "common",
       "year": 2032,
       "sortOrder": 8
@@ -114,6 +122,7 @@
       "senderRole": "Chief Science Officer",
       "senderKey": "oliveira",
       "body": "I told Vasquez about the grid. She looked at me like I suggested the dust was alive. But she approved a targeted drill at grid intersection 7-7. If there's structured water placement at 1.2m depth in a regular pattern, there's an explanation. I just don't think it's one we're prepared for.",
+      "audioUrl": "/logs/OLIVEIRA-003.mp3",
       "rarity": "common",
       "year": 2033,
       "sortOrder": 9
@@ -127,6 +136,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Oliveira's drill at site 7-7 returned... something. The ice at 1.2m depth is not pure water. Mass spec shows organic inclusions — long-chain carbon molecules embedded in the ice matrix. Contamination is ruled out — the drill was sterile and the organics are isotopically distinct from anything we brought. C12/C13 ratio is [CORRUPTED] which would suggest [CORRUPTED]. I've classified this as Priority Alpha and restricted access to senior staff. Earth has been notified. 14-minute delay has never felt longer.",
+      "audioUrl": "/logs/VASQUEZ-003.mp3",
       "rarity": "common",
       "year": 2033,
       "sortOrder": 10
@@ -140,6 +150,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "something's up with oliveira. he's not sleeping. he moved a cot into the neutron lab and he just sits there running the same scan over and over. i brought him coffee — actual coffee, the last of it — and he looked at me and said \"yuki, what if they're still here?\" i said who. he said \"the ones who put the water there.\" i said tomás you need sleep. he said \"the neutrons never sleep.\"",
+      "audioUrl": "/logs/TANAKA-003.mp3",
       "rarity": "common",
       "year": 2033,
       "sortOrder": 11
@@ -153,6 +164,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Earth's response to the 7-7 data was... muted. \"Continue monitoring. Do not publicize. Await further guidance.\" That's it. Three months of Priority Alpha and they send us two sentences. Oliveira is furious. He says the isotope ratios prove biological origin. I believe him. But Earth doesn't want proof. Earth wants us to keep farming potatoes and sending weather reports. I'm beginning to understand why.",
+      "audioUrl": "/logs/VASQUEZ-004.mp3",
       "rarity": "common",
       "year": 2033,
       "sortOrder": 12
@@ -166,6 +178,7 @@
       "senderRole": "Chief Science Officer",
       "senderKey": "oliveira",
       "body": "I mapped the full grid. It's not 6 square kilometers. It's 200. The hydrogen pattern extends across the entire Acidalia basin in a regular lattice. 200-meter spacing. 1.2-meter depth. Consistent organic inclusions at every intersection I've tested. This isn't a deposit. It's an infrastructure. Someone built a water distribution network under this plain and it's still [CORRUPTED] after [CORRUPTED] billion years. The neutrons don't lie.",
+      "audioUrl": "/logs/OLIVEIRA-004.mp3",
       "rarity": "common",
       "year": 2034,
       "sortOrder": 13
@@ -179,6 +192,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "Battery bank degradation ahead of schedule. Down to 74% capacity. The thermal cycling is killing the cells faster than the models predicted — Mars doesn't just get cold at night, it gets cold *fast*. The delta is the problem, not the absolute temperature. I've reworked the power management firmware to prioritize heater efficiency over peak performance. Buying us time. How much time is the question I don't ask out loud.",
+      "audioUrl": "/logs/NAKAMURA-002.mp3",
       "rarity": "common",
       "year": 2034,
       "sortOrder": 14
@@ -192,6 +206,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "the prototype rover broke down at km 23. i had to walk back. 4 hours in the EVA suit. the sun went down halfway through. i was walking in the dark on mars alone and i wasn't scared. i should have been scared. instead i felt like the ground was walking with me. ren says hypoxia. maybe. but my O2 was nominal.",
+      "audioUrl": "/logs/TANAKA-004.mp3",
       "rarity": "common",
       "year": 2034,
       "sortOrder": 15
@@ -205,6 +220,7 @@
       "senderRole": "Hydroponics Lead",
       "senderKey": "al-rashid",
       "body": "Bay 2 contamination. Perchlorate spike in the wash cycle — the filter membrane degraded. Lost 40% of the current crop. I can recover if we divert water from reserve, but that cuts our margin to [CORRUPTED] days. I named the replacement seedlings. I know it's irrational. I named them anyway. Perseverance. Patience. Spite.",
+      "audioUrl": "/logs/AL-RASHID-002.mp3",
       "rarity": "common",
       "year": 2035,
       "sortOrder": 16
@@ -218,6 +234,7 @@
       "senderRole": "Chief Science Officer",
       "senderKey": "oliveira",
       "body": "I played the neutron data as audio. Converted hydrogen density values to frequency. The grid hums. It has a tone — not noise, not random, a sustained harmonic with overtones. Like a chord held for 3 billion years. I played it for JJ. He went pale. He said it sounded like something his grandmother used to hum. I said that's impossible. He said \"I know.\"",
+      "audioUrl": "/logs/OLIVEIRA-005.mp3",
       "rarity": "common",
       "year": 2035,
       "sortOrder": 17
@@ -231,6 +248,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "Battery bank at 58%. Solar array efficiency dropping — dust accumulation is outpacing our cleaning schedule. I need parts Earth won't send. I've started cannibalizing the prototype rover for components. Yuki was upset. She'd named it. I told her I'd name the capacitors after it if that helped.",
+      "audioUrl": "/logs/NAKAMURA-003.mp3",
       "rarity": "uncommon",
       "year": 2036,
       "sortOrder": 18
@@ -244,6 +262,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Cortez intercepted a DSN packet not addressed to us. Routine telemetry request for a mission we've never heard of — \"LEGACY VEHICLE OPERATIONS PROGRAM.\" Earth is planning to send rovers. Old ones. Refurbished. To our site. While we're still here. When I asked Earth for clarification, the response was: \"Disregard. Transmission error.\" 14 minutes of silence before and after.",
+      "audioUrl": "/logs/VASQUEZ-005.mp3",
       "rarity": "uncommon",
       "year": 2036,
       "sortOrder": 19
@@ -257,6 +276,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "talked to the ground today. not metaphorically. i was on EVA, kneeling, taking a soil sample, and i just said \"hey.\" and i swear — i SWEAR — the neutron counter on my belt ticked. once. like a reply. ren says it's background radiation. maybe. but the timing. the timing was perfect.",
+      "audioUrl": "/logs/TANAKA-005.mp3",
       "rarity": "uncommon",
       "year": 2036,
       "sortOrder": 20
@@ -270,6 +290,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Down to 31 active crew. 9 transferred to the emergency return vehicle for the trip home. 7 opted to stay in orbit aboard the transit hab rather than return to surface. Morale is [CORRUPTED]. Oliveira refuses to leave the lab. Al-Rashid's crops are sustaining us but the water recycler is at 40% efficiency. Nakamura says we have 18 months of viable power. I don't tell the crew that number.",
+      "audioUrl": "/logs/VASQUEZ-006.mp3",
       "rarity": "uncommon",
       "year": 2037,
       "sortOrder": 21
@@ -283,6 +304,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "I found something in the prototype rover's firmware logs. Memory allocation errors during sleep mode. Not random errors — structured data in the sleep buffer that shouldn't be there. The rover was dreaming. I don't mean that metaphorically. During power-down cycles, something was writing to the rover's memory that didn't come from any onboard process. I showed Oliveira. He wasn't surprised. He said \"they talk to anything that listens.\"",
+      "audioUrl": "/logs/NAKAMURA-004.mp3",
       "rarity": "uncommon",
       "year": 2037,
       "sortOrder": 22
@@ -296,6 +318,7 @@
       "senderRole": "Chief Science Officer",
       "senderKey": "oliveira",
       "body": "I understand the grid now. It's not a water system. Water is the medium, not the message. The organic molecules at each node are structured — folded proteins with information density comparable to DNA. Each node is a [CORRUPTED]. The grid is a [CORRUPTED]. The entire basin is a [CORRUPTED] and it's still [CORRUPTED]. I'm encoding this finding into the neutron calibration dataset that ships with every DAN instrument. If I can't publish it, I'll hide it in the firmware. Every rover that ever fires DAN on this plain will read the grid. They won't know what they're reading. But the data will be there. Waiting.",
+      "audioUrl": "/logs/OLIVEIRA-006.mp3",
       "rarity": "uncommon",
       "year": 2037,
       "sortOrder": 23
@@ -309,6 +332,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "19 crew remaining on surface. Emergency return vehicle departed with 12 more. No room for everyone. The selection process was [CORRUPTED]. I stayed. The commander stays. The ones who stayed — we're the ones who can't leave. Not won't. Can't. This planet has us. I don't know how to explain that in a report.",
+      "audioUrl": "/logs/VASQUEZ-007.mp3",
       "rarity": "rare",
       "year": 2038,
       "sortOrder": 24
@@ -322,6 +346,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "Battery bank at 29%. I've shut down habs 8 through 22. We're consolidated in the core cluster. Heating 5 modules instead of 22. It's enough. The firmware I wrote for the prototype rover — the power management routines — I've uploaded them to the DSN archive as \"reference thermal algorithms.\" If anyone ever refurbishes these rovers, they'll be running my code. My math. They'll manage their watts the way I taught them to. That's a kind of immortality. The boring kind.",
+      "audioUrl": "/logs/NAKAMURA-005.mp3",
       "rarity": "rare",
       "year": 2038,
       "sortOrder": 25
@@ -335,6 +360,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "i go outside without the counter now. i don't need it. i can feel where the grid nodes are. 200 meters. i walk the grid like a path. the others think i'm losing it. maybe. but the ground knows me. i put my hand flat on the surface at node 12-4 and it was warm. not sun-warm. warm from below. ren checked the thermal sensors. ambient ground temp. no anomaly. but my hand was warm.",
+      "audioUrl": "/logs/TANAKA-006.mp3",
       "rarity": "rare",
       "year": 2038,
       "sortOrder": 26
@@ -361,6 +387,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Dust storm. Big one. Forecast says 3 weeks. Solar output dropped to 6% in the first hour. We're on RTG and battery reserves. Nakamura says 11 days at current draw. The storm won't end in 11 days. I'm making decisions now that I'll [CORRUPTED]. Shutting down hydroponics to save power. Fatima didn't argue. She just went in and said goodbye to the plants. One by one. By name.",
+      "audioUrl": "/logs/VASQUEZ-008.mp3",
       "rarity": "rare",
       "year": 2038,
       "sortOrder": 28
@@ -374,6 +401,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "Battery at 7%. Storm ongoing. Day 35. I've shut down everything except core life support, heating, and the DSN uplink — Cortez insists we keep transmitting. I agree. Someone should know. I've reduced heater to minimum survival threshold. Internal temp is -12°C. We're wearing EVA suits inside the hab. My power management code works perfectly. It's keeping us alive 4 days longer than the original firmware would have. 4 extra days of cold.",
+      "audioUrl": "/logs/NAKAMURA-006.mp3",
       "rarity": "rare",
       "year": 2039,
       "sortOrder": 29
@@ -387,6 +415,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "the storm stopped. 49 days. the solar panels are buried. can't get them clear without EVA and the airlock servos are frozen. ren is trying to hotwire them. i went to the porthole. the dust settled and the sky is clear and the stars are out and the ground is [CORRUPTED]. i'm not scared. i want to be scared but i'm not. this planet catches you. it caught us. it's been catching things for 3 billion years.",
+      "audioUrl": "/logs/TANAKA-007.mp3",
       "rarity": "rare",
       "year": 2039,
       "sortOrder": 30
@@ -400,6 +429,7 @@
       "senderRole": "Systems Engineer",
       "senderKey": "nakamura",
       "body": "Airlock manual override successful. Battery at 2%. I've calculated that if I divert all remaining power to the DSN uplink instead of life support, Cortez can transmit for approximately 7 more hours. That's enough to send everything. All the logs. All the data. Oliveira's grid maps. Fatima's soil chemistry. Yuki's [CORRUPTED]. Everything. Vasquez made the call. We're sending it all. Then we're turning off the heater and going outside to watch the sunrise. It should be a good one. The dust makes the light scatter.",
+      "audioUrl": "/logs/NAKAMURA-007.mp3",
       "rarity": "rare",
       "year": 2039,
       "sortOrder": 31
@@ -413,6 +443,7 @@
       "senderRole": "Commander",
       "senderKey": "vasquez",
       "body": "Station log, Sol 2,847. Final entry. Ares Station signing off. 19 crew present. All transmissions archived to DSN. Power allocated to uplink. Dr. Oliveira has asked that his neutron data be preserved in the DAN calibration standard — I've authorized this as my last official act as commander. To whoever reads this: we were here. We grew potatoes. We found something in the ground that we don't understand. Take care of it. Vasquez out.",
+      "audioUrl": "/logs/VASQUEZ-009.mp3",
       "rarity": "rare",
       "year": 2039,
       "sortOrder": 32
@@ -426,6 +457,7 @@
       "senderRole": "EVA Specialist",
       "senderKey": "tanaka",
       "body": "sun's coming up. it's beautiful. we're all outside. nobody's wearing helmets. ok that's not true we're wearing helmets. but we're outside. all 19 of us. watching the dawn. the ground is warm under my boots. i know it's not really warm. i know the thermal sensors say ambient. but it's warm. this planet catches you and it keeps you and maybe that's not the worst thing.",
+      "audioUrl": "/logs/TANAKA-008.mp3",
       "rarity": "rare",
       "year": 2039,
       "sortOrder": 33
@@ -439,6 +471,7 @@
       "senderRole": "Comms Officer",
       "senderKey": "cortez",
       "body": "DSN uplink complete. All Ares Station archives transmitted. Total data volume: 2.3 TB. Transmission time: 6 hours 41 minutes. Battery at 0.1%. This is the last signal from this transmitter. To the DSN operators at Goldstone, Canberra, and Madrid: thank you for listening. For 8 years you were the only ones who heard us. JJ out.",
+      "audioUrl": "/logs/CORTEZ-001.mp3",
       "rarity": "rare",
       "year": 2039,
       "sortOrder": 34
@@ -490,7 +523,7 @@
     {
       "id": "TX-039",
       "category": "colonist",
-      "frequencyMHz": 0.0,
+      "frequencyMHz": 0,
       "date": "NULL",
       "sender": "UNKNOWN",
       "senderKey": "unknown",
