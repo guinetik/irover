@@ -5,10 +5,11 @@
     <div class="form-area" :class="{ visible: formVisible }">
       <p class="form-title anim-item">PATRON SELECTION — MISSION SPONSORSHIP</p>
       <p class="form-sub anim-item">Your mission requires institutional backing. Choose carefully.</p>
-      <div class="cards-row anim-item">
+      <div class="cards-row">
         <PatronCard
           v-for="(patron, i) in patronList"
           :key="patron.id"
+          :class="['card-anim', `card-${i}`]"
           :patron="patron"
           :motto="mottos[patron.id]"
           :org-name="orgNames[patron.id]"
@@ -156,7 +157,7 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-/* Staggered child animations */
+/* Staggered title/subtitle animations */
 .anim-item {
   opacity: 0;
   transform: perspective(600px) rotateX(-15deg) translateY(10px);
@@ -175,10 +176,29 @@ onUnmounted(() => {
   transition-delay: 0.25s;
 }
 
-.form-area.visible .anim-item:nth-child(3) {
+/* Card flip animations — each card flips in from rotateY(180) */
+.card-anim {
+  opacity: 0;
+  transform: perspective(800px) rotateY(180deg);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.form-area.visible .card-0 {
   opacity: 1;
-  transform: perspective(600px) rotateX(0) translateY(0);
-  transition-delay: 0.45s;
+  transform: perspective(800px) rotateY(0);
+  transition-delay: 0.4s;
+}
+
+.form-area.visible .card-1 {
+  opacity: 1;
+  transform: perspective(800px) rotateY(0);
+  transition-delay: 0.6s;
+}
+
+.form-area.visible .card-2 {
+  opacity: 1;
+  transform: perspective(800px) rotateY(0);
+  transition-delay: 0.8s;
 }
 
 .form-title {
