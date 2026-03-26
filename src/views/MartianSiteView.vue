@@ -26,10 +26,13 @@
       :achievements-expanded="achievementsOpen"
       :sp-ledger-expanded="spLedgerOpen"
       :active-mission-count="activeMissions.length"
+      :show-archive-button="dsnUnlocked"
+      :archive-unread-count="dsnUnreadCount"
       @open-achievements="achievementsOpen = true"
       @open-sp-ledger="spLedgerOpen = true"
       @open-science-log="scienceLogOpen = true"
       @open-mission-log="handleOpenMissionLog"
+      @open-archive="showArchive = true"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
     <RoverDeployOverlays
@@ -176,6 +179,7 @@
       :reward-track="rewardTrackMilestones"
       @close="achievementsOpen = false"
     />
+    <DSNArchiveDialog :open="showArchive" @close="showArchive = false" />
     <RewardTrackDialog
       :open="rewardTrackOpen"
       :milestones="rewardTrackMilestones"
@@ -479,6 +483,7 @@ import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
 import ScienceLogDialog from '@/components/ScienceLogDialog.vue'
 import SciencePointsDialog from '@/components/SciencePointsDialog.vue'
 import AchievementsDialog from '@/components/AchievementsDialog.vue'
+import DSNArchiveDialog from '@/components/DSNArchiveDialog.vue'
 import RewardTrackDialog from '@/components/RewardTrackDialog.vue'
 import AchievementBanner from '@/components/AchievementBanner.vue'
 import MissionCompleteBanner from '@/components/MissionCompleteBanner.vue'
@@ -557,6 +562,7 @@ const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
 const rewardTrackOpen = ref(false)
+const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const roverHeading = ref(0)

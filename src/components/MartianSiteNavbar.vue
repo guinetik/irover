@@ -43,6 +43,11 @@
         <span class="sp-value font-instrument">{{ totalSp }}</span>
         <span class="sp-label">SP</span>
       </button>
+      <button v-if="showArchiveButton" class="hud-btn hud-btn--archive" @click="$emit('open-archive')">
+        <span class="hud-btn-icon">&#x29BF;</span>
+        <span class="hud-btn-label">ARCHIVE</span>
+        <span v-if="archiveUnreadCount > 0" class="hud-badge archive-badge">{{ archiveUnreadCount }}</span>
+      </button>
       <button
         v-if="showScienceButton"
         type="button"
@@ -79,8 +84,10 @@ withDefaults(
     achievementsExpanded: boolean
     spLedgerExpanded: boolean
     activeMissionCount?: number
+    showArchiveButton?: boolean
+    archiveUnreadCount?: number
   }>(),
-  { compassPois: () => [], currentNightFactor: 0, activeMissionCount: 0 },
+  { compassPois: () => [], currentNightFactor: 0, activeMissionCount: 0, showArchiveButton: false, archiveUnreadCount: 0 },
 )
 
 defineEmits<{
@@ -88,6 +95,7 @@ defineEmits<{
   'open-sp-ledger': []
   'open-science-log': []
   'open-mission-log': []
+  'open-archive': []
 }>()
 
 const router = useRouter()
@@ -335,6 +343,70 @@ function goBack(): void {
 
 .back-btn:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+.hud-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+  background: rgba(196, 149, 106, 0.1);
+  border: 1px solid rgba(196, 149, 106, 0.35);
+  border-radius: 4px;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.hud-btn:hover {
+  background: rgba(196, 149, 106, 0.16);
+  border-color: rgba(232, 176, 96, 0.45);
+}
+
+.hud-btn:focus {
+  outline: none;
+}
+
+.hud-btn:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(10, 6, 4, 0.95),
+    0 0 0 4px rgba(232, 176, 96, 0.45);
+}
+
+.hud-btn-icon {
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(196, 149, 106, 0.85);
+}
+
+.hud-btn-label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(196, 149, 106, 0.85);
+}
+
+.hud-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+  border-radius: 8px;
+}
+
+.archive-badge {
+  color: #0a0604;
+  background: rgba(196, 149, 106, 0.85);
 }
 
 .site-name {
