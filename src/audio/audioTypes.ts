@@ -1,5 +1,5 @@
 /**
- * Canonical audio channel categories used by {@link AudioDefinition} and the manifest.
+ * Canonical audio channel categories used by manifest entries and the runtime.
  */
 export const AUDIO_CATEGORIES = ['ui', 'voice', 'sfx', 'ambient', 'music'] as const
 
@@ -39,20 +39,39 @@ export const AUDIO_PLAYBACK_MODES = [
 /** Union of {@link AUDIO_PLAYBACK_MODES} values. */
 export type AudioPlaybackMode = (typeof AUDIO_PLAYBACK_MODES)[number]
 
-/**
- * Static metadata for a registered sound id in the audio manifest.
- */
-export interface AudioDefinition {
+/** Fields shared by every manifest entry. */
+interface AudioDefinitionCommon {
   id: string
   category: AudioCategory
-  src?: string | readonly string[]
-  allowDynamicSrc?: boolean
   load: AudioLoadStrategy
   playback: AudioPlaybackMode
   volume: number
   effect: AudioEffectPreset
   cooldownMs?: number
 }
+
+/**
+ * Bundled or fixed file path(s); `src` is required so static sounds cannot omit assets silently.
+ */
+export interface AudioDefinitionStatic extends AudioDefinitionCommon {
+  allowDynamicSrc?: false
+  src: string | readonly string[]
+}
+
+/**
+ * Source resolved at play time (e.g. DSN stream URL); must not rely on a bundled `src`.
+ */
+export interface AudioDefinitionDynamic extends AudioDefinitionCommon {
+  allowDynamicSrc: true
+  src?: never
+}
+
+/**
+ * Static metadata for a registered sound id in the audio manifest.
+ *
+ * Discriminated by {@link AudioDefinitionStatic} vs {@link AudioDefinitionDynamic} (`allowDynamicSrc`).
+ */
+export type AudioDefinition = AudioDefinitionStatic | AudioDefinitionDynamic
 
 /**
  * Per-play overrides passed to the runtime when triggering a sound (e.g. dynamic DSN URL).
