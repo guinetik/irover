@@ -10,6 +10,9 @@ export type ObjectiveType =
   | 'rtg-overdrive'
   | 'rtg-shunt'
   | 'rems-activate'
+  | 'use-repair-kit'
+  | 'install-upgrade'
+  | 'dsn-firmware-install'
 
 export interface ObjectiveDef {
   id: string

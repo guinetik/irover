@@ -380,12 +380,27 @@ function wireArchiveCheckers(): void {
 
   // rems-activate: flag set externally when player turns on REMS
   registerChecker('rems-activate', () => remsActivated.value)
+
+  // use-repair-kit: flag set externally when player completes a repair
+  registerChecker('use-repair-kit', () => repairKitUsed.value)
+
+  // install-upgrade: check if a specific instrument has been upgraded
+  registerChecker('install-upgrade', (p) => {
+    if (p.instrumentId) return upgradedInstruments.value.has(p.instrumentId)
+    return upgradedInstruments.value.size > 0
+  })
+
+  // dsn-firmware-install: flag set externally when player installs DSN firmware
+  registerChecker('dsn-firmware-install', () => dsnFirmwareInstalled.value)
 }
 
 /** Set to true when the player activates RTG overdrive (called from view layer). */
 const rtgOverdriveTriggered = ref(false)
 const rtgShuntTriggered = ref(false)
 const remsActivated = ref(false)
+const repairKitUsed = ref(false)
+const upgradedInstruments = ref<Set<string>>(new Set())
+const dsnFirmwareInstalled = ref(false)
 
 function notifyRtgOverdrive(): void {
   rtgOverdriveTriggered.value = true
@@ -399,10 +414,27 @@ function notifyRemsActivated(): void {
   remsActivated.value = true
 }
 
+function notifyRepairKitUsed(): void {
+  repairKitUsed.value = true
+}
+
+function notifyDsnFirmwareInstalled(): void {
+  dsnFirmwareInstalled.value = true
+}
+
+function notifyUpgradeInstalled(instrumentId: string): void {
+  const next = new Set(upgradedInstruments.value)
+  next.add(instrumentId)
+  upgradedInstruments.value = next
+}
+
 function resetForTests(): void {
   rtgOverdriveTriggered.value = false
   rtgShuntTriggered.value = false
   remsActivated.value = false
+  repairKitUsed.value = false
+  upgradedInstruments.value = new Set()
+  dsnFirmwareInstalled.value = false
   catalog.value = []
   missionStates.value = []
   trackedMissionId.value = null
@@ -432,6 +464,9 @@ export function useMissions() {
     notifyRtgOverdrive,
     notifyRtgShunt,
     notifyRemsActivated,
+    notifyRepairKitUsed,
+    notifyDsnFirmwareInstalled,
+    notifyUpgradeInstalled,
     getMissionDef,
     resetForTests,
   }
