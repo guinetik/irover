@@ -59,15 +59,24 @@ const MODIFIER_LABELS: Record<string, string> = {
   structureDurability: 'Durability',
 }
 
+// Modifiers where lower = better (negative value is a buff)
+const LOWER_IS_BETTER = new Set([
+  'powerConsumption', 'heaterDraw', 'repairCost', 'upgradeCost',
+])
+
 const modifierList = computed(() => {
   const mods = props.patron.modifiers as Partial<ProfileModifiers>
   return Object.entries(mods)
     .filter(([, v]) => v !== undefined && v !== 0)
-    .map(([key, value]) => ({
-      label: MODIFIER_LABELS[key] ?? key,
-      value: `${Math.round(value! * 100)}%`,
-      positive: value! > 0,
-    }))
+    .map(([key, value]) => {
+      const inverted = LOWER_IS_BETTER.has(key)
+      const isBuff = inverted ? value! < 0 : value! > 0
+      return {
+        label: MODIFIER_LABELS[key] ?? key,
+        value: `${Math.round(value! * 100)}%`,
+        positive: isBuff,
+      }
+    })
 })
 </script>
 
