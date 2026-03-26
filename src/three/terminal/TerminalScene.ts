@@ -24,6 +24,7 @@ export class TerminalScene {
 
   private renderer: THREE.WebGLRenderer | null = null
   private composer: EffectComposer | null = null
+  private vignettePass: ShaderPass | null = null
   private model: THREE.Object3D | null = null
   private clock = new THREE.Clock(false)
   private rafId = 0
@@ -111,10 +112,10 @@ export class TerminalScene {
     this.composer.addPass(bloomPass)
 
     // Vignette — darkens edges, focuses attention on screen
-    const vignettePass = new ShaderPass(VignetteShader)
-    vignettePass.uniforms['offset'].value = 0.9
-    vignettePass.uniforms['darkness'].value = 1.0
-    this.composer.addPass(vignettePass)
+    this.vignettePass = new ShaderPass(VignetteShader)
+    this.vignettePass.uniforms['offset'].value = 0.9
+    this.vignettePass.uniforms['darkness'].value = 1.0
+    this.composer.addPass(this.vignettePass)
   }
 
   startLoop(): void {
@@ -139,6 +140,8 @@ export class TerminalScene {
       const ease = smoothstep(t)
       this.lerpModelTransform(ease)
       this.lerpCameraPosition(ease)
+      // Vignette ramps up as we zoom in
+      this.setVignette(0.2 + ease * 0.7, ease * 1.0)
       if (t >= 1) this.setPhase('boot')
     } else if (this.phase === 'boot') {
       if (this.phaseTime >= BOOT_DELAY) this.setPhase('launch')
@@ -148,9 +151,17 @@ export class TerminalScene {
       // Reverse: from end position back to a "gone" position
       this.lerpModelTransform(1 - ease)
       this.lerpCameraPosition(1 - ease)
+      // Vignette fades as we pull back
+      this.setVignette(0.9 - ease * 0.7, 1.0 - ease * 0.8)
       if (t >= 1) this.setPhase('done')
     }
     // 'active', 'launch', 'exit' phases: no 3D animation, handled by Vue overlay
+  }
+
+  private setVignette(offset: number, darkness: number): void {
+    if (!this.vignettePass) return
+    this.vignettePass.uniforms['offset'].value = offset
+    this.vignettePass.uniforms['darkness'].value = darkness
   }
 
   private lerpModelTransform(t: number): void {

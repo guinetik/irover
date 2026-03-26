@@ -293,7 +293,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  color: rgba(196, 149, 106, 0.9);
+  color: rgba(230, 180, 130, 1);
   font-family: var(--font-mono);
   padding: 20px 28px;
   box-sizing: border-box;
@@ -310,13 +310,13 @@ onUnmounted(() => {
 .org {
   font-size: 13px;
   letter-spacing: 0.12em;
-  color: rgba(196, 149, 106, 0.7);
+  color: rgba(230, 180, 130, 0.8);
   margin: 0;
 }
 
 .form-id {
   font-size: 11px;
-  color: rgba(196, 149, 106, 0.5);
+  color: rgba(230, 180, 130, 0.6);
   margin: 0;
 }
 
@@ -324,7 +324,7 @@ onUnmounted(() => {
   margin-top: 10px;
   font-size: 14px;
   letter-spacing: 0.18em;
-  color: rgba(196, 149, 106, 1);
+  color: rgba(255, 200, 140, 1);
 }
 
 .content {
