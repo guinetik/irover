@@ -12,10 +12,23 @@ Interactive 3D Mars globe visualization using real NASA/JPL/USGS imagery from Ar
 npm run dev          # Vite dev server (port 9966)
 npm run build        # vue-tsc type check + vite build
 npm run test         # vitest run (all tests)
+npm run test:coverage # vitest with coverage (lib-focused; see vite.config `coverage.include`)
 npm run test:watch   # vitest watch mode
 ```
 
 ## Architecture
+
+### Why `lib` exists
+
+`lib/` holds **pure domain logic**: math, sampling, instrument models, time conversion, and feature flags—**no Three.js, no Vue reactivity, no DOM** except for a few helpers that read `window` / `localStorage` (still unit-tested with stubs).
+
+**Motivation:**
+
+- **Dependents stay honest** — `three/`, `composables/`, and `components/` import stable, typed functions. When gameplay or science rules change, you fix one place and tests catch regressions.
+- **Fast, deterministic tests** — Pure functions and small stateful singletons (`missionCooldowns`) are cheap to cover with Vitest; shader-heavy and scene code stay in integration-style tests only where needed.
+- **Clear layering** — `types/` = shared shapes; `lib/` = behavior; `three/` = WebGL/scene; Vue = glue and UI. That order avoids “business rules” silently living inside materials or animation loops.
+
+New instrument behavior or Mars-specific rules should land in `lib/…` first, then get wired in `three/` or composables.
 
 ### Directory Layout
 

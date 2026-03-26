@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useDSNArchive } from '../useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
 
@@ -47,6 +47,10 @@ describe('useDSNArchive', () => {
     resetForTests()
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('starts with empty discoveries and locked', () => {
     const { discoveries, unlocked } = useDSNArchive()
     expect(discoveries.value).toEqual([])
@@ -65,19 +69,22 @@ describe('useDSNArchive', () => {
     expect(unlocked.value).toBe(true)
   })
 
-  it('pullTransmissions returns 1-3 from weighted pool, never TX-039', () => {
+  it('pullTransmissions returns 1-2 from weighted pool, never TX-039', () => {
+    // pullTransmissions uses ~30% chance of zero results; force a non-empty pass band
+    vi.spyOn(Math, 'random').mockReturnValue(0.4)
     const { loadCatalog, unlock, pullTransmissions } = useDSNArchive()
     loadCatalog({ version: 1, transmissions: MOCK_TRANSMISSIONS })
     unlock()
     const pulled = pullTransmissions(1)
     expect(pulled.length).toBeGreaterThanOrEqual(1)
-    expect(pulled.length).toBeLessThanOrEqual(3)
+    expect(pulled.length).toBeLessThanOrEqual(2)
     for (const p of pulled) {
       expect(p.id).not.toBe('TX-039')
     }
   })
 
   it('pullTransmissions does not return already-discovered entries', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.4)
     const { loadCatalog, unlock, pullTransmissions } = useDSNArchive()
     const small: DSNTransmission[] = [
       MOCK_TRANSMISSIONS[0], // TX-001
@@ -97,6 +104,7 @@ describe('useDSNArchive', () => {
   })
 
   it('first pull always includes TX-001 if not yet discovered', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.4)
     const { loadCatalog, unlock, pullTransmissions } = useDSNArchive()
     loadCatalog({ version: 1, transmissions: MOCK_TRANSMISSIONS })
     unlock()
@@ -105,6 +113,7 @@ describe('useDSNArchive', () => {
   })
 
   it('markRead updates discovery read state', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.4)
     const { loadCatalog, unlock, pullTransmissions, markRead, discoveries } = useDSNArchive()
     loadCatalog({ version: 1, transmissions: MOCK_TRANSMISSIONS })
     unlock()

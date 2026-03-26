@@ -35,5 +35,10 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/**/*.ts'],
+      exclude: ['src/lib/**/__tests__/**', 'src/**/*.test.ts'],
+    },
   },
 })

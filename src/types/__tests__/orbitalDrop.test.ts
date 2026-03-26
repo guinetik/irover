@@ -13,6 +13,7 @@ describe('orbitalDrop item catalog helpers', () => {
       'digital-components',
       'welding-wire',
       'ice',
+      "dsn-archaeology-module"
     ])
   })
 
