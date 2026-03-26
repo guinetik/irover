@@ -9,7 +9,7 @@
       "briefing": "Telemetry's coming in — descent trajectory looks nominal but we need ground-truth coordinates before we clear you for operations. Three transponder stakes were deployed ahead of your landing. WASD to drive, mouse to orbit the camera. Hit all three markers so we can lock your position fix. Routine procedure.",
       "reward": { "sp": 25 },
       "unlocks": ["repair-kit"],
-      "chain": "m02-repair",
+      "chain": "m03-rems",
       "objectives": [
         { "id": "tri-1", "type": "go-to", "label": "Reach marker Alpha", "params": { "poiId": "tri-alpha" }, "sequential": false },
         { "id": "tri-2", "type": "go-to", "label": "Reach marker Beta", "params": { "poiId": "tri-beta" }, "sequential": false },
@@ -18,23 +18,23 @@
     },
     {
       "id": "m02-repair",
-      "name": "2. Equipment Repair",
+      "name": "4. Equipment Repair",
       "patron": null,
-      "description": "Use a repair kit to fix minor vehicle damage.",
-      "briefing": "The battery got damaged in landing. Use a repair kit to fix it.",
+      "description": "Use a repair kit to fix RTG damage sustained during landing.",
+      "briefing": "Now that you've run the RTG shakedown, you've probably noticed the power output is lower than spec. That's because the RTG took a hit during landing — durability is sitting at 60%. That's not critical yet, but it'll keep degrading. You've got welding wire in your kit. Open the RTG panel [7], check the durability readout, and run a field repair. Costs welding wire and engineering components. Get it above 90% and we'll clear you for science ops.",
       "reward": { "sp": 15 },
-      "unlocks": ["rems"],
-      "chain": "m03-rems",
+      "unlocks": ["mastcam"],
+      "chain": "m05-mastcam",
       "objectives": [
         { "id": "repair-1", "type": "use-repair-kit", "label": "Use a repair kit to fix the RTG", "params": { }, "sequential": false }
       ]
     },
     {
       "id": "m03-rems",
-      "name": "3. REMS Weather Station",
+      "name": "2. REMS Weather Station",
       "patron": null,
       "description": "Activate the environmental monitoring station and transmit a baseline weather report.",
-      "briefing": "Position locked and equipment checks out. Before we go any further — weather. Mars doesn't give warnings. Dust storms can drop visibility to zero and bury your solar margin in minutes. Temperature swings of 80°C between day and night will kill your battery if you're not watching. Your REMS station monitors pressure, temperature, humidity, wind speed, and UV radiation in real time. Select REMS [8] and activate it. Once it's running, it'll alert you to incoming weather events — dust storms, cold snaps, pressure drops. You need this data streaming before we clear you for instrument operations. It's non-negotiable.",
+      "briefing": "Position locked. Before we go any further — weather. Mars doesn't give warnings. Dust storms can drop visibility to zero and bury your solar margin in minutes. Temperature swings of 80°C between day and night will kill your battery if you're not watching. Your REMS station monitors pressure, temperature, humidity, wind speed, and UV radiation in real time. Select REMS [8] and activate it. Once it's running, it'll alert you to incoming weather events — dust storms, cold snaps, pressure drops. You need this data streaming before we clear you for instrument operations. It's non-negotiable.",
       "reward": { "sp": 20 },
       "unlocks": ["rtg"],
       "chain": "m04-rtg",
@@ -44,13 +44,13 @@
     },
     {
       "id": "m04-rtg",
-      "name": "4. RTG Shakedown",
+      "name": "3. RTG Shakedown",
       "patron": null,
       "description": "Verify RTG power output and test emergency overdrive mode.",
-      "briefing": "REMS is streaming — good. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — we'll need that position for your next assignment.",
+      "briefing": "REMS is streaming — good. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — you'll notice the RTG took some damage during landing. We'll deal with that next.",
       "reward": { "sp": 30 },
-      "unlocks": ["mastcam"],
-      "chain": "m05-mastcam",
+      "unlocks": [],
+      "chain": "m02-repair",
       "objectives": [
         { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },
         { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true },
