@@ -35,19 +35,15 @@ const vertexShader = /* glsl */ `
       sin(uTime * 0.3 + drift * 0.5) * 0.02 * progress
     );
 
-    // Mouse influence — gentle rotation offset
-    morphed.x += uMouse.x * 0.15 * progress;
-    morphed.y += uMouse.y * 0.1 * progress;
-
     vec4 mvPosition = modelViewMatrix * vec4(morphed, 1.0);
     gl_Position = projectionMatrix * mvPosition;
 
     // Size attenuation
-    gl_PointSize = aSize * uPixelRatio * (80.0 / -mvPosition.z);
+    gl_PointSize = aSize * uPixelRatio * (40.0 / -mvPosition.z);
 
     // Alpha based on morph progress + randomness
-    vAlpha = 0.3 + 0.7 * progress;
-    vAlpha *= 0.6 + 0.4 * aRandom;
+    vAlpha = 0.15 + 0.35 * progress;
+    vAlpha *= 0.5 + 0.3 * aRandom;
   }
 `
 
@@ -60,8 +56,8 @@ const fragmentShader = /* glsl */ `
     if (dist > 0.5) discard;
     float alpha = smoothstep(0.5, 0.15, dist) * vAlpha;
 
-    // Warm amber/white color
-    vec3 color = mix(vec3(0.9, 0.65, 0.35), vec3(1.0, 0.95, 0.9), vAlpha);
+    // Warm orange color
+    vec3 color = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.7, 0.3), vAlpha);
 
     gl_FragColor = vec4(color, alpha);
   }
@@ -76,14 +72,16 @@ export class PatronScene {
   private clock = new THREE.Clock(false)
   private rafId = 0
   private material: THREE.ShaderMaterial | null = null
+  private pointsGroup: THREE.Group | null = null
   private morphProgress = 0
   private mouseTarget = new THREE.Vector2(0, 0)
   private mouseCurrent = new THREE.Vector2(0, 0)
+  private targetRotation = new THREE.Euler(0, 0, 0)
 
   constructor(aspect: number) {
     this.camera = new THREE.PerspectiveCamera(35, aspect, 0.1, 100)
-    this.camera.position.set(0, 0.5, 4)
-    this.camera.lookAt(0, 0.3, 0)
+    this.camera.position.set(0, 0.5, 5.5)
+    this.camera.lookAt(0, 0.8, 0)
     this.scene.background = new THREE.Color(0x000000)
   }
 
@@ -94,7 +92,7 @@ export class PatronScene {
 
     // Load skull and extract vertices
     const loader = new GLTFLoader()
-    const gltf = await loader.loadAsync('/skull.glb')
+    const gltf = await loader.loadAsync('/soulless.glb')
     const skullPositions = this.extractVertices(gltf.scene)
     const particleCount = Math.min(skullPositions.length / 3, MAX_PARTICLES)
 
@@ -106,12 +104,12 @@ export class PatronScene {
     const randoms = new Float32Array(particleCount)
 
     for (let i = 0; i < particleCount; i++) {
-      // Random scattered spawn positions (sphere distribution)
+      // Spawn off-screen — scattered far out so they fly in
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
-      const r = 1.5 + Math.random() * 2.0
+      const r = 8 + Math.random() * 12
       randomPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-      randomPositions[i * 3 + 1] = r * Math.cos(phi) + 0.3
+      randomPositions[i * 3 + 1] = r * Math.cos(phi)
       randomPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
 
       // Target = skull vertex (sample evenly if more verts than MAX_PARTICLES)
@@ -120,7 +118,7 @@ export class PatronScene {
       targetPositions[i * 3 + 1] = skullPositions[srcIdx * 3 + 1]
       targetPositions[i * 3 + 2] = skullPositions[srcIdx * 3 + 2]
 
-      sizes[i] = 0.8 + Math.random() * 1.2
+      sizes[i] = 0.3 + Math.random() * 0.5
       randoms[i] = Math.random()
     }
 
@@ -144,7 +142,9 @@ export class PatronScene {
     })
 
     const points = new THREE.Points(geometry, this.material)
-    this.scene.add(points)
+    this.pointsGroup = new THREE.Group()
+    this.pointsGroup.add(points)
+    this.scene.add(this.pointsGroup)
 
     // Post-processing
     this.composer = new EffectComposer(this.renderer)
@@ -152,9 +152,9 @@ export class PatronScene {
 
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(canvas.clientWidth, canvas.clientHeight),
-      0.8,   // strength
-      0.5,   // radius
-      0.3,   // threshold (low — particles are dim, we want them to glow)
+      0.3,   // strength
+      0.4,   // radius
+      0.6,   // threshold
     )
     this.composer.addPass(bloomPass)
 
@@ -194,12 +194,12 @@ export class PatronScene {
     const center = box.getCenter(new THREE.Vector3())
     const size = box.getSize(new THREE.Vector3())
     const maxDim = Math.max(size.x, size.y, size.z)
-    const scale = 2.0 / maxDim // normalize to ~2 units tall
+    const scale = 2.6 / maxDim // normalize to ~2.6 units tall
 
     for (let i = 0; i < arr.length; i += 3) {
       arr[i] = (arr[i] - center.x) * scale
-      arr[i + 1] = (arr[i + 1] - center.y) * scale + 0.5 // offset upward
-      arr[i + 2] = (arr[i + 2] - center.z) * scale
+      arr[i + 1] = (arr[i + 1] - center.y) * scale + 1.6 // offset upward
+      arr[i + 2] = -(arr[i + 2] - center.z) * scale // flip Z to face camera
     }
 
     return arr
@@ -229,9 +229,22 @@ export class PatronScene {
     this.material.uniforms.uProgress.value = eased
     this.material.uniforms.uTime.value = elapsed
 
-    // Smooth mouse follow
+    // Smooth mouse follow — rotate skull to look at cursor
     this.mouseCurrent.lerp(this.mouseTarget, MOUSE_LERP)
     this.material.uniforms.uMouse.value.copy(this.mouseCurrent)
+
+    if (this.pointsGroup) {
+      // Target rotation: Y = horizontal look, X = vertical tilt
+      this.targetRotation.set(
+        0.15 - this.mouseCurrent.y * 0.3,  // base tilt down + mouse up/down
+        Math.PI + this.mouseCurrent.x * 0.4,   // face camera + turn left/right
+        0,
+      )
+      // Lerp toward target
+      this.pointsGroup.rotation.x += (this.targetRotation.x - this.pointsGroup.rotation.x) * MOUSE_LERP
+      this.pointsGroup.rotation.y += (this.targetRotation.y - this.pointsGroup.rotation.y) * MOUSE_LERP
+    }
+
   }
 
   /** Update mouse position — normalized -1 to 1 */

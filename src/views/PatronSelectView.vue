@@ -91,6 +91,7 @@ onUnmounted(() => {
   height: 35%;
   border: 1px dashed rgba(196, 149, 106, 0.3);
   border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   align-items: center;
