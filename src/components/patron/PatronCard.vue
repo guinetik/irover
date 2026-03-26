@@ -20,7 +20,7 @@
         class="mod"
         :class="mod.positive ? 'buff' : 'debuff'"
       >
-        {{ mod.positive ? '+' : '' }}{{ mod.value }} {{ mod.label }}
+        {{ mod.display }} {{ mod.label }}
       </p>
     </div>
   </button>
@@ -71,9 +71,11 @@ const modifierList = computed(() => {
     .map(([key, value]) => {
       const inverted = LOWER_IS_BETTER.has(key)
       const isBuff = inverted ? value! < 0 : value! > 0
+      const pct = Math.abs(Math.round(value! * 100))
+      const sign = isBuff ? '+' : '-'
       return {
         label: MODIFIER_LABELS[key] ?? key,
-        value: `${Math.round(value! * 100)}%`,
+        display: `${sign}${pct}%`,
         positive: isBuff,
       }
     })
