@@ -13,7 +13,8 @@ import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
 import { listOrbitalDropItemIds } from '@/types/orbitalDrop'
 import type { GeologicalFeature, Landmark } from '@/types/landmark'
-import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
+import type { TerrainParams, TerrainGeneratorType } from '@/three/terrain/TerrainGenerator'
+import { GLB_TERRAIN_SITES } from '@/three/terrain/GlbTerrainGenerator'
 import { devSpawnRandomInventoryItems } from '@/composables/useInventory'
 import { devAwardSciencePoints } from '@/composables/useSciencePoints'
 import {
@@ -478,8 +479,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const terrainParams = getTerrainParamsForSite(siteId, landmarks)
     siteTerrainParams.value = terrainParams
 
-    siteScene = new SiteScene('default')
+    const terrainType: TerrainGeneratorType = GLB_TERRAIN_SITES.has(siteId) ? 'glb' : 'default'
+    siteScene = new SiteScene(terrainType)
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
+
+    // Adjust camera far plane to match terrain scale (default 800 → 1200, GLB 2000 → 3000)
+    camera.far = siteScene.terrain.scale * 1.5
+    camera.updateProjectionMatrix()
 
     // Procedural Mars environment map — gives PBR metals something to reflect
     siteScene.scene.environment = createMarsEnvironment(renderer)

@@ -10,10 +10,9 @@ import {
   buildSpawnDistribution,
   pickRockType,
 } from './RockTypes'
+import { TERRAIN_SCALE } from './terrainConstants'
 import type { TerrainParams } from './TerrainGenerator'
 import { generateRockDistribution, type RockSpawn, type GolombekConfig } from './GolombekDistribution'
-
-const SCALE = 800
 
 export interface RockCollider {
   x: number
@@ -151,9 +150,10 @@ export class RockFactory {
     heightAt: (x: number, z: number) => number,
     group: THREE.Group,
     config?: GolombekConfig,
+    scale: number = TERRAIN_SCALE,
   ): void {
     // ── Generate scientifically-grounded rock distribution ──────────────
-    const distribution = generateRockDistribution(params, SCALE, config)
+    const distribution = generateRockDistribution(params, scale, config)
 
     // ── Geology-driven mineral type distribution ───────────────────────
     const spawnDist = buildSpawnDistribution({

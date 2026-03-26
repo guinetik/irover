@@ -8,9 +8,10 @@ import dustTextureUrl from '@/assets/texture2.jpg?url'
 import { RockFactory, type RockCollider } from './RockFactory'
 import { SimplexNoise } from './SimplexNoise'
 import { fetchElevationTile } from './marsElevationTiles'
+import { TERRAIN_SCALE } from './terrainConstants'
 import type { ITerrainGenerator, TerrainParams } from './TerrainGenerator'
 
-const SCALE = 800
+const SCALE = TERRAIN_SCALE
 const GRID_SIZE = 256
 
 /** Map orbital textures grouped by feature type for cross-site blending. */

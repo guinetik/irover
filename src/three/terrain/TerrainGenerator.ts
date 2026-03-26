@@ -13,7 +13,10 @@ import { MarsGlobalTerrainGenerator } from "./MarsGlobalTerrainGenerator";
 import { ElevationTerrainGenerator } from "./ElevationTerrainGenerator";
 
 const GRID_SIZE = 256;
-const SCALE = 800;
+
+import { TERRAIN_SCALE } from './terrainConstants'
+export { TERRAIN_SCALE } from './terrainConstants'
+const SCALE = TERRAIN_SCALE;
 
 /** Map orbital textures grouped by feature type for cross-site blending. */
 const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {

@@ -28,7 +28,8 @@ const CAMERA_LERP = 0.08
 const GROUND_LERP = 0.2
 const TILT_LERP = 0.1
 const ORBIT_SENSITIVITY = 0.005
-const TERRAIN_BOUNDARY = 380
+/** 20-unit margin from terrain edge; actual value derived from terrain.scale at runtime. */
+const TERRAIN_BOUNDARY_MARGIN = 20
 
 /** Pitch limits when zoomed out (large radius) — tighter to limit horizon / under-terrain glimpses. */
 const ORBIT_PITCH_MIN_FAR = -0.3
@@ -577,9 +578,10 @@ export class RoverController {
       let nx = this.rover.position.x + moveDir.x * this.config.moveSpeed * delta
       let nz = this.rover.position.z + moveDir.z * this.config.moveSpeed * delta
 
-      // Terrain bounds
-      nx = Math.max(-TERRAIN_BOUNDARY, Math.min(TERRAIN_BOUNDARY, nx))
-      nz = Math.max(-TERRAIN_BOUNDARY, Math.min(TERRAIN_BOUNDARY, nz))
+      // Terrain bounds — derived from the active terrain generator's scale
+      const bound = (this.siteScene?.terrain?.scale ?? 800) / 2 - TERRAIN_BOUNDARY_MARGIN
+      nx = Math.max(-bound, Math.min(bound, nx))
+      nz = Math.max(-bound, Math.min(bound, nz))
 
       this.rover.position.x = nx
       this.rover.position.z = nz

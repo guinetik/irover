@@ -10,24 +10,22 @@ import { RockFactory, type RockCollider } from './RockFactory'
 import type { ITerrainGenerator, TerrainParams } from './TerrainGenerator'
 import { SimplexNoise } from './SimplexNoise'
 
-/** Available GLB terrain files in public/terrain/ */
-const TERRAIN_POOL = [
-  '/terrain/terrain-001.glb',
-  '/terrain/terrain-002.glb',
-  '/terrain/terrain-003.glb',
-  '/terrain/terrain-004.glb',
-  '/terrain/terrain-005.glb',
-  '/terrain/terrain-006.glb',
-  '/terrain/terrain-007.glb',
-  '/terrain/terrain-008.glb',
-  '/terrain/terrain-009.glb',
-  '/terrain/terrain-010.glb',
-  '/terrain/terrain-011.glb',
-  '/terrain/terrain-012.glb',
-  '/terrain/terrain-013.glb',
-  '/terrain/terrain-014.glb',
-  '/terrain/terrain-015.glb',
-]
+/** Sites that have a dedicated GLB terrain file in public/terrain/{siteId}.glb */
+export const GLB_TERRAIN_SITES = new Set([
+  'acidalia-planitia',
+  'argyre-basin',
+  'arsia-mons',
+  'ascraeus-mons',
+  'elysium-mons',
+  'hellas-basin',
+  'north-polar-cap',
+  'olympus-mons',
+  'pavonis-mons',
+  'south-polar-cap',
+  'syrtis-major',
+  'utopia-planitia',
+  'valles-marineris',
+])
 
 /** Map orbital textures grouped by feature type for cross-site blending. */
 const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {
@@ -48,7 +46,9 @@ function pickDetailTextures(p: TerrainParams): [string, string] {
   return [pool[i], pool[j === i ? (i + 1) % pool.length : j]]
 }
 
-const SCALE = 800
+/** GLB maps are 400x400 grids scaled up to 1000 world units (-500 to +500). */
+export const GLB_TERRAIN_SCALE = 1000
+const SCALE = GLB_TERRAIN_SCALE
 const GRID_SIZE = 256
 
 /**
@@ -82,10 +82,9 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     this.dispose()
     await this.rockSpawner.ready()
 
-    // Pick a terrain GLB based on seed
-    const terrainIdx = Math.abs(params.seed) % TERRAIN_POOL.length
-    const terrainUrl = TERRAIN_POOL[terrainIdx]
-    console.log(`[GlbTerrain] loading ${terrainUrl} (index ${terrainIdx})`)
+    // Load the site-specific terrain GLB
+    const terrainUrl = `/terrain/${params.siteId}.glb`
+    console.log(`[GlbTerrain] loading ${terrainUrl}`)
 
     const loader = new GLTFLoader()
     const gltf = await loader.loadAsync(terrainUrl)
@@ -184,6 +183,8 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
       params,
       (x, z) => this.raycastHeight(x, z),
       this.group,
+      undefined,
+      SCALE,
     )
     console.log(`[GlbTerrain] raycast: ${this._rayHits} hits, ${this._rayMisses} misses, ${this.rockSpawner.rocks.length} rocks spawned`)
 

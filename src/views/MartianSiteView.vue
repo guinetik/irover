@@ -1,5 +1,6 @@
 <template>
   <div class="martian-site-view w-full h-full">
+    <LoadingOverlay :is-loading="siteLoading" :site-name="siteId" />
     <canvas ref="canvasRef" class="block w-full h-full" />
     <Transition name="deploy-fade">
       <div
@@ -546,6 +547,7 @@ import type { LGAMessage } from '@/types/lgaMailbox'
 import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
+import LoadingOverlay from '@/components/LoadingOverlay.vue'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
@@ -570,6 +572,7 @@ const roverHeading = ref(0)
 const roverIsMoving = ref(false)
 /** After first W/S drive while deployed, hide the centered driving tips (per session). */
 const controlsHintDismissed = ref(false)
+const siteLoading = ref(true)
 const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
@@ -1471,6 +1474,7 @@ onMounted(async () => {
   const handle = createMarsSiteViewController(createSiteControllerContext())
   await handle.mount()
   siteHandle.value = handle
+  siteLoading.value = false
 })
 
 onUnmounted(() => {

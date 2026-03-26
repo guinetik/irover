@@ -6,12 +6,12 @@ import mountainFrag from '@/three/shaders/mountain.frag.glsl?raw'
 import rockTextureUrl from '@/assets/texture1.jpg?url'
 import dustTextureUrl from '@/assets/texture2.jpg?url'
 import { RockFactory, type RockCollider } from './RockFactory'
-import type { ITerrainGenerator, TerrainParams } from './TerrainGenerator'
-import { DefaultTerrainGenerator } from './TerrainGenerator'
+import { TERRAIN_SCALE } from './terrainConstants'
+import { DefaultTerrainGenerator, type ITerrainGenerator, type TerrainParams } from './TerrainGenerator'
 import { SimplexNoise } from './SimplexNoise'
 import { loadMarsGlobalMesh, extractLocalPatch, PATCH_GRID_SIZE } from './marsGlobalExtract'
 
-const SCALE = 800
+const SCALE = TERRAIN_SCALE
 const GRID_SIZE = PATCH_GRID_SIZE // 128
 
 /** Map orbital textures grouped by feature type for cross-site blending. */
