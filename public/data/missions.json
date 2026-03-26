@@ -8,7 +8,7 @@
       "description": "Standard post-landing position calibration using three transponder markers.",
       "briefing": "Telemetry's coming in — descent trajectory looks nominal but we need ground-truth coordinates before we clear you for operations. Three transponder stakes were deployed ahead of your landing. WASD to drive, mouse to orbit the camera. Hit all three markers so we can lock your position fix. Routine procedure.",
       "reward": { "sp": 25 },
-      "unlocks": ["repair-kit"],
+      "unlocks": ["rems"],
       "chain": "m03-rems",
       "objectives": [
         { "id": "tri-1", "type": "go-to", "label": "Reach marker Alpha", "params": { "poiId": "tri-alpha" }, "sequential": false },
