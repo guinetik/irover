@@ -23,6 +23,8 @@ export class RTGController extends InstrumentController {
   override readonly repairComponentId = 'mechatronics-components'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 1.0
+  /** RTG took damage during landing — starts at 60% durability. */
+  override durabilityPct = 60
   /** Cyan selection glow; site render loop skips it during `phase === 'overdrive'` so orange burst VFX wins. */
   override get selectionHighlightColor(): number | null { return INSTRUMENT_SELECTION_GLOW_HEX }
   /** RTG management UI / telemetry — not the RTG thermal output (that is generation). */

@@ -390,8 +390,6 @@ function wireArchiveCheckers(): void {
     return upgradedInstruments.value.size > 0
   })
 
-  // dsn-firmware-install: flag set externally when player installs DSN firmware
-  registerChecker('dsn-firmware-install', () => dsnFirmwareInstalled.value)
 }
 
 /** Set to true when the player activates RTG overdrive (called from view layer). */
@@ -400,7 +398,7 @@ const rtgShuntTriggered = ref(false)
 const remsActivated = ref(false)
 const repairKitUsed = ref(false)
 const upgradedInstruments = ref<Set<string>>(new Set())
-const dsnFirmwareInstalled = ref(false)
+
 
 function notifyRtgOverdrive(): void {
   rtgOverdriveTriggered.value = true
@@ -418,10 +416,6 @@ function notifyRepairKitUsed(): void {
   repairKitUsed.value = true
 }
 
-function notifyDsnFirmwareInstalled(): void {
-  dsnFirmwareInstalled.value = true
-}
-
 function notifyUpgradeInstalled(instrumentId: string): void {
   const next = new Set(upgradedInstruments.value)
   next.add(instrumentId)
@@ -434,7 +428,6 @@ function resetForTests(): void {
   remsActivated.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
-  dsnFirmwareInstalled.value = false
   catalog.value = []
   missionStates.value = []
   trackedMissionId.value = null
@@ -465,7 +458,6 @@ export function useMissions() {
     notifyRtgShunt,
     notifyRemsActivated,
     notifyRepairKitUsed,
-    notifyDsnFirmwareInstalled,
     notifyUpgradeInstalled,
     getMissionDef,
     resetForTests,

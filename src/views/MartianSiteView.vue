@@ -149,8 +149,8 @@
       :repair-cost-wire="activeDurability?.repairCost.weldingWire"
       :repair-cost-component-id="activeDurability?.repairCost.componentId"
       :repair-cost-component-qty="activeDurability?.repairCost.componentQty"
-      :dsn-firmware-available="dsnFirmwareAvailable"
-      @install-dsn-firmware="handleDsnFirmwareInstall"
+      :uhf-upgraded="uhfUpgraded"
+      @toggle-dsn-archaeology="handleToggleDsnArchaeology"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -767,21 +767,22 @@ function handleInstrumentRepair() {
   }
 }
 
-function handleDsnFirmwareInstall() {
-  const { unlock } = useDSNArchive()
-  unlock()
-  useMissions().notifyDsnFirmwareInstalled()
-  sampleToastRef.value?.showComm?.('DSN ARCHAEOLOGY v1.0 — INSTALLED')
-}
-
-const dsnFirmwareAvailable = computed(() => {
-  const { activeMissions, getMissionDef } = useMissions()
-  if (dsnUnlocked.value) return false
-  return activeMissions.value.some(m => {
-    const def = getMissionDef(m.missionId)
-    return def?.objectives.some(o => o.type === 'dsn-firmware-install')
-  })
+const uhfUpgraded = computed(() => {
+  const uhf = siteRover.value?.instruments.find(i => i.id === 'antenna-uhf')
+  return uhf?.upgraded ?? false
 })
+
+// When UHF gets upgraded, unlock DSN archaeology
+watch(uhfUpgraded, (upgraded) => {
+  if (upgraded && !dsnUnlocked.value) {
+    useDSNArchive().unlock()
+    sampleToastRef.value?.showComm?.('DSN ARCHAEOLOGY — UNLOCKED')
+  }
+})
+
+function handleToggleDsnArchaeology() {
+  showArchive.value = true
+}
 
 function toggleWheelsPanel() {
   if (!siteRover.value || isSleeping.value || wheelsHudBlocked.value) return

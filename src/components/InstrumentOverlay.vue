@@ -269,10 +269,10 @@
           </div>
         </Transition>
 
-        <!-- DSN Firmware install (UHF slot only, when mission active) -->
-        <div v-if="dsnFirmwareAvailable && activeSlot === 12" class="ov-firmware">
-          <button class="ov-btn-primary ov-btn-dsn" @click="$emit('installDsnFirmware')">
-            INSTALL DSN ARCHAEOLOGY v1.0
+        <!-- DSN Archaeology (UHF slot only, after upgrade) -->
+        <div v-if="uhfUpgraded && activeSlot === 12" class="ov-dsn-action">
+          <button class="ov-btn-primary ov-btn-dsn" @click="$emit('toggleDsnArchaeology')">
+            📡 DSN ARCHAEOLOGY
           </button>
         </div>
 
@@ -422,7 +422,7 @@ defineEmits<{
   danProspect: []
   samSeeResults: []
   apxsSeeResults: []
-  installDsnFirmware: []
+  toggleDsnArchaeology: []
 }>()
 
 export interface ThermalDisplay {
@@ -498,7 +498,7 @@ const props = withDefaults(
     repairCostWire?: number
     repairCostComponentId?: string
     repairCostComponentQty?: number
-    dsnFirmwareAvailable?: boolean
+    uhfUpgraded?: boolean
   }>(),
   {
     canActivate: true,
@@ -535,7 +535,7 @@ const props = withDefaults(
     repairCostWire: 0,
     repairCostComponentId: '',
     repairCostComponentQty: 0,
-    dsnFirmwareAvailable: false,
+    uhfUpgraded: false,
   },
 )
 
@@ -860,8 +860,8 @@ const durabilityColor = computed(() => {
   letter-spacing: 0.08em;
 }
 
-/* DSN firmware install */
-.ov-firmware {
+/* DSN archaeology action */
+.ov-dsn-action {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid rgba(102, 255, 238, 0.15);

@@ -139,7 +139,7 @@ export function useMissionUI(deps: {
     accept(missionId, marsSol.value)
 
     // Enable tutorial-short RTG durations for the RTG mission
-    if (missionId === 'm03-rtg') setRtgTutorialMode(true)
+    if (missionId === 'm04-rtg') setRtgTutorialMode(true)
 
     const def = getMissionDef(missionId)
     if (def) {
@@ -257,7 +257,7 @@ export function useMissionUI(deps: {
     // Fire callback for newly completed missions
     if (curr.length > (prev?.length ?? 0)) {
       const newest = curr[curr.length - 1]
-      if (newest.missionId === 'm03-rtg') setRtgTutorialMode(false)
+      if (newest.missionId === 'm04-rtg') setRtgTutorialMode(false)
       const def = getMissionDef(newest.missionId)
       if (def) {
         const unlockLabel = def.unlocks.length > 0 ? def.unlocks.join(', ').toUpperCase() : null

@@ -12,7 +12,6 @@ export type ObjectiveType =
   | 'rems-activate'
   | 'use-repair-kit'
   | 'install-upgrade'
-  | 'dsn-firmware-install'
 
 export interface ObjectiveDef {
   id: string

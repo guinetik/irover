@@ -81,6 +81,10 @@ export abstract class InstrumentController {
   readonly repairComponentId: string = 'engineering-components'
   hazardDecayMultiplier = 1.0
 
+  // ── Upgrade system ──────────────────────────────────────────────────
+  upgradeLevel = 0
+  readonly maxUpgradeLevel: number = 1
+
   /**
    * When non-null, the view applies a pulsing emissive on this instrument's focus subtree while selected.
    * Colour shifts from cyan (healthy) through green/yellow/orange as durability drops.
@@ -136,6 +140,16 @@ export abstract class InstrumentController {
     if (this.durabilityPct <= this.breakThreshold) return  // permanently broken
     this.durabilityPct = this.maxDurability
     this.maxDurability = Math.max(this.breakThreshold + 1, this.maxDurability - 1)
+  }
+
+  get upgraded(): boolean {
+    return this.upgradeLevel >= this.maxUpgradeLevel
+  }
+
+  applyUpgrade(): boolean {
+    if (this.upgradeLevel >= this.maxUpgradeLevel) return false
+    this.upgradeLevel += 1
+    return true
   }
 
   node: THREE.Object3D | null = null

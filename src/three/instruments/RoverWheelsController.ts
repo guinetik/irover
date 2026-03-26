@@ -54,8 +54,7 @@ export class RoverWheelsController extends InstrumentController {
    */
   baseDriveW = 5
 
-  /** Upgrade tier for future track efficiency (each step +5% modeled draw ceiling). */
-  upgradeLevel = 0
+  override readonly maxUpgradeLevel = 5
 
   /**
    * Scales billed motor power from wear and placeholder upgrade track.
@@ -74,10 +73,4 @@ export class RoverWheelsController extends InstrumentController {
     return this.baseDriveW * this.powerEfficiency
   }
 
-  /**
-   * Apply the next tier on the mobility upgrade track (stub for future mechanics).
-   */
-  applyUpgrade(): void {
-    if (this.upgradeLevel < 5) this.upgradeLevel += 1
-  }
 }
