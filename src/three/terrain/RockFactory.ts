@@ -213,17 +213,21 @@ export class RockFactory {
       const rz = spawn.z
       let ry: number
 
+      const groundY = heightAt(rx, rz)
+      // Skip rocks in areas with no terrain coverage
+      if (Number.isNaN(groundY)) continue
+
       if (useGlb) {
         const geoIdx = i % this.glbRockGeos.length
         const bottomY = this.glbRockBottomY[geoIdx]
         // Base placement: bottom of mesh on terrain
-        ry = heightAt(rx, rz) - bottomY * sc * scaleY
+        ry = groundY - bottomY * sc * scaleY
         // Burial: sink rock into terrain
         ry -= spawn.burial * sc * scaleY * 0.5
         // Slight additional embed for natural look
         ry -= sc * scaleY * 0.08
       } else {
-        ry = heightAt(rx, rz)
+        ry = groundY
         ry -= spawn.burial * sc * scaleY * 0.4
         ry -= sc * 0.05
       }

@@ -252,10 +252,12 @@
               </span>
             </button>
             <button
+              v-if="hasUpgrade"
               class="ov-btn-secondary"
-              :class="{ active: upgradeOpen }"
+              :class="{ active: upgradeOpen, disabled: isUpgraded }"
+              :disabled="isUpgraded"
               @click="upgradeOpen = !upgradeOpen"
-            >UPGRADE</button>
+            >{{ isUpgraded ? 'UPGRADED' : 'UPGRADE' }}</button>
           </div>
         </div>
 
@@ -270,8 +272,8 @@
           </div>
         </Transition>
 
-        <!-- DSN Archaeology (UHF slot only, after upgrade) -->
-        <div v-if="uhfUpgraded && activeSlot === 12" class="ov-dsn-action">
+        <!-- DSN Archaeology (LGA slot only, after upgrade) -->
+        <div v-if="lgaUpgraded && activeSlot === 11" class="ov-dsn-action">
           <button class="ov-btn-primary ov-btn-dsn" @click="$emit('toggleDsnArchaeology')">
             📡 DSN ARCHAEOLOGY
           </button>
@@ -500,7 +502,11 @@ const props = withDefaults(
     repairCostWire?: number
     repairCostComponentId?: string
     repairCostComponentQty?: number
-    uhfUpgraded?: boolean
+    lgaUpgraded?: boolean
+    /** True when the active instrument has an upgrade path (show UPGRADE button) */
+    hasUpgrade?: boolean
+    /** True when the active instrument is already fully upgraded */
+    isUpgraded?: boolean
   }>(),
   {
     canActivate: true,
@@ -537,7 +543,7 @@ const props = withDefaults(
     repairCostWire: 0,
     repairCostComponentId: '',
     repairCostComponentQty: 0,
-    uhfUpgraded: false,
+    lgaUpgraded: false,
   },
 )
 

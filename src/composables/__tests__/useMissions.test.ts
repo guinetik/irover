@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useMissions } from '../useMissions'
+import {
+  grantMissionCatalogProgressForDevUpTo,
+  resetMissionProgressForDev,
+  useMissions,
+} from '../useMissions'
 import type { MissionCatalog } from '@/types/missions'
 
 // --- Minimal localStorage mock for Node environment ---
@@ -105,6 +109,16 @@ describe('useMissions', () => {
     expect(unlockedInstruments.value).toEqual([])
     accept('m01-test', 1)
     complete('m01-test', 5)
+    expect(unlockedInstruments.value).toContain('mastcam')
+  })
+
+  it('grantMissionCatalogProgressForDevUpTo completes prior catalog missions with rewards and unlocks', () => {
+    const { loadCatalog, completedMissions, unlockedInstruments } = useMissions()
+    loadCatalog(mockMissions)
+    resetMissionProgressForDev()
+    const granted = grantMissionCatalogProgressForDevUpTo(2, 7)
+    expect(granted).toEqual(['m01-test', 'm02-test'])
+    expect(completedMissions.value.length).toBe(2)
     expect(unlockedInstruments.value).toContain('mastcam')
   })
 

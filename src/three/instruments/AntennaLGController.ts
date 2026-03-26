@@ -14,6 +14,7 @@ export class AntennaLGController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.25
   override readonly repairComponentId = 'digital-components'
+  override readonly upgradeItemId = 'dsn-archaeology-module'
   override readonly breakThreshold = 5
   override readonly usageDecayChance = 0.10
   override readonly usageDecayAmount = 0.5

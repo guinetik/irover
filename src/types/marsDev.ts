@@ -5,6 +5,11 @@ export type DevAddSciencePointsResult =
   | { ok: true; amount: number }
   | { ok: false; message: string }
 
+/** Result of {@link MarsDevDebugApi.mission}. */
+export type DevMissionSetResult =
+  | { ok: true; missionId: string; name: string; priorCompletedIds: string[] }
+  | { ok: false; message: string }
+
 /**
  * Console API for development helpers exposed as `window.MarsDev` in DEV builds only.
  */
@@ -32,4 +37,13 @@ export interface MarsDevDebugApi {
      */
     addSP(amount: number): DevAddSciencePointsResult
   }
+
+  /**
+   * Clears mission progress (`mars-missions-v1`), auto-completes missions at catalog indices `0..index-1`
+   * (SP, item rewards, instrument unlocks — same as playing through them), preserves existing LGA message
+   * history, then appends an incoming transmission for the mission at `index` (same shape as the
+   * first-mission briefing delivery).
+   * @param index - 0-based index into the loaded mission catalog.
+   */
+  mission(index: number): DevMissionSetResult
 }

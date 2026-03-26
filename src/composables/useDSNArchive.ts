@@ -146,7 +146,10 @@ function pullTransmissions(currentSol: number): DSNTransmission[] {
   )
   if (pool.length === 0) return []
 
-  const count = Math.min(pool.length, 1 + Math.floor(Math.random() * 3))
+  // ~30% chance nothing comes through, ~55% one transmission, ~15% two
+  const roll = Math.random()
+  const count = Math.min(pool.length, roll < 0.30 ? 0 : roll < 0.85 ? 1 : 2)
+  if (count === 0) return []
   const pulled: DSNTransmission[] = []
 
   // First pull ever: force TX-001

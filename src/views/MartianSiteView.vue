@@ -151,7 +151,9 @@
       :repair-cost-wire="activeDurability?.repairCost.weldingWire"
       :repair-cost-component-id="activeDurability?.repairCost.componentId"
       :repair-cost-component-qty="activeDurability?.repairCost.componentQty"
-      :uhf-upgraded="uhfUpgraded"
+      :lga-upgraded="lgaUpgraded"
+      :has-upgrade="activeInstrumentHasUpgrade"
+      :is-upgraded="activeInstrumentIsUpgraded"
       @toggle-dsn-archaeology="handleToggleDsnArchaeology"
     />
     <ChemCamExperimentPanel
@@ -568,6 +570,32 @@ const rewardTrackOpen = ref(false)
 const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+
+// --- Shared audio element for DSN playback (unlocked on first user gesture) ---
+let dsnAudio: HTMLAudioElement | null = null
+let audioUnlocked = false
+function ensureAudioUnlocked() {
+  if (audioUnlocked) return
+  audioUnlocked = true
+  dsnAudio = new Audio()
+  dsnAudio.volume = 0.5
+  // Tiny silent play to unlock the element for future programmatic use
+  dsnAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='
+  dsnAudio.play().then(() => dsnAudio!.pause()).catch(() => {})
+  window.removeEventListener('keydown', ensureAudioUnlocked)
+  window.removeEventListener('pointerdown', ensureAudioUnlocked)
+}
+window.addEventListener('keydown', ensureAudioUnlocked, { once: false })
+window.addEventListener('pointerdown', ensureAudioUnlocked, { once: false })
+
+function playDsnAudio(url: string) {
+  if (!dsnAudio) {
+    dsnAudio = new Audio()
+    dsnAudio.volume = 0.5
+  }
+  dsnAudio.src = url
+  dsnAudio.play().catch(() => {})
+}
 const roverHeading = ref(0)
 /** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
 const roverIsMoving = ref(false)
@@ -584,6 +612,20 @@ const passiveUiRevision = ref(0)
 const activeDurability = computed(() => {
   if (activeInstrumentSlot.value === null) return undefined
   return getBySlot(activeInstrumentSlot.value)
+})
+
+const activeInstrumentHasUpgrade = computed(() => {
+  void passiveUiRevision.value
+  void activeInstrumentSlot.value
+  const inst = siteRover.value?.activeInstrument
+  return inst ? inst.upgradeItemId !== null : false
+})
+
+const activeInstrumentIsUpgraded = computed(() => {
+  void passiveUiRevision.value
+  void activeInstrumentSlot.value
+  const inst = siteRover.value?.activeInstrument
+  return inst?.upgraded ?? false
 })
 
 const passiveOverlayPatch = computed(() => {
@@ -779,21 +821,23 @@ function handleInstrumentUpgrade() {
   if (result.ok) {
     useMissions().notifyUpgradeInstalled(snap.id)
     sampleToastRef.value?.showComm?.(`${snap.name} — UPGRADE INSTALLED`)
+    // Force reactive recalc — controller fields aren't Vue-reactive
+    passiveUiRevision.value++
   } else if (result.message) {
     sampleToastRef.value?.showError?.(result.message)
   }
 }
 
-const uhfUpgraded = computed(() => {
-  const uhf = siteRover.value?.instruments.find(i => i.id === 'antenna-uhf')
-  return uhf?.upgraded ?? false
+const lgaUpgraded = computed(() => {
+  void passiveUiRevision.value // re-evaluate when upgrade state changes
+  const lga = siteRover.value?.instruments.find(i => i.id === 'antenna-lg')
+  return lga?.upgraded ?? false
 })
 
-// When UHF gets upgraded, unlock DSN archaeology
-watch(uhfUpgraded, (upgraded) => {
+// When LGA gets upgraded (or was already upgraded from localStorage), unlock DSN archaeology
+watch(lgaUpgraded, (upgraded) => {
   if (upgraded && !dsnUnlocked.value) {
     useDSNArchive().unlock()
-    sampleToastRef.value?.showComm?.('DSN ARCHAEOLOGY — UNLOCKED')
   }
 })
 
@@ -1394,6 +1438,11 @@ function createSiteControllerContext() {
       const count = txs.length
       const label = count === 1 ? '1 DSN transmission received' : `${count} DSN transmissions received`
       sampleToastRef.value?.showComm?.(label)
+      // Auto-play the first transmission's audio log if available
+      const firstWithAudio = txs.find(tx => tx.audioUrl)
+      if (firstWithAudio?.audioUrl) {
+        playDsnAudio(firstWithAudio.audioUrl)
+      }
     },
     clearPois,
     devSpawnRandomInventoryItems,
@@ -1489,11 +1538,16 @@ onMounted(async () => {
   await handle.mount()
   siteHandle.value = handle
   siteLoading.value = false
+  // Kick reactive computeds after upgrade hydration from localStorage (runs on first frame)
+  requestAnimationFrame(() => { passiveUiRevision.value++ })
 })
 
 onUnmounted(() => {
   siteHandle.value?.dispose()
   siteHandle.value = null
+  window.removeEventListener('keydown', ensureAudioUnlocked)
+  window.removeEventListener('pointerdown', ensureAudioUnlocked)
+  if (dsnAudio) { dsnAudio.pause(); dsnAudio.src = ''; dsnAudio = null }
 })
 
 

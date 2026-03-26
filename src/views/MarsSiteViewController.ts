@@ -49,7 +49,11 @@ import {
 import type { SiteFrameContext } from './site-controllers/SiteFrameContext'
 import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTickHandlers'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
-import { useMissions } from '@/composables/useMissions'
+import {
+  grantMissionCatalogProgressForDevUpTo,
+  resetMissionProgressForDev,
+  useMissions,
+} from '@/composables/useMissions'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
@@ -553,6 +557,39 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           }
           sampleToastRef.value?.showSP(gain.amount, 'DEV', gain.bonus)
           return { ok: true as const, amount: gain.amount }
+        },
+        setMissionForDev: (index: number) => {
+          gameClock.missionCooldowns.clearAll()
+          const list = missions.catalog.value
+          if (list.length === 0) {
+            return { ok: false as const, message: 'Mission catalog is not loaded yet.' }
+          }
+          const n = Number(index)
+          if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n >= list.length) {
+            return {
+              ok: false as const,
+              message: `Invalid index (0..${list.length - 1}).`,
+            }
+          }
+          const def = list[n]
+          resetMissionProgressForDev()
+          const priorCompletedIds = grantMissionCatalogProgressForDevUpTo(n, marsSol.value)
+          pushMessage({
+            direction: 'received',
+            sol: marsSol.value,
+            timeOfDay: marsTimeOfDay.value,
+            subject: def.name,
+            body: def.briefing,
+            type: 'mission',
+            from: def.patron ?? 'Mission Control',
+            missionId: def.id,
+          })
+          return {
+            ok: true as const,
+            missionId: def.id,
+            name: def.name,
+            priorCompletedIds,
+          }
         },
       })
     }

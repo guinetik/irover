@@ -1,10 +1,16 @@
-import type { DevAddSciencePointsResult, MarsDevDebugApi } from '@/types/marsDev'
+import type {
+  DevAddSciencePointsResult,
+  DevMissionSetResult,
+  MarsDevDebugApi,
+} from '@/types/marsDev'
 import type { DevSpawnInventoryItemResult } from '@/types/inventory'
 
 export interface InstallMarsDevDebugApiOptions {
   spawnRandomInventoryItems: (count?: number) => string[]
   spawnInventoryItemById: (itemId: string, quantity?: number) => DevSpawnInventoryItemResult
   addSciencePoints: (amount: number) => DevAddSciencePointsResult
+  /** Clears mission + LGA state and queues the briefing for `missions.json` catalog index. */
+  setMissionForDev: (index: number) => DevMissionSetResult
 }
 
 declare global {
@@ -31,6 +37,9 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
       addSP(amount) {
         return options.addSciencePoints(amount)
       },
+    },
+    mission(index: number) {
+      return options.setMissionForDev(index)
     },
   }
 

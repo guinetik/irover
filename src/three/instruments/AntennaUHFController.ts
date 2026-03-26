@@ -13,7 +13,6 @@ export class AntennaUHFController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.25
   override readonly repairComponentId = 'digital-components'
-  override readonly upgradeItemId = 'dsn-archaeology-module'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 0.8
   override readonly billsPassiveBackgroundPower = true

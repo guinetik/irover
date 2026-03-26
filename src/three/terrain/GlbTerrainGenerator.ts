@@ -49,7 +49,7 @@ function pickDetailTextures(p: TerrainParams): [string, string] {
 /** GLB maps are 400x400 grids scaled up to 1000 world units (-500 to +500). */
 export const GLB_TERRAIN_SCALE = 1000
 const SCALE = GLB_TERRAIN_SCALE
-const GRID_SIZE = 256
+const GRID_SIZE = 512
 
 /**
  * Terrain generator that loads a GLB heightmap model and applies
@@ -68,12 +68,10 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
   private textures: THREE.Texture[] = []
   /** Sampled height grid for fast heightAt() queries */
   private heightmap: Float32Array | null = null
+  /** Tracks which grid cells have real mesh data */
+  private coverage: Uint8Array | null = null
   private heightMin = 0
   private heightMax = 0
-  /** Raycaster for precise height queries during rock spawning */
-  private raycaster = new THREE.Raycaster()
-  private rayOrigin = new THREE.Vector3()
-  private rayDown = new THREE.Vector3(0, -1, 0)
 
   get rockColliders(): RockCollider[] { return this.rockSpawner.colliders }
   get scale(): number { return SCALE }
@@ -176,17 +174,15 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     // Force world matrix update so raycaster can hit the meshes
     this.group.updateMatrixWorld(true)
 
-    // Spawn rocks — use raycasting for precise ground placement on GLB meshes
-    this._rayHits = 0
-    this._rayMisses = 0
+    // Spawn rocks — use heightmap grid, return NaN for uncovered areas so rocks are skipped
     this.rockSpawner.spawn(
       params,
-      (x, z) => this.raycastHeight(x, z),
+      (x, z) => this.hasCoverage(x, z) ? this.terrainHeightAt(x, z) : NaN,
       this.group,
       undefined,
       SCALE,
     )
-    console.log(`[GlbTerrain] raycast: ${this._rayHits} hits, ${this._rayMisses} misses, ${this.rockSpawner.rocks.length} rocks spawned`)
+    console.log(`[GlbTerrain] ${this.rockSpawner.rocks.length} rocks spawned`)
 
     // GLB terrains have their own horizon — skip procedural mountains
   }
@@ -195,8 +191,9 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
   private buildHeightmap(geometries: THREE.BufferGeometry[]): void {
     const hm = new Float32Array(GRID_SIZE * GRID_SIZE)
     hm.fill(-Infinity)
+    const counts = new Uint16Array(GRID_SIZE * GRID_SIZE)
 
-    // Sample all vertices into the grid
+    // Sample all vertices into the grid — average heights per cell
     for (const geo of geometries) {
       const pos = geo.attributes.position
       for (let i = 0; i < pos.count; i++) {
@@ -204,16 +201,28 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
         const wy = pos.getY(i) // height
         const wz = pos.getZ(i)
 
-        const gx = Math.floor((wx / SCALE + 0.5) * (GRID_SIZE - 1))
-        const gz = Math.floor((wz / SCALE + 0.5) * (GRID_SIZE - 1))
+        const gx = Math.round((wx / SCALE + 0.5) * (GRID_SIZE - 1))
+        const gz = Math.round((wz / SCALE + 0.5) * (GRID_SIZE - 1))
         if (gx < 0 || gx >= GRID_SIZE || gz < 0 || gz >= GRID_SIZE) continue
 
         const idx = gz * GRID_SIZE + gx
-        if (wy > hm[idx]) hm[idx] = wy
+        if (counts[idx] === 0) {
+          hm[idx] = wy
+        } else {
+          hm[idx] += wy
+        }
+        counts[idx]++
       }
     }
 
-    // Fill gaps (cells with no vertices) by nearest-neighbor
+    // Finalize averages & build coverage mask from vertex data
+    const cov = new Uint8Array(GRID_SIZE * GRID_SIZE)
+    for (let i = 0; i < hm.length; i++) {
+      if (counts[i] > 1) hm[i] /= counts[i]
+      if (counts[i] > 0) cov[i] = 1
+    }
+
+    // Fill gaps (cells with no vertices) by nearest-neighbor — only for rover traversal
     for (let pass = 0; pass < 3; pass++) {
       for (let z = 1; z < GRID_SIZE - 1; z++) {
         for (let x = 1; x < GRID_SIZE - 1; x++) {
@@ -245,26 +254,9 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     }
 
     this.heightmap = hm
+    this.coverage = cov
   }
 
-  private _rayHits = 0
-  private _rayMisses = 0
-
-  /** Raycast against actual terrain meshes for precise height at (x, z). */
-  private raycastHeight(x: number, z: number): number {
-    if (this.terrainMeshes.length === 0) return 0
-    this.rayOrigin.set(x, this.heightMax + 50, z)
-    this.raycaster.set(this.rayOrigin, this.rayDown)
-    const hits = this.raycaster.intersectObjects(this.terrainMeshes, false)
-    if (hits.length > 0) {
-      this._rayHits++
-      if (this._rayHits === 1) console.log('[GlbTerrain] first raycast hit at y:', hits[0].point.y.toFixed(1))
-      return hits[0].point.y
-    }
-    this._rayMisses++
-    if (this._rayMisses === 1) console.log('[GlbTerrain] first raycast miss at:', x.toFixed(1), z.toFixed(1), 'heightMax:', this.heightMax.toFixed(1))
-    return this.terrainHeightAt(x, z)
-  }
 
   heightAt(x: number, z: number): number {
     let h = this.terrainHeightAt(x, z)
@@ -284,6 +276,15 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     }
 
     return h
+  }
+
+  /** Returns true if the given world position has actual mesh data underneath */
+  private hasCoverage(x: number, z: number): boolean {
+    if (!this.coverage) return false
+    const gx = Math.round((x / SCALE + 0.5) * (GRID_SIZE - 1))
+    const gz = Math.round((z / SCALE + 0.5) * (GRID_SIZE - 1))
+    if (gx < 0 || gx >= GRID_SIZE || gz < 0 || gz >= GRID_SIZE) return false
+    return this.coverage[gz * GRID_SIZE + gx] === 1
   }
 
   terrainHeightAt(x: number, z: number): number {
@@ -509,5 +510,6 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     }
     this.mountains = []
     this.heightmap = null
+    this.coverage = null
   }
 }

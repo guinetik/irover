@@ -106,6 +106,20 @@
                   :class="{ 'dsn-detail-body--tx039': selectedTx.id === 'TX-039' }"
                   v-html="formatBody(selectedTx.body)"
                 />
+                <div v-if="selectedTx.audioUrl" class="dsn-audio-player">
+                  <button
+                    type="button"
+                    class="dsn-audio-btn"
+                    :class="{ 'dsn-audio-btn--playing': isPlaying && playingTxId === selectedTx.id }"
+                    @click="toggleAudio(selectedTx)"
+                  >
+                    <span class="dsn-audio-icon">{{ isPlaying && playingTxId === selectedTx.id ? '&#x25A0;' : '&#x25B6;' }}</span>
+                    <span class="dsn-audio-label">{{ isPlaying && playingTxId === selectedTx.id ? 'STOP' : 'PLAY AUDIO LOG' }}</span>
+                  </button>
+                  <div v-if="isPlaying && playingTxId === selectedTx.id" class="dsn-audio-bar">
+                    <div class="dsn-audio-bar-fill" :style="{ width: audioProgress + '%' }" />
+                  </div>
+                </div>
                 <div class="dsn-detail-footer">
                   Discovered: Sol {{ selectedTx.discoveredAtSol }}
                 </div>
@@ -119,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
 
@@ -200,10 +214,52 @@ function formatBody(body: string): string {
     .replace(/\[LONG STATIC\]/g, '<span class="dsn-static">[LONG STATIC]</span>')
 }
 
+// --- Audio playback ---
+let currentAudio: HTMLAudioElement | null = null
+const isPlaying = ref(false)
+const playingTxId = ref<string | null>(null)
+const audioProgress = ref(0)
+let progressInterval: ReturnType<typeof setInterval> | null = null
+
+function stopAudio() {
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.src = ''
+    currentAudio = null
+  }
+  isPlaying.value = false
+  playingTxId.value = null
+  audioProgress.value = 0
+  if (progressInterval) { clearInterval(progressInterval); progressInterval = null }
+}
+
+function toggleAudio(tx: DiscoveredTx) {
+  if (isPlaying.value && playingTxId.value === tx.id) {
+    stopAudio()
+    return
+  }
+  stopAudio()
+  if (!tx.audioUrl) return
+  const audio = new Audio(tx.audioUrl)
+  audio.volume = 0.6
+  currentAudio = audio
+  playingTxId.value = tx.id
+  isPlaying.value = true
+  audio.play().catch(() => stopAudio())
+  audio.addEventListener('ended', stopAudio)
+  progressInterval = setInterval(() => {
+    if (audio.duration > 0) audioProgress.value = (audio.currentTime / audio.duration) * 100
+  }, 100)
+}
+
+onUnmounted(stopAudio)
+
 watch(() => props.open, (open) => {
   if (open) {
     selectedId.value = null
     activeSenderFilter.value = 'all'
+  } else {
+    stopAudio()
   }
 })
 </script>
@@ -647,6 +703,54 @@ watch(() => props.open, (open) => {
 
 .dsn-detail-body :deep(.dsn-static) {
   color: rgba(200, 200, 220, 0.3);
+}
+
+/* Audio player */
+.dsn-audio-player {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: rgba(196, 149, 106, 0.04);
+  border: 1px solid rgba(196, 149, 106, 0.12);
+  border-radius: 4px;
+}
+
+.dsn-audio-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(196, 149, 106, 0.7);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.dsn-audio-btn:hover { color: rgba(196, 149, 106, 0.95); }
+
+.dsn-audio-btn--playing { color: #e05030; }
+.dsn-audio-btn--playing:hover { color: #f06040; }
+
+.dsn-audio-icon { font-size: 12px; }
+
+.dsn-audio-bar {
+  margin-top: 8px;
+  height: 2px;
+  background: rgba(196, 149, 106, 0.12);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.dsn-audio-bar-fill {
+  height: 100%;
+  background: rgba(196, 149, 106, 0.6);
+  border-radius: 1px;
+  transition: width 0.15s linear;
 }
 
 .dsn-detail-footer {

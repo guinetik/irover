@@ -9,6 +9,7 @@ import { useDanArchive } from './useDanArchive'
 import { useSamArchive } from './useSamArchive'
 import { useAPXSArchive } from './useAPXSArchive'
 import { INVENTORY_CATALOG } from '@/types/inventory'
+import { devSpawnInventoryItem } from '@/composables/useInventory'
 import { getMastCamTagCount, getTotalMastCamTags } from './useMastCamTags'
 
 const STORAGE_KEY = 'mars-missions-v1'
@@ -432,6 +433,87 @@ function resetForTests(): void {
   missionStates.value = []
   trackedMissionId.value = null
   try { localStorage.removeItem(STORAGE_KEY) } catch { /* ignore */ }
+}
+
+/**
+ * DEV-only: clears persisted mission progress and in-memory mission/counter state without
+ * clearing the loaded catalog. Does not run in production builds.
+ */
+export function resetMissionProgressForDev(): void {
+  transmitting.value = null
+  transmitProgress.value = 0
+  rtgOverdriveTriggered.value = false
+  rtgShuntTriggered.value = false
+  remsActivated.value = false
+  repairKitUsed.value = false
+  upgradedInstruments.value = new Set()
+  missionStates.value = []
+  trackedMissionId.value = null
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    /* ignore */
+  }
+  persist()
+}
+
+/**
+ * Marks a single mission as completed and applies SP + item rewards (equivalent to normal completion rewards),
+ * without scheduling chained LGA messages. Item grants use dev spawn so cargo capacity does not block rewards.
+ */
+function grantMissionCompletedForDev(missionId: string, currentSol: number): void {
+  const def = getMissionDef(missionId)
+  if (!def) return
+
+  const objectives: ObjectiveState[] = def.objectives.map((o) => ({ id: o.id, done: true }))
+  const newState: MissionState = {
+    missionId,
+    status: 'completed',
+    acceptedAtSol: currentSol,
+    completedAtSol: currentSol,
+    objectives,
+  }
+
+  const others = missionStates.value.filter((s) => s.missionId !== missionId)
+  missionStates.value = [...others, newState]
+  persist()
+
+  if (trackedMissionId.value === missionId) {
+    trackedMissionId.value = null
+  }
+
+  if (def.reward.sp) {
+    const { awardSurvival } = useSciencePoints()
+    awardSurvival('mission:' + missionId, def.reward.sp)
+  }
+
+  if (def.reward.items && def.reward.items.length > 0) {
+    for (const item of def.reward.items) {
+      devSpawnInventoryItem(item.id, item.quantity)
+    }
+  }
+}
+
+/**
+ * DEV-only: marks catalog missions at indices `[0, targetIndex)` as completed and applies rewards + unlocks.
+ * Does not push LGA messages. Call {@link resetMissionProgressForDev} first for a clean jump to `targetIndex`.
+ *
+ * @param targetIndex - Mission catalog index to jump to; missions `0 .. targetIndex-1` are auto-completed.
+ * @param currentSol - Sol used for `acceptedAtSol` / `completedAtSol`.
+ * @returns Mission ids that were granted completion (in catalog order).
+ */
+export function grantMissionCatalogProgressForDevUpTo(
+  targetIndex: number,
+  currentSol: number,
+): string[] {
+  const list = catalog.value
+  const grantedIds: string[] = []
+  const end = Math.min(Math.max(0, Math.floor(targetIndex)), list.length)
+  for (let i = 0; i < end; i++) {
+    grantMissionCompletedForDev(list[i].id, currentSol)
+    grantedIds.push(list[i].id)
+  }
+  return grantedIds
 }
 
 export function useMissions() {

@@ -16,8 +16,24 @@ export interface DurabilitySnapshot {
 const snapshots = ref<DurabilitySnapshot[]>([])
 let instrumentRefs: InstrumentController[] = []
 
+// --- Upgrade persistence ---
+const UPGRADES_STORAGE_KEY = 'mars-instrument-upgrades-v1'
+
+function loadUpgrades(): string[] {
+  try {
+    const raw = localStorage.getItem(UPGRADES_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveUpgrades(ids: string[]): void {
+  try { localStorage.setItem(UPGRADES_STORAGE_KEY, JSON.stringify(ids)) } catch {}
+}
+
 export function useInstrumentDurability() {
   const { stacks, consumeItem } = useInventory()
+
+  let upgradesHydrated = false
 
   /**
    * Called each frame from MarsSiteViewController to sync controller state
@@ -25,6 +41,16 @@ export function useInstrumentDurability() {
    */
   function syncFromControllers(instruments: InstrumentController[]): void {
     instrumentRefs = instruments
+
+    // Restore persisted upgrades once on first sync
+    if (!upgradesHydrated) {
+      upgradesHydrated = true
+      const saved = loadUpgrades()
+      for (const id of saved) {
+        const inst = instruments.find(i => i.id === id)
+        if (inst && !inst.upgraded) inst.applyUpgrade()
+      }
+    }
     snapshots.value = instruments.map(inst => ({
       id: inst.id,
       name: inst.name,
@@ -111,6 +137,9 @@ export function useInstrumentDurability() {
     }
 
     inst.applyUpgrade()
+    // Persist upgraded instrument IDs
+    const upgraded = instrumentRefs.filter(i => i.upgraded).map(i => i.id)
+    saveUpgrades(upgraded)
     return { ok: true }
   }
 

@@ -44,6 +44,18 @@ export function resetForTests(): void {
   messages.value = []
 }
 
+/**
+ * DEV-only: clears in-memory messages and `mars-lga-mailbox-v1` storage.
+ */
+export function resetMailboxForDev(): void {
+  messages.value = []
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function useLGAMailbox() {
   const unreadCount = computed(() => messages.value.filter((m) => !m.read).length)
 

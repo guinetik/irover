@@ -11,11 +11,18 @@ describe('installMarsDevDebugApi', () => {
     const spawnRandomInventoryItems = vi.fn(() => ['a', 'b', 'c'])
     const spawnInventoryItemById = vi.fn(() => ({ ok: true as const }))
     const addSciencePoints = vi.fn(() => ({ ok: true as const, amount: 100 }))
+    const setMissionForDev = vi.fn(() => ({
+      ok: true as const,
+      missionId: 'm01',
+      name: 'Test',
+      priorCompletedIds: [] as string[],
+    }))
 
     const dispose = installMarsDevDebugApi({
       spawnRandomInventoryItems,
       spawnInventoryItemById,
       addSciencePoints,
+      setMissionForDev,
     })
 
     const api = (globalThis as { MarsDev?: MarsDevDebugApi }).MarsDev
@@ -29,6 +36,14 @@ describe('installMarsDevDebugApi', () => {
 
     expect(api?.science.addSP(50)).toEqual({ ok: true, amount: 100 })
     expect(addSciencePoints).toHaveBeenCalledWith(50)
+
+    expect(api?.mission(2)).toEqual({
+      ok: true,
+      missionId: 'm01',
+      name: 'Test',
+      priorCompletedIds: [],
+    })
+    expect(setMissionForDev).toHaveBeenCalledWith(2)
 
     dispose()
     expect((globalThis as { MarsDev?: unknown }).MarsDev).toBeUndefined()
