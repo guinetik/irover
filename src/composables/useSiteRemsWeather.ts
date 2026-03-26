@@ -1,21 +1,23 @@
 import { ref } from 'vue'
 import type { TerrainParams } from '@/types/terrain'
+import { DUST_STORM_LEVEL_LABELS } from '@/lib/weather/rems'
+import { windFromDegToCompass } from '@/lib/weather/rems'
 import {
-  DUST_STORM_LEVEL_LABELS,
-  diurnalAmbientC,
-  peakStormWindMs,
-  siteBaseWindMs,
-  siteHumidityFraction,
-  sitePressureHpa,
-  siteRng01,
-  windFromDegToCompass,
-} from '@/lib/weather/rems'
+  type SiteWeatherSnapshot,
+  type StormState,
+  computeSiteWeather,
+  createStormState,
+  tickStormFSM,
+} from '@/lib/weather/siteWeather'
+import { siteRng01 } from '@/lib/weather/rems'
 
 export {
   DUST_STORM_LEVEL_LABELS,
   peakStormWindMs,
   windFromDegToCompass,
 } from '@/lib/weather/rems'
+
+export type { SiteWeatherSnapshot } from '@/lib/weather/siteWeather'
 
 /** Live REMS readouts for HUD / instrument card (also mirrored onto {@link REMSController}). */
 export interface RemsHudSnapshot {
@@ -27,6 +29,8 @@ export interface RemsHudSnapshot {
   windDirDeg: number
   windDirCompass: string
   uvIndex: number
+  /** Site elevation in km (relative to Mars datum). */
+  elevationKm: number
   /** `none` outside storm; `incoming` / `active` while REMS storm sequence runs. */
   dustStormPhase: 'none' | 'incoming' | 'active'
   /** 1–5 while incoming or active; `null` otherwise. */
@@ -45,233 +49,111 @@ export interface RemsWeatherTickInput {
   ambientEffectiveC: number
 }
 
-type StormPhase = 'idle' | 'incoming' | 'active' | 'cooldown'
-
-/**
- * Site-driven REMS weather, dust-storm notices (REMS on only), and HUD snapshot for Vue.
- */
-export function useSiteRemsWeather() {
-  const solClockAmbientC = ref<number | null>(null)
-  const remsHud = ref<RemsHudSnapshot>({
+function emptyHud(): RemsHudSnapshot {
+  return {
     available: false,
     pressureHpa: 0,
     humidityPct: 0,
     tempC: 0,
     windMs: 0,
     windDirDeg: 0,
-    windDirCompass: 'N',
+    windDirCompass: '—',
     uvIndex: 0,
+    elevationKm: 0,
+    dustStormPhase: 'none',
+    dustStormLevel: null,
+  }
+}
+
+/**
+ * Site-driven REMS weather, dust-storm notices (REMS on only), and HUD snapshot for Vue.
+ *
+ * Weather physics live in `lib/weather/siteWeather.ts` — this composable is the Vue glue
+ * that owns refs, storm text, and the REMS display gate.
+ */
+export function useSiteRemsWeather() {
+  const solClockAmbientC = ref<number | null>(null)
+  const remsHud = ref<RemsHudSnapshot>(emptyHud())
+  const remsStormIncomingText = ref<string | null>(null)
+  const remsStormActiveText = ref<string | null>(null)
+  /** Always-live weather state — updates regardless of REMS instrument toggle. */
+  const siteWeather = ref<SiteWeatherSnapshot>({
+    windMs: 5,
+    windDirDeg: 0,
+    tempC: -23,
+    pressureHpa: 610,
+    humidityPct: 2,
+    uvIndex: 3,
     dustStormPhase: 'none',
     dustStormLevel: null,
   })
-  const remsStormIncomingText = ref<string | null>(null)
-  const remsStormActiveText = ref<string | null>(null)
 
-  let stormPhase: StormPhase = 'idle'
-  let stormTimer = 0
-  /** Seconds until next idle-phase storm check. */
-  let idleCountdown = 55
-  let stormSalt = 0
+  let storm: StormState = createStormState()
   let wasRemsOn = false
-  /** 1–5 for the current / last storm event (set when incoming starts). */
-  let stormLevel = 1
 
   function resetStormState(): void {
-    stormPhase = 'idle'
-    stormTimer = 0
-    idleCountdown = 55
-    stormLevel = 1
+    storm = createStormState()
     remsStormIncomingText.value = null
     remsStormActiveText.value = null
   }
 
-  function emptyHud(): RemsHudSnapshot {
-    return {
-      available: false,
-      pressureHpa: 0,
-      humidityPct: 0,
-      tempC: 0,
-      windMs: 0,
-      windDirDeg: 0,
-      windDirCompass: '—',
-      uvIndex: 0,
-      dustStormPhase: 'none',
-      dustStormLevel: null,
-    }
-  }
-
-  /**
-   * Advances REMS readings and dust-storm messaging for one frame.
-   */
   function tickRemsWeather(input: RemsWeatherTickInput): void {
     const { terrain, remsOn, ambientEffectiveC, simulationTime, timeOfDay, sol, deltaSeconds } = input
     const dustCover = terrain?.dustCover ?? 0.45
     const stormSeed = terrain?.seed ?? 1
     const stormChance = 0.04 + dustCover * 0.14
-    const dt = deltaSeconds
 
+    // --- Dust storm FSM (always ticks so storms persist across REMS toggle) ---
+    const stormResult = tickStormFSM(storm, deltaSeconds, stormSeed, sol, stormChance)
+    storm = stormResult.state
+    if (stormResult.incomingText) remsStormIncomingText.value = stormResult.incomingText
+    if (stormResult.activeText) {
+      remsStormActiveText.value = stormResult.activeText
+      remsStormIncomingText.value = null
+    }
+    // Clear active text when storm leaves active phase
+    if (storm.phase !== 'active' && storm.phase !== 'incoming') {
+      remsStormActiveText.value = null
+    }
+    if (storm.phase !== 'incoming') {
+      // Only clear incoming if FSM didn't just set it this frame
+      if (!stormResult.incomingText) remsStormIncomingText.value = null
+    }
+
+    // --- Always-live weather (world state, independent of REMS toggle) ---
+    const w = computeSiteWeather(
+      terrain, simulationTime, timeOfDay, sol, dustCover, ambientEffectiveC,
+      storm, stormResult.affectsReadouts,
+    )
+    siteWeather.value = w
+
+    // --- REMS display gating (HUD mirrors world state only when instrument is on) ---
     if (!remsOn) {
       wasRemsOn = false
       solClockAmbientC.value = null
       remsHud.value = emptyHud()
-      remsStormIncomingText.value = null
-      remsStormActiveText.value = null
-      stormPhase = 'idle'
-      stormTimer = 0
-      idleCountdown = 55
       return
     }
 
     if (!wasRemsOn) {
       wasRemsOn = true
-      idleCountdown = Math.max(idleCountdown, 28)
+      storm = { ...storm, idleCountdown: Math.max(storm.idleCountdown, 28) }
     }
 
     solClockAmbientC.value = ambientEffectiveC
 
-    // --- Dust storm FSM (before readouts so wind/pressure react) ---
-    if (stormPhase === 'idle') {
-      idleCountdown -= dt
-      if (idleCountdown <= 0) {
-        if (siteRng01(stormSeed, sol, stormSalt + 100) < stormChance) {
-          stormPhase = 'incoming'
-          stormTimer = 22
-          stormLevel = 1 + Math.floor(siteRng01(stormSeed, sol, stormSalt + 777) * 5)
-          const label = DUST_STORM_LEVEL_LABELS[stormLevel] ?? 'Moderate'
-          remsStormIncomingText.value = `REMS: Level ${stormLevel} (${label}) dust storm approaching — expect high winds.`
-          remsStormActiveText.value = null
-        } else {
-          stormSalt += 1
-          idleCountdown = 25 + siteRng01(stormSeed, sol, stormSalt) * 95
-        }
-      }
-    } else if (stormPhase === 'incoming') {
-      stormTimer -= dt
-      if (stormTimer <= 0) {
-        stormPhase = 'active'
-        stormTimer = 48
-        remsStormIncomingText.value = null
-        const label = DUST_STORM_LEVEL_LABELS[stormLevel] ?? 'Moderate'
-        remsStormActiveText.value = `Regional dust storm in progress — Level ${stormLevel} (${label}).`
-      }
-    } else if (stormPhase === 'active') {
-      stormTimer -= dt
-      if (stormTimer <= 0) {
-        stormPhase = 'cooldown'
-        stormTimer = 75
-        remsStormActiveText.value = null
-      }
-    } else if (stormPhase === 'cooldown') {
-      stormTimer -= dt
-      if (stormTimer <= 0) {
-        stormPhase = 'idle'
-        stormSalt += 17
-        idleCountdown = 40 + siteRng01(stormSeed, sol, stormSalt) * 100
-      }
-    }
-
-    const stormAffectsReadouts = stormPhase === 'incoming' || stormPhase === 'active'
-    const hudStormPhase: RemsHudSnapshot['dustStormPhase'] =
-      stormPhase === 'incoming' ? 'incoming' : stormPhase === 'active' ? 'active' : 'none'
-    const hudStormLevel = stormAffectsReadouts ? stormLevel : null
-
-    // --- Base environment ---
-    if (!terrain) {
-      let windMs = 5
-      let pressureHpa = 610
-      let humidityPct = 2
-      let tempC = ambientEffectiveC
-      let uvIndex = 3
-      const windDirDeg = 90
-      if (stormAffectsReadouts) {
-        const peak = peakStormWindMs(stormLevel, dustCover, simulationTime)
-        const ramp =
-          stormPhase === 'incoming' ? 1 - Math.max(0, Math.min(1, stormTimer / 22)) : 1
-        windMs = stormPhase === 'incoming' ? 5 + (peak - 5) * ramp : peak
-        pressureHpa -= 2 * stormLevel
-        humidityPct = Math.max(0.2, humidityPct - stormLevel * 0.4)
-        uvIndex = Math.max(0, uvIndex - stormLevel * 0.8)
-        tempC -= 0.15 * stormLevel
-      }
-      remsHud.value = {
-        available: true,
-        pressureHpa,
-        humidityPct,
-        tempC,
-        windMs,
-        windDirDeg,
-        windDirCompass: windFromDegToCompass(windDirDeg),
-        uvIndex,
-        dustStormPhase: hudStormPhase,
-        dustStormLevel: hudStormLevel,
-      }
-      return
-    }
-
-    const seed = terrain.seed
-    const t = diurnalAmbientC(timeOfDay, terrain.temperatureMinK, terrain.temperatureMaxK)
-    const micro =
-      Math.sin(simulationTime * 0.55) * 1.1 +
-      Math.sin(simulationTime * 1.83) * 0.45 +
-      Math.sin(simulationTime * 0.09 + seed) * 0.35
-    let tempC = t + micro
-
-    const pBase = sitePressureHpa(terrain)
-    let pressureHpa = pBase + Math.sin(simulationTime * 0.31 + seed) * 1.2 + siteRng01(seed, sol, 7) * 0.4
-
-    const humFrac = siteHumidityFraction(terrain)
-    let humidityPct = Math.max(
-      0.1,
-      Math.min(
-        20,
-        humFrac * 100 + Math.sin(simulationTime * 0.42) * 0.35 - terrain.dustCover * 1.5,
-      ),
-    )
-
-    const wBase = siteBaseWindMs(terrain)
-    let windMs = Math.max(
-      0.2,
-      wBase +
-        Math.sin(simulationTime * 0.67 + seed * 0.01) * 2.2 +
-        Math.sin(simulationTime * 2.1) * 0.9,
-    )
-
-    let windDirDeg =
-      (terrain.seed * 0.37 + sol * 41.7 + simulationTime * 8.5 + Math.sin(simulationTime * 0.15) * 25) % 360
-
-    const sunUp = 0.5 + 0.5 * Math.sin((timeOfDay - 0.25) * Math.PI * 2)
-    let uvIndex = Math.max(
-      0,
-      Math.min(
-        12,
-        3 + sunUp * 5 - terrain.dustCover * 2 + siteRng01(seed, sol, 3) * 0.8,
-      ),
-    )
-
-    if (stormAffectsReadouts) {
-      const peak = peakStormWindMs(stormLevel, dustCover, simulationTime)
-      const ramp = stormPhase === 'incoming' ? 1 - Math.max(0, Math.min(1, stormTimer / 22)) : 1
-      windMs = stormPhase === 'incoming' ? windMs + (peak - windMs) * ramp : peak
-      windDirDeg += Math.sin(simulationTime * (2.1 + stormLevel * 0.4)) * (18 + stormLevel * 6)
-      pressureHpa -= 1.2 * stormLevel + dustCover * 4
-      humidityPct = Math.max(0.15, humidityPct - stormLevel * 0.55)
-      uvIndex = Math.max(0, uvIndex - stormLevel * 1.1 - dustCover * 1.5)
-      tempC -= 0.4 * stormLevel + dustCover * 0.6
-    }
-
-    const windDirCompass = windFromDegToCompass(windDirDeg)
-
     remsHud.value = {
       available: true,
-      pressureHpa,
-      humidityPct,
-      tempC,
-      windMs,
-      windDirDeg,
-      windDirCompass,
-      uvIndex,
-      dustStormPhase: hudStormPhase,
-      dustStormLevel: hudStormLevel,
+      pressureHpa: w.pressureHpa,
+      humidityPct: w.humidityPct,
+      tempC: w.tempC,
+      windMs: w.windMs,
+      windDirDeg: w.windDirDeg,
+      windDirCompass: windFromDegToCompass(w.windDirDeg),
+      uvIndex: w.uvIndex,
+      elevationKm: terrain?.elevationKm ?? 0,
+      dustStormPhase: w.dustStormPhase,
+      dustStormLevel: w.dustStormLevel,
     }
   }
 
@@ -280,6 +162,8 @@ export function useSiteRemsWeather() {
     remsHud,
     remsStormIncomingText,
     remsStormActiveText,
+    /** Always-live weather — updates even when REMS display is off. */
+    siteWeather,
     tickRemsWeather,
     /** Test hook: clear storm timers. */
     resetStormState,

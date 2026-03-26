@@ -42,9 +42,19 @@ export function windFromDegToCompass(deg: number): string {
  * Baseline wind speed (m/s) from terrain parameters.
  */
 export function siteBaseWindMs(p: TerrainParams): number {
-  let w = 2.5 + p.roughness * 7 + p.dustCover * 5
-  if (p.featureType === 'polar-cap') w += 3
-  if (p.featureType === 'canyon') w += 1.5
+  let w = 2.5 + p.roughness * 3.5 + p.dustCover * 3
+  if (p.featureType === 'polar-cap') w += 2
+  // Canyon topology funnels and accelerates winds — Valles Marineris floor
+  // sees 20-50 m/s in models; rim is calmer but still persistently windy.
+  // Canyon depth amplifies: deeper = stronger channeling.
+  if (p.featureType === 'canyon') {
+    const depthKm = Math.max(0, -(p.elevationKm ?? 0))
+    w += 3 + depthKm * 0.8
+  }
+  // High-altitude slope winds — thin atmosphere + thermal gradients on volcanic shields
+  // drive strong katabatic/anabatic circulation; scales with elevation above ~5 km
+  const elevKm = p.elevationKm ?? 0
+  if (elevKm > 5) w += (elevKm - 5) * 0.5
   return w
 }
 

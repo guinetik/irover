@@ -15,6 +15,8 @@ export interface TerrainParams {
   craterDensity: number
   dustCover: number
   elevation: number
+  /** Raw site elevation in km relative to Mars datum. */
+  elevationKm: number
   ironOxide: number
   basalt: number
   seed: number

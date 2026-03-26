@@ -1,6 +1,7 @@
 uniform float uTime;
 uniform float uDustCover;
 uniform vec3 uWindDirection;
+uniform float uWindSpeed;
 uniform vec3 uCameraPos;
 uniform float uVerticalDrift;
 
@@ -14,12 +15,13 @@ varying float vDist;
 void main() {
   vec3 pos = position;
 
-  // Drift with wind + individual turbulence
+  // Drift with wind + individual turbulence, scaled by REMS wind speed
   float t = uTime * aSpeed + aPhase;
-  pos += uWindDirection * t * 2.0;
-  pos.x += sin(t * 1.3 + aPhase * 6.28) * 1.5;
-  pos.y += sin(t * 0.7 + aPhase * 3.14) * 0.8 + uVerticalDrift * t;
-  pos.z += cos(t * 1.1 + aPhase * 4.71) * 1.5;
+  pos += uWindDirection * t * 2.0 * uWindSpeed;
+  float turbulence = 1.0 + (uWindSpeed - 1.0) * 0.3; // turbulence grows mildly with wind
+  pos.x += sin(t * 1.3 + aPhase * 6.28) * 1.5 * turbulence;
+  pos.y += sin(t * 0.7 + aPhase * 3.14) * 0.8 * turbulence + uVerticalDrift * t;
+  pos.z += cos(t * 1.1 + aPhase * 4.71) * 1.5 * turbulence;
 
   // Wrap particles within a box around the camera
   float boxSize = 80.0;

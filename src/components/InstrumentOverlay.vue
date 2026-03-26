@@ -72,6 +72,10 @@
               <div class="ov-stat-label">UV</div>
               <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.uvIndex.toFixed(1) }}</div>
             </div>
+            <div class="ov-stat">
+              <div class="ov-stat-label">ELEV</div>
+              <div class="ov-stat-value" style="color: #9ec8d4">{{ remsHud.elevationKm >= 0 ? '+' : '' }}{{ remsHud.elevationKm.toFixed(1) }} km</div>
+            </div>
             <div
               v-if="remsHud.dustStormLevel != null"
               class="ov-rems-dust-storm"

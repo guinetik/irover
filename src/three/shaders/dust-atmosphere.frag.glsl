@@ -1,5 +1,6 @@
 uniform sampler2D tDiffuse;
 uniform float uDustCover;
+uniform float uWindSpeed;
 uniform float uTime;
 uniform vec2 uResolution;
 
@@ -38,8 +39,9 @@ void main() {
   float distortion = 1.0 + r2 * 0.15 + r2 * r2 * 0.05;
   vec2 distortedUv = centered * distortion + 0.5;
 
-  // Clamp to valid range
-  distortedUv = clamp(distortedUv, 0.0, 1.0);
+  // Detect out-of-bounds UVs — fade to dust color instead of hard clamp
+  float oob = smoothstep(0.48, 0.52, max(abs(distortedUv.x - 0.5), abs(distortedUv.y - 0.5)));
+  distortedUv = clamp(distortedUv, 0.001, 0.999);
 
   // --- Chromatic aberration ---
   float caStrength = 0.0015 + r2 * 0.003; // stronger at edges
@@ -49,20 +51,28 @@ void main() {
   float blue  = texture2D(tDiffuse, distortedUv - caDir).b;
   vec4 color = vec4(red, green, blue, 1.0);
 
-  // --- Dust atmosphere ---
+  // --- Wind-reactive dust atmosphere ---
+  // windFactor: 0 at dead calm, 1 at baseline (5 m/s), ~4 at severe storm
+  float windFactor = clamp(uWindSpeed, 0.0, 6.0);
+
   vec3 dustColor = vec3(0.78, 0.58, 0.38);
   vec2 uv = vUv * vec2(uResolution.x / uResolution.y, 1.0);
-  float dustNoise = fbm(uv * 2.0 + uTime * 0.03);
-  float dustNoise2 = fbm(uv * 4.0 - uTime * 0.02 + 100.0);
+  float dustNoise = fbm(uv * 2.0 + uTime * 0.03 * windFactor);
+  float dustNoise2 = fbm(uv * 4.0 - uTime * 0.02 * windFactor + 100.0);
   float dustPattern = dustNoise * 0.6 + dustNoise2 * 0.4;
 
   float heightGrad = smoothstep(0.0, 0.5, vUv.y) * smoothstep(1.0, 0.6, vUv.y);
   float edgeVignette = smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
 
-  float dustAmount = dustPattern * uDustCover * 0.35;
+  // Calm wind: visible haze; storm: heavy orange blanket
+  float dustIntensity = mix(0.25, 0.65, smoothstep(0.5, 3.0, windFactor));
+  float dustAmount = dustPattern * uDustCover * dustIntensity;
   dustAmount *= (1.0 - heightGrad * 0.5);
   dustAmount *= mix(0.7, 1.0, edgeVignette);
   color.rgb = mix(color.rgb, dustColor, dustAmount);
+
+  // Blend OOB edges into dust color for natural wide-angle falloff
+  color.rgb = mix(color.rgb, dustColor * 0.6, oob);
 
   // --- Drone feed color grade ---
   // Slight desaturation (compressed video feel)
@@ -90,13 +100,10 @@ void main() {
   float burst = step(0.995, burstLine) * (hash(vUv * uResolution * 0.5 + uTime * 50.0) - 0.5) * 0.15;
   color.rgb += burst;
 
-  // --- Vignette (lens falloff) ---
-  float vig = 1.0 - smoothstep(0.4, 1.3, length(centered) * 2.0);
-  color.rgb *= 0.75 + vig * 0.25;
-
-  // Darken corners more aggressively (drone lens)
-  float cornerDark = smoothstep(0.6, 1.1, length(centered) * 2.0);
-  color.rgb *= 1.0 - cornerDark * 0.3;
+  // --- Vignette (single unified lens falloff) ---
+  float vigDist = length(centered) * 2.0;
+  float vig = 1.0 - smoothstep(0.5, 1.5, vigDist) * 0.25;
+  color.rgb *= vig;
 
   gl_FragColor = color;
 }

@@ -998,6 +998,7 @@ const {
   remsHud,
   remsStormIncomingText,
   remsStormActiveText,
+  siteWeather,
   tickRemsWeather,
 } = useSiteRemsWeather()
 const remsSurveying = ref(false)
@@ -1535,6 +1536,7 @@ function createSiteControllerContext() {
       remsHud,
       remsStormIncomingText,
       remsStormActiveText,
+      siteWeather,
       remsSurveying,
     },
   })

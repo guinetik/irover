@@ -155,6 +155,7 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
       craterDensity: geo.craterDensity,
       dustCover: geo.dustCover,
       elevation: Math.min(1, Math.max(0, (geo.elevationKm + 8) / 30)),
+      elevationKm: geo.elevationKm,
       ironOxide: geo.ironOxideIndex,
       basalt: geo.basaltIndex,
       seed: hashString(geo.id) + Math.floor(Date.now() / 1000),
@@ -175,6 +176,7 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
     craterDensity: 0.3,
     dustCover: 0.6,
     elevation: 0.5,
+    elevationKm: 0,
     ironOxide: 0.6,
     basalt: 0.5,
     seed: hashString(siteId) + Math.floor(Date.now() / 1000),
@@ -272,6 +274,8 @@ export interface MarsSiteViewRefs {
   remsHud: Ref<RemsHudSnapshot>
   remsStormIncomingText: Ref<string | null>
   remsStormActiveText: Ref<string | null>
+  /** Always-live weather state — updates regardless of REMS instrument toggle. */
+  siteWeather: Ref<{ windMs: number; windDirDeg: number; tempC: number; pressureHpa: number; humidityPct: number; uvIndex: number }>
   /** REMS passive surveying — drives ambient air HUD availability. */
   remsSurveying: Ref<boolean>
 }
@@ -402,6 +406,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     samIsProcessing,
     remsHud,
     remsSurveying,
+    siteWeather,
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
@@ -799,6 +804,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         remsOn,
         ambientEffectiveC: ambientEffectiveC.value,
       })
+      // Wind affects dust particles regardless of REMS instrument state
+      siteScene.dust?.setWind(siteWeather.value.windMs, siteWeather.value.windDirDeg)
       if (remsInst && remsOn && remsHud.value.available) {
         const h = remsHud.value
         remsInst.temperature = h.tempC
@@ -920,6 +927,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
+        dustPass.setWeather(siteWeather.value.windMs)
       }
 
       if (composer) {
