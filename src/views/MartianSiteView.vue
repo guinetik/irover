@@ -146,6 +146,8 @@
       :repair-cost-wire="activeDurability?.repairCost.weldingWire"
       :repair-cost-component-id="activeDurability?.repairCost.componentId"
       :repair-cost-component-qty="activeDurability?.repairCost.componentQty"
+      :dsn-firmware-available="dsnFirmwareAvailable"
+      @install-dsn-firmware="handleDsnFirmwareInstall"
     />
     <ChemCamExperimentPanel
       :readout="activeChemCamReadout"
@@ -758,6 +760,22 @@ function handleInstrumentRepair() {
     sampleToastRef.value?.showError?.(result.message)
   }
 }
+
+function handleDsnFirmwareInstall() {
+  const { unlock } = useDSNArchive()
+  unlock()
+  useMissions().notifyDsnFirmwareInstalled()
+  sampleToastRef.value?.showComm?.('DSN ARCHAEOLOGY v1.0 — INSTALLED')
+}
+
+const dsnFirmwareAvailable = computed(() => {
+  const { activeMissions, getMissionDef } = useMissions()
+  if (dsnUnlocked.value) return false
+  return activeMissions.value.some(m => {
+    const def = getMissionDef(m.missionId)
+    return def?.objectives.some(o => o.type === 'dsn-firmware-install')
+  })
+})
 
 function toggleWheelsPanel() {
   if (!siteRover.value || isSleeping.value || wheelsHudBlocked.value) return

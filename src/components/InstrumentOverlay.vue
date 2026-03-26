@@ -269,6 +269,13 @@
           </div>
         </Transition>
 
+        <!-- DSN Firmware install (UHF slot only, when mission active) -->
+        <div v-if="dsnFirmwareAvailable && activeSlot === 12" class="ov-firmware">
+          <button class="ov-btn-primary ov-btn-dsn" @click="$emit('installDsnFirmware')">
+            INSTALL DSN ARCHAEOLOGY v1.0
+          </button>
+        </div>
+
         <div class="ov-esc">{{ isActiveMode ? '[ESC] BACK TO OVERVIEW' : '[ESC] BACK TO DRIVING' }}</div>
       </div>
     </Transition>
@@ -415,6 +422,7 @@ defineEmits<{
   danProspect: []
   samSeeResults: []
   apxsSeeResults: []
+  installDsnFirmware: []
 }>()
 
 export interface ThermalDisplay {
@@ -490,6 +498,7 @@ const props = withDefaults(
     repairCostWire?: number
     repairCostComponentId?: string
     repairCostComponentQty?: number
+    dsnFirmwareAvailable?: boolean
   }>(),
   {
     canActivate: true,
@@ -526,6 +535,7 @@ const props = withDefaults(
     repairCostWire: 0,
     repairCostComponentId: '',
     repairCostComponentQty: 0,
+    dsnFirmwareAvailable: false,
   },
 )
 
@@ -848,6 +858,17 @@ const durabilityColor = computed(() => {
   font-size: 11px;
   color: #e05030;
   letter-spacing: 0.08em;
+}
+
+/* DSN firmware install */
+.ov-firmware {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(102, 255, 238, 0.15);
+}
+.ov-btn-dsn {
+  background: linear-gradient(90deg, #1a4a44 0%, #2a7a6a 100%);
+  color: #e8faf6;
 }
 
 /* ESC hint */
