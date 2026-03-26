@@ -363,33 +363,35 @@
       :active-slot="activeInstrumentSlot"
       :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('antenna-uhf')"
       :lga-alert="lgaUnreadCount > 0 && activeInstrumentSlot !== 11"
-      @select="(slot: number) => siteRover?.activateInstrument(slot)"
-      @deselect="siteRover?.activateInstrument(null)"
+      @select="(slot: number) => { lgaEverToggled = true; siteRover?.activateInstrument(slot) }"
+      @deselect="() => { lgaEverToggled = true; siteRover?.activateInstrument(null) }"
     />
-    <!-- LGA Mailbox panel (shown when LGA selected OR when there are unread messages) -->
-    <LGAMailbox
-      v-if="!deploying && !descending && (activeInstrumentSlot === 11 || lgaUnreadCount > 0)"
-      :messages="lgaMailbox.messages.value"
-      :unread-count="lgaUnreadCount"
-      @mark-read="lgaMailbox.markRead"
-      @open-message="handleOpenMessage"
-      style="position: fixed; top: 58px; left: 76px; z-index: 40;"
-    />
-    <!-- UHF Uplink panel (shown when UHF antenna selected) -->
-    <UHFUplinkPanel
-      v-if="!deploying && !descending && activeInstrumentSlot === 12"
-      :pass-active="uhfPassActive"
-      :transmitting="uhfTransmitting"
-      :current-orbiter="uhfCurrentOrbiter"
-      :transmission-progress="uhfTransmissionProgress"
-      :queue-length="uhfQueueLength"
-      :window-remaining-sec="uhfWindowRemainingSec"
-      :next-pass-in-sec="uhfNextPassInSec"
-      :transmitted-this-pass="uhfTransmittedThisPass"
-      :uhf-enabled="uhfEnabled"
-      :passes="currentSolPasses"
-      style="position: fixed; top: 168px; left: 10px; z-index: 40;"
-    />
+    <!-- Comm panels container: stacks LGA mailbox and UHF uplink vertically beside the CommToolbar -->
+    <div
+      v-if="!deploying && !descending && ((!lgaEverToggled || activeInstrumentSlot === 11) || activeInstrumentSlot === 12)"
+      style="position: fixed; top: 58px; left: 76px; z-index: 40; display: flex; flex-direction: column; gap: 6px;"
+    >
+      <LGAMailbox
+        v-if="!lgaEverToggled || activeInstrumentSlot === 11"
+        :messages="lgaMailbox.messages.value"
+        :unread-count="lgaUnreadCount"
+        @mark-read="lgaMailbox.markRead"
+        @open-message="handleOpenMessage"
+      />
+      <UHFUplinkPanel
+        v-if="activeInstrumentSlot === 12"
+        :pass-active="uhfPassActive"
+        :transmitting="uhfTransmitting"
+        :current-orbiter="uhfCurrentOrbiter"
+        :transmission-progress="uhfTransmissionProgress"
+        :queue-length="uhfQueueLength"
+        :window-remaining-sec="uhfWindowRemainingSec"
+        :next-pass-in-sec="uhfNextPassInSec"
+        :transmitted-this-pass="uhfTransmittedThisPass"
+        :uhf-enabled="uhfEnabled"
+        :passes="currentSolPasses"
+      />
+    </div>
     <MastTelemetry
       v-if="isInstrumentActive && (activeInstrumentSlot === 1 || activeInstrumentSlot === 2)"
       :base-lat="siteLat"
@@ -461,7 +463,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
-import { MARS_TIME_OF_DAY_06_00, SOL_DURATION, MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
+import {
+  MARS_TIME_OF_DAY_06_00,
+  MARS_SOL_CLOCK_MINUTES,
+  SOL_DURATION,
+} from '@/lib/marsTimeConstants'
 import {
   roverHeadingRadToCompassDeg,
   signedRelativeBearingDeg,
@@ -470,7 +476,7 @@ import {
 import { useMarsData } from '@/composables/useMarsData'
 import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import MartianSiteNavbar from '@/components/MartianSiteNavbar.vue'
-import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
+import type { TerrainParams } from '@/types/terrain'
 import {
   createMarsSiteViewController,
   formatRtgShuntCooldownLabel,
@@ -606,6 +612,7 @@ const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
 const activeInstrumentSlot = ref<number | null>(null)
+const lgaEverToggled = ref(false)
 /** Bumped when a passive instrument (DAN/REMS/RAD/comms) toggles STANDBY so the overlay re-reads bus state. */
 const passiveUiRevision = ref(0)
 

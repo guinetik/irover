@@ -7,31 +7,14 @@ import rockTextureUrl from '@/assets/texture1.jpg?url'
 import dustTextureUrl from '@/assets/texture2.jpg?url'
 import { RockFactory, type RockCollider } from './RockFactory'
 import { TERRAIN_SCALE } from './terrainConstants'
-import { DefaultTerrainGenerator, type ITerrainGenerator, type TerrainParams } from './TerrainGenerator'
-import { SimplexNoise } from './SimplexNoise'
+import { DefaultTerrainGenerator, type ITerrainGenerator } from './TerrainGenerator'
+import type { TerrainParams } from '@/types/terrain'
+import { SimplexNoise } from '@/lib/math/simplexNoise'
+import { pickDetailTextures } from '@/lib/terrain/detailTextures'
 import { loadMarsGlobalMesh, extractLocalPatch, PATCH_GRID_SIZE } from './marsGlobalExtract'
 
 const SCALE = TERRAIN_SCALE
 const GRID_SIZE = PATCH_GRID_SIZE // 128
-
-/** Map orbital textures grouped by feature type for cross-site blending. */
-const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {
-  'volcano':      ['/olympus-mons.jpg', '/ascraeus-mons.jpg', '/pavonis-mons.jpg', '/elysium-mons.jpg'],
-  'canyon':       ['/valles-marineris.jpg', '/syrtis-major.jpg', '/argyre-basin.jpg'],
-  'basin':        ['/hellas-basin.jpg', '/argyre-basin.jpg', '/utopia-planitia.jpg'],
-  'plain':        ['/utopia-planitia.jpg', '/acidalia-planitia.jpg', '/syrtis-major.jpg'],
-  'polar-cap':    ['/north-polar-cap.jpg', '/south-polar-cap.jpg', '/utopia-planitia.jpg'],
-  'landing-site': ['/utopia-planitia.jpg', '/acidalia-planitia.jpg', '/hellas-basin.jpg'],
-}
-
-function pickDetailTextures(p: TerrainParams): [string, string] {
-  const own = `/${p.siteId}.jpg`
-  const pool = (MAP_TEXTURES_BY_TYPE[p.featureType] ?? MAP_TEXTURES_BY_TYPE['plain'])
-    .filter(url => url !== own)
-  const i = Math.abs(p.seed) % pool.length
-  const j = (i + 1) % pool.length
-  return [pool[i], pool[j === i ? (i + 1) % pool.length : j]]
-}
 
 /**
  * Terrain generator that uses a global Mars heightmap GLB.

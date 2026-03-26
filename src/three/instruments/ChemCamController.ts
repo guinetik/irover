@@ -2,6 +2,10 @@ import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
 import { mastPanTiltKeysHeld, mastState, MAST_ACTUATOR_HOLD_POWER_W } from './MastState'
+import { generateChemCamSpectrum } from '@/lib/optical/chemCamSpectrum'
+import type { SpectrumPeak } from '@/types/chemcam'
+
+export type { SpectrumPeak } from '@/types/chemcam'
 
 // --- Timing (base values — modified by durationMultiplier) ---
 const BASE_PULSE_TRAIN_DURATION = 7.0   // seconds of pulsed laser fire
@@ -64,12 +68,6 @@ export interface ChemCamReadout {
   /** 0–1 calibration at time of scan. Affects peak visibility & labels. */
   calibration: number
   read: boolean
-}
-
-export interface SpectrumPeak {
-  wavelength: number   // nm (380–780 range)
-  intensity: number    // 0–1
-  element: string      // e.g. 'Fe', 'Si', 'Mn'
 }
 
 export class ChemCamController extends InstrumentController {
@@ -365,7 +363,7 @@ export class ChemCamController extends InstrumentController {
 
     // Generate procedural spectrum — quality depends on calibration
     const cal = this.calibration
-    const peaks = generateSpectrum(rockType, cal)
+    const peaks = generateChemCamSpectrum(rockType, cal)
 
     // Persist on rock
     this.currentTarget.userData.chemcamAnalyzed = true
@@ -572,118 +570,4 @@ export class ChemCamController extends InstrumentController {
   override dispose(): void {
     this.removeBeamVFX()
   }
-}
-
-// =============================================
-// Procedural spectrum generation
-// =============================================
-
-/** Element templates — wavelength ranges where peaks appear */
-const ELEMENT_PEAKS: Record<string, { nm: number; spread: number }[]> = {
-  Fe: [{ nm: 404, spread: 3 }, { nm: 438, spread: 4 }, { nm: 527, spread: 3 }],
-  Si: [{ nm: 390, spread: 5 }, { nm: 634, spread: 4 }],
-  Mn: [{ nm: 403, spread: 3 }, { nm: 475, spread: 4 }],
-  Mg: [{ nm: 518, spread: 5 }, { nm: 552, spread: 3 }],
-  Al: [{ nm: 396, spread: 4 }, { nm: 394, spread: 3 }],
-  Ca: [{ nm: 422, spread: 4 }, { nm: 445, spread: 3 }],
-  Na: [{ nm: 589, spread: 2 }, { nm: 590, spread: 2 }],
-  Ti: [{ nm: 498, spread: 4 }, { nm: 506, spread: 3 }],
-  S:  [{ nm: 545, spread: 5 }, { nm: 564, spread: 4 }],
-  Ni: [{ nm: 508, spread: 3 }, { nm: 471, spread: 4 }],
-}
-
-/** Which elements dominate per rock type */
-const ROCK_ELEMENT_PROFILES: Record<RockTypeId, { el: string; weight: number }[]> = {
-  basalt: [
-    { el: 'Fe', weight: 0.7 }, { el: 'Si', weight: 0.9 },
-    { el: 'Mg', weight: 0.6 }, { el: 'Ca', weight: 0.5 },
-    { el: 'Al', weight: 0.4 }, { el: 'Ti', weight: 0.3 },
-  ],
-  hematite: [
-    { el: 'Fe', weight: 1.0 }, { el: 'Si', weight: 0.3 },
-    { el: 'Mn', weight: 0.4 }, { el: 'Al', weight: 0.2 },
-  ],
-  olivine: [
-    { el: 'Mg', weight: 0.9 }, { el: 'Fe', weight: 0.6 },
-    { el: 'Si', weight: 0.8 }, { el: 'Mn', weight: 0.2 },
-  ],
-  sulfate: [
-    { el: 'S', weight: 0.9 }, { el: 'Ca', weight: 0.7 },
-    { el: 'Mg', weight: 0.5 }, { el: 'Fe', weight: 0.2 },
-    { el: 'Na', weight: 0.3 },
-  ],
-  mudstone: [
-    { el: 'Si', weight: 0.7 }, { el: 'Fe', weight: 0.5 },
-    { el: 'Al', weight: 0.6 }, { el: 'Ca', weight: 0.4 },
-    { el: 'Mn', weight: 0.5 },
-  ],
-  'iron-meteorite': [
-    { el: 'Fe', weight: 1.0 }, { el: 'Ni', weight: 0.8 },
-    { el: 'Mn', weight: 0.3 }, { el: 'Si', weight: 0.1 },
-  ],
-}
-
-/**
- * Generate spectrum peaks with quality degraded by calibration level.
- *
- * cal 0.0 → only strongest 1-2 peaks visible, most labeled "??", high noise
- * cal 0.4 → ~half peaks visible, some "??", moderate noise
- * cal 0.7 → most peaks visible, rare "??", light noise
- * cal 1.0 → full clean spectrum, all elements labeled
- */
-function generateSpectrum(rockType: RockTypeId, cal: number): SpectrumPeak[] {
-  const profile = ROCK_ELEMENT_PROFILES[rockType] ?? ROCK_ELEMENT_PROFILES.basalt
-  const allPeaks: { nm: number; intensity: number; element: string; weight: number }[] = []
-
-  for (const { el, weight } of profile) {
-    const templates = ELEMENT_PEAKS[el]
-    if (!templates) continue
-    for (const t of templates) {
-      const nm = t.nm + (Math.random() - 0.5) * t.spread
-      const intensity = weight * (0.7 + Math.random() * 0.3)
-      allPeaks.push({ nm, intensity, element: el, weight })
-    }
-  }
-
-  // Sort by weight (strongest first) to decide which are "visible"
-  allPeaks.sort((a, b) => b.weight - a.weight)
-
-  // How many peaks are resolved depends on calibration
-  // cal 0 → ~20% of peaks, cal 1 → 100%
-  const visibleFraction = 0.2 + cal * 0.8
-  const visibleCount = Math.max(1, Math.ceil(allPeaks.length * visibleFraction))
-
-  // Threshold below which element labels show as "??"
-  // cal 0 → only weight > 0.8 gets labeled, cal 1 → everything labeled
-  const labelThreshold = 1.0 - cal  // cal 0 → 1.0, cal 0.5 → 0.5, cal 1 → 0
-
-  // Noise added to intensity at low cal
-  const noiseMag = (1 - cal) * 0.25
-
-  const peaks: SpectrumPeak[] = []
-  for (let i = 0; i < allPeaks.length; i++) {
-    const p = allPeaks[i]
-    if (i >= visibleCount) continue
-
-    // Add noise to intensity
-    const noise = (Math.random() - 0.5) * 2 * noiseMag
-    const noisyIntensity = Math.max(0.05, Math.min(1, p.intensity + noise))
-
-    // Wavelength jitter increases at low calibration
-    const extraJitter = (1 - cal) * 8
-    const jitteredNm = p.nm + (Math.random() - 0.5) * extraJitter
-
-    // Label: "??" if below threshold
-    const labeled = p.weight >= labelThreshold
-    const element = labeled ? p.element : '??'
-
-    peaks.push({
-      wavelength: Math.round(jitteredNm * 10) / 10,
-      intensity: noisyIntensity,
-      element,
-    })
-  }
-
-  peaks.sort((a, b) => a.wavelength - b.wavelength)
-  return peaks
 }

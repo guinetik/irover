@@ -25,7 +25,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
+import { MARS_SOL_CLOCK_MINUTES } from '@/lib/marsTimeConstants'
 
 const props = defineProps<{
   sol: number

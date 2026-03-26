@@ -1,7 +1,7 @@
-import { TILE_SERVICE_BASE, TILE_SIZE } from '@/three/constants'
+import { MDIM_TILE_PIXEL_SIZE, MDIM_TILE_SERVICE_BASE } from './mdimTileService'
 
 export function tileUrl(z: number, y: number, x: number): string {
-  return `${TILE_SERVICE_BASE}/${z}/${y}/${x}?blankTile=false`
+  return `${MDIM_TILE_SERVICE_BASE}/${z}/${y}/${x}?blankTile=false`
 }
 
 export function tileGridSize(zoom: number): { cols: number; rows: number } {
@@ -28,8 +28,8 @@ export async function compositeToCanvas(
 ): Promise<HTMLCanvasElement> {
   const { cols, rows } = tileGridSize(zoom)
   const canvas = document.createElement('canvas')
-  canvas.width = cols * TILE_SIZE
-  canvas.height = rows * TILE_SIZE
+  canvas.width = cols * MDIM_TILE_PIXEL_SIZE
+  canvas.height = rows * MDIM_TILE_PIXEL_SIZE
   const ctx = canvas.getContext('2d')!
 
   const total = cols * rows
@@ -44,7 +44,13 @@ export async function compositeToCanvas(
       promises.push(
         loadImage(url)
           .then((img) => {
-            ctx.drawImage(img, tileX * TILE_SIZE, tileY * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            ctx.drawImage(
+              img,
+              tileX * MDIM_TILE_PIXEL_SIZE,
+              tileY * MDIM_TILE_PIXEL_SIZE,
+              MDIM_TILE_PIXEL_SIZE,
+              MDIM_TILE_PIXEL_SIZE,
+            )
           })
           .catch(() => {})
           .finally(() => {

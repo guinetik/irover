@@ -225,7 +225,7 @@ export class PatronScene {
     if (this.morphProgress < 1) {
       this.morphProgress = Math.min(this.morphProgress + delta / MORPH_DURATION, 1)
     }
-    const eased = smoothstep(this.morphProgress)
+    const eased = THREE.MathUtils.smoothstep(this.morphProgress, 0, 1)
     this.material.uniforms.uProgress.value = eased
     this.material.uniforms.uTime.value = elapsed
 
@@ -270,8 +270,4 @@ export class PatronScene {
       }
     })
   }
-}
-
-function smoothstep(t: number): number {
-  return t * t * (3 - 2 * t)
 }

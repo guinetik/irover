@@ -23,9 +23,14 @@ npm run test:watch   # vitest watch mode
 src/
 ├── components/      # Vue components (MarsCanvas, tooltips, cards, overlays)
 ├── composables/     # useThreeScene (camera/controls/render loop), useMarsData (landmark loading)
-├── lib/areography/  # Mars-specific math (lat/lon conversions, ArcGIS tile math)
+├── lib/               # Domain math & rules (areography, weather/REMS, mission time, …)
+├── lib/areography/    # Lat/lon, MDIM tiles, Google elevation quadtree paths
+├── lib/weather/       # REMS site atmosphere (pure functions); composable owns Vue + storm FSM
+├── lib/terrain/       # Golombek SFD, mineral catalog + spawn weights (`rocks.ts`); GL in `three/terrain/RockTypes`
+├── lib/optical/       # ChemCam LIBS spectrum generation (`chemCamSpectrum.ts`)
+├── lib/neutron/       # DAN passive sampling priors (`danSampling.ts`)
 ├── three/           # All Three.js scene code + GLSL shaders
-├── types/           # Landmark interfaces (LandingSite, GeologicalFeature)
+├── types/           # Shared DTOs (landmarks, `terrain` site params, …)
 └── views/           # HomeView (single view)
 ```
 
@@ -53,4 +58,5 @@ Each layer implements: `init(): Promise<void>`, `update(elapsed: number)`, `disp
 - Areocentric coordinates: latitude (-90 to 90), longitude (-180 to 180, east-positive)
 - Scene units: `GLOBE_RADIUS = 10` (1 unit ≈ 1 Mars radius conceptually)
 - Mars obliquity: 25.19° axial tilt applied to globe group
-- ArcGIS tiles: 512x512 JPEG, equirectangular projection, WKID 104971
+- ArcGIS MDIM: `lib/areography/mdimTileService.ts` (512×512 JPEG, equirectangular, WKID 104971)
+- In-game sol length: `lib/marsTimeConstants.ts` (used by `MarsSky` and HUD math)

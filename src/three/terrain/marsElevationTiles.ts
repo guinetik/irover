@@ -8,34 +8,10 @@
  * Tiles are 256×256 JPEG, color-coded: blue=low, green=mid, yellow/red=high
  */
 
+import { latLonToQuadtree } from '@/lib/areography/googleMarsElevationQuadtree'
+
 const TILE_BASE = '/mars-elevation/'
 const TILE_PIXELS = 256
-
-/**
- * Converts lat/lon to a Google Maps quadtree tile path.
- * Each character after the root 't' selects a quadrant:
- * q=top-left, r=top-right, s=bottom-left, t=bottom-right
- */
-export function latLonToQuadtree(lat: number, lon: number, zoom: number): string {
-  let path = 't'
-  let latMin = -90, latMax = 90, lonMin = -180, lonMax = 180
-
-  for (let i = 0; i < zoom; i++) {
-    const latMid = (latMin + latMax) / 2
-    const lonMid = (lonMin + lonMax) / 2
-
-    if (lat >= latMid) {
-      if (lon < lonMid) { path += 'q'; lonMax = lonMid }
-      else { path += 'r'; lonMin = lonMid }
-      latMin = latMid
-    } else {
-      if (lon < lonMid) { path += 's'; lonMax = lonMid }
-      else { path += 't'; lonMin = lonMid }
-      latMax = latMid
-    }
-  }
-  return path
-}
 
 /**
  * Fetches the elevation tile for a lat/lon at the given zoom level.

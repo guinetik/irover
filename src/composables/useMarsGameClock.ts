@@ -64,7 +64,7 @@ export function useMarsGameClock() {
     setClockPaused,
     getSceneDelta,
     getSkyDelta,
-    /** Sol-relative duration helpers (backed by `MarsSky.SOL_DURATION`). */
+    /** Sol-relative duration helpers (backed by `SOL_DURATION` in `@/lib/marsTimeConstants`). */
     secondsPerSol,
     sceneSecondsFromSolFraction,
     sceneSecondsFromMarsClockHours,

@@ -7,8 +7,10 @@ import mountainFrag from '@/three/shaders/mountain.frag.glsl?raw'
 import rockTextureUrl from '@/assets/texture1.jpg?url'
 import dustTextureUrl from '@/assets/texture2.jpg?url'
 import { RockFactory, type RockCollider } from './RockFactory'
-import type { ITerrainGenerator, TerrainParams } from './TerrainGenerator'
-import { SimplexNoise } from './SimplexNoise'
+import type { ITerrainGenerator } from './TerrainGenerator'
+import type { TerrainParams } from '@/types/terrain'
+import { SimplexNoise } from '@/lib/math/simplexNoise'
+import { pickDetailTextures } from '@/lib/terrain/detailTextures'
 
 /** Sites that have a dedicated GLB terrain file in public/terrain/{siteId}.glb */
 export const GLB_TERRAIN_SITES = new Set([
@@ -26,25 +28,6 @@ export const GLB_TERRAIN_SITES = new Set([
   'utopia-planitia',
   'valles-marineris',
 ])
-
-/** Map orbital textures grouped by feature type for cross-site blending. */
-const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {
-  'volcano':      ['/olympus-mons.jpg', '/ascraeus-mons.jpg', '/pavonis-mons.jpg', '/elysium-mons.jpg'],
-  'canyon':       ['/valles-marineris.jpg', '/syrtis-major.jpg', '/argyre-basin.jpg'],
-  'basin':        ['/hellas-basin.jpg', '/argyre-basin.jpg', '/utopia-planitia.jpg'],
-  'plain':        ['/utopia-planitia.jpg', '/acidalia-planitia.jpg', '/syrtis-major.jpg'],
-  'polar-cap':    ['/north-polar-cap.jpg', '/south-polar-cap.jpg', '/utopia-planitia.jpg'],
-  'landing-site': ['/utopia-planitia.jpg', '/acidalia-planitia.jpg', '/hellas-basin.jpg'],
-}
-
-function pickDetailTextures(p: TerrainParams): [string, string] {
-  const own = `/${p.siteId}.jpg`
-  const pool = (MAP_TEXTURES_BY_TYPE[p.featureType] ?? MAP_TEXTURES_BY_TYPE['plain'])
-    .filter(url => url !== own)
-  const i = Math.abs(p.seed) % pool.length
-  const j = (i + 1) % pool.length
-  return [pool[i], pool[j === i ? (i + 1) % pool.length : j]]
-}
 
 /** GLB maps are 400x400 grids scaled up to 1000 world units (-500 to +500). */
 export const GLB_TERRAIN_SCALE = 1000

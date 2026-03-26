@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { SimplexNoise } from './SimplexNoise'
+import { SimplexNoise } from '@/lib/math/simplexNoise'
 import {
   ROCK_TYPE_LIST,
   ROCK_VARIANTS_PER_TYPE,
@@ -11,8 +11,12 @@ import {
   pickRockType,
 } from './RockTypes'
 import { TERRAIN_SCALE } from './terrainConstants'
-import type { TerrainParams } from './TerrainGenerator'
-import { generateRockDistribution, type RockSpawn, type GolombekConfig } from './GolombekDistribution'
+import type { TerrainParams } from '@/types/terrain'
+import {
+  generateRockDistribution,
+  type GolombekConfig,
+  type RockSpawn,
+} from '@/lib/terrain/golombekDistribution'
 
 export interface RockCollider {
   x: number
@@ -152,8 +156,8 @@ export class RockFactory {
     config?: GolombekConfig,
     scale: number = TERRAIN_SCALE,
   ): void {
-    // ── Generate scientifically-grounded rock distribution ──────────────
-    const distribution = generateRockDistribution(params, scale, config)
+    const golombekRng = new SimplexNoise(params.seed + 777)
+    const distribution = generateRockDistribution(params, scale, golombekRng, config)
 
     // ── Geology-driven mineral type distribution ───────────────────────
     const spawnDist = buildSpawnDistribution({

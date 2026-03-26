@@ -1,22 +1,11 @@
 import * as THREE from 'three'
 import skyVert from '@/three/shaders/mars-sky.vert.glsl?raw'
 import skyFrag from '@/three/shaders/mars-sky.frag.glsl?raw'
+import {
+  MARS_TIME_OF_DAY_06_00,
+  SOL_DURATION,
+} from '@/lib/marsTimeConstants'
 
-// Full day cycle in seconds (accelerated — 3 real minutes = 1 sol)
-export const SOL_DURATION = 180
-
-/** Martian sol length in minutes — must match `SolClock` display math. */
-export const MARS_SOL_CLOCK_MINUTES = 24 * 60 + 37
-
-/**
- * `timeOfDay` in 0..1 that corresponds to 06:00 on the HUD sol clock.
- */
-export const MARS_TIME_OF_DAY_06_00 = (6 * 60) / MARS_SOL_CLOCK_MINUTES
-
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
-  return t * t * (3 - 2 * t)
-}
 const SKY_RADIUS = 900
 
 export class MarsSky {
@@ -108,15 +97,15 @@ export class MarsSky {
 
     // Adjust light intensity/color based on sun elevation
     const sunUp = Math.max(0, elevation)
-    this.nightFactor = 1.0 - smoothstep(-0.1, 0.2, elevation)
+    this.nightFactor = 1.0 - THREE.MathUtils.smoothstep(elevation, -0.1, 0.2)
 
     // Sun intensity — multi-phase curve for dramatic day arc
     // Dawn/dusk ramp (elevation -0.1 to 0.1): 0 to 2.0
     // Morning (0.1-0.5): 2.0 to 4.0
     // Noon (0.5-1.0): 4.0 to 5.5
-    const dawnRamp = smoothstep(-0.1, 0.1, elevation)
-    const morningRamp = smoothstep(0.1, 0.5, elevation)
-    const noonRamp = smoothstep(0.5, 1.0, elevation)
+    const dawnRamp = THREE.MathUtils.smoothstep(elevation, -0.1, 0.1)
+    const morningRamp = THREE.MathUtils.smoothstep(elevation, 0.1, 0.5)
+    const noonRamp = THREE.MathUtils.smoothstep(elevation, 0.5, 1.0)
     this.sunLight.intensity = dawnRamp * 2.0 + morningRamp * 2.0 + noonRamp * 1.5
 
     // Ambient and hemisphere — higher daytime fill for softer shadows
@@ -129,15 +118,15 @@ export class MarsSky {
     if (elevation < 0) {
       this.sunLight.color.copy(MarsSky.DAWN_COLOR)
     } else {
-      const dayProgress = smoothstep(0.0, 0.5, elevation)
-      const noonProgress = smoothstep(0.5, 1.0, elevation)
+      const dayProgress = THREE.MathUtils.smoothstep(elevation, 0.0, 0.5)
+      const noonProgress = THREE.MathUtils.smoothstep(elevation, 0.5, 1.0)
       this._scratchColor.copy(MarsSky.DAWN_COLOR).lerp(MarsSky.MORNING_COLOR, dayProgress)
       this._scratchColor.lerp(MarsSky.NOON_COLOR, noonProgress)
       this.sunLight.color.copy(this._scratchColor)
     }
 
     // Ambient color — smooth transition instead of hard toggle
-    const ambientT = smoothstep(-0.1, 0.2, elevation)
+    const ambientT = THREE.MathUtils.smoothstep(elevation, -0.1, 0.2)
     this.ambientLight.color.copy(MarsSky.AMBIENT_NIGHT).lerp(MarsSky.AMBIENT_DAY, ambientT)
   }
 

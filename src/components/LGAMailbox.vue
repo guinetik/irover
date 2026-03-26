@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { LGAMessage } from '@/types/lgaMailbox'
+import { MARS_SOL_CLOCK_MINUTES } from '@/lib/marsTimeConstants'
 
 const props = defineProps<{
   messages: LGAMessage[]
@@ -30,7 +31,7 @@ function toggleMessage(msg: LGAMessage) {
 }
 
 function formatTimeOfDay(tod: number): string {
-  const totalMinutes = tod * 1477  // MARS_SOL_CLOCK_MINUTES
+  const totalMinutes = tod * MARS_SOL_CLOCK_MINUTES
   const hours = Math.floor(totalMinutes / 60)
   const minutes = Math.floor(totalMinutes % 60)
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`

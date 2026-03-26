@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { useOrbitalPasses } from '../useOrbitalPasses'
 import { solFractionFromMarsClockHours } from '@/lib/missionTime'
-import { MARS_SOL_CLOCK_MINUTES } from '@/three/MarsSky'
+import { MARS_SOL_CLOCK_MINUTES } from '@/lib/marsTimeConstants'
 
 const MIN_SPACING = solFractionFromMarsClockHours(3)
 const MIN_DURATION = solFractionFromMarsClockHours(2)

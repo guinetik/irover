@@ -85,7 +85,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import type { ChemCamReadout, SpectrumPeak } from '@/three/instruments/ChemCamController'
+import type { ChemCamReadout } from '@/three/instruments/ChemCamController'
+import type { SpectrumPeak } from '@/types/chemcam'
 
 const props = defineProps<{
   readout: ChemCamReadout | null

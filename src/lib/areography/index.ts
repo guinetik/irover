@@ -1,3 +1,5 @@
 export { latLonToCartesian, cartesianToLatLon, surfaceNormal } from './coordinates'
 export { approximateLatLonFromTangentOffset } from './siteTangent'
 export { tileUrl, tileGridSize, latLonToTile, compositeToCanvas } from './tiles'
+export { MDIM_TILE_PIXEL_SIZE, MDIM_TILE_SERVICE_BASE } from './mdimTileService'
+export { latLonToQuadtree } from './googleMarsElevationQuadtree'

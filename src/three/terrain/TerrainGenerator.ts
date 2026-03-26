@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { SimplexNoise } from "./SimplexNoise";
+import { SimplexNoise } from "@/lib/math/simplexNoise";
+import type { TerrainParams } from "@/types/terrain";
+export type { TerrainParams, TerrainFeatureType } from "@/types/terrain";
+import { pickDetailTextures } from "@/lib/terrain/detailTextures";
 import terrainVert from "@/three/shaders/terrain.vert.glsl?raw";
 import terrainFrag from "@/three/shaders/terrain.frag.glsl?raw";
 import mountainVert from "@/three/shaders/mountain.vert.glsl?raw";
@@ -17,75 +20,6 @@ const GRID_SIZE = 256;
 import { TERRAIN_SCALE } from './terrainConstants'
 export { TERRAIN_SCALE } from './terrainConstants'
 const SCALE = TERRAIN_SCALE;
-
-/** Map orbital textures grouped by feature type for cross-site blending. */
-const MAP_TEXTURES_BY_TYPE: Record<string, string[]> = {
-  volcano: [
-    "/olympus-mons.jpg",
-    "/ascraeus-mons.jpg",
-    "/pavonis-mons.jpg",
-    "/elysium-mons.jpg",
-  ],
-  canyon: ["/valles-marineris.jpg", "/syrtis-major.jpg", "/argyre-basin.jpg"],
-  basin: ["/hellas-basin.jpg", "/argyre-basin.jpg", "/utopia-planitia.jpg"],
-  plain: [
-    "/utopia-planitia.jpg",
-    "/acidalia-planitia.jpg",
-    "/syrtis-major.jpg",
-  ],
-  "polar-cap": [
-    "/north-polar-cap.jpg",
-    "/south-polar-cap.jpg",
-    "/utopia-planitia.jpg",
-  ],
-  "landing-site": [
-    "/utopia-planitia.jpg",
-    "/acidalia-planitia.jpg",
-    "/hellas-basin.jpg",
-  ],
-};
-
-/**
- * Picks two complementary orbital map textures from the same feature-type pool,
- * excluding the site's own image so all three terrain textures are distinct.
- */
-function pickDetailTextures(p: TerrainParams): [string, string] {
-  const own = `/${p.siteId}.jpg`;
-  const pool = (
-    MAP_TEXTURES_BY_TYPE[p.featureType] ?? MAP_TEXTURES_BY_TYPE["plain"]
-  ).filter((url) => url !== own);
-  // Deterministic pick based on seed
-  const i = Math.abs(p.seed) % pool.length;
-  const j = (i + 1) % pool.length;
-  return [pool[i], pool[j === i ? (i + 1) % pool.length : j]];
-}
-
-export interface TerrainParams {
-  roughness: number;
-  craterDensity: number;
-  dustCover: number;
-  elevation: number;
-  ironOxide: number;
-  basalt: number;
-  seed: number;
-  // Site identity
-  siteId: string;
-  featureType:
-    | "volcano"
-    | "canyon"
-    | "basin"
-    | "plain"
-    | "polar-cap"
-    | "landing-site";
-  waterIceIndex: number;
-  silicateIndex: number;
-  temperatureMaxK: number;
-  temperatureMinK: number;
-  /** Landmark latitude in degrees (-90..90) */
-  latDeg?: number;
-  /** Landmark longitude in degrees (-180..180, east-positive) */
-  lonDeg?: number;
-}
 
 /** Common interface for all terrain generators. */
 export interface ITerrainGenerator {

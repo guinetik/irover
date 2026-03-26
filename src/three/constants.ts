@@ -23,8 +23,6 @@ export const FLY_TO_DISTANCE = GLOBE_RADIUS * 1.6
 export const ATMOSPHERE_COLOR: [number, number, number] = [0.8, 0.35, 0.1]
 export const ATMOSPHERE_FRESNEL_POWER = 5.0
 
-export const TILE_SERVICE_BASE = 'https://astro.arcgis.com/arcgis/rest/services/OnMars/MDIM/MapServer/tile'
-export const TILE_SIZE = 512
 export const TILE_BASE_ZOOM = 3
 
 export const LANDMARK_COLORS: Record<string, string> = {

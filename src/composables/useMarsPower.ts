@@ -57,7 +57,7 @@ export const ROCK_DRILL_BASE_W = 100
 
 /**
  * Scales Wh integration so battery changes are visible with an accelerated sol.
- * Linked to MarsSky.SOL_DURATION — if sol length changes, retune this.
+ * Linked to `SOL_DURATION` in `@/lib/marsTimeConstants` — if sol length changes, retune this.
  * Mission-timed effects (RTG, etc.) should use `src/lib/missionTime.ts` + `missionCooldowns`, not parallel magic seconds.
  * See docs/superpowers/specs/gdd-power-simulation-mvp-design.md
  */

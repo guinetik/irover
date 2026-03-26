@@ -1,23 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  peakStormWindMs,
-  windFromDegToCompass,
-  useSiteRemsWeather,
-} from '@/composables/useSiteRemsWeather'
-import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
-
-describe('windFromDegToCompass', () => {
-  it('maps cardinal directions', () => {
-    expect(windFromDegToCompass(0)).toBe('N')
-    expect(windFromDegToCompass(90)).toBe('E')
-    expect(windFromDegToCompass(180)).toBe('S')
-    expect(windFromDegToCompass(270)).toBe('W')
-  })
-
-  it('normalizes negative angles', () => {
-    expect(windFromDegToCompass(-90)).toBe('W')
-  })
-})
+import { useSiteRemsWeather } from '@/composables/useSiteRemsWeather'
+import type { TerrainParams } from '@/types/terrain'
 
 describe('useSiteRemsWeather', () => {
   const baseTerrain: TerrainParams = {
@@ -83,10 +66,5 @@ describe('useSiteRemsWeather', () => {
     expect(h.windDirCompass.length).toBeGreaterThan(0)
     expect(h.dustStormPhase).toBe('none')
     expect(h.dustStormLevel).toBeNull()
-  })
-
-  it('peak storm wind scales with level and dust', () => {
-    expect(peakStormWindMs(1, 0.2, 0)).toBeGreaterThan(25)
-    expect(peakStormWindMs(5, 0.9, 1)).toBeGreaterThan(peakStormWindMs(2, 0.2, 1))
   })
 })

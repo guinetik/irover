@@ -9,7 +9,7 @@ import {
   getTouchdownTetherRetractProgress,
   getTouchdownTetherTension,
   isInTouchdownTetherWindow,
-} from './skyCraneTouchdown'
+} from '@/lib/skyCraneTouchdown'
 
 const ROVER_SCALE = 0.5
 const TOUCHDOWN_STAGE_HEIGHT = 3.8

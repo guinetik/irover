@@ -137,7 +137,7 @@ export class TerminalScene {
 
     if (this.phase === 'intro') {
       const t = Math.min(this.phaseTime / INTRO_DURATION, 1)
-      const ease = smoothstep(t)
+      const ease = THREE.MathUtils.smoothstep(t, 0, 1)
       this.lerpModelTransform(ease)
       this.lerpCameraPosition(ease)
       // Vignette ramps up as we zoom in
@@ -147,7 +147,7 @@ export class TerminalScene {
       if (this.phaseTime >= BOOT_DELAY) this.setPhase('launch')
     } else if (this.phase === 'outro') {
       const t = Math.min(this.phaseTime / OUTRO_DURATION, 1)
-      const ease = smoothstep(t)
+      const ease = THREE.MathUtils.smoothstep(t, 0, 1)
       // Reverse: from end position back to a "gone" position
       this.lerpModelTransform(1 - ease)
       this.lerpCameraPosition(1 - ease)
@@ -236,8 +236,4 @@ export class TerminalScene {
       }
     })
   }
-}
-
-function smoothstep(t: number): number {
-  return t * t * (3 - 2 * t)
 }

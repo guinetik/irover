@@ -1,27 +1,15 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
+import {
+  danPassiveHitProbability,
+  danSignalQualityLabel,
+  danWaterConfirmChance,
+} from '@/lib/neutron/danSampling'
 
 // --- Sampling ---
 const SAMPLE_INTERVAL_MOVING = 3.0
 const SAMPLE_INTERVAL_STATIC = 5.0
 const MIN_MOVE_DIST = 0.5
-const BASE_HIT_RATE = 0.02
-
-const FEATURE_MULT: Record<string, number> = {
-  'polar-cap': 3.0,
-  'canyon': 1.5,
-  'basin': 1.5,
-  'plain': 1.0,
-  'volcano': 0.5,
-}
-
-function siteMultiplier(waterIceIndex: number): number {
-  if (waterIceIndex >= 0.8) return 5.0
-  if (waterIceIndex >= 0.5) return 3.5
-  if (waterIceIndex >= 0.3) return 2.5
-  if (waterIceIndex >= 0.1) return 1.5
-  return 1.0
-}
 
 export interface DANHit {
   worldPosition: THREE.Vector3
@@ -112,9 +100,7 @@ export class DANController extends InstrumentController {
 
     this.totalSamples++
 
-    const siteMult = siteMultiplier(this.waterIceIndex)
-    const featMult = FEATURE_MULT[this.featureType] ?? 1.0
-    const p = Math.min(BASE_HIT_RATE * siteMult * featMult, 0.95)
+    const p = danPassiveHitProbability(this.waterIceIndex, this.featureType)
 
     if (Math.random() < p) {
       const strength = Math.min(1.0, Math.max(0.3,
@@ -131,19 +117,16 @@ export class DANController extends InstrumentController {
   }
 
   static qualityLabel(strength: number): string {
-    if (strength >= 0.7) return 'Strong'
-    if (strength >= 0.5) return 'Moderate'
-    return 'Weak'
+    return danSignalQualityLabel(strength)
   }
 
   static waterChance(strength: number, waterIceIndex: number): number {
-    const base = strength >= 0.7 ? 0.70 : strength >= 0.5 ? 0.40 : 0.15
-    return Math.min(base * (0.5 + waterIceIndex), 1.0)
+    return danWaterConfirmChance(strength, waterIceIndex)
   }
 
   rollWater(): boolean {
     const chance = Math.min(
-      DANController.waterChance(this.prospectStrength, this.waterIceIndex) * this.accuracyMod,
+      danWaterConfirmChance(this.prospectStrength, this.waterIceIndex) * this.accuracyMod,
       1.0,
     )
     return Math.random() < chance

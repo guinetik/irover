@@ -3,7 +3,7 @@ import {
   getTouchdownReleaseProgress,
   getTouchdownTetherRetractProgress,
   getTouchdownTetherTension,
-} from '@/three/skyCraneTouchdown'
+} from '@/lib/skyCraneTouchdown'
 import { loadOrbitalDropPayloadModel } from './orbitalDropPayloadModel'
 
 export interface OrbitalDropControllerOptions {

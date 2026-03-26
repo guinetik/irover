@@ -1,8 +1,9 @@
 import type { Ref } from 'vue'
 import * as THREE from 'three'
-import { MARS_SOL_CLOCK_MINUTES, SOL_DURATION } from '@/three/MarsSky'
+import { MARS_SOL_CLOCK_MINUTES, SOL_DURATION } from '@/lib/marsTimeConstants'
 import { DANController } from '@/three/instruments'
-import type { TerrainParams } from '@/three/terrain/TerrainGenerator'
+import type { TerrainParams } from '@/types/terrain'
+import { danSignalQualityLabel } from '@/lib/neutron/danSampling'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import { DAN_INITIATE_DURATION_SEC, DAN_PROSPECT_DURATION_MARS_HOURS } from '@/views/MarsSiteViewController'
@@ -151,7 +152,7 @@ export function createDanTickHandler(
         sampleToastRef.value?.showDAN('New hydrogen signal — previous marker updated')
       }
       const hit = danInst.pendingHit
-      const qual = DANController.qualityLabel(hit.signalStrength)
+      const qual = danSignalQualityLabel(hit.signalStrength)
       sampleToastRef.value?.showDAN(`Hydrogen signal — ${qual} (${Math.round(hit.signalStrength * 100)}%)`)
       const gain = awardDAN('DAN signal hit')
       if (gain) sampleToastRef.value?.showSP(gain.amount, 'DAN SIGNAL', gain.bonus)
@@ -228,7 +229,7 @@ export function createDanTickHandler(
               roverSpawnX: roverSpawnXZ.value.x,
               roverSpawnZ: roverSpawnXZ.value.z,
               signalStrength: danInst.prospectStrength,
-              quality: DANController.qualityLabel(danInst.prospectStrength) as 'Weak' | 'Moderate' | 'Strong',
+              quality: danSignalQualityLabel(danInst.prospectStrength),
               waterConfirmed: hasWater,
               reservoirQuality: danInst.prospectStrength,
             })

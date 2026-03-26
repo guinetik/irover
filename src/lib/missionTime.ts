@@ -2,11 +2,10 @@
  * Mission time scaling — all scene-second durations that represent “Mars time” should derive from
  * {@link SOL_DURATION} and the HUD sol clock so changing day length is a single constant change.
  *
- * @see MarsSky.SOL_DURATION — real-time seconds for one full in-game sol (timeOfDay 0→1).
- * @see MarsSky.MARS_SOL_CLOCK_MINUTES — length of that sol on the sol clock (24h 37m).
+ * See `src/lib/marsTimeConstants.ts` for `SOL_DURATION` and `MARS_SOL_CLOCK_MINUTES`.
  */
 
-import { MARS_SOL_CLOCK_MINUTES, SOL_DURATION } from '@/three/MarsSky'
+import { MARS_SOL_CLOCK_MINUTES, SOL_DURATION } from '@/lib/marsTimeConstants'
 
 /** Real-time seconds representing one full in-game sol. */
 export function secondsPerSol(): number {

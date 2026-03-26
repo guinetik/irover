@@ -1,5 +1,5 @@
 import type { RockTypeId } from '@/three/terrain/RockTypes'
-import type { SpectrumPeak } from '@/three/instruments/ChemCamController'
+import type { SpectrumPeak } from '@/types/chemcam'
 
 /**
  * Immutable ChemCam LIBS record saved when the player acknowledges a spectrum.

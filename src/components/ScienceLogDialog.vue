@@ -323,7 +323,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { ArchivedChemCamSpectrum } from '@/types/chemcamArchive'
-import type { SpectrumPeak } from '@/three/instruments/ChemCamController'
+import type { SpectrumPeak } from '@/types/chemcam'
 import type { ArchivedDANProspect } from '@/types/danArchive'
 import type { ArchivedSAMDiscovery } from '@/types/samArchive'
 import type { ArchivedAPXSAnalysis } from '@/composables/useAPXSArchive'
