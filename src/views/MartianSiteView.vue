@@ -534,6 +534,7 @@ import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandle
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import { useMissionUI } from '@/composables/useMissionUI'
 import { useMissions } from '@/composables/useMissions'
+import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
@@ -543,6 +544,7 @@ const route = useRoute()
 const siteId = route.params.siteId as string
 
 const { tryRepair, getBySlot } = useInstrumentDurability()
+const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
 
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
@@ -750,8 +752,9 @@ function handleInstrumentRepair() {
   const snap = getBySlot(activeInstrumentSlot.value)
   if (!snap) return
   const result = tryRepair(snap.id)
-  if (!result.ok && result.message) {
-    // Show error toast if available
+  if (result.ok) {
+    useMissions().notifyRepairKitUsed()
+  } else if (result.message) {
     sampleToastRef.value?.showError?.(result.message)
   }
 }
@@ -1345,6 +1348,11 @@ function createSiteControllerContext() {
     apxsState,
     onInstrumentActivateRequest: handleActivate,
     onGlobalKeyDown,
+    onDSNTransmissionsReceived: (txs) => {
+      const count = txs.length
+      const label = count === 1 ? '1 DSN transmission received' : `${count} DSN transmissions received`
+      sampleToastRef.value?.showComm?.(label)
+    },
     clearPois,
     devSpawnRandomInventoryItems,
     devSpawnInventoryItemById: devSpawnInventoryItem,

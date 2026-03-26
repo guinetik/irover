@@ -192,6 +192,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       sampleToastRef: ctx.sampleToastRef,
       awardTransmission: ctx.awardTransmission,
       playerMod: ctx.playerMod,
+      onDSNTransmissionsReceived: ctx.onDSNTransmissionsReceived,
     },
   )
 

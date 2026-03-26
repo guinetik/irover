@@ -10,6 +10,8 @@ import type { TransmissionQueueItem } from '@/types/transmissionQueue'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import { useDSNArchive } from '@/composables/useDSNArchive'
+import type { DSNTransmission } from '@/types/dsnArchive'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface AntennaTickRefs {
@@ -29,6 +31,7 @@ export interface AntennaTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardTransmission: (archiveId: string, baseSP: number, label: string) => SPGain | null
   playerMod: (key: keyof ProfileModifiers) => number
+  onDSNTransmissionsReceived?: (transmissions: DSNTransmission[]) => void
 }
 
 /**
@@ -126,6 +129,16 @@ export function createAntennaTickHandler(
       if (uhfCtrl.transmittedThisPass > 0) {
         callbacks.sampleToastRef.value?.showComm?.(`${uhfCtrl.transmittedThisPass} discoveries transmitted`)
       }
+
+      // Pull DSN archaeology transmissions at end of pass
+      const { unlocked: dsnUnlocked, pullTransmissions: dsnPull } = useDSNArchive()
+      if (dsnUnlocked.value && uhfCtrl.passiveSubsystemEnabled) {
+        const pulled = dsnPull(marsSol)
+        if (pulled.length > 0) {
+          callbacks.onDSNTransmissionsReceived?.(pulled)
+        }
+      }
+
       uhfCtrl.passActive = false
       uhfCtrl.transmitting = false
       uhfCtrl.transmissionProgress = 0

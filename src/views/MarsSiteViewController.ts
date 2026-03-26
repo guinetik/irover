@@ -49,6 +49,7 @@ import type { SiteFrameContext } from './site-controllers/SiteFrameContext'
 import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTickHandlers'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import { useMissions } from '@/composables/useMissions'
+import { useDSNArchive } from '@/composables/useDSNArchive'
 import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
@@ -314,6 +315,7 @@ export interface MarsSiteViewContext {
   onAPXSLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onAPXSBlockedByCold: () => void
   onInstrumentActivateRequest: () => void
+  onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
   clearPois: () => void
   devSpawnRandomInventoryItems: typeof devSpawnRandomInventoryItems
@@ -523,6 +525,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const missionsData = await fetch('/data/missions.json').then((r) => r.json())
     loadCatalog(missionsData)
     wireArchiveCheckers()
+
+    // --- DSN Archive init ---
+    const dsnData = await fetch('/data/dsn-transmissions.json').then((r) => r.json())
+    const { loadCatalog: loadDSNCatalog } = useDSNArchive()
+    loadDSNCatalog(dsnData)
 
     if (import.meta.env.DEV) {
       disposeOrbitalDropDebugApi = installOrbitalDropDebugApi({
