@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AUDIO_CATEGORIES,
   AUDIO_SOUND_IDS,
+  SILENT_STATIC_WAV_DATA_URI,
   audioManifest,
   getAudioDefinition,
 } from '../audioManifest'
@@ -51,6 +52,17 @@ describe('audioManifest', () => {
     }
   })
 
+  it('uses self-contained audio sources for seeded static entries (no missing public fetches)', () => {
+    for (const id of AUDIO_SOUND_IDS) {
+      const def = getAudioDefinition(id)
+      if (def.allowDynamicSrc === true) continue
+      expect(typeof def.src).toBe('string')
+      expect(def.src.length).toBeGreaterThan(0)
+      expect(def.src.startsWith('data:audio/')).toBe(true)
+      expect(def.src.startsWith('/audio/')).toBe(false)
+    }
+  })
+
   it('returns frozen snapshots so callers cannot mutate shared manifest state', () => {
     const fromGetter = getAudioDefinition('ui.click')
     expect(Object.isFrozen(fromGetter)).toBe(true)
@@ -60,7 +72,7 @@ describe('audioManifest', () => {
     } catch {
       /* strict mode may throw on frozen prop assign */
     }
-    expect(getAudioDefinition('ui.click').src).toBe('/audio/ui/click.mp3')
+    expect(getAudioDefinition('ui.click').src).toBe(SILENT_STATIC_WAV_DATA_URI)
 
     const fromList = audioManifest[1]
     expect(fromList?.id).toBe('ui.click')
@@ -73,7 +85,7 @@ describe('audioManifest', () => {
     expect(getAudioDefinition('ui.click').volume).toBe(0.35)
   })
 
-  it('lists expected load, playback, volume, and paths per seeded entry', () => {
+  it('lists expected load, playback, volume, and inline src per seeded entry', () => {
     expect(getAudioDefinition('voice.dsnTransmission')).toMatchObject({
       load: 'lazy',
       playback: 'exclusive-category',
@@ -81,19 +93,19 @@ describe('audioManifest', () => {
       effect: 'dsn-radio',
     })
     expect(getAudioDefinition('ui.click')).toMatchObject({
-      src: '/audio/ui/click.mp3',
+      src: SILENT_STATIC_WAV_DATA_URI,
       load: 'eager',
       playback: 'restart',
       volume: 0.35,
     })
     expect(getAudioDefinition('ui.error')).toMatchObject({
-      src: '/audio/ui/error.mp3',
+      src: SILENT_STATIC_WAV_DATA_URI,
       load: 'eager',
       playback: 'restart',
       volume: 0.45,
     })
     expect(getAudioDefinition('sfx.discovery')).toMatchObject({
-      src: '/audio/sfx/discovery.mp3',
+      src: SILENT_STATIC_WAV_DATA_URI,
       load: 'lazy',
       playback: 'single-instance',
       volume: 0.55,

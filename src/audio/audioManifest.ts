@@ -2,6 +2,13 @@ import type { AudioCategory, AudioDefinition } from './audioTypes'
 import { AUDIO_CATEGORIES } from './audioTypes'
 
 /**
+ * Minimal valid silent WAV inlined as a data URI so seeded static sounds decode without
+ * `public/audio/*` files. Swap for real assets when they land in the repo.
+ */
+export const SILENT_STATIC_WAV_DATA_URI =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+
+/**
  * Seeded sound ids registered for the first audio migration (order is stable for tests and tooling).
  */
 export const AUDIO_SOUND_IDS = [
@@ -33,7 +40,7 @@ const manifestById: ManifestById = {
   },
   'ui.click': {
     id: 'ui.click',
-    src: '/audio/ui/click.mp3',
+    src: SILENT_STATIC_WAV_DATA_URI,
     category: 'ui',
     load: 'eager',
     playback: 'restart',
@@ -42,7 +49,7 @@ const manifestById: ManifestById = {
   },
   'ui.error': {
     id: 'ui.error',
-    src: '/audio/ui/error.mp3',
+    src: SILENT_STATIC_WAV_DATA_URI,
     category: 'ui',
     load: 'eager',
     playback: 'restart',
@@ -51,7 +58,7 @@ const manifestById: ManifestById = {
   },
   'sfx.discovery': {
     id: 'sfx.discovery',
-    src: '/audio/sfx/discovery.mp3',
+    src: SILENT_STATIC_WAV_DATA_URI,
     category: 'sfx',
     load: 'lazy',
     playback: 'single-instance',
