@@ -94,3 +94,17 @@ export interface AudioPlaybackHandle {
   progress(): number
   duration(): number
 }
+
+/**
+ * Per-category gain and mute state used by the audio manager for routing and UI.
+ */
+export interface AudioCategoryState {
+  volume: number
+  muted: boolean
+}
+
+/** Constructor options for the runtime audio manager (`AudioManager`). */
+export interface AudioManagerOptions {
+  /** Initial category state; unspecified categories use full volume and unmuted. */
+  initialCategoryState?: Partial<Record<AudioCategory, AudioCategoryState>>
+}
