@@ -26,6 +26,6 @@ const foundations = Object.values(FOUNDATIONS)
 
 <style scoped>
 .step { display: flex; flex-direction: column; gap: 24px; }
-.prompt { font-size: 14px; color: rgba(255, 255, 255, 0.7); line-height: 1.6; }
+.prompt { font-size: 18px; color: rgba(255, 255, 255, 0.95); line-height: 1.6; }
 .options { display: flex; flex-direction: column; gap: 4px; }
 </style>

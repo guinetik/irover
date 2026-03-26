@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "intro": "Third-party assets and data sources used in I, Rover. Thank you to the creators and agencies below.",
+  "groups": [
+    {
+      "id": "models",
+      "label": "3D models",
+      "items": [
+        {
+          "asset": "nasa_curiosity_clean.glb",
+          "title": "NASA Curiosity (Clean) rover",
+          "author": "Thomas Flynn (Sketchfab; NASA-derived mesh)",
+          "url": "https://sketchfab.com/3d-models/nasa-curiosity-clean-0696a383f3e841d2b5c7636ee8a58aba",
+          "license": "CC BY 4.0 (Sketchfab)",
+          "notes": "Mission hardware reference: NASA / JPL-Caltech — https://science.nasa.gov/resource/curiosity-rover-3d-model/"
+        },
+        {
+          "asset": "sci-fi_cargo_crate.glb",
+          "title": "Sci-fi cargo crate (orbital payload)",
+          "author": "Confirm source in your asset library",
+          "url": "",
+          "notes": "Replace `url` and `author` with the Sketchfab/CGTrader page for the exact file you downloaded."
+        },
+        {
+          "asset": "rocks.glb",
+          "title": "Rock geometry pool",
+          "author": "Confirm source in your asset library",
+          "url": "",
+          "notes": "Add the author and link for the rock pack you used."
+        },
+        {
+          "asset": "mars_terrain_model.glb",
+          "title": "Mars global terrain mesh",
+          "author": "Confirm DEM / mesh provenance",
+          "url": "https://www.usgs.gov/centers/astrogeo-science-center/science/mars-dems-and-dtms",
+          "notes": "Project mesh may be derived from USGS/NASA Mars elevation products; adjust if your pipeline differs."
+        },
+        {
+          "asset": "desk.glb",
+          "title": "Desk prop",
+          "author": "Add author when you confirm download source",
+          "url": "",
+          "notes": "Untracked asset in `public/` — paste Sketchfab or marketplace link here."
+        },
+        {
+          "asset": "terminal.glb",
+          "title": "Terminal prop",
+          "author": "Add author when you confirm download source",
+          "url": "",
+          "notes": "Untracked asset in `public/` — paste Sketchfab or marketplace link here."
+        }
+      ]
+    },
+    {
+      "id": "imagery-data",
+      "label": "Imagery & data",
+      "items": [
+        {
+          "title": "Mars orbital imagery (globe & site context)",
+          "author": "NASA / JPL / USGS; Esri ArcGIS tile services",
+          "url": "https://www.usgs.gov/centers/astrogeo-science-center/science/mars-global-digital-image-mosaic",
+          "license": "See each provider’s terms for MDIM / mission imagery",
+          "notes": "Globe uses composited MDIM-style coverage; site views may use mission-specific orbital maps."
+        },
+        {
+          "title": "Mission & landmark reference data",
+          "author": "NASA mission pages and public datasets",
+          "url": "https://mars.nasa.gov/",
+          "notes": "Landing sites and science context informed by NASA/JPL mission materials."
+        }
+      ]
+    }
+  ]
+}

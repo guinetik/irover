@@ -1,5 +1,10 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
+import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 /** Duration of intro/outro animations in seconds */
 const INTRO_DURATION = 2.5
@@ -18,6 +23,7 @@ export class TerminalScene {
   readonly camera: THREE.PerspectiveCamera
 
   private renderer: THREE.WebGLRenderer | null = null
+  private composer: EffectComposer | null = null
   private model: THREE.Object3D | null = null
   private clock = new THREE.Clock(false)
   private rafId = 0
@@ -27,8 +33,8 @@ export class TerminalScene {
   // Animation: model start/end transforms
   private modelStartPos = new THREE.Vector3(0, -2, -8)
   private modelStartRot = new THREE.Euler(-0.3, Math.PI * 0.8, 0.2)
-  private modelEndPos = new THREE.Vector3(0, 0, 0)
-  private modelEndRot = new THREE.Euler(0, 0, 0)
+  private modelEndPos = new THREE.Vector3(0, 0.05, 0)
+  private modelEndRot = new THREE.Euler(-0.25, 0, 0)
 
   // Camera start (far) / end (zoomed to screen)
   private cameraStartPos = new THREE.Vector3(0, 0.5, 6)
@@ -91,6 +97,24 @@ export class TerminalScene {
     this.model = wrapper
     this.scene.add(this.model)
 
+    // Post-processing pipeline
+    this.composer = new EffectComposer(this.renderer)
+    this.composer.addPass(new RenderPass(this.scene, this.camera))
+
+    // Subtle bloom on the green CRT glow
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(canvas.clientWidth, canvas.clientHeight),
+      0.4,  // strength
+      0.6,  // radius
+      0.7,  // threshold
+    )
+    this.composer.addPass(bloomPass)
+
+    // Vignette — darkens edges, focuses attention on screen
+    const vignettePass = new ShaderPass(VignetteShader)
+    vignettePass.uniforms['offset'].value = 0.9
+    vignettePass.uniforms['darkness'].value = 1.0
+    this.composer.addPass(vignettePass)
   }
 
   startLoop(): void {
@@ -102,7 +126,7 @@ export class TerminalScene {
       this.rafId = requestAnimationFrame(tick)
       const delta = this.clock.getDelta()
       this.update(delta)
-      this.renderer?.render(this.scene, this.camera)
+      this.composer?.render()
     }
     tick()
   }
@@ -186,6 +210,7 @@ export class TerminalScene {
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
     this.renderer?.setSize(width, height)
+    this.composer?.setSize(width, height)
   }
 
   dispose(): void {

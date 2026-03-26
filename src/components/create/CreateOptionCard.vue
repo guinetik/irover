@@ -36,16 +36,16 @@ defineEmits<{
   cursor: pointer;
   text-align: left;
   font-family: var(--font-mono);
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.75);
   transition: color 0.15s ease;
 }
 
 .option:hover {
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .option.selected {
-  color: #c4956a;
+  color: rgba(255, 220, 170, 1);
 }
 
 .radio {
@@ -61,14 +61,14 @@ defineEmits<{
 }
 
 .name {
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
 .desc {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.6;
   opacity: 0.7;

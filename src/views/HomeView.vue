@@ -11,6 +11,9 @@
           {{ continueTarget ? 'NEW MISSION' : 'BEGIN MISSION' }}
         </button>
       </div>
+      <nav class="home-footer" aria-label="Secondary">
+        <router-link class="footer-link" to="/credits">Credits</router-link>
+      </nav>
     </div>
   </div>
 </template>
@@ -91,6 +94,25 @@ function startNew(): void {
   gap: 16px;
   margin-top: 48px;
   animation: fadeUp 0.8s ease-out 0.6s both;
+}
+
+.home-footer {
+  margin-top: 56px;
+  animation: fadeUp 0.8s ease-out 0.75s both;
+}
+
+.footer-link {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.28);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.footer-link:hover {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .cta {

@@ -1,9 +1,23 @@
 <template>
   <div class="patron-placeholder">
     <p>PATRON SELECTION — COMING SOON</p>
-    <button @click="$router.push('/globe')">[ SKIP TO GLOBE ]</button>
+    <button @click="skipToGlobe">[ SKIP TO GLOBE ]</button>
   </div>
 </template>
+
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { usePlayerProfile } from '@/composables/usePlayerProfile'
+
+const router = useRouter()
+const { setProfile, profile } = usePlayerProfile()
+
+function skipToGlobe(): void {
+  // Set a default patron so the route guard allows globe access
+  setProfile(profile.archetype!, profile.foundation!, 'trc')
+  router.push('/globe')
+}
+</script>
 
 <style scoped>
 .patron-placeholder {
