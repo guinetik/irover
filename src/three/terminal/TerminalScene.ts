@@ -32,7 +32,7 @@ export class TerminalScene {
 
   // Camera start (far) / end (zoomed to screen)
   private cameraStartPos = new THREE.Vector3(0, 0.5, 6)
-  private cameraEndPos = new THREE.Vector3(0, 0.3, 2.8)
+  private cameraEndPos = new THREE.Vector3(0, 0.45, 0.65)
 
   // Screen corners in model-local space (determined empirically from GLB inspection)
   // These will be calibrated in Task 2 after inspecting the loaded model
@@ -91,25 +91,6 @@ export class TerminalScene {
     this.model = wrapper
     this.scene.add(this.model)
 
-    // --- DEBUG: remove after calibration ---
-    console.log('=== TERMINAL GLB DEBUG ===')
-    const debugModel = gltf.scene
-    debugModel.traverse((child: THREE.Object3D) => {
-      if (child instanceof THREE.Mesh) {
-        const childBox = new THREE.Box3().setFromObject(child)
-        console.log(`Mesh: "${child.name}"`, {
-          min: childBox.min.toArray().map((n: number) => +n.toFixed(3)),
-          max: childBox.max.toArray().map((n: number) => +n.toFixed(3)),
-        })
-      }
-    })
-    const wrapperBox = new THREE.Box3().setFromObject(this.model)
-    console.log('Wrapper bounds:', {
-      min: wrapperBox.min.toArray().map((n: number) => +n.toFixed(3)),
-      max: wrapperBox.max.toArray().map((n: number) => +n.toFixed(3)),
-      size: wrapperBox.getSize(new THREE.Vector3()).toArray().map((n: number) => +n.toFixed(3)),
-    })
-    console.log('=== END DEBUG ===')
   }
 
   startLoop(): void {
@@ -160,7 +141,7 @@ export class TerminalScene {
 
   private lerpCameraPosition(t: number): void {
     this.camera.position.lerpVectors(this.cameraStartPos, this.cameraEndPos, t)
-    this.camera.lookAt(0, 0.2, 0)
+    this.camera.lookAt(0, 0.35, 0)
   }
 
   private setPhase(phase: TerminalPhase): void {

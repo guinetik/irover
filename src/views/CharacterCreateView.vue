@@ -160,7 +160,7 @@ function onAccept(): void {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #000;
+  background: transparent;
   color: rgba(196, 149, 106, 0.7);
   font-family: var(--font-mono);
   padding: 48px 64px;
