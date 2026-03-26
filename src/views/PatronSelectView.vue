@@ -2,15 +2,16 @@
   <div class="patron-root">
     <canvas ref="patronCanvas" class="patron-canvas" />
 
-    <div class="form-area">
-      <p class="form-title">PATRON SELECTION — MISSION SPONSORSHIP</p>
-      <p class="form-sub">Your mission requires institutional backing. Choose carefully.</p>
-      <div class="cards-row">
+    <div class="form-area" :class="{ visible: formVisible }">
+      <p class="form-title anim-item">PATRON SELECTION — MISSION SPONSORSHIP</p>
+      <p class="form-sub anim-item">Your mission requires institutional backing. Choose carefully.</p>
+      <div class="cards-row anim-item">
         <PatronCard
           v-for="(patron, i) in patronList"
           :key="patron.id"
           :patron="patron"
           :motto="mottos[patron.id]"
+          :org-name="orgNames[patron.id]"
           :highlighted="highlightIndex === i"
           @select="selectPatron(patron.id)"
           @hover="highlightIndex = i"
@@ -34,6 +35,7 @@ const patronCanvas = ref<HTMLCanvasElement | null>(null)
 let scene: PatronScene | null = null
 
 const highlightIndex = ref(-1)
+const formVisible = ref(false)
 const patronList = computed(() => Object.values(PATRONS))
 
 const mottos: Record<PatronId, string> = {
@@ -42,9 +44,18 @@ const mottos: Record<PatronId, string> = {
   msi: 'Home is where you build it.',
 }
 
+const orgNames: Record<PatronId, string> = {
+  trc: 'Terran Resource Consortium',
+  isf: 'Interplanetary Science Foundation',
+  msi: 'Mars Settlement Initiative',
+}
+
 function selectPatron(id: PatronId): void {
   setProfile(profile.archetype!, profile.foundation!, id)
-  router.push('/globe')
+  formVisible.value = false
+  setTimeout(() => {
+    router.push('/globe')
+  }, 600)
 }
 
 function onKeydown(e: KeyboardEvent): void {
@@ -86,6 +97,11 @@ onMounted(async () => {
   await scene.init(canvas)
   scene.startLoop()
 
+  // Show form after skull morph completes
+  setTimeout(() => {
+    formVisible.value = true
+  }, 3000)
+
   window.addEventListener('mousemove', onMouseMove)
   window.addEventListener('resize', onResize)
   window.addEventListener('keydown', onKeydown)
@@ -121,10 +137,10 @@ onUnmounted(() => {
   position: absolute;
   z-index: 1;
   left: 50%;
-  top: 48%;
+  top: 36%;
   transform: translateX(-50%);
-  width: 65%;
-  max-height: 48%;
+  width: 42%;
+  max-height: 60%;
   background: rgba(0, 0, 0, 0.6);
   border-radius: 8px;
   padding: 20px 24px;
@@ -132,20 +148,51 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+.form-area.visible {
+  opacity: 1;
+}
+
+/* Staggered child animations */
+.anim-item {
+  opacity: 0;
+  transform: perspective(600px) rotateX(-15deg) translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.form-area.visible .anim-item:nth-child(1) {
+  opacity: 1;
+  transform: perspective(600px) rotateX(0) translateY(0);
+  transition-delay: 0.1s;
+}
+
+.form-area.visible .anim-item:nth-child(2) {
+  opacity: 1;
+  transform: perspective(600px) rotateX(0) translateY(0);
+  transition-delay: 0.25s;
+}
+
+.form-area.visible .anim-item:nth-child(3) {
+  opacity: 1;
+  transform: perspective(600px) rotateX(0) translateY(0);
+  transition-delay: 0.45s;
 }
 
 .form-title {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.15em;
-  color: rgba(255, 200, 140, 0.9);
+  color: rgba(255, 200, 140, 1);
   margin: 0;
 }
 
 .form-sub {
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: rgba(230, 180, 130, 0.5);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
   margin: 0;
 }
 

@@ -7,7 +7,10 @@
   >
     <p class="full-name">{{ patron.fullName }}</p>
     <p class="abbrev">{{ patron.name }}</p>
-    <p class="identity">{{ patron.identity }}</p>
+    <div class="preview-img">
+      <img :src="`/patrons/${patron.id}.webp`" :alt="patron.fullName" @error="($event.target as HTMLImageElement).style.display='none'" />
+    </div>
+    <p class="identity">{{ orgName }}</p>
     <p class="motto">"{{ motto }}"</p>
     <p class="desc">{{ patron.description }}</p>
     <div class="modifiers">
@@ -30,6 +33,7 @@ import type { PatronDef, ProfileModifiers } from '@/composables/usePlayerProfile
 const props = defineProps<{
   patron: PatronDef
   motto: string
+  orgName: string
   highlighted: boolean
 }>()
 
@@ -91,7 +95,7 @@ const modifierList = computed(() => {
 }
 
 .full-name {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -100,28 +104,44 @@ const modifierList = computed(() => {
 }
 
 .abbrev {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.2em;
   color: rgba(230, 180, 130, 0.5);
   margin: 0;
 }
 
+.preview-img {
+  width: 100%;
+  height: 100px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(196, 149, 106, 0.05);
+  margin: 4px 0;
+}
+
+.preview-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
 .identity {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: #ff9932;
   margin: 4px 0 0;
 }
 
 .motto {
-  font-size: 11px;
+  font-size: 13px;
   font-style: italic;
   color: rgba(230, 180, 130, 0.5);
   margin: 0;
 }
 
 .desc {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.75);
   margin: 6px 0 0;
@@ -137,6 +157,7 @@ const modifierList = computed(() => {
 }
 
 .mod {
+  font-size: 13px;
   font-size: 11px;
   margin: 0;
 }
