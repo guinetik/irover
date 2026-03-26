@@ -65,6 +65,13 @@ describe('site intro / post-processing flags', () => {
       const mod = await import('@/lib/siteIntroSequence')
       expect(mod.isSiteIntroSequenceSkipped()).toBe(true)
     })
+
+    it('treats unrecognized localStorage as absent (play intro)', async () => {
+      stubWindow('')
+      localStorageMock.setItem('mars.skipSiteIntro', 'maybe')
+      const { isSiteIntroSequenceSkipped } = await import('@/lib/siteIntroSequence')
+      expect(isSiteIntroSequenceSkipped()).toBe(false)
+    })
   })
 
   describe('isSitePostProcessingEnabled', () => {
@@ -84,6 +91,13 @@ describe('site intro / post-processing flags', () => {
 
     it('defaults to true when nothing is set', async () => {
       stubWindow('')
+      const { isSitePostProcessingEnabled } = await import('@/lib/sitePostProcessing')
+      expect(isSitePostProcessingEnabled()).toBe(true)
+    })
+
+    it('treats unrecognized localStorage as absent (postfx on)', async () => {
+      stubWindow('')
+      localStorageMock.setItem('mars.sitePostProcessing', 'foobar')
       const { isSitePostProcessingEnabled } = await import('@/lib/sitePostProcessing')
       expect(isSitePostProcessingEnabled()).toBe(true)
     })
