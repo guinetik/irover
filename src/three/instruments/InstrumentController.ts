@@ -84,6 +84,10 @@ export abstract class InstrumentController {
   // ── Upgrade system ──────────────────────────────────────────────────
   upgradeLevel = 0
   readonly maxUpgradeLevel: number = 1
+  /** Inventory item consumed when installing an upgrade. Null = no item cost. */
+  readonly upgradeItemId: string | null = null
+  /** Quantity of upgradeItemId consumed per upgrade. */
+  readonly upgradeItemQty: number = 1
 
   /**
    * When non-null, the view applies a pulsing emissive on this instrument's focus subtree while selected.

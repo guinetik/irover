@@ -266,6 +266,7 @@
             <div class="ov-upgrade-name">{{ instrument.upgName }}</div>
             <div class="ov-upgrade-desc">{{ instrument.upgDesc }}</div>
             <div class="ov-upgrade-req">{{ instrument.upgReq }}</div>
+            <button class="ov-btn-primary ov-btn-install" @click="$emit('installUpgrade')">INSTALL</button>
           </div>
         </Transition>
 
@@ -415,6 +416,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
 defineEmits<{
   activate: []
   repair: []
+  installUpgrade: []
   seeResults: []
   rtgOverdrive: []
   rtgConservation: []
@@ -869,6 +871,10 @@ const durabilityColor = computed(() => {
 .ov-btn-dsn {
   background: linear-gradient(90deg, #1a4a44 0%, #2a7a6a 100%);
   color: #e8faf6;
+}
+.ov-btn-install {
+  margin-top: 8px;
+  width: 100%;
 }
 
 /* ESC hint */

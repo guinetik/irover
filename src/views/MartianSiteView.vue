@@ -131,6 +131,7 @@
       @heater-overdrive="showHeaterOverdriveConfirm = true"
       @rtg-conservation="openConservationConfirm()"
       @repair="handleInstrumentRepair"
+      @install-upgrade="handleInstrumentUpgrade"
       :dan-hit-available="danHitAvailable"
       :dan-prospect-phase="danProspectPhase"
       @dan-prospect="handleDanProspect"
@@ -552,7 +553,7 @@ import LoadingOverlay from '@/components/LoadingOverlay.vue'
 const route = useRoute()
 const siteId = route.params.siteId as string
 
-const { tryRepair, getBySlot } = useInstrumentDurability()
+const { tryRepair, tryUpgrade, getBySlot } = useInstrumentDurability()
 const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
 
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
@@ -765,6 +766,19 @@ function handleInstrumentRepair() {
   const result = tryRepair(snap.id)
   if (result.ok) {
     useMissions().notifyRepairKitUsed()
+  } else if (result.message) {
+    sampleToastRef.value?.showError?.(result.message)
+  }
+}
+
+function handleInstrumentUpgrade() {
+  if (activeInstrumentSlot.value === null) return
+  const snap = getBySlot(activeInstrumentSlot.value)
+  if (!snap) return
+  const result = tryUpgrade(snap.id)
+  if (result.ok) {
+    useMissions().notifyUpgradeInstalled(snap.id)
+    sampleToastRef.value?.showComm?.(`${snap.name} — UPGRADE INSTALLED`)
   } else if (result.message) {
     sampleToastRef.value?.showError?.(result.message)
   }

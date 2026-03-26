@@ -92,6 +92,29 @@ export function useInstrumentDurability() {
   }
 
   /**
+   * Attempt to install an upgrade on an instrument. Consumes the required
+   * inventory item(s) and calls applyUpgrade() on the controller.
+   */
+  function tryUpgrade(instrumentId: string): { ok: boolean; message?: string } {
+    const inst = instrumentRefs.find(i => i.id === instrumentId)
+    if (!inst) return { ok: false, message: 'Instrument not found.' }
+    if (inst.upgraded) return { ok: false, message: 'Already fully upgraded.' }
+
+    if (inst.upgradeItemId) {
+      const stack = stacks.value.find(s => s.itemId === inst.upgradeItemId)
+      const qty = stack?.quantity ?? 0
+      if (qty < inst.upgradeItemQty) {
+        return { ok: false, message: `Need ${inst.upgradeItemQty} ${inst.upgradeItemId}.` }
+      }
+      const result = consumeItem(inst.upgradeItemId, inst.upgradeItemQty)
+      if (!result.ok) return { ok: false, message: result.message }
+    }
+
+    inst.applyUpgrade()
+    return { ok: true }
+  }
+
+  /**
    * Get snapshot for a specific instrument slot.
    */
   function getBySlot(slot: number): DurabilitySnapshot | undefined {
@@ -102,6 +125,7 @@ export function useInstrumentDurability() {
     snapshots,
     syncFromControllers,
     tryRepair,
+    tryUpgrade,
     applyHazardToCategory,
     getBySlot,
   }

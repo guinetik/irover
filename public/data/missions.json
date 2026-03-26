@@ -48,7 +48,7 @@
       "patron": null,
       "description": "Verify RTG power output and test emergency overdrive mode.",
       "briefing": "REMS is streaming — good. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — you'll notice the RTG took some damage during landing. We'll deal with that next.",
-      "reward": { "sp": 30 },
+      "reward": { "sp": 30, "items": [{ "id": "mechatronics-components", "quantity": 2 }] },
       "unlocks": [],
       "chain": "m02-repair",
       "objectives": [
@@ -168,12 +168,14 @@
       "name": "13. Deep Signal",
       "patron": null,
       "description": "Install the DSN Archaeology upgrade on the UHF antenna to unlock legacy band reception.",
-      "briefing": "Rover, routine diagnostic. Your UHF transceiver has been operating on standard relay frequencies — adequate for orbital uplinks. However, your hardware is technically capable of receiving across the full DSN frequency spectrum. We're dropping a dual-band archaeology module on your next orbital window. Once you have it, open the UHF antenna panel and install the upgrade. There's... a lot of old data out there. Most of it is noise. Calibration pings. Deprecated telemetry. But some of our analysts think there might be recoverable mission archives from early Mars programs. Historical interest only. No science value. Install the upgrade and see what you find. Low priority.",
+      "briefing": "Rover, routine diagnostic. Your UHF transceiver has been operating on standard relay frequencies — adequate for orbital uplinks. However, your hardware is technically capable of receiving across the full DSN frequency spectrum. We're dropping a dual-band archaeology module at a supply point on the far side of the site. Drive out, collect the package, then open the UHF antenna panel and install the upgrade. There's... a lot of old data out there. Most of it is noise. Calibration pings. Deprecated telemetry. But some of our analysts think there might be recoverable mission archives from early Mars programs. Historical interest only. No science value. Install the upgrade and see what you find. Low priority.",
       "reward": { "sp": 100 },
       "unlocks": ["dsn-archaeology"],
       "chain": null,
       "objectives": [
-        { "id": "dsn-1", "type": "install-upgrade", "label": "Install DSN Archaeology module on UHF", "params": { "instrumentId": "antenna-uhf" }, "sequential": false }
+        { "id": "dsn-1", "type": "go-to", "label": "Reach the supply drop zone", "params": { "poiId": "supply-cache-02" }, "sequential": true },
+        { "id": "dsn-2", "type": "gather", "label": "Collect DSN Archaeology module", "params": { "itemId": "dsn-archaeology-module", "quantity": 1 }, "sequential": true },
+        { "id": "dsn-3", "type": "install-upgrade", "label": "Install DSN Archaeology module on UHF", "params": { "instrumentId": "antenna-uhf" }, "sequential": true }
       ]
     }
   ]

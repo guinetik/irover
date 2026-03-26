@@ -257,6 +257,15 @@
       "maxStack": 100
     },
     {
+      "id": "dsn-archaeology-module",
+      "category": "component",
+      "label": "DSN Archaeology Module",
+      "description": "Dual-band receiver firmware and antenna filter. Enables legacy DSN frequency reception on the UHF transceiver.",
+      "image": "/inventory/component-tier-4.png",
+      "weightPerUnit": 0.5,
+      "maxStack": 1
+    },
+    {
       "id": "biosignature-sample",
       "category": "refined",
       "label": "Biosignature Sample",
