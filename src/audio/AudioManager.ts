@@ -10,11 +10,15 @@ import {
   type AudioPlaybackHandle,
 } from './audioTypes'
 
-/** Tracks the currently active Howl for a category. */
+/** One running instance registered with the manager (supports overlap within a category). */
 interface ActivePlayback {
+  /** Stable token for handle.stop bookkeeping. */
+  token: number
   soundId: AudioSoundId
   category: AudioCategory
   howl: Howl
+  /** Sound id returned by {@link Howl.play} (distinct instances on the same Howl). */
+  howlPlayId?: number
 }
 
 const DEFAULT_CATEGORY_STATE: Record<AudioCategory, AudioCategoryState> = {
@@ -32,8 +36,10 @@ const DEFAULT_CATEGORY_STATE: Record<AudioCategory, AudioCategoryState> = {
 export class AudioManager {
   private unlocked = false
   private readonly categoryState: Record<AudioCategory, AudioCategoryState>
-  private readonly activeByCategory = new Map<AudioCategory, ActivePlayback>()
+  /** Multiple concurrent playbacks per category (e.g. overlap); exclusive modes clear before adding. */
+  private readonly activeByCategory = new Map<AudioCategory, ActivePlayback[]>()
   private readonly cachedHowls = new Map<AudioSoundId, Howl>()
+  private nextPlaybackToken = 1
 
   constructor(options: AudioManagerOptions = {}) {
     this.categoryState = { ...DEFAULT_CATEGORY_STATE }
@@ -49,9 +55,21 @@ export class AudioManager {
     Howler.autoUnlock = false
   }
 
-  /** Marks audio as allowed to play (e.g. after user interaction). */
+  /**
+   * Merges mixer state for a category (volume/mute). Affects the next computed playback level.
+   */
+  applyCategoryState(category: AudioCategory, patch: Partial<AudioCategoryState>): void {
+    this.categoryState[category] = { ...this.categoryState[category], ...patch }
+  }
+
+  /**
+   * Marks the app as allowed to play audio and attempts to resume the Web Audio `AudioContext`
+   * (required when `Howler.autoUnlock` is disabled). Safe to call repeatedly; resume failures are
+   * ignored (e.g. strict autoplay policies).
+   */
   unlock(): void {
     this.unlocked = true
+    this.resumeHowlerAudioContext()
   }
 
   /**
@@ -77,40 +95,108 @@ export class AudioManager {
         ? new Howl({
             src: [dynamicSrc],
             preload: false,
-            volume: this.computePlaybackVolume(def, options),
+            volume: 1,
           })
-        : this.getOrCreateHowl(soundId, options)
+        : this.getOrCreateHowl(soundId)
 
-    howl.play()
-    this.activeByCategory.set(def.category, { soundId, category: def.category, howl })
+    this.applyHowlPlaybackVolume(howl, def, options)
+
+    const howlPlayIdRaw = howl.play()
+    const howlPlayId =
+      typeof howlPlayIdRaw === 'number' && !Number.isNaN(howlPlayIdRaw) ? howlPlayIdRaw : undefined
+
+    const token = this.nextPlaybackToken++
+    const playback: ActivePlayback = {
+      token,
+      soundId,
+      category: def.category,
+      howl,
+      howlPlayId,
+    }
+    this.pushActive(def.category, playback)
 
     return {
       soundId,
       stop: () => {
-        howl.stop()
+        this.stopPlaybackInstance(playback)
       },
-      playing: () => howl.playing(),
+      playing: () => (howlPlayId !== undefined ? howl.playing(howlPlayId) : howl.playing()),
       progress: () => {
-        const duration = howl.duration()
-        return duration > 0 ? Number(howl.seek()) / duration : 0
+        const dur =
+          howlPlayId !== undefined ? howl.duration(howlPlayId) : howl.duration()
+        const pos =
+          howlPlayId !== undefined ? Number(howl.seek(howlPlayId)) : Number(howl.seek())
+        return dur > 0 ? pos / dur : 0
       },
-      duration: () => howl.duration(),
+      duration: () =>
+        howlPlayId !== undefined ? howl.duration(howlPlayId) : howl.duration(),
     }
   }
 
   /**
-   * Stops and unloads the active sound for a category, and drops it from the static cache when
-   * applicable.
+   * Stops every active sound in a category, unloads non-cached Howls, and clears bookkeeping.
    */
   stopCategory(category: AudioCategory): void {
-    const active = this.activeByCategory.get(category)
-    if (!active) return
-    active.howl.stop()
-    active.howl.unload()
-    if (this.cachedHowls.get(active.soundId) === active.howl) {
-      this.cachedHowls.delete(active.soundId)
+    const list = this.activeByCategory.get(category)
+    if (!list?.length) return
+
+    const uniqueHowls = new Set<Howl>()
+    for (const p of list) {
+      this.stopHowlSound(p.howl, p.howlPlayId)
+      uniqueHowls.add(p.howl)
+    }
+    for (const howl of uniqueHowls) {
+      if (!this.isCachedHowlInstance(howl)) {
+        howl.unload()
+      }
     }
     this.activeByCategory.delete(category)
+  }
+
+  private resumeHowlerAudioContext(): void {
+    if (Howler.noAudio) return
+    // Lazily creates Howler's shared AudioContext (same entry point Howler uses internally).
+    void Howler.volume()
+    const ctx = Howler.ctx
+    if (!ctx || typeof ctx.resume !== 'function') return
+    void ctx.resume().catch(() => {
+      /* ignore — may reject if not triggered from a user gesture */
+    })
+  }
+
+  private pushActive(category: AudioCategory, playback: ActivePlayback): void {
+    const list = this.activeByCategory.get(category) ?? []
+    list.push(playback)
+    this.activeByCategory.set(category, list)
+  }
+
+  private stopPlaybackInstance(playback: ActivePlayback): void {
+    const list = this.activeByCategory.get(playback.category)
+    if (!list?.length) return
+    const idx = list.findIndex((p) => p.token === playback.token)
+    if (idx === -1) return
+    list.splice(idx, 1)
+    if (!list.length) {
+      this.activeByCategory.delete(playback.category)
+    }
+    this.stopHowlSound(playback.howl, playback.howlPlayId)
+  }
+
+  private stopHowlSound(howl: Howl, howlPlayId?: number): void {
+    if (howlPlayId !== undefined) {
+      howl.stop(howlPlayId)
+    } else {
+      howl.stop()
+    }
+  }
+
+  /** Sets per-instance gain from manifest + category + optional per-play override (cached Howls). */
+  private applyHowlPlaybackVolume(
+    howl: Howl,
+    def: Readonly<AudioDefinition>,
+    options: AudioPlayOptions,
+  ): void {
+    howl.volume(this.computePlaybackVolume(def, options))
   }
 
   private computePlaybackVolume(def: Readonly<AudioDefinition>, options: AudioPlayOptions): number {
@@ -136,7 +222,7 @@ export class AudioManager {
     return undefined
   }
 
-  private getOrCreateHowl(soundId: AudioSoundId, options: AudioPlayOptions): Howl {
+  private getOrCreateHowl(soundId: AudioSoundId): Howl {
     const cached = this.cachedHowls.get(soundId)
     if (cached) return cached
 
@@ -148,10 +234,17 @@ export class AudioManager {
     const howl = new Howl({
       src: srcList,
       preload: def.load === 'eager',
-      volume: this.computePlaybackVolume(def, options),
+      volume: 1,
     })
     this.cachedHowls.set(soundId, howl)
     return howl
+  }
+
+  private isCachedHowlInstance(howl: Howl): boolean {
+    for (const h of this.cachedHowls.values()) {
+      if (h === howl) return true
+    }
+    return false
   }
 
   private createNoopHandle(soundId: AudioSoundId): AudioPlaybackHandle {

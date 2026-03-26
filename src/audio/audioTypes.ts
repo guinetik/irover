@@ -105,6 +105,9 @@ export interface AudioCategoryState {
 
 /** Constructor options for the runtime audio manager (`AudioManager`). */
 export interface AudioManagerOptions {
-  /** Initial category state; unspecified categories use full volume and unmuted. */
-  initialCategoryState?: Partial<Record<AudioCategory, AudioCategoryState>>
+  /**
+   * Initial category state; unspecified categories use full volume and unmuted.
+   * Per-category patches may be partial (e.g. `{ volume: 0.5 }` without `muted`).
+   */
+  initialCategoryState?: Partial<Record<AudioCategory, Partial<AudioCategoryState>>>
 }
