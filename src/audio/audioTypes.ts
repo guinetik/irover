@@ -27,6 +27,14 @@ export type AudioLoadStrategy = (typeof AUDIO_LOAD_STRATEGIES)[number]
 
 /**
  * Coexistence and interruption rules when the same or related sounds are triggered.
+ *
+ * `AudioManager` applies these as follows:
+ * - `exclusive-category` — stop all other active playbacks in the same category before starting.
+ * - `restart` — stop any prior active playback of the same sound id (any category), then play.
+ * - `single-instance` — same as `restart` (one concurrent instance of that id).
+ * - `overlap` — do not pre-stop; multiple instances may run (use per-instance volume on shared Howls).
+ * - `rate-limited` — if `cooldownMs` is set, ignore play requests until the cooldown elapses (keyed by
+ *   `cooldownKey` in {@link AudioPlayOptions} or the manifest `id`).
  */
 export const AUDIO_PLAYBACK_MODES = [
   'restart',

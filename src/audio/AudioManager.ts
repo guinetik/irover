@@ -30,8 +30,8 @@ const DEFAULT_CATEGORY_STATE: Record<AudioCategory, AudioCategoryState> = {
 }
 
 /**
- * Central runtime for manifest-driven playback: category routing, exclusive voice,
- * cached static {@link Howl} instances, and dynamic `src` for DSN-style streams.
+ * Central runtime for manifest-driven playback: category routing, cached static {@link Howl}
+ * instances, dynamic `src` for DSN-style streams, and manifest playback modes.
  */
 export class AudioManager {
   private unlocked = false
@@ -39,6 +39,8 @@ export class AudioManager {
   /** Multiple concurrent playbacks per category (e.g. overlap); exclusive modes clear before adding. */
   private readonly activeByCategory = new Map<AudioCategory, ActivePlayback[]>()
   private readonly cachedHowls = new Map<AudioSoundId, Howl>()
+  /** Last trigger time for {@link AudioDefinition} `rate-limited` + `cooldownMs`. */
+  private readonly lastRateLimitTriggerAt = new Map<string, number>()
   private nextPlaybackToken = 1
 
   constructor(options: AudioManagerOptions = {}) {
@@ -83,9 +85,11 @@ export class AudioManager {
       return this.createNoopHandle(soundId)
     }
 
-    if (def.playback === 'exclusive-category') {
-      this.stopCategory(def.category)
+    if (def.playback === 'rate-limited' && this.isRateLimited(def, soundId, options)) {
+      return this.createNoopHandle(soundId)
     }
+
+    this.applyPlaybackModePrelude(def, soundId)
 
     const dynamicSrc =
       options.src !== undefined && options.src !== '' ? options.src : undefined
@@ -99,11 +103,12 @@ export class AudioManager {
           })
         : this.getOrCreateHowl(soundId)
 
-    this.applyHowlPlaybackVolume(howl, def, options)
-
     const howlPlayIdRaw = howl.play()
     const howlPlayId =
       typeof howlPlayIdRaw === 'number' && !Number.isNaN(howlPlayIdRaw) ? howlPlayIdRaw : undefined
+
+    const vol = this.computePlaybackVolume(def, options)
+    this.applyPerInstanceVolume(howl, vol, howlPlayId)
 
     const token = this.nextPlaybackToken++
     const playback: ActivePlayback = {
@@ -114,6 +119,12 @@ export class AudioManager {
       howlPlayId,
     }
     this.pushActive(def.category, playback)
+
+    this.wirePlaybackEnd(howl, howlPlayId, playback, options)
+
+    if (def.playback === 'rate-limited') {
+      this.recordRateLimitTrigger(def, soundId, options)
+    }
 
     return {
       soundId,
@@ -139,23 +150,101 @@ export class AudioManager {
   stopCategory(category: AudioCategory): void {
     const list = this.activeByCategory.get(category)
     if (!list?.length) return
-
-    const uniqueHowls = new Set<Howl>()
-    for (const p of list) {
-      this.stopHowlSound(p.howl, p.howlPlayId)
-      uniqueHowls.add(p.howl)
+    const copy = [...list]
+    for (const p of copy) {
+      this.stopPlaybackInstance(p)
     }
-    for (const howl of uniqueHowls) {
-      if (!this.isCachedHowlInstance(howl)) {
-        howl.unload()
+  }
+
+  /**
+   * Applies manifest {@link AudioDefinition.playback} rules before starting a new instance.
+   */
+  private applyPlaybackModePrelude(def: Readonly<AudioDefinition>, soundId: AudioSoundId): void {
+    switch (def.playback) {
+      case 'exclusive-category':
+        this.stopCategory(def.category)
+        break
+      case 'restart':
+      case 'single-instance':
+        this.stopAllActiveWithSoundId(soundId)
+        break
+      case 'overlap':
+      case 'rate-limited':
+        break
+      default:
+        break
+    }
+  }
+
+  private isRateLimited(
+    def: Readonly<AudioDefinition>,
+    soundId: AudioSoundId,
+    options: AudioPlayOptions,
+  ): boolean {
+    const ms = def.cooldownMs ?? 0
+    if (ms <= 0) return false
+    const key = options.cooldownKey ?? soundId
+    const last = this.lastRateLimitTriggerAt.get(key)
+    if (last === undefined) return false
+    return performance.now() - last < ms
+  }
+
+  private recordRateLimitTrigger(
+    def: Readonly<AudioDefinition>,
+    soundId: AudioSoundId,
+    options: AudioPlayOptions,
+  ): void {
+    const ms = def.cooldownMs ?? 0
+    if (ms <= 0) return
+    const key = options.cooldownKey ?? soundId
+    this.lastRateLimitTriggerAt.set(key, performance.now())
+  }
+
+  private stopAllActiveWithSoundId(soundId: AudioSoundId): void {
+    const toStop: ActivePlayback[] = []
+    for (const cat of AUDIO_CATEGORIES) {
+      const list = this.activeByCategory.get(cat)
+      if (!list?.length) continue
+      for (const p of list) {
+        if (p.soundId === soundId) toStop.push(p)
       }
     }
-    this.activeByCategory.delete(category)
+    for (const p of toStop) {
+      this.stopPlaybackInstance(p)
+    }
+  }
+
+  private wirePlaybackEnd(
+    howl: Howl,
+    howlPlayId: number | undefined,
+    playback: ActivePlayback,
+    options: AudioPlayOptions,
+  ): void {
+    const handler = () => {
+      try {
+        options.onEnd?.()
+      } finally {
+        this.finalizePlaybackEnded(playback)
+      }
+    }
+    if (howlPlayId !== undefined) {
+      howl.once('end', handler, howlPlayId)
+    } else {
+      howl.once('end', handler)
+    }
+  }
+
+  /** Natural completion: drop bookkeeping and unload non-cached Howls. */
+  private finalizePlaybackEnded(playback: ActivePlayback): void {
+    const removed = this.removeFromActiveList(playback)
+    if (!removed) return
+    if (!this.isCachedHowlInstance(playback.howl)) {
+      playback.howl.unload()
+    }
   }
 
   private resumeHowlerAudioContext(): void {
     if (Howler.noAudio) return
-    // Lazily creates Howler's shared AudioContext (same entry point Howler uses internally).
     void Howler.volume()
     const ctx = Howler.ctx
     if (!ctx || typeof ctx.resume !== 'function') return
@@ -170,16 +259,26 @@ export class AudioManager {
     this.activeByCategory.set(category, list)
   }
 
+  /** User stop: remove bookkeeping, stop the instance, unload dynamic Howls. */
   private stopPlaybackInstance(playback: ActivePlayback): void {
+    const removed = this.removeFromActiveList(playback)
+    if (!removed) return
+    this.stopHowlSound(playback.howl, playback.howlPlayId)
+    if (!this.isCachedHowlInstance(playback.howl)) {
+      playback.howl.unload()
+    }
+  }
+
+  private removeFromActiveList(playback: ActivePlayback): boolean {
     const list = this.activeByCategory.get(playback.category)
-    if (!list?.length) return
+    if (!list?.length) return false
     const idx = list.findIndex((p) => p.token === playback.token)
-    if (idx === -1) return
+    if (idx === -1) return false
     list.splice(idx, 1)
     if (!list.length) {
       this.activeByCategory.delete(playback.category)
     }
-    this.stopHowlSound(playback.howl, playback.howlPlayId)
+    return true
   }
 
   private stopHowlSound(howl: Howl, howlPlayId?: number): void {
@@ -190,13 +289,16 @@ export class AudioManager {
     }
   }
 
-  /** Sets per-instance gain from manifest + category + optional per-play override (cached Howls). */
-  private applyHowlPlaybackVolume(
-    howl: Howl,
-    def: Readonly<AudioDefinition>,
-    options: AudioPlayOptions,
-  ): void {
-    howl.volume(this.computePlaybackVolume(def, options))
+  /**
+   * Per-instance gain: use `volume(vol, id)` when Howler exposes a play id so shared cached
+   * Howls can overlap at different levels.
+   */
+  private applyPerInstanceVolume(howl: Howl, volume: number, howlPlayId: number | undefined): void {
+    if (howlPlayId !== undefined) {
+      howl.volume(volume, howlPlayId)
+    } else {
+      howl.volume(volume)
+    }
   }
 
   private computePlaybackVolume(def: Readonly<AudioDefinition>, options: AudioPlayOptions): number {
