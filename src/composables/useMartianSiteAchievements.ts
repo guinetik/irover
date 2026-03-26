@@ -1,4 +1,4 @@
-import { ref, computed, watchEffect } from 'vue'
+import { ref, computed, watchEffect, watch } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import { milestonesUnlockedBetween } from '@/lib/rewardTrack'
 import type { RewardTrackMilestone } from '@/lib/rewardTrack'
@@ -6,6 +6,7 @@ import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type AchievementBanner from '@/components/AchievementBanner.vue'
+import { useDSNArchive } from '@/composables/useDSNArchive'
 
 interface Achievement {
   id: string
@@ -82,6 +83,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
   const survivalAchievements = ref<SurvivalAchievement[]>([])
   const samAchievementsData = ref<EventAchievement[]>([])
   const apxsAchievementsData = ref<EventAchievement[]>([])
+  const dsnAchievementsData = ref<EventAchievement[]>([])
 
   const unlockedAchievementIds = ref<string[]>([])
 
@@ -92,6 +94,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
       survivalAchievements.value.length +
       samAchievementsData.value.length +
       apxsAchievementsData.value.length +
+      dsnAchievementsData.value.length +
       rewardTrackMilestones.value.length,
   )
   const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
@@ -105,6 +108,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
         'mars-survival'?: SurvivalAchievement[]
         'sam-analysis'?: EventAchievement[]
         'apxs-analysis'?: EventAchievement[]
+        'dsn-archaeology'?: EventAchievement[]
         'reward-track'?: RewardTrackMilestone[]
       }) => {
         libsAchievements.value = data['libs-calibration'] ?? []
@@ -112,6 +116,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
         survivalAchievements.value = data['mars-survival'] ?? []
         samAchievementsData.value = data['sam-analysis'] ?? []
         apxsAchievementsData.value = data['apxs-analysis'] ?? []
+        dsnAchievementsData.value = data['dsn-archaeology'] ?? []
         if (data['reward-track']) void loadRewardTrack(data['reward-track'])
       },
     )
@@ -143,6 +148,44 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
       }
     }
   }
+
+  function triggerDSNAchievement(event: string): void {
+    for (const ach of dsnAchievementsData.value) {
+      if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
+        unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
+        achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+      }
+    }
+  }
+
+  // DSN Archaeology achievement watcher
+  const dsn = useDSNArchive()
+  watch(() => dsn.discoveries.value.length, (count) => {
+    if (count === 0) return
+    if (count >= 1) triggerDSNAchievement('first-transmission')
+    if (count >= 10) triggerDSNAchievement('ten-transmissions')
+
+    // Per-sender completion
+    const completions = dsn.senderCompletions.value
+    for (const [key, { found, total }] of Object.entries(completions)) {
+      if (total > 0 && found >= total) triggerDSNAchievement(`sender-${key}`)
+    }
+
+    // Corrupted fragments
+    if (dsn.corruptedAllFound.value) triggerDSNAchievement('corrupted-all')
+
+    // Archive complete (all 38 colonist logs excluding TX-039)
+    const { found, total } = dsn.colonistCount.value
+    if (found >= total && total > 0) triggerDSNAchievement('archive-complete')
+
+    // TX-039 read
+    if (dsn.tx039Read.value) triggerDSNAchievement('tx039-read')
+  })
+
+  // TX-039 read needs its own watcher since reading doesn't change discoveries length
+  watch(() => dsn.tx039Read.value, (isRead) => {
+    if (isRead) triggerDSNAchievement('tx039-read')
+  })
 
   watchEffect(() => {
     const sp = chemcamSP.value
@@ -201,5 +244,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
     triggerDanAchievement,
     triggerSamAchievement,
     triggerAPXSAchievement,
+    dsnAchievementsData,
+    triggerDSNAchievement,
   }
 }

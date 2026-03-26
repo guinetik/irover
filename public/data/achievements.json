@@ -190,6 +190,96 @@
       "type": "APXS ANALYSIS"
     }
   ],
+  "dsn-archaeology": [
+    {
+      "id": "dsn-signal-acquired",
+      "event": "first-transmission",
+      "icon": "📡",
+      "title": "SIGNAL ACQUIRED",
+      "description": "Old frequencies. Old voices. Someone was here before you.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-voices-in-static",
+      "event": "ten-transmissions",
+      "icon": "📻",
+      "title": "VOICES IN THE STATIC",
+      "description": "The colony had a name. Ares Station. 47 people. 8 years.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-commanders-log",
+      "event": "sender-vasquez",
+      "icon": "⭐",
+      "title": "COMMANDER'S LOG",
+      "description": "She kept the records. She made the hard calls. She stayed.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-the-grid",
+      "event": "sender-oliveira",
+      "icon": "🔬",
+      "title": "THE GRID",
+      "description": "He found the pattern. 200 meters. 1.2 meters deep. Everywhere.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-power-budget",
+      "event": "sender-nakamura",
+      "icon": "🔋",
+      "title": "POWER BUDGET",
+      "description": "His firmware is still running. In your rover. Right now.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-perseverance",
+      "event": "sender-al-rashid",
+      "icon": "🌱",
+      "title": "PERSEVERANCE, PATIENCE, SPITE",
+      "description": "She named them. Every single one.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-ground-knows",
+      "event": "sender-tanaka",
+      "icon": "🌍",
+      "title": "THE GROUND KNOWS",
+      "description": "'This planet catches you.' She was right.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-last-signal",
+      "event": "sender-cortez",
+      "icon": "📶",
+      "title": "LAST SIGNAL",
+      "description": "6 hours 41 minutes. 2.3 terabytes. Then silence.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-between-neutrons",
+      "event": "corrupted-all",
+      "icon": "✦",
+      "title": "BETWEEN THE NEUTRONS",
+      "description": "The boy. The father. The catcher. It's all in there.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-archive-complete",
+      "event": "archive-complete",
+      "icon": "📚",
+      "title": "ARCHIVE COMPLETE",
+      "description": "You found them all. Now find TX-039.",
+      "type": "DSN ARCHAEOLOGY"
+    },
+    {
+      "id": "dsn-welcome-home",
+      "event": "tx039-read",
+      "icon": "🏠",
+      "title": "WELCOME HOME",
+      "description": "You are the message and the reader. You always were.",
+      "type": "DSN ARCHAEOLOGY"
+    }
+  ],
   "reward-track": [
     {
       "sp": 25,
