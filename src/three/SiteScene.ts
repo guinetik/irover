@@ -10,6 +10,8 @@ import {
   getTouchdownTetherTension,
   isInTouchdownTetherWindow,
 } from '@/lib/skyCraneTouchdown'
+import landingDustVert from '@/three/shaders/landing-dust.vert.glsl?raw'
+import landingDustFrag from '@/three/shaders/landing-dust.frag.glsl?raw'
 
 const ROVER_SCALE = 0.5
 const TOUCHDOWN_STAGE_HEIGHT = 3.8
@@ -396,73 +398,8 @@ export class SiteScene {
       uniforms: {
         uTime: { value: 0 },
       },
-      vertexShader: `
-        attribute float aSpeed;
-        attribute float aSize;
-        attribute float aPhase;
-        attribute float aRise;
-        uniform float uTime;
-        varying float vAlpha;
-        varying float vLife;
-
-        void main() {
-          float life = uTime / 4.0; // 0-1 over dust lifetime
-          vLife = life;
-
-          // Decelerate over time (fast burst then slow)
-          float decel = 1.0 - life * life * 0.6;
-          vec3 pos = position;
-          float dist = length(pos.xz);
-          vec2 dir = dist > 0.01 ? pos.xz / dist : vec2(1.0, 0.0);
-
-          // Radial expansion with deceleration
-          float radial = aSpeed * uTime * decel;
-          pos.xz += dir * radial;
-
-          // Turbulence — swirl and wobble
-          float turb = sin(aPhase + uTime * 2.5) * 0.5 + cos(aPhase * 1.7 + uTime * 1.8) * 0.3;
-          pos.x += turb * (0.3 + life * 0.8);
-          pos.z += cos(aPhase + uTime * 3.0) * turb * 0.4;
-
-          // Vertical rise with slight deceleration
-          pos.y += aRise * uTime * (1.0 - life * 0.4);
-
-          // Fade: quick appearance, slow fade out
-          float fadeIn = smoothstep(0.0, 0.05, life);
-          float fadeOut = 1.0 - smoothstep(0.3, 1.0, life);
-          vAlpha = fadeIn * fadeOut * 0.7;
-
-          // Size grows over time (billowing effect)
-          float size = aSize * (1.0 + uTime * 1.5);
-
-          vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = size * (300.0 / -mvPos.z);
-          gl_Position = projectionMatrix * mvPos;
-        }
-      `,
-      fragmentShader: `
-        varying float vAlpha;
-        varying float vLife;
-
-        void main() {
-          // Soft circular falloff (no square edges)
-          vec2 center = gl_PointCoord - 0.5;
-          float dist = length(center) * 2.0;
-          float circle = 1.0 - smoothstep(0.4, 1.0, dist);
-
-          // Color: warm Mars dust, slightly darker at edges
-          vec3 dustColor = mix(
-            vec3(0.76, 0.58, 0.40),  // core: warm tan
-            vec3(0.55, 0.40, 0.28),  // edge: darker brown
-            dist * 0.6
-          );
-
-          // Slight color shift as particles age (cooler as they disperse)
-          dustColor = mix(dustColor, vec3(0.60, 0.52, 0.45), vLife * 0.4);
-
-          gl_FragColor = vec4(dustColor, vAlpha * circle);
-        }
-      `,
+      vertexShader: landingDustVert,
+      fragmentShader: landingDustFrag,
       transparent: true,
       depthWrite: false,
       blending: THREE.NormalBlending,

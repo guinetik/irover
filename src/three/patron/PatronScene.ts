@@ -5,63 +5,12 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import patronParticlesVert from '@/three/shaders/patron-particles.vert.glsl?raw'
+import patronParticlesFrag from '@/three/shaders/patron-particles.frag.glsl?raw'
 
 const MAX_PARTICLES = 50000
 const MORPH_DURATION = 2.5
 const MOUSE_LERP = 0.05
-
-const vertexShader = /* glsl */ `
-  attribute vec3 aTargetPosition;
-  attribute float aSize;
-  attribute float aRandom;
-
-  uniform float uProgress;
-  uniform float uTime;
-  uniform vec2 uMouse;
-  uniform float uPixelRatio;
-
-  varying float vAlpha;
-
-  void main() {
-    // Morph between random (position) and skull (aTargetPosition)
-    float progress = uProgress;
-    vec3 morphed = mix(position, aTargetPosition, progress);
-
-    // Subtle floating motion when morphed
-    float drift = aRandom * 6.2831;
-    morphed += vec3(
-      sin(uTime * 0.5 + drift) * 0.02 * progress,
-      cos(uTime * 0.7 + drift) * 0.02 * progress,
-      sin(uTime * 0.3 + drift * 0.5) * 0.02 * progress
-    );
-
-    vec4 mvPosition = modelViewMatrix * vec4(morphed, 1.0);
-    gl_Position = projectionMatrix * mvPosition;
-
-    // Size attenuation
-    gl_PointSize = aSize * uPixelRatio * (40.0 / -mvPosition.z);
-
-    // Alpha based on morph progress + randomness
-    vAlpha = 0.15 + 0.35 * progress;
-    vAlpha *= 0.5 + 0.3 * aRandom;
-  }
-`
-
-const fragmentShader = /* glsl */ `
-  varying float vAlpha;
-
-  void main() {
-    // Soft circle
-    float dist = length(gl_PointCoord - 0.5);
-    if (dist > 0.5) discard;
-    float alpha = smoothstep(0.5, 0.15, dist) * vAlpha;
-
-    // Warm orange color
-    vec3 color = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.7, 0.3), vAlpha);
-
-    gl_FragColor = vec4(color, alpha);
-  }
-`
 
 export class PatronScene {
   readonly scene = new THREE.Scene()
@@ -128,8 +77,8 @@ export class PatronScene {
     geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1))
 
     this.material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
+      vertexShader: patronParticlesVert,
+      fragmentShader: patronParticlesFrag,
       uniforms: {
         uProgress: { value: 0 },
         uTime: { value: 0 },

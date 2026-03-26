@@ -29,7 +29,7 @@ src/
 ├── lib/terrain/       # Golombek SFD, mineral catalog + spawn weights (`rocks.ts`); GL in `three/terrain/RockTypes`
 ├── lib/optical/       # ChemCam LIBS spectrum generation (`chemCamSpectrum.ts`)
 ├── lib/neutron/       # DAN passive sampling priors (`danSampling.ts`)
-├── three/           # All Three.js scene code + GLSL shaders
+├── three/           # All Three.js scene code; GLSL in `three/shaders/*.glsl` (import `?raw`)
 ├── types/           # Shared DTOs (landmarks, `terrain` site params, …)
 └── views/           # HomeView (single view)
 ```
@@ -54,7 +54,7 @@ Each layer implements: `init(): Promise<void>`, `update(elapsed: number)`, `disp
 
 - Path alias: `@/` maps to `src/`
 - TypeScript strict mode, ES2020 target
-- GLSL shaders imported via `?raw` suffix
+- **GLSL belongs in `src/three/shaders/`** — keep `.vert.glsl` / `.frag.glsl` as separate files and import them in TypeScript with the `?raw` suffix (e.g. `import frag from '@/three/shaders/foo.frag.glsl?raw'`). Do not embed large shader strings or `` `template` `` GLSL blocks inside `.ts`/`.vue` files; it obscures the pipeline, breaks syntax highlighting, and makes reuse harder. Small dynamic shader snippets built by string concatenation should stay rare and be justified (e.g. generated `#define`s).
 - Areocentric coordinates: latitude (-90 to 90), longitude (-180 to 180, east-positive)
 - Scene units: `GLOBE_RADIUS = 10` (1 unit ≈ 1 Mars radius conceptually)
 - Mars obliquity: 25.19° axial tilt applied to globe group

@@ -1,5 +1,7 @@
 import * as THREE from 'three'
 import type { HeightFn } from './RoverController'
+import roverTrailsVert from '@/three/shaders/rover-trails.vert.glsl?raw'
+import roverTrailsFrag from '@/three/shaders/rover-trails.frag.glsl?raw'
 
 const MAX_POINTS = 600
 const TRACK_WIDTH = 0.18
@@ -40,20 +42,8 @@ export class RoverTrails {
 
     this.material = new THREE.ShaderMaterial({
       uniforms: {},
-      vertexShader: `
-        attribute float aAlpha;
-        varying float vAlpha;
-        void main() {
-          vAlpha = aAlpha;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying float vAlpha;
-        void main() {
-          gl_FragColor = vec4(0.45, 0.35, 0.25, vAlpha * 0.7);
-        }
-      `,
+      vertexShader: roverTrailsVert,
+      fragmentShader: roverTrailsFrag,
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,

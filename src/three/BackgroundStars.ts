@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import type { SceneLayer } from './SceneLayer'
 import { STAR_SPHERE_RADIUS } from './constants'
+import backgroundStarsVert from '@/three/shaders/background-stars.vert.glsl?raw'
+import backgroundStarsFrag from '@/three/shaders/background-stars.frag.glsl?raw'
 
 const STAR_COUNT = 14000
 const POINT_SIZE = 1.4
@@ -50,41 +52,8 @@ export class BackgroundStars implements SceneLayer {
     geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1))
 
     const material = new THREE.RawShaderMaterial({
-      vertexShader: /* glsl */ `
-        precision mediump float;
-        attribute float aSize;
-        attribute float aOpacity;
-        attribute vec3 aColor;
-        attribute float aPhase;
-        attribute vec3 position;
-        uniform mat4 modelViewMatrix;
-        uniform mat4 projectionMatrix;
-        uniform float uTime;
-        varying float vOpacity;
-        varying vec3 vColor;
-
-        void main() {
-          vColor = aColor;
-          float twinkle = sin(uTime * 1.8 + aPhase) * 0.32 + 0.68;
-          vOpacity = aOpacity * twinkle;
-
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = aSize * (620.0 / -mvPosition.z);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: /* glsl */ `
-        precision mediump float;
-        varying float vOpacity;
-        varying vec3 vColor;
-
-        void main() {
-          float dist = length(gl_PointCoord - vec2(0.5));
-          if (dist > 0.5) discard;
-          float alpha = smoothstep(0.5, 0.1, dist) * vOpacity;
-          gl_FragColor = vec4(vColor, alpha);
-        }
-      `,
+      vertexShader: backgroundStarsVert,
+      fragmentShader: backgroundStarsFrag,
       transparent: true,
       depthWrite: false,
       blending: THREE.NormalBlending,
