@@ -1193,8 +1193,11 @@ function handleSamEnqueue(entry: Omit<SamQueueEntry, 'id'>): void {
       consumeItem(ing.itemId, ing.quantity)
     }
   }
-  // Fill in sol
-  const fullEntry = { ...entry, startedAtSol: marsSol.value }
+  // Apply analysis speed modifier to processing duration
+  const speedMult = playerMod('analysisSpeed')
+  const adjustedRemaining = entry.remainingTimeSec / speedMult
+  const adjustedTotal = entry.totalTimeSec / speedMult
+  const fullEntry = { ...entry, startedAtSol: marsSol.value, remainingTimeSec: adjustedRemaining, totalTimeSec: adjustedTotal }
   samEnqueue(fullEntry)
   samDialogVisible.value = false
   triggerSamAchievement('first-analysis')

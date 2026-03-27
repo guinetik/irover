@@ -64,6 +64,8 @@ export class DANController extends InstrumentController {
   prospectStrength = 0
   /** Instrument accuracy modifier from player profile (1.0 = baseline). */
   accuracyMod = 1.0
+  /** Analysis speed modifier from player profile (1.0 = baseline, >1 = faster). */
+  analysisSpeedMod = 1.0
 
   // --- Rover state (set by view each frame) ---
   private roverPos = new THREE.Vector3()
@@ -91,7 +93,7 @@ export class DANController extends InstrumentController {
   private tickSampling(delta: number): void {
     const dist = this.roverPos.distanceTo(this.lastSamplePos)
     const isMoving = dist > MIN_MOVE_DIST
-    const interval = isMoving ? SAMPLE_INTERVAL_MOVING : SAMPLE_INTERVAL_STATIC
+    const interval = (isMoving ? SAMPLE_INTERVAL_MOVING : SAMPLE_INTERVAL_STATIC) / this.analysisSpeedMod
 
     this.sampleTimer += delta
     if (this.sampleTimer < interval) return

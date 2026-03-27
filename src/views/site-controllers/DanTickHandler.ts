@@ -174,6 +174,7 @@ export function createDanTickHandler(
       danInst.featureType = siteTerrainParams.value.featureType ?? 'plain'
     }
     danInst.accuracyMod = playerMod('instrumentAccuracy')
+    danInst.analysisSpeedMod = playerMod('analysisSpeed')
     danInst.update(sceneDelta)
 
     danTotalSamples.value = danInst.totalSamples
@@ -244,7 +245,7 @@ export function createDanTickHandler(
             }
           }
         } else if (danInst.prospectPhase === 'prospecting') {
-          const prospectDurationSec = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION
+          const prospectDurationSec = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION / playerMod('analysisSpeed')
           danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / prospectDurationSec)
           danInst.prospectProgress = danProspectProgress.value
 
