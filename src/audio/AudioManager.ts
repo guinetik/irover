@@ -45,6 +45,8 @@ interface ActivePlayback {
   endHandler: () => void
   playErrorHandler: HowlErrorEventHandler
   loadErrorHandler: HowlErrorEventHandler
+  /** {@link AudioPlayOptions.onEnd} — natural completion and load/play failure (not manual stop). */
+  onEndCallback?: () => void
 }
 
 const DEFAULT_CATEGORY_STATE: Record<AudioCategory, AudioCategoryState> = {
@@ -162,8 +164,10 @@ export class AudioManager {
   }
 
   /**
-   * Plays a registered sound. Dynamic sources pass `options.src` (required for manifest entries
-   * with `allowDynamicSrc: true` and no bundled `src`).
+   * Plays a registered sound.
+   *
+   * Runtime `options.src` is applied only when the manifest entry has `allowDynamicSrc: true`
+   * (e.g. DSN voice). Static UI/SFX entries always use their manifest `src`.
    */
   play(soundId: AudioSoundId, options: AudioPlayOptions = {}): AudioPlaybackHandle {
     const def = getAudioDefinition(soundId)
@@ -188,8 +192,9 @@ export class AudioManager {
 
     this.applyPlaybackModePrelude(def, soundId)
 
+    const allowDynamicSrc = 'allowDynamicSrc' in def && def.allowDynamicSrc === true
     const dynamicSrc =
-      options.src !== undefined && options.src !== '' ? options.src : undefined
+      allowDynamicSrc && options.src !== undefined && options.src !== '' ? options.src : undefined
 
     const howl =
       dynamicSrc !== undefined
@@ -214,9 +219,11 @@ export class AudioManager {
       loadErrorHandler: () => {},
     }
 
+    playback.onEndCallback = options.onEnd
+
     playback.endHandler = () => {
       try {
-        options.onEnd?.()
+        playback.onEndCallback?.()
       } finally {
         this.detachPlaybackListeners(playback)
         this.finalizePlaybackEnded(playback)
@@ -456,9 +463,17 @@ export class AudioManager {
     }
   }
 
-  /** Load/decode failure: no `onEnd`; drop bookkeeping and unload dynamic Howls. */
+  /**
+   * Load/decode failure: invokes {@link ActivePlayback.onEndCallback} (same contract as natural
+   * `end`), then drops bookkeeping and unloads dynamic Howls.
+   */
   private teardownPlaybackFailure(playback: ActivePlayback): void {
     this.detachPlaybackListeners(playback)
+    try {
+      playback.onEndCallback?.()
+    } catch {
+      /* ignore user callback errors */
+    }
     const wasVoice = playback.category === 'voice'
     this.releasePlaybackEffectChain(playback)
     const removed = this.removeFromActiveList(playback)
@@ -668,7 +683,8 @@ export class AudioManager {
     def: Readonly<AudioDefinition>,
     options: AudioPlayOptions,
   ): string | readonly string[] | undefined {
-    if (options.src !== undefined && options.src !== '') {
+    const allowDynamicSrc = 'allowDynamicSrc' in def && def.allowDynamicSrc === true
+    if (allowDynamicSrc && options.src !== undefined && options.src !== '') {
       return options.src
     }
     if ('src' in def && def.src !== undefined) {

@@ -219,9 +219,7 @@ function formatBody(body: string): string {
 }
 
 // --- Audio playback (manifest voice + dynamic src; progress via AudioPlaybackHandle) ---
-/** Howler may not report `playing()` until decode starts; avoid treating early `false` as failure. */
-const PLAYBACK_STARTUP_GRACE_MS = 2000
-
+/** Failure/teardown resets UI via `onEnd` from AudioManager (load/play errors), not polling timeouts. */
 let currentHandle: AudioPlaybackHandle | null = null
 const isPlaying = ref(false)
 const playingTxId = ref<string | null>(null)
@@ -255,7 +253,6 @@ function toggleAudio(tx: DiscoveredTx) {
     src: tx.audioUrl,
     onEnd: stopAudio,
   })
-  const playbackStartedAt = performance.now()
   currentHandle = handle
   playingTxId.value = tx.id
   isPlaying.value = true
@@ -264,11 +261,6 @@ function toggleAudio(tx: DiscoveredTx) {
     if (!currentHandle) return
     if (currentHandle.playing()) {
       audioProgress.value = currentHandle.progress() * 100
-      return
-    }
-    const elapsed = performance.now() - playbackStartedAt
-    if (elapsed > PLAYBACK_STARTUP_GRACE_MS) {
-      stopAudio()
     }
   }, 100)
 }

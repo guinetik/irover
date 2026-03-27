@@ -82,7 +82,15 @@ export interface AudioDefinitionDynamic extends AudioDefinitionCommon {
 export type AudioDefinition = AudioDefinitionStatic | AudioDefinitionDynamic
 
 /**
- * Per-play overrides passed to the runtime when triggering a sound (e.g. dynamic DSN URL).
+ * Per-play overrides passed to the runtime when triggering a sound.
+ *
+ * **`src`** — Only honored when the manifest entry has {@link AudioDefinitionDynamic.allowDynamicSrc}
+ * set to `true`. Static cues always use their bundled manifest `src`; passing `src` for other ids is
+ * ignored.
+ *
+ * **`onEnd`** — Invoked when the instance finishes playing naturally (`end`) **and** when playback is
+ * torn down after a load or decode failure (`loaderror` / `playerror`), so callers can reset UI state
+ * without relying on timeouts. Not invoked for manual {@link AudioPlaybackHandle.stop} (user interrupt).
  */
 export interface AudioPlayOptions {
   src?: string

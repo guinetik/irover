@@ -217,7 +217,7 @@ vi.mock('howler', () => {
 })
 
 import * as audioManifest from '../audioManifest'
-import { NON_DSN_SEEDED_SOUND_IDS } from '../audioManifest'
+import { NON_DSN_SEEDED_SOUND_IDS, SILENT_STATIC_WAV_DATA_URI } from '../audioManifest'
 import {
   VOICE_DUCK_FADE_ATTACK_MS,
   VOICE_DUCK_FADE_RELEASE_MS,
@@ -376,6 +376,12 @@ describe('AudioManager', () => {
     expect(mockCtxResume).toHaveBeenCalled()
   })
 
+  it('ignores options.src for static manifest entries (uses bundled src)', () => {
+    manager.unlock()
+    manager.play('ui.click', { src: 'https://example.com/override.mp3' })
+    expect(getLastMockHowl()?.src[0]).toBe(SILENT_STATIC_WAV_DATA_URI)
+  })
+
   it('applies per-instance volume on each play for shared cached Howls', () => {
     const m = new AudioManager({
       initialCategoryState: { ui: { volume: 1, muted: false } },
@@ -527,6 +533,19 @@ describe('AudioManager', () => {
     firePlayErrorOnLastHowl(1)
     expect(mockUnload).toHaveBeenCalled()
     expect(getLastMockHowl()?.endOnce).toHaveLength(0)
+  })
+
+  it('invokes onEnd when dynamic playback fails with playerror', () => {
+    let ended = false
+    manager.unlock()
+    manager.play('voice.dsnTransmission', {
+      src: '/logs/fail-onend.mp3',
+      onEnd: () => {
+        ended = true
+      },
+    })
+    firePlayErrorOnLastHowl(1)
+    expect(ended).toBe(true)
   })
 
   it('does not unload on playerror when the emitted id does not match (dynamic once is consumed)', () => {
