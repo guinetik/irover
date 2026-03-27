@@ -277,7 +277,7 @@ const manifestById: ManifestById = {
     category: 'sfx',
     load: 'lazy',
     playback: 'single-instance',
-    volume: 0.45,
+    volume: 0.6,
     effect: 'none',
   },
   'sfx.roverTurnOut': {
@@ -286,7 +286,7 @@ const manifestById: ManifestById = {
     category: 'sfx',
     load: 'lazy',
     playback: 'restart',
-    volume: 0.45,
+    volume: 0.6,
     effect: 'none',
   },
 }
