@@ -3,6 +3,7 @@ import { APXSController } from '@/three/instruments'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
+import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
 
@@ -21,6 +22,7 @@ export interface APXSTickRefs {
   crosshairY: Ref<number>
   apxsCountdown: Ref<number>
   apxsState: Ref<APXSCountdownState>
+  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface APXSTickCallbacks {
@@ -29,6 +31,7 @@ export interface APXSTickCallbacks {
   playerMod: (key: keyof ProfileModifiers) => number
   playActionSound: (soundId: 'sfx.apxsContact') => void
   startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
+  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
 }
 
 export function createAPXSTickHandler(

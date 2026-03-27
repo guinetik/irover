@@ -575,6 +575,7 @@ import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
+import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
 
@@ -775,6 +776,10 @@ const chemCamOverlaySequenceActive = ref(false)
 const chemCamOverlaySequenceProgress = ref(0)
 const chemCamOverlaySequenceLabel = ref('')
 const chemCamOverlaySequencePulse = ref(false)
+const drillSpeedBreakdown = ref<SpeedBreakdown | null>(null)
+const chemCamSpeedBreakdown = ref<SpeedBreakdown | null>(null)
+const mastCamSpeedBreakdown = ref<SpeedBreakdown | null>(null)
+const apxsSpeedBreakdown = ref<SpeedBreakdown | null>(null)
 const activeChemCamReadout = computed(() => {
   if (!showChemCamResults.value) return null
   const cc = siteRover.value?.instruments.find(i => i.id === 'chemcam')
@@ -1479,6 +1484,12 @@ function createSiteControllerContext() {
     isSleeping,
     roverPowerProfile: profile,
     playerMod,
+    profileSources: {
+      archetype: playerProfile.archetype ? ARCHETYPES[playerProfile.archetype] : null,
+      foundation: playerProfile.foundation ? FOUNDATIONS[playerProfile.foundation] : null,
+      patron: playerProfile.patron ? PATRONS[playerProfile.patron] : null,
+    },
+    trackModifiers,
     hasPerk,
     tickPower,
     tickThermal,
@@ -1621,6 +1632,10 @@ function createSiteControllerContext() {
       siteWeather,
       remsSurveying,
       micEnabled: micListening,
+      drillSpeedBreakdown,
+      chemCamSpeedBreakdown,
+      mastCamSpeedBreakdown,
+      apxsSpeedBreakdown,
     },
   })
 }

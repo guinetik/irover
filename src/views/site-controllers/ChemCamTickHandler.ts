@@ -5,6 +5,7 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface ChemCamTickRefs {
   chemCamUnreadCount: Ref<number>
@@ -26,6 +27,7 @@ export interface ChemCamTickRefs {
   crosshairY: Ref<number>
   isDrilling: Ref<boolean>
   drillProgress: Ref<number>
+  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface ChemCamTickCallbacks {
@@ -34,6 +36,7 @@ export interface ChemCamTickCallbacks {
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
   startHeldActionSound: (soundId: 'sfx.chemcamFire') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
+  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
 }
 
 /**

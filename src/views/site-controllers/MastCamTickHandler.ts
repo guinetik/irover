@@ -8,6 +8,7 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface MastCamTickRefs {
   mastcamFilterLabel: Ref<string>
@@ -23,6 +24,7 @@ export interface MastCamTickRefs {
   crosshairY: Ref<number>
   isDrilling: Ref<boolean>
   drillProgress: Ref<number>
+  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface MastCamTickCallbacks {
@@ -31,6 +33,7 @@ export interface MastCamTickCallbacks {
   playerMod: (key: keyof ProfileModifiers) => number
   startHeldActionSound: (soundId: 'sfx.mastcamTag') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
+  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
 }
 
 /**

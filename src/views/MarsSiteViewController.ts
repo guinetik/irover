@@ -9,7 +9,7 @@ import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLi
 import { createMarsEnvironment } from '@/three/MarsEnvironment'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
-import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
+import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
 import { listOrbitalDropItemIds } from '@/types/orbitalDrop'
@@ -27,6 +27,7 @@ import {
 import type { ThermalTickInput, ThermalZone } from '@/composables/useMarsThermal'
 import type { RemsHudSnapshot, RemsWeatherTickInput } from '@/composables/useSiteRemsWeather'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { SamQueueEntry } from '@/composables/useSamQueue'
 import type { APXSQueueEntry } from '@/composables/useAPXSQueue'
@@ -323,6 +324,10 @@ export interface MarsSiteViewRefs {
   remsSurveying: Ref<boolean>
   /** Mic passive subsystem enabled state — drives ambient audio layers. */
   micEnabled: Ref<boolean>
+  drillSpeedBreakdown: Ref<SpeedBreakdown | null>
+  chemCamSpeedBreakdown: Ref<SpeedBreakdown | null>
+  mastCamSpeedBreakdown: Ref<SpeedBreakdown | null>
+  apxsSpeedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -336,6 +341,14 @@ export interface MarsSiteViewContext {
   isSleeping: Ref<boolean>
   roverPowerProfile: RoverPowerProfile
   playerMod: (key: keyof ProfileModifiers) => number
+  /** Profile source definitions for speed breakdown display. */
+  profileSources: {
+    archetype: import('@/lib/instrumentSpeedBreakdown').ProfileSource | null
+    foundation: import('@/lib/instrumentSpeedBreakdown').ProfileSource | null
+    patron: import('@/lib/instrumentSpeedBreakdown').ProfileSource | null
+  }
+  /** Accumulated reward track modifiers for speed breakdown display. */
+  trackModifiers: Ref<Partial<ProfileModifiers>>
   hasPerk: (perkId: string) => boolean
   tickPower: (deltaSeconds: number, input: PowerTickInput) => void
   tickThermal: (deltaSeconds: number, input: ThermalTickInput) => void
@@ -491,6 +504,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let roverSpawnCaptured = false
   let firstMissionDelivered = false
   let landingSoundPlayed = false
+  /** After rover is ready once, persist intro-skip so the next visit loads deployed. */
+  let siteIntroSkipPersisted = false
   let landingSoundHandle: import('@/audio/audioTypes').AudioPlaybackHandle | null = null
   let landingSoundFadeVol = 0
   let thrusterSoundHandle: import('@/audio/audioTypes').AudioPlaybackHandle | null = null
@@ -958,6 +973,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         descending.value = false
         deploying.value = false
         deployProgress.value = 1
+      }
+
+      if (roverReady && !siteIntroSkipPersisted) {
+        siteIntroSkipPersisted = true
+        setSiteIntroSequenceSkipped(true)
       }
 
       if (roverReady && !gameClock.roverClockRunning.value) {

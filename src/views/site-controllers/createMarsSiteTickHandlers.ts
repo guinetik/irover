@@ -1,4 +1,5 @@
 import type { MarsSiteViewContext } from '@/views/MarsSiteViewController'
+import type { SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
 import { createDanTickHandler } from './DanTickHandler'
 import { createDrillTickHandler } from './DrillTickHandler'
@@ -58,6 +59,14 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     micEnabled,
   } = refs
 
+  const getSpeedBreakdownBase = (): Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'> => ({
+    modifierKey: 'analysisSpeed',
+    archetype: ctx.profileSources.archetype,
+    foundation: ctx.profileSources.foundation,
+    patron: ctx.profileSources.patron,
+    trackModifiers: ctx.trackModifiers.value,
+  })
+
   const roverVfxHandler = createRoverVfxTickHandler({
     rtgPhase: refs.rtgPhase,
     rtgPhaseProgress: refs.rtgPhaseProgress,
@@ -109,6 +118,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       drillProgress: refs.drillProgress,
       isDrilling: refs.isDrilling,
+      speedBreakdown: refs.drillSpeedBreakdown,
     },
     {
       sampleToastRef: ctx.sampleToastRef,
@@ -116,6 +126,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       awardSP: ctx.awardSP,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.drillStart'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
+      getSpeedBreakdownBase,
     },
   )
 
@@ -134,6 +145,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       isDrilling: refs.isDrilling,
       drillProgress: refs.drillProgress,
+      speedBreakdown: refs.mastCamSpeedBreakdown,
     },
     {
       sampleToastRef: ctx.sampleToastRef,
@@ -141,6 +153,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playerMod: ctx.playerMod,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.mastcamTag'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
+      getSpeedBreakdownBase,
     },
   )
 
@@ -165,6 +178,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       isDrilling: refs.isDrilling,
       drillProgress: refs.drillProgress,
+      speedBreakdown: refs.chemCamSpeedBreakdown,
     },
     {
       sampleToastRef: ctx.sampleToastRef,
@@ -172,6 +186,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       awardSP: ctx.awardSP,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.chemcamFire'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
+      getSpeedBreakdownBase,
     },
   )
 
@@ -183,6 +198,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       apxsCountdown: refs.apxsCountdown,
       apxsState: refs.apxsState,
+      speedBreakdown: refs.apxsSpeedBreakdown,
     },
     {
       onLaunchMinigame: ctx.onAPXSLaunchMinigame,
@@ -190,6 +206,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playerMod: ctx.playerMod,
       playActionSound: () => ctx.playInstrumentActionSound('sfx.apxsContact'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
+      getSpeedBreakdownBase,
     },
   )
 
