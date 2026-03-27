@@ -120,6 +120,9 @@ export class ChemCamController extends InstrumentController {
   set tiltAngle(v: number) { mastState.tiltAngle = v }
   get fov() { return mastState.fov }
   set fov(v: number) { mastState.fov = v }
+  /** True only on frames where active input actually changed mast pan/tilt. */
+  private mastActuatingThisFrame = false
+  get isMastActuating(): boolean { return this.mastActuatingThisFrame }
 
   // Camera state for RoverController
   readonly mastWorldPos = new THREE.Vector3()
@@ -152,6 +155,8 @@ export class ChemCamController extends InstrumentController {
 
   /** True while E is held — IR pulse train runs only while this is true (same idea as arm drill hold-to-fire). */
   private _eFireHeld = false
+  /** True while the fire trigger is physically held, even if the phase has not yet updated. */
+  get isFireTriggerHeld(): boolean { return this._eFireHeld }
 
   override attach(rover: THREE.Group): void {
     super.attach(rover)
@@ -201,6 +206,9 @@ export class ChemCamController extends InstrumentController {
   }
 
   override handleInput(keys: Set<string>, delta: number): void {
+    const panBefore = this.panAngle
+    const tiltBefore = this.tiltAngle
+
     // Pan/tilt mast
     if (keys.has('KeyA') || keys.has('ArrowLeft')) this.panAngle += PAN_SPEED * delta
     if (keys.has('KeyD') || keys.has('ArrowRight')) this.panAngle -= PAN_SPEED * delta
@@ -211,6 +219,9 @@ export class ChemCamController extends InstrumentController {
 
     // E hold to fire IR (release E aborts pulse train — mirrors arm drill hold-to-fire)
     this._eFireHeld = keys.has('KeyE')
+
+    this.mastActuatingThisFrame =
+      Math.abs(this.panAngle - panBefore) > 1e-6 || Math.abs(this.tiltAngle - tiltBefore) > 1e-6
 
     if (mastPanTiltKeysHeld(keys)) mastState.actuatorKeysHeld = true
   }

@@ -99,7 +99,7 @@ describe('MicTickHandler', () => {
 
     // Find day layer calls (index 1 = ambient.day)
     const dayCalls = setAmbientVolume.mock.calls.filter(
-      (_call: [AudioPlaybackHandle, number], idx: number) => idx % 6 === 1,
+      (_call, idx: number) => idx % 6 === 1,
     )
     const lastDayVol = dayCalls[dayCalls.length - 1][1] as number
     expect(lastDayVol).toBeGreaterThan(0.8)
@@ -118,7 +118,7 @@ describe('MicTickHandler', () => {
     }
 
     const nightCalls = setAmbientVolume.mock.calls.filter(
-      (_call: [AudioPlaybackHandle, number], idx: number) => idx % 6 === 2,
+      (_call, idx: number) => idx % 6 === 2,
     )
     const lastNightVol = nightCalls[nightCalls.length - 1][1] as number
     expect(lastNightVol).toBeGreaterThan(0.8)
@@ -142,7 +142,7 @@ describe('MicTickHandler', () => {
 
     // Storm is index 4
     const stormCalls = setAmbientVolume.mock.calls.filter(
-      (_call: [AudioPlaybackHandle, number], idx: number) => idx % 6 === 4,
+      (_call, idx: number) => idx % 6 === 4,
     )
     const lastStormVol = stormCalls[stormCalls.length - 1][1] as number
     expect(lastStormVol).toBeGreaterThan(0.2)
@@ -166,7 +166,7 @@ describe('MicTickHandler', () => {
     }
 
     const quakeCalls3 = setAmbientVolume.mock.calls.filter(
-      (_call: [AudioPlaybackHandle, number], idx: number) => idx % 6 === 5,
+      (_call, idx: number) => idx % 6 === 5,
     )
     const lastQuakeVol3 = quakeCalls3[quakeCalls3.length - 1][1] as number
     expect(lastQuakeVol3).toBeLessThan(0.01)
@@ -182,7 +182,7 @@ describe('MicTickHandler', () => {
     }
 
     const quakeCalls5 = setAmbientVolume.mock.calls.filter(
-      (_call: [AudioPlaybackHandle, number], idx: number) => idx % 6 === 5,
+      (_call, idx: number) => idx % 6 === 5,
     )
     const lastQuakeVol5 = quakeCalls5[quakeCalls5.length - 1][1] as number
     expect(lastQuakeVol5).toBeGreaterThan(0.5)

@@ -1,31 +1,31 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="message" class="msg-overlay" @click.self="$emit('close')">
+      <div v-if="message" class="msg-overlay" @click.self="emitClose">
         <div class="msg-dialog" role="dialog" aria-modal="true">
           <div class="msg-head">
             <div class="msg-from" v-if="message.from">FROM: {{ message.from }}</div>
             <h2 class="msg-subject">{{ message.subject }}</h2>
-            <button class="msg-close" @click="$emit('close')">&times;</button>
+            <button type="button" class="msg-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
           <div class="msg-body">
             <p>{{ message.body }}</p>
           </div>
           <div class="msg-footer">
             <template v-if="message.type === 'mission' && !missionAccepted">
-              <button class="msg-btn msg-btn-accept" @click="$emit('accept-mission', message.missionId ?? '')">
+              <button type="button" class="msg-btn msg-btn-accept" @click="emitAcceptMission(message.missionId ?? '')">
                 ACCEPT MISSION
               </button>
-              <button class="msg-btn msg-btn-later" @click="$emit('close')">
+              <button type="button" class="msg-btn msg-btn-later" @click="emitClose">
                 MAYBE LATER
               </button>
             </template>
             <template v-else-if="message.type === 'mission' && missionAccepted">
               <span class="msg-accepted-label">MISSION ACCEPTED</span>
-              <button class="msg-btn msg-btn-later" @click="$emit('close')">CLOSE</button>
+              <button type="button" class="msg-btn msg-btn-later" @click="emitClose">CLOSE</button>
             </template>
             <template v-else>
-              <button class="msg-btn msg-btn-later" @click="$emit('close')">CLOSE</button>
+              <button type="button" class="msg-btn msg-btn-later" @click="emitClose">CLOSE</button>
             </template>
           </div>
         </div>
@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAudio } from '@/audio/useAudio'
 import type { LGAMessage } from '@/types/lgaMailbox'
 
 defineProps<{
@@ -42,10 +43,30 @@ defineProps<{
   missionAccepted: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   'accept-mission': [missionId: string]
 }>()
+
+const audio = useAudio()
+
+/**
+ * Navbar / panel open cue — used for LGA message dismissals and mission acceptance.
+ */
+function playConfirmCue(): void {
+  audio.unlock()
+  audio.play('ui.confirm')
+}
+
+function emitClose(): void {
+  playConfirmCue()
+  emit('close')
+}
+
+function emitAcceptMission(missionId: string): void {
+  playConfirmCue()
+  emit('accept-mission', missionId)
+}
 </script>
 
 <style scoped>

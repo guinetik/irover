@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import { MARS_SOL_CLOCK_MINUTES } from '@/lib/marsTimeConstants'
 
@@ -13,6 +15,8 @@ const emit = defineEmits<{
   'open-message': [message: LGAMessage]
 }>()
 
+const audio = useAudio()
+
 const activeTab = ref<'inbox' | 'sent'>('inbox')
 const expandedId = ref<string | null>(null)
 
@@ -20,10 +24,29 @@ const inbox = computed(() => props.messages.filter(m => m.direction === 'receive
 const sent = computed(() => props.messages.filter(m => m.direction === 'sent').reverse())
 const displayedMessages = computed(() => activeTab.value === 'inbox' ? inbox.value : sent.value)
 
+/**
+ * Plays a manifest UI cue in the user-gesture stack (unlock + one-shot).
+ */
+function playUiCue(soundId: AudioSoundId): void {
+  audio.unlock()
+  audio.play(soundId)
+}
+
+/**
+ * Switches inbox / sent tab with the shared tab-toggle cue.
+ */
+function setTab(tab: 'inbox' | 'sent'): void {
+  if (activeTab.value === tab) return
+  playUiCue('ui.switch')
+  activeTab.value = tab
+}
+
 function toggleMessage(msg: LGAMessage) {
   if (expandedId.value === msg.id) {
+    playUiCue('ui.switch')
     expandedId.value = null
   } else {
+    playUiCue('ui.science')
     expandedId.value = msg.id
     if (!msg.read) emit('markRead', msg.id)
     emit('open-message', msg)
@@ -48,7 +71,8 @@ function formatTimeOfDay(tod: number): string {
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'inbox' }"
-        @click="activeTab = 'inbox'"
+        type="button"
+        @click="setTab('inbox')"
       >
         INBOX
         <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
@@ -56,7 +80,8 @@ function formatTimeOfDay(tod: number): string {
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'sent' }"
-        @click="activeTab = 'sent'"
+        type="button"
+        @click="setTab('sent')"
       >
         SENT
       </button>

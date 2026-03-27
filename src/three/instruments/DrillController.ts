@@ -47,6 +47,8 @@ export class DrillController extends InstrumentController {
   targeting: RockTargeting | null = null
   private drill: LaserDrill | null = null
   private drilling = false  // E key held
+  /** Prevents auto-restarting the drill until the player releases E after a successful sample. */
+  private waitingForTriggerRelease = false
   private currentTarget: TargetResult | null = null
 
   // 3D target indicator
@@ -137,7 +139,11 @@ export class DrillController extends InstrumentController {
     }
 
     // E key triggers drill
-    this.drilling = keys.has('KeyE')
+    const triggerHeld = keys.has('KeyE')
+    if (!triggerHeld) {
+      this.waitingForTriggerRelease = false
+    }
+    this.drilling = triggerHeld && !this.waitingForTriggerRelease
   }
 
   override update(delta: number): void {
@@ -208,7 +214,9 @@ export class DrillController extends InstrumentController {
 
       if (this.drill.isComplete && this.currentTarget) {
         this.collectSample(this.currentTarget.rock)
-        this.drill.isComplete = false
+        this.waitingForTriggerRelease = true
+        this.drilling = false
+        this.drill.cancelDrill()
       }
     }
   }
@@ -291,6 +299,7 @@ export class DrillController extends InstrumentController {
    */
   deactivate(): void {
     this.drilling = false
+    this.waitingForTriggerRelease = false
     this.drill?.cancelDrill()
   }
 

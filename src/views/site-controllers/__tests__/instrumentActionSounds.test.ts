@@ -635,7 +635,7 @@ describe('instrument action sounds', () => {
   it('starts the DAN sound while passive scanning is enabled and stops it when disabled', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
-    const playActionSound = vi.fn()
+    const startHeldProspectingSound = vi.fn(() => makeHandle())
     const dan = new DANController()
 
     const handler = createDanTickHandler(
@@ -660,7 +660,7 @@ describe('instrument action sounds', () => {
         sampleToastRef: ref(null),
         playerMod: () => 1,
         awardDAN: () => null,
-        playActionSound,
+        startHeldProspectingSound,
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
         startHeldActionSound,
@@ -682,13 +682,14 @@ describe('instrument action sounds', () => {
     dan.passiveSubsystemEnabled = false
     handler.tick(fctx)
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
-    expect(playActionSound).not.toHaveBeenCalled()
+    expect(startHeldProspectingSound).not.toHaveBeenCalled()
   })
 
-  it('plays the DAN prospecting cue when prospecting begins', () => {
-    const heldHandle = makeHandle()
-    const startHeldActionSound = vi.fn(() => heldHandle)
-    const playActionSound = vi.fn()
+  it('loops the DAN prospecting sound while prospecting is active', () => {
+    const scanHandle = makeHandle()
+    const prospectHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => scanHandle)
+    const startHeldProspectingSound = vi.fn(() => prospectHandle)
     const dan = new DANController()
     dan.passiveSubsystemEnabled = true
     dan.pendingHit = {
@@ -720,7 +721,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         awardDAN: () => null,
         startHeldActionSound,
-        playActionSound,
+        startHeldProspectingSound,
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
       },
@@ -734,7 +735,7 @@ describe('instrument action sounds', () => {
     })
     handler.handleDanProspect(fctx)
     handler.tick(fctx)
-    expect(playActionSound).not.toHaveBeenCalled()
+    expect(startHeldProspectingSound).not.toHaveBeenCalled()
 
     handler.tick(makeFrameContext(dan, {
       sceneDelta: 4.1,
@@ -743,7 +744,14 @@ describe('instrument action sounds', () => {
         config: { moveSpeed: 5 },
       } as SiteFrameContext['rover'],
     }))
-    expect(playActionSound).toHaveBeenCalledTimes(1)
-    expect(playActionSound).toHaveBeenCalledWith('sfx.danProspecting')
+    expect(startHeldProspectingSound).toHaveBeenCalledTimes(1)
+    expect(startHeldProspectingSound).toHaveBeenCalledWith('sfx.danProspecting')
+
+    handler.tick(fctx)
+    expect(startHeldProspectingSound).toHaveBeenCalledTimes(1)
+
+    dan.prospectPhase = 'idle'
+    handler.tick(fctx)
+    expect(prospectHandle.stop).toHaveBeenCalledTimes(1)
   })
 })

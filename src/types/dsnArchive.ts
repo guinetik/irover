@@ -1,6 +1,10 @@
 export type TransmissionRarity = 'common' | 'uncommon' | 'rare' | 'legendary'
 export type TransmissionCategory = 'colonist' | 'echo'
 
+/**
+ * One catalog row in the DSN archive. Choosing a row in the UI plays manifest cue
+ * `ui.dsnArchiveSelect` (`/sound/dsn-select.mp3`); see `DSNArchiveDialog.selectTransmission`.
+ */
 export interface DSNTransmission {
   id: string
   category: TransmissionCategory

@@ -35,7 +35,7 @@
                       type="button"
                       class="science-acc-item"
                       :class="{ active: s.archiveId === selectedId }"
-                      @click="selectedId = s.archiveId"
+                      @click="selectChemCamReport(s.archiveId)"
                     >
                       <span class="sai-rock">{{ s.rockLabel }}</span>
                       <span class="sai-meta font-instrument">SOL {{ s.capturedSol }} · {{ formatShortDate(s.capturedAtMs) }}
@@ -72,7 +72,7 @@
                       type="button"
                       class="science-acc-item"
                       :class="{ active: p.archiveId === selectedDanId }"
-                      @click="selectedDanId = p.archiveId"
+                      @click="selectDanReport(p.archiveId)"
                     >
                       <span class="sai-rock">{{ p.quality }} Signal{{ p.waterConfirmed ? ' — WATER' : '' }}</span>
                       <span class="sai-meta font-instrument">SOL {{ p.capturedSol }} · {{ formatShortDate(p.capturedAtMs) }}
@@ -95,7 +95,7 @@
                   <li v-for="r in sortedSamResults" :key="r.archiveId">
                     <button type="button" class="science-acc-item"
                       :class="{ active: r.archiveId === selectedSamId }"
-                      @click="selectedSamId = r.archiveId">
+                      @click="selectSamReport(r.archiveId)">
                       <span class="sai-rock" :style="{ color: RARITY_COLORS[r.rarity] ?? '#888' }">{{ r.discoveryName }}</span>
                       <span class="sai-meta font-instrument">SOL {{ r.capturedSol }} · {{ r.modeName }}
                         <span v-if="r.transmitted" class="sai-tx-tag transmitted">TX</span>
@@ -118,7 +118,7 @@
                   <li v-for="a in sortedApxsResults" :key="a.archiveId">
                     <button type="button" class="science-acc-item"
                       :class="{ active: a.archiveId === selectedApxsId }"
-                      @click="selectedApxsId = a.archiveId">
+                      @click="selectApxsReport(a.archiveId)">
                       <span class="sai-rock">{{ a.rockLabel }}</span>
                       <span class="sai-sol font-instrument">Sol {{ a.capturedSol }}
                         <span v-if="a.transmitted" class="sai-tx-tag transmitted">TX</span>
@@ -322,6 +322,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useAudio } from '@/audio/useAudio'
 import type { ArchivedChemCamSpectrum } from '@/types/chemcamArchive'
 import type { SpectrumPeak } from '@/types/chemcam'
 import type { ArchivedDANProspect } from '@/types/danArchive'
@@ -342,6 +343,7 @@ const emit = defineEmits<{
   queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
   dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
 }>()
+const audio = useAudio()
 
 const chemcamExpanded = ref(true)
 const selectedId = ref<string | null>(null)
@@ -356,6 +358,34 @@ const apxsExpanded = ref(false)
 const selectedApxsId = ref<string | null>(null)
 
 const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs'>('chemcam')
+
+/**
+ * Plays the science-log report selection cue.
+ */
+function playScienceSelectionCue(): void {
+  audio.unlock()
+  audio.play('ui.science')
+}
+
+function selectChemCamReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedId.value = archiveId
+}
+
+function selectDanReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedDanId.value = archiveId
+}
+
+function selectSamReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedSamId.value = archiveId
+}
+
+function selectApxsReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedApxsId.value = archiveId
+}
 
 watch(selectedDanId, (id) => {
   if (id) detailMode.value = 'dan'

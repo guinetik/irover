@@ -138,6 +138,7 @@ import { useAudio } from '@/audio/useAudio'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
+import { startDsnArchivePlayback } from './dsnArchivePlayback'
 
 const audio = useAudio()
 
@@ -206,6 +207,10 @@ const selectedTx = computed(() => {
 })
 
 function selectTransmission(id: string) {
+  if (selectedId.value !== id) {
+    audio.unlock()
+    audio.play('ui.dsnArchiveSelect')
+  }
   selectedId.value = id
   markRead(id)
 }
@@ -246,13 +251,8 @@ function toggleAudio(tx: DiscoveredTx) {
     return
   }
   stopAudio()
-  if (!tx.audioUrl) return
-  // User gesture: unlock first so we never queue a pending handle or noop from “locked” state.
-  audio.unlock()
-  const handle = audio.play('voice.dsnTransmission', {
-    src: tx.audioUrl,
-    onEnd: stopAudio,
-  })
+  const handle = startDsnArchivePlayback(audio, tx, stopAudio)
+  if (!handle) return
   currentHandle = handle
   playingTxId.value = tx.id
   isPlaying.value = true

@@ -68,7 +68,7 @@ const props = defineProps<{
 defineEmits<{ close: [] }>()
 
 const danImgSrc = computed(() => {
-  try { return new URL('../../../inspo/dan.png', import.meta.url).href } catch { return '' }
+  try { return new URL('/inspo/dan.png', import.meta.url).href } catch { return '' }
 })
 
 const qualityLabel = computed(() => {

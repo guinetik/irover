@@ -43,6 +43,9 @@ export class MastCamController extends InstrumentController {
   set tiltAngle(v: number) { mastState.tiltAngle = v }
   get fov() { return mastState.fov }
   set fov(v: number) { mastState.fov = v }
+  /** True only on frames where active input actually changed mast pan/tilt. */
+  private mastActuatingThisFrame = false
+  get isMastActuating(): boolean { return this.mastActuatingThisFrame }
 
   // Survey state
   private rocks: THREE.Mesh[] = []
@@ -60,6 +63,8 @@ export class MastCamController extends InstrumentController {
   private scanProgress = 0
   durationMultiplier = 1.0
   scanTarget: THREE.Mesh | null = null
+  /** True while the scan trigger is physically held, regardless of target validity. */
+  get isScanTriggerHeld(): boolean { return this.scanning }
   /** Persistent tag markers above scanned rocks — survive mode exit */
   private tagMarkers = new Map<THREE.Mesh, THREE.Mesh>()
   /** Callback when a scan completes — set by view for SP awards */
@@ -122,6 +127,9 @@ export class MastCamController extends InstrumentController {
   }
 
   override handleInput(keys: Set<string>, delta: number): void {
+    const panBefore = this.panAngle
+    const tiltBefore = this.tiltAngle
+
     // A/D to pan mast (yaw)
     if (keys.has('KeyA') || keys.has('ArrowLeft')) {
       this.panAngle += PAN_SPEED * delta
@@ -146,6 +154,9 @@ export class MastCamController extends InstrumentController {
 
     // E to scan (hold)
     this.scanning = keys.has('KeyE')
+
+    this.mastActuatingThisFrame =
+      Math.abs(this.panAngle - panBefore) > 1e-6 || Math.abs(this.tiltAngle - tiltBefore) > 1e-6
 
     if (mastPanTiltKeysHeld(keys)) mastState.actuatorKeysHeld = true
   }

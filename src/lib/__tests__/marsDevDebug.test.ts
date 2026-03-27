@@ -11,6 +11,7 @@ describe('installMarsDevDebugApi', () => {
     const spawnRandomInventoryItems = vi.fn(() => ['a', 'b', 'c'])
     const spawnInventoryItemById = vi.fn(() => ({ ok: true as const }))
     const addSciencePoints = vi.fn(() => ({ ok: true as const, amount: 100 }))
+    const triggerStorm = vi.fn()
     const setMissionForDev = vi.fn(() => ({
       ok: true as const,
       missionId: 'm01',
@@ -22,6 +23,7 @@ describe('installMarsDevDebugApi', () => {
       spawnRandomInventoryItems,
       spawnInventoryItemById,
       addSciencePoints,
+      triggerStorm,
       setMissionForDev,
     })
 
@@ -44,6 +46,9 @@ describe('installMarsDevDebugApi', () => {
       priorCompletedIds: [],
     })
     expect(setMissionForDev).toHaveBeenCalledWith(2)
+
+    api?.weather.triggerStorm(4)
+    expect(triggerStorm).toHaveBeenCalledWith(4)
 
     dispose()
     expect((globalThis as { MarsDev?: unknown }).MarsDev).toBeUndefined()

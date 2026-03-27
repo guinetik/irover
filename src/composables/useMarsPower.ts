@@ -312,11 +312,13 @@ export function useMarsPower() {
     powerConsumptionLines.value = lines
 
     // --- Integrate battery ---
+    // During critical-power sleep everything is dedicated to restoring charge → 2× recharge rate
+    const whPerWSec = isSleeping.value ? ECONOMY_WH_PER_W_SEC * 2 : ECONOMY_WH_PER_W_SEC
     const net = generationW.value - consumptionW.value
     const cap = capacityWh.value
     batteryWh.value = Math.max(
       0,
-      Math.min(cap, batteryWh.value + net * deltaSeconds * ECONOMY_WH_PER_W_SEC),
+      Math.min(cap, batteryWh.value + net * deltaSeconds * whPerWSec),
     )
 
     // --- Sleep mode transitions ---

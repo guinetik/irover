@@ -34,6 +34,7 @@ export interface DanTickCallbacks {
   playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
   startHeldActionSound: (soundId: 'sfx.danScan') => AudioPlaybackHandle
+  startHeldProspectingSound: (soundId: 'sfx.danProspecting') => AudioPlaybackHandle
   triggerDanAchievement: (event: string) => void
   archiveDanProspect: (params: {
     capturedSol: number
@@ -80,6 +81,7 @@ export function createDanTickHandler(
     playerMod,
     awardDAN,
     startHeldActionSound,
+    startHeldProspectingSound,
     triggerDanAchievement,
     archiveDanProspect,
   } = callbacks
@@ -89,6 +91,7 @@ export function createDanTickHandler(
   const danCompletedDiscs: THREE.Mesh[] = []
   let vfxInitialised = false
   let heldDanPlayback: AudioPlaybackHandle | null = null
+  let heldDanProspectingPlayback: AudioPlaybackHandle | null = null
 
   /**
    * Keeps the DAN scan loop owned by this handler and tied to the passive subsystem state.
@@ -100,6 +103,18 @@ export function createDanTickHandler(
     }
     heldDanPlayback?.stop()
     heldDanPlayback = null
+  }
+
+  /**
+   * Keeps the DAN prospecting loop owned by this handler and tied to the active prospect phase.
+   */
+  function syncDanProspectingPlayback(enabled: boolean): void {
+    if (enabled) {
+      heldDanProspectingPlayback ??= startHeldProspectingSound('sfx.danProspecting')
+      return
+    }
+    heldDanProspectingPlayback?.stop()
+    heldDanProspectingPlayback = null
   }
 
   function initIfReady(fctx: SiteFrameContext): void {
@@ -146,6 +161,7 @@ export function createDanTickHandler(
     const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
     if (!danInst || !fctx.roverReady) {
       syncDanScanPlayback(false)
+      syncDanProspectingPlayback(false)
       return
     }
 
@@ -309,10 +325,12 @@ export function createDanTickHandler(
         }
       }
     }
+    syncDanProspectingPlayback(danInst.prospectPhase === 'prospecting')
   }
 
   function dispose(): void {
     syncDanScanPlayback(false)
+    syncDanProspectingPlayback(false)
     if (danDiscMesh) {
       danDiscMesh.geometry.dispose()
       ;(danDiscMesh.material as THREE.Material).dispose()

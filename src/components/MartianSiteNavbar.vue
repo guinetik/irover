@@ -130,8 +130,13 @@ function handleMissionLogClick(): void {
   emit('open-mission-log')
 }
 
+/**
+ * Trophy opens achievements — play the achievement sting here (same handler as the click) so it is not
+ * lost behind `ui.confirm` or a parent listener running after emit.
+ */
 function handleAchievementsClick(): void {
-  playConfirmCue()
+  audio.unlock()
+  audio.play('ui.achievement')
   emit('open-achievements')
 }
 

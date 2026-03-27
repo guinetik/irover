@@ -206,14 +206,14 @@
               class="ov-btn-primary ov-btn-rtg-overdrive"
               :class="{ disabled: !rtgOverdriveReady || isActiveMode }"
               :disabled="!rtgOverdriveReady || isActiveMode"
-              @click="rtgOverdriveReady && !isActiveMode && $emit('rtgOverdrive')"
+              @click="handleRtgOverdriveClick"
             >OVERDRIVE</button>
             <button
               class="ov-btn-primary ov-btn-rtg-shunt"
               :class="{ disabled: !rtgConservationReady || isActiveMode }"
               :disabled="!rtgConservationReady || isActiveMode"
               :title="rtgConservationCooldownTitle"
-              @click="rtgConservationReady && !isActiveMode && $emit('rtgConservation')"
+              @click="handleRtgConservationClick"
             >POWER SHUNT</button>
           </template>
           <template v-else-if="activeSlot === HEATER_SLOT">
@@ -229,7 +229,7 @@
               class="ov-btn-primary"
               :class="{ disabled: !canActivate || isActiveMode }"
               :disabled="!canActivate || isActiveMode"
-              @click="canActivate && !isActiveMode && $emit('activate')"
+              @click="handleActivateClick"
             >{{ passiveSubsystemEnabled ? 'STANDBY' : 'ACTIVATE' }}</button>
             <button
               v-if="activeSlot === 5 && danHitAvailable && danProspectPhase === 'idle'"
@@ -242,7 +242,7 @@
               class="ov-btn-primary"
               :class="{ disabled: !canActivate || isActiveMode }"
               :disabled="!canActivate || isActiveMode"
-              @click="canActivate && !isActiveMode && $emit('activate')"
+              @click="handleActivateClick"
             >ACTIVATE</button>
           </template>
           <div class="ov-btn-row">
@@ -291,6 +291,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue'
+import { useAudio } from '@/audio/useAudio'
 import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
 import { DUST_STORM_LEVEL_LABELS, type RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
 
@@ -427,7 +428,7 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
   },
 }
 
-defineEmits<{
+const emit = defineEmits<{
   activate: []
   repair: []
   installUpgrade: []
@@ -440,6 +441,7 @@ defineEmits<{
   apxsSeeResults: []
   toggleDsnArchaeology: []
 }>()
+const audio = useAudio()
 
 export interface ThermalDisplay {
   internalTempC: number
@@ -560,6 +562,34 @@ const props = withDefaults(
 )
 
 const upgradeOpen = ref(false)
+
+/**
+ * Dispatches activation from either activate button variant.
+ */
+function handleActivateClick(): void {
+  if (!props.canActivate || props.isActiveMode) return
+  emit('activate')
+}
+
+/**
+ * Plays the shared switch cue before opening RTG overdrive confirmation.
+ */
+function handleRtgOverdriveClick(): void {
+  if (!props.rtgOverdriveReady || props.isActiveMode) return
+  audio.unlock()
+  audio.play('ui.switch')
+  emit('rtgOverdrive')
+}
+
+/**
+ * Plays the shared switch cue before opening RTG power shunt confirmation.
+ */
+function handleRtgConservationClick(): void {
+  if (!props.rtgConservationReady || props.isActiveMode) return
+  audio.unlock()
+  audio.play('ui.switch')
+  emit('rtgConservation')
+}
 
 // Reset upgrade panel when switching instruments
 watch(() => props.activeSlot, () => {

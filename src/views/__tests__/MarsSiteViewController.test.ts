@@ -26,6 +26,6 @@ describe('getExitedActiveInstrumentSoundIds', () => {
         { mode: 'active', instrumentId: 'mastcam' },
         { mode: 'active', instrumentId: 'drill' },
       ),
-    ).toEqual(['sfx.mastcamTag'])
+    ).toEqual(['sfx.mastcamTag', 'sfx.cameraMove'])
   })
 })
