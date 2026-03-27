@@ -795,3 +795,21 @@ describe('AudioManagerOptions.initialCategoryState', () => {
     expect(mockHowlVolume).toHaveBeenNthCalledWith(3, 0, 2)
   })
 })
+
+describe('setVolume on playback handle', () => {
+  it('updates the per-instance volume on a playing sound', () => {
+    const mgr = new AudioManager()
+    mgr.unlock()
+    const handle = mgr.play('ui.click')
+    // Should not throw
+    handle.setVolume(0.5)
+    expect(handle.playing).toBeDefined()
+  })
+
+  it('is a no-op on a noop handle', () => {
+    const mgr = new AudioManager()
+    // Not unlocked — returns noop
+    const handle = mgr.play('ui.click')
+    expect(() => handle.setVolume(0.5)).not.toThrow()
+  })
+})
