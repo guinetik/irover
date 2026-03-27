@@ -13,12 +13,21 @@
     <p class="line">&nbsp;</p>
     <p class="line dim">Pack light. Mars provides the rest.</p>
 
-    <button class="btn" @click="$emit('accept')">[ ACCEPT APPLICATION ]</button>
+    <button class="btn" @click="handleAccept">[ ACCEPT APPLICATION ]</button>
   </div>
 </template>
 
 <script setup lang="ts">
-defineEmits<{ accept: [] }>()
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
+
+const emit = defineEmits<{ accept: [] }>()
+
+const audio = useAudio()
+function handleAccept(): void {
+  audio.play('ui.confirm' as AudioSoundId)
+  emit('accept')
+}
 
 const appNumber = String(Math.floor(Math.random() * 90000) + 10000)
 const roverId = `MSL-2187-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${Math.floor(Math.random() * 900) + 100}`

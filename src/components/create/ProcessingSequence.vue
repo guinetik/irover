@@ -4,16 +4,24 @@
       {{ line.text }}
     </p>
     <p v-if="showSnark" class="snark">{{ snarkText }}</p>
-    <button v-if="showContinue" class="btn" @click="$emit('continue')">[ CONTINUE ]</button>
+    <button v-if="showContinue" class="btn" @click="handleContinue">[ CONTINUE ]</button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { PositionId } from './StepPosition.vue'
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
 
 const props = defineProps<{ positionChoice: PositionId }>()
-defineEmits<{ continue: [] }>()
+const emit = defineEmits<{ continue: [] }>()
+
+const audio = useAudio()
+function handleContinue(): void {
+  audio.play('ui.confirm' as AudioSoundId)
+  emit('continue')
+}
 
 interface Line { text: string; dim: boolean }
 
