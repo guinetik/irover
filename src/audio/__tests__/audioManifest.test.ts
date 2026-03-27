@@ -30,6 +30,7 @@ describe('audioManifest', () => {
       'ui.dsnArchivePlay',
       'sfx.dsnIncoming',
       'sfx.rtgShunt',
+      'sfx.rtgOverdrive',
       'sfx.discovery',
       'sfx.mastcamTag',
       'sfx.chemcamFire',

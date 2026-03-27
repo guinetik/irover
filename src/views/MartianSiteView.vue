@@ -1362,6 +1362,7 @@ function confirmOverdrive() {
   const rtg = siteRover.value.activeInstrument
   if (rtg instanceof RTGController) {
     rtg.activateOverdrive()
+    audio.play('sfx.rtgOverdrive' as import('@/audio/audioManifest').AudioSoundId)
     siteRover.value.activateInstrument(null)
     // Notify mission system that overdrive was used
     useMissions().notifyRtgOverdrive()
