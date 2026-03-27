@@ -64,13 +64,13 @@
           <button
             v-if="currentStep > 1"
             class="nav-btn"
-            @click="currentStep--"
+            @click="goBack"
           >[ &lt; BACK ]</button>
           <span v-else />
           <button
             class="nav-btn"
             :disabled="!canAdvance"
-            @click="currentStep++"
+            @click="goNext"
           >[ NEXT &gt; ]</button>
         </footer>
       </div>
@@ -91,9 +91,12 @@ import StepPosition from '@/components/create/StepPosition.vue'
 import type { PositionId } from '@/components/create/StepPosition.vue'
 import ProcessingSequence from '@/components/create/ProcessingSequence.vue'
 import AcceptanceScreen from '@/components/create/AcceptanceScreen.vue'
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
 
 const router = useRouter()
 const { setProfile, setIdentity } = usePlayerProfile()
+const audio = useAudio()
 
 // --- Phase state ---
 const phase = ref<TerminalPhase>('intro')
@@ -127,6 +130,16 @@ const canAdvance = computed(() => {
     default: return false
   }
 })
+
+function goBack(): void {
+  audio.play('ui.switch' as AudioSoundId)
+  currentStep.value--
+}
+
+function goNext(): void {
+  audio.play('ui.confirm' as AudioSoundId)
+  currentStep.value++
+}
 
 // --- Keyboard navigation ---
 const stepOptions: Record<number, { values: readonly string[]; ref: ReturnType<typeof ref> }> = {

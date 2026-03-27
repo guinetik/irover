@@ -2,7 +2,8 @@
   <button
     class="option"
     :class="{ selected }"
-    @click="$emit('select')"
+    @mouseenter="playHover"
+    @click="handleClick"
   >
     <span class="radio">{{ selected ? '\u25CF' : '\u25CB' }}</span>
     <span class="label">
@@ -13,15 +14,29 @@
 </template>
 
 <script setup lang="ts">
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
+
 defineProps<{
   name: string
   description: string
   selected: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   select: []
 }>()
+
+const audio = useAudio()
+
+function playHover(): void {
+  audio.play('ui.switch' as AudioSoundId)
+}
+
+function handleClick(): void {
+  audio.play('ui.instrument' as AudioSoundId)
+  emit('select')
+}
 </script>
 
 <style scoped>
