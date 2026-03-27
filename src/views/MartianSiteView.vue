@@ -557,6 +557,7 @@ import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { useAudio } from '@/audio/useAudio'
 
 const route = useRoute()
@@ -579,11 +580,9 @@ const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-// --- DSN voice playback via shared AudioManager (unlocked on first user gesture) ---
-let audioUnlocked = false
+// --- DSN voice: one owned playback at a time; unlock on mount so early DSN is not a manager no-op ---
+let dsnVoicePlayback: AudioPlaybackHandle | null = null
 function ensureAudioUnlocked() {
-  if (audioUnlocked) return
-  audioUnlocked = true
   audio.unlock()
   window.removeEventListener('keydown', ensureAudioUnlocked)
   window.removeEventListener('pointerdown', ensureAudioUnlocked)
@@ -1437,7 +1436,8 @@ function createSiteControllerContext() {
       // Auto-play the first transmission's audio log if available
       const firstWithAudio = txs.find(tx => tx.audioUrl)
       if (firstWithAudio?.audioUrl) {
-        audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl })
+        dsnVoicePlayback?.stop()
+        dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl })
       }
     },
     clearPois,
@@ -1531,6 +1531,7 @@ function createSiteControllerContext() {
 }
 
 onMounted(async () => {
+  audio.unlock()
   const handle = createMarsSiteViewController(createSiteControllerContext())
   await handle.mount()
   siteHandle.value = handle
@@ -1544,7 +1545,8 @@ onUnmounted(() => {
   siteHandle.value = null
   window.removeEventListener('keydown', ensureAudioUnlocked)
   window.removeEventListener('pointerdown', ensureAudioUnlocked)
-  audio.stopCategory('voice')
+  dsnVoicePlayback?.stop()
+  dsnVoicePlayback = null
 })
 
 
