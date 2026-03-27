@@ -937,6 +937,16 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
       siteScene.setAtmosphere(sw.windMs, sw.dustStormLevel ?? 0)
 
+      // Moon orbital positions
+      if (siteScene.moons && siteScene.sky) {
+        siteScene.moons.update(
+          siteScene.sky.timeOfDay,
+          marsSol.value,
+          siteScene.sky.nightFactor,
+          sw.dustStormLevel ?? 0,
+        )
+      }
+
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
         dustPass.setWeather(siteWeather.value.windMs)

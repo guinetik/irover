@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { createTerrainGenerator, type ITerrainGenerator, type TerrainParams, type TerrainGeneratorType } from './terrain/TerrainGenerator'
 import { DustParticles } from './DustParticles'
 import { MarsSky } from './MarsSky'
+import { MarsMoons } from './MarsMoons'
 import { RoverTrails } from './RoverTrails'
 import {
   getTouchdownReleaseProgress,
@@ -62,6 +63,7 @@ export class SiteScene {
   readonly scene = new THREE.Scene()
   readonly terrain: ITerrainGenerator
   sky: MarsSky | null = null
+  moons: MarsMoons | null = null
 
   constructor(terrainType?: TerrainGeneratorType) {
     this.terrain = createTerrainGenerator(terrainType)
@@ -137,6 +139,10 @@ export class SiteScene {
     // Sky with day/night cycle and lighting
     this.sky = new MarsSky(this.scene)
     this.sky.setTerrain(params.waterIceIndex)
+
+    // Moons (Phobos & Deimos)
+    this.moons = new MarsMoons(this.scene)
+    await this.moons.init(params.latDeg)
 
     // Terrain
     await this.terrain.generate(params)
@@ -701,6 +707,7 @@ export class SiteScene {
       })
     }
     this.terrain.dispose()
+    this.moons?.dispose()
     this.sky?.dispose()
     this.dust?.dispose()
     this.trails?.dispose()
