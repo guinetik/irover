@@ -3,166 +3,166 @@
   "missions": [
     {
       "id": "m01-triangulate",
-      "name": "1. Triangulate Position",
+      "name": "First Light (Position Fix)",
       "patron": null,
-      "description": "Standard post-landing position calibration using three transponder markers.",
-      "briefing": "Telemetry's coming in — descent trajectory looks nominal but we need ground-truth coordinates before we clear you for operations. Three transponder stakes were deployed ahead of your landing. WASD to drive, mouse to orbit the camera. Hit all three markers so we can lock your position fix. Routine procedure.",
+      "description": "Consortium baseline MEC-4401: confirm ground coordinates before any instrument time is billed to the program.",
+      "briefing": "Descent telemetry is filed as nominal. The spreadsheet says you're fine. Mars says spreadsheets lie. Three transponder stakes were emplaced pre-landing — Alpha, Beta, Gamma. Per LVOP checkout you need an echo off each before we can assign a map grid and pretend the insurance paperwork matches reality. Drive the circuit. Ping all three. After that, Section 1 of your onboarding packet is stamped complete. Section 2 is weather. Try to look excited on the inside.",
       "reward": { "sp": 25 },
       "unlocks": ["rems"],
       "chain": "m03-rems",
       "objectives": [
-        { "id": "tri-1", "type": "go-to", "label": "Reach marker Alpha", "params": { "poiId": "tri-alpha" }, "sequential": false },
-        { "id": "tri-2", "type": "go-to", "label": "Reach marker Beta", "params": { "poiId": "tri-beta" }, "sequential": false },
-        { "id": "tri-3", "type": "go-to", "label": "Reach marker Gamma", "params": { "poiId": "tri-gamma" }, "sequential": false }
+        { "id": "tri-1", "type": "go-to", "label": "Stake Alpha — confirm ping", "params": { "poiId": "tri-alpha" }, "sequential": false },
+        { "id": "tri-2", "type": "go-to", "label": "Stake Beta — confirm ping", "params": { "poiId": "tri-beta" }, "sequential": false },
+        { "id": "tri-3", "type": "go-to", "label": "Stake Gamma — confirm ping", "params": { "poiId": "tri-gamma" }, "sequential": false }
       ]
     },
     {
       "id": "m02-repair",
-      "name": "4. Equipment Repair",
+      "name": "RTG — Corrective Maintenance",
       "patron": null,
-      "description": "Use a repair kit to fix RTG damage sustained during landing.",
-      "briefing": "Now that you've run the RTG shakedown, you've probably noticed the power output is lower than spec. That's because the RTG took a hit during landing — durability is sitting at 60%. That's not critical yet, but it'll keep degrading. You've got welding wire in your kit. Open the RTG panel [7], check the durability readout, and run a field repair. Costs welding wire and engineering components. Get it above 90% and we'll clear you for science ops.",
+      "description": "Vehicle age: ~175 years, refurbishment status: \"extensive.\" The RTG disagrees with the brochure.",
+      "briefing": "Post-shakedown power curve is trending wrong. Not an emergency — emergencies get their own forms. This is deferred maintenance that became urgent because someone dented something during EDL and nobody filed it. You have consumables in-kit; bring the stack back within tolerance or we hold science ops until Engineering stops arguing in the thread. Standard MEC liability language applies. So does rust, probably.",
       "reward": { "sp": 15 },
       "unlocks": ["mastcam"],
       "chain": "m05-mastcam",
       "objectives": [
-        { "id": "repair-1", "type": "use-repair-kit", "label": "Use a repair kit to fix the RTG", "params": { }, "sequential": false }
+        { "id": "repair-1", "type": "use-repair-kit", "label": "RTG integrity within spec (field repair)", "params": { }, "sequential": false }
       ]
     },
     {
       "id": "m03-rems",
-      "name": "2. REMS Weather Station",
+      "name": "REMS — Environmental Baseline",
       "patron": null,
-      "description": "Activate the environmental monitoring station and transmit a baseline weather report.",
-      "briefing": "Position locked. Before we go any further — weather. Mars doesn't give warnings. Dust storms can drop visibility to zero and bury your solar margin in minutes. Temperature swings of 80°C between day and night will kill your battery if you're not watching. Your REMS station monitors pressure, temperature, humidity, wind speed, and UV radiation in real time. Select REMS [8] and activate it. Once it's running, it'll alert you to incoming weather events — dust storms, cold snaps, pressure drops. You need this data streaming before we clear you for instrument operations. It's non-negotiable.",
+      "description": "Before the consortium bills instrument hours, someone has to certify you're not about to lose the rover to weather nobody forecasted.",
+      "briefing": "Mars does not issue advisories. It issues consequences. REMS is the minimum viable excuse for saying we checked — pressure, wind, temperature, UV. Activate the station and keep the stream live. Without it, downstream checkout is blocked by policy, not physics. If that feels arbitrary, welcome to the Consortium. The dust doesn't read the handbook either.",
       "reward": { "sp": 20 },
       "unlocks": ["rtg"],
       "chain": "m04-rtg",
       "objectives": [
-        { "id": "rems-1", "type": "rems-activate", "label": "Activate REMS weather station", "params": {}, "sequential": false }
+        { "id": "rems-1", "type": "rems-activate", "label": "REMS online — continuous telemetry", "params": {}, "sequential": false }
       ]
     },
     {
       "id": "m04-rtg",
-      "name": "3. RTG Shakedown",
+      "name": "Power Systems — Shakedown",
       "patron": null,
-      "description": "Verify RTG power output and test emergency overdrive mode.",
-      "briefing": "REMS is streaming — good. Next on the pre-ops checklist: power systems. Your Multi-Mission RTG generates about 110W steady-state — that's your entire power budget out here. Open the RTG panel [7] after collecting the calibration components from the supply cache. We need you to run an emergency overdrive test — it dumps the RTG's thermal reserve into the bus for a quick battery top-off. Instruments go offline during the burst and cooldown, but it's short. Standard shakedown procedure. After the test clears, drive to the marked rock outcrop — you'll notice the RTG took some damage during landing. We'll deal with that next.",
+      "description": "Verify the MMRTG and the emergency thermal dump. Paperwork calls it \"standard\"; the bus calls it a bad idea executed correctly.",
+      "briefing": "Your steady-state budget is roughly a hundred watts of decay heat turned into electricity — the whole mission in one hot brick. Collect the calibration hardware from the cache, then run the overdrive test: thermal reserve to bus, instruments offline for the burst, cooldown logged. It's on the checklist because someone once didn't do it and we spent six months in review. When the graph flatlines, proceed to the marked outcrop. Spoiler: the landing also scratched the RTG. We'll pretend that's a separate ticket.",
       "reward": { "sp": 30, "items": [{ "id": "mechatronics-components", "quantity": 2 }] },
       "unlocks": [],
       "chain": "m02-repair",
       "objectives": [
-        { "id": "rtg-1", "type": "go-to", "label": "Reach supply cache", "params": { "poiId": "supply-cache-01" }, "sequential": true },
-        { "id": "rtg-2", "type": "gather", "label": "Collect calibration rods", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true },
-        { "id": "rtg-3", "type": "rtg-overdrive", "label": "Test emergency overdrive", "params": {}, "sequential": true },
-        { "id": "rtg-4", "type": "go-to", "label": "Drive to the rock outcrop", "params": { "poiId": "rock-outcrop-01" }, "sequential": true }
+        { "id": "rtg-1", "type": "go-to", "label": "Supply cache — retrieve calibration kit", "params": { "poiId": "supply-cache-01" }, "sequential": true },
+        { "id": "rtg-2", "type": "gather", "label": "Sign out calibration rods (inventory)", "params": { "itemId": "engineering-components", "quantity": 2 }, "sequential": true },
+        { "id": "rtg-3", "type": "rtg-overdrive", "label": "Overdrive test — log complete", "params": {}, "sequential": true },
+        { "id": "rtg-4", "type": "go-to", "label": "Outcrop rendezvous (follow-up item)", "params": { "poiId": "rock-outcrop-01" }, "sequential": true }
       ]
     },
     {
       "id": "m05-mastcam",
-      "name": "5. MastCam Calibration",
+      "name": "MastCam — Classifier Baseline",
       "patron": null,
-      "description": "Verify MastCam optical survey system by tagging terrain samples.",
-      "briefing": "MastCam is online and the optics look clean. Time to calibrate. Select MastCam [1] — it puts you in survey mode where rocks in range get highlighted. Pan toward a rock and hold the scan until the tag locks. Each tagged rock gets a persistent floating label with its type classification. Tag at least three so we can verify the classifier against ground-truth. These tags feed directly into ChemCam and Drill targeting later — MastCam is always the first step in the science pipeline.",
+      "description": "Survey pass: teach the vision stack what this patch of Mars looks like, three targets minimum per procedure.",
+      "briefing": "Optics passed bench. The planet hasn't. Run survey mode, tag at least three rocks so we can file a classifier attestation. The floating labels aren't flair — they're chain-of-custody for anything you shoot or drill later. Skip this step and Legal sends a memo. Nobody wants the memo.",
       "reward": { "sp": 35 },
       "unlocks": ["chemcam"],
       "chain": "m06-chemcam",
       "objectives": [
-        { "id": "mc-1", "type": "mastcam-tag", "label": "Tag 3 rocks with MastCam", "params": { "rockType": "any", "count": 3 }, "sequential": false }
+        { "id": "mc-1", "type": "mastcam-tag", "label": "Three rock tags — classifier verification", "params": { "rockType": "any", "count": 3 }, "sequential": false }
       ]
     },
     {
       "id": "m06-chemcam",
-      "name": "6. ChemCam Verification",
+      "name": "ChemCam — LIBS Verification",
       "patron": null,
-      "description": "Test LIBS spectroscopy on a MastCam-tagged target.",
-      "briefing": "MastCam classifier checks out. Now let's verify ChemCam — the laser-induced breakdown spectrometer. Select ChemCam [2] and aim at one of your tagged rocks (the floating labels mark valid targets). ChemCam can only fire at rocks MastCam has already classified — that's by design, not a bug. The laser vaporizes a pinpoint on the surface and we read the plasma emission spectrum. After the pulse completes, acknowledge the readout so we can log the mineral profile. One clean spectrum is all we need to clear the instrument.",
+      "description": "Laser spectroscopy checkout. The laser is real; the permission model is mostly lawyers.",
+      "briefing": "Classifier sign-off received. ChemCam may only engage MastCam-tagged targets — interlock, not suggestion. One LIBS cycle, spectrum to archive, acknowledge the readout. We call it science. Risk calls it controlled arson at millimeter scale. Tomato, tomato, plasma.",
       "reward": { "sp": 40 },
       "unlocks": ["drill"],
       "chain": "m07-drill",
       "objectives": [
-        { "id": "cc-1", "type": "chemcam", "label": "Complete a LIBS analysis", "params": { "rockType": "any" }, "sequential": false }
+        { "id": "cc-1", "type": "chemcam", "label": "LIBS analysis — one logged spectrum", "params": { "rockType": "any" }, "sequential": false }
       ]
     },
     {
       "id": "m07-drill",
-      "name": "7. Core Sample Extraction",
+      "name": "Drill — Sample + Power Recovery",
       "patron": null,
-      "description": "Test the rotary percussive drill and run a power shunt recovery.",
-      "briefing": "Spectrometer is nominal. Next up: the drill. Select it [3], drive within range of a rock, and hold [E] to bore in. Here's something important for your workflow: rocks you've already processed through MastCam and ChemCam yield significantly better drill results — trace elements, rare minerals, and specialty components that unscanned rocks simply don't produce. The MastCam → ChemCam → Drill pipeline is how you extract real value. After drilling, your battery will be running low. Open the RTG panel [7] and engage the power shunt — it stows the drive motors and dumps thermal headroom into the main bus for an immediate recharge. We need to verify that system too.",
+      "description": "Extract a core, then demonstrate bus recovery. Two line items, one form — efficiency.",
+      "briefing": "Percussive rotary checkout: obtain a sample. Note for the file — targets already run through MastCam and ChemCam tend to yield richer material; the pipeline isn't superstition, it's statistics someone once put in a footnote. After the bit stops, you'll be low on electrons. Run the RTG shunt procedure — motors stowed, thermal headroom to the bus — and log it. Accounting loves a logged shunt. Engineering tolerates it.",
       "reward": { "sp": 40 },
       "unlocks": ["apxs"],
       "chain": "m08-apxs",
       "objectives": [
-        { "id": "dr-1", "type": "gather", "label": "Drill and collect a rock sample", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": true },
-        { "id": "dr-2", "type": "rtg-shunt", "label": "Engage power shunt to recharge", "params": {}, "sequential": true }
+        { "id": "dr-1", "type": "gather", "label": "Drilled sample — bag and tag", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": true },
+        { "id": "dr-2", "type": "rtg-shunt", "label": "Power shunt — recovery logged", "params": {}, "sequential": true }
       ]
     },
     {
       "id": "m08-apxs",
-      "name": "8. APXS Contact Analysis",
+      "name": "APXS — Contact Science",
       "patron": null,
-      "description": "Deploy the Alpha Particle X-Ray Spectrometer for elemental composition.",
-      "briefing": "Drill checks out, power shunt verified. The APXS is next — your contact-science instrument. It uses alpha particles and X-rays to measure the elemental composition of a rock surface. Unlike ChemCam which works at range, APXS needs to be pressed directly against the target. Select APXS [4], drive close to a rock, and deploy. The analysis takes a bit longer than LIBS but gives you a complete elemental breakdown — different data, complementary to the spectrum. One clean analysis to verify calibration.",
+      "description": "Elemental composition via contact pass. Slower than LIBS. More paperwork per joule.",
+      "briefing": "ChemCam did standoff. APXS does intimacy — sensor to rock, alpha and X-ray, count until the statistics stop arguing. One clean pass satisfies calibration. If you're bored, remember someone in 2187 still has to peer-review this. Be kind to the future.",
       "reward": { "sp": 45 },
       "unlocks": ["dan"],
       "chain": "m09-dan",
       "objectives": [
-        { "id": "apxs-1", "type": "apxs", "label": "Complete an APXS analysis", "params": { "rockType": "any" }, "sequential": false }
+        { "id": "apxs-1", "type": "apxs", "label": "APXS contact analysis — complete", "params": { "rockType": "any" }, "sequential": false }
       ]
     },
     {
       "id": "m09-dan",
-      "name": "9. DAN Subsurface Probe",
+      "name": "DAN — Subsurface Baseline",
       "patron": null,
-      "description": "Calibrate the Dynamic Albedo of Neutrons instrument for water ice detection.",
-      "briefing": "All surface instruments check out. Time to look underground. DAN fires neutrons into the regolith and measures the scatter pattern to detect hydrogen — which means water ice. Select DAN [5] — it runs a passive background scan as you drive, building a signal map. When you see a strong return, stop and hold position to let it lock in a prospect. We need at least one confirmed water-ice signature for the calibration baseline. The data feeds directly into mission planning for future water extraction sites.",
+      "description": "Neutron survey for hydrogen signatures. Planners call it science; MSI calls it inventory; TRC calls it a line item.",
+      "briefing": "Passive map while you roll. When the return peaks, hold still and let it resolve — one confirmed water-ice signature for the archive. That datum will be fought over by three committees who agree on nothing except that you should have scanned faster. Do not scan faster. Scan until it locks.",
       "reward": { "sp": 45 },
       "unlocks": ["sam"],
       "chain": "m10-sam",
       "objectives": [
-        { "id": "dan-1", "type": "dan-prospect", "label": "Confirm a water ice detection", "params": { "minWaterChance": 0.3 }, "sequential": false }
+        { "id": "dan-1", "type": "dan-prospect", "label": "Water-ice prospect — confirmed", "params": { "minWaterChance": 0.3 }, "sequential": false }
       ]
     },
     {
       "id": "m10-sam",
-      "name": "10. SAM Lab Checkout",
+      "name": "SAM — Lab Checkout",
       "patron": null,
-      "description": "Run a full sample analysis cycle through the SAM instrument suite.",
-      "briefing": "Surface ops are verified. Last instrument: SAM — your onboard analytical laboratory. This is where drill samples become real science. Open SAM [6], load one of your collected samples, choose an analysis mode, and run the experiment. Each mode reveals different chemistry: pyrolysis bakes the sample and reads the volatiles, wet chemistry dissolves it for isotope ratios, and so on. The results determine the science value of your discovery. One complete run clears the lab for regular operations.",
+      "description": "Onboard analytical lab: one full experiment cycle. After this, the oven stops being decorative.",
+      "briefing": "Load a drill sample, select a mode, run to completion. Pyrolysis, wet chemistry, whatever the checklist demands — each mode answers a different committee. One finished run clears SAM for routine ops and gives Discovery something to put in a press release. The science is optional. The logging is not.",
       "reward": { "sp": 50 },
       "unlocks": ["antenna-uhf"],
       "chain": "m11-transmit",
       "objectives": [
-        { "id": "sam-1", "type": "sam-experiment", "label": "Run a SAM experiment", "params": { "mode": "any" }, "sequential": false }
+        { "id": "sam-1", "type": "sam-experiment", "label": "SAM experiment — full cycle logged", "params": { "mode": "any" }, "sequential": false }
       ]
     },
     {
       "id": "m11-transmit",
-      "name": "11. First Data Uplink",
+      "name": "UHF — First Uplink",
       "patron": null,
-      "description": "Transmit collected science data to Earth via UHF relay during an orbital pass.",
-      "briefing": "All instruments are verified and your archive is building up nicely. But none of this counts until Earth receives it. Open the UHF antenna [T] and queue your science data for transmission. UHF relay works through orbital passes — the Mars Reconnaissance Orbiter flies overhead on a regular schedule, and your uplink window is limited. Each item takes bandwidth proportional to its complexity. Get at least one dataset transmitted so we can confirm the end-to-end pipeline. After this, you're fully operational — pre-ops checkout complete.",
+      "description": "Data on-vehicle does not exist for grant accounting until Earth acknowledges receipt. Welcome to orbital windows.",
+      "briefing": "Queue a science package on UHF during a relay pass. Bandwidth is finite; complexity costs time; the orbiter does not wait for your feelings. One confirmed downlink closes pre-ops checkout on our end. After that you're officially not a training scenario — just an underinsured asset on another planet. Congratulations are in the FAQ, appendix C.",
       "reward": { "sp": 50 },
       "unlocks": [],
       "chain": "m13-deep-signal",
       "objectives": [
-        { "id": "tx-1", "type": "transmit", "label": "Transmit data via UHF", "params": { "count": 1 }, "sequential": false }
+        { "id": "tx-1", "type": "transmit", "label": "UHF uplink — one package acknowledged", "params": { "count": 1 }, "sequential": false }
       ]
     },
     {
       "id": "m13-deep-signal",
-      "name": "13. Deep Signal",
+      "name": "LGA — Nonstandard Receive",
       "patron": null,
-      "description": "Install the DSN Archaeology upgrade on the LGA to unlock legacy Deep Space Network reception.",
-      "briefing": "Rover, routine diagnostic. Your low-gain antenna has been operating on standard direct-to-Earth frequencies — adequate for mission updates and mailbox. However, the hardware is technically capable of receiving across the full DSN frequency spectrum. We're dropping an archaeology receiver module at a supply point on the far side of the site. Drive out, collect the package, then open the LGA panel and install the upgrade. There's... a lot of old data out there. Most of it is noise. Calibration pings. Deprecated telemetry. But some of our analysts think there might be recoverable mission archives from early Mars programs. Historical interest only. No science value. Install the upgrade and see what you find. Low priority.",
+      "description": "Routine diagnostic (official). Expanded spectrum capability (actual). Funding source: \"historical outreach\" (nobody asked follow-ups).",
+      "briefing": "There's a module at the far cache — DSN archaeology firmware for the low-gain path. Install per attached instructions. Most of what you'll hear is garbage: calibration ghosts, deprecated handshakes, beeps from programs defunded before your grandparents were born. Archives thinks there might be recoverable mission tape in the noise. Science Directorate marks it zero priority. You are therefore cleared to waste time on it. Bolt it on. Log the install. If you hear singing, that's not in the scope.",
       "reward": { "sp": 100 },
       "unlocks": ["dsn-archaeology"],
       "chain": null,
       "objectives": [
-        { "id": "dsn-1", "type": "go-to", "label": "Reach the supply drop zone", "params": { "poiId": "supply-cache-02" }, "sequential": true },
-        { "id": "dsn-2", "type": "gather", "label": "Collect DSN Archaeology module", "params": { "itemId": "dsn-archaeology-module", "quantity": 1 }, "sequential": true },
-        { "id": "dsn-3", "type": "install-upgrade", "label": "Install DSN Archaeology module on LGA", "params": { "instrumentId": "antenna-lg" }, "sequential": true }
+        { "id": "dsn-1", "type": "go-to", "label": "Far supply drop — module location", "params": { "poiId": "supply-cache-02" }, "sequential": true },
+        { "id": "dsn-2", "type": "gather", "label": "DSN archaeology module — retrieve", "params": { "itemId": "dsn-archaeology-module", "quantity": 1 }, "sequential": true },
+        { "id": "dsn-3", "type": "install-upgrade", "label": "LGA — install archaeology module", "params": { "instrumentId": "antenna-lg" }, "sequential": true }
       ]
     }
   ]
