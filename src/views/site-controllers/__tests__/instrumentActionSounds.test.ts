@@ -59,6 +59,46 @@ function makeHandle(): AudioPlaybackHandle {
 }
 
 describe('instrument action sounds', () => {
+  it('stops the mastcam shutter sound when leaving active mode', () => {
+    const heldHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => heldHandle)
+    const mastCam = new MastCamController()
+    const mastCamPrivate = mastCam as unknown as Record<string, unknown>
+    mastCamPrivate.scanning = true
+    mastCamPrivate.scanTarget = { userData: {} }
+
+    const handler = createMastCamTickHandler(
+      {
+        mastcamFilterLabel: ref('ALL TYPES'),
+        mastcamScanning: ref(false),
+        mastcamScanProgress: ref(0),
+        mastPan: ref(0),
+        mastTilt: ref(0),
+        mastFov: ref(0),
+        mastTargetRange: ref(0),
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        isDrilling: ref(false),
+        drillProgress: ref(0),
+      },
+      {
+        sampleToastRef: ref(null),
+        awardSP: () => null,
+        playerMod: () => 1,
+        startHeldActionSound,
+      },
+    )
+
+    const activeCtx = makeFrameContext(mastCam)
+    handler.tick(activeCtx)
+    expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+
+    handler.tick(makeFrameContext(mastCam, { rover: { ...activeCtx.rover!, mode: 'driving' } }))
+    expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+  })
+
   it('starts the mastcam shutter sound while tagging and stops it on release', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
@@ -160,6 +200,50 @@ describe('instrument action sounds', () => {
 
     chemCam.phase = 'COOLDOWN'
     handler.tick(fctx)
+    expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops the chemcam sound when leaving active mode', () => {
+    const heldHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => heldHandle)
+    const chemCam = new ChemCamController()
+    chemCam.phase = 'PULSE_TRAIN'
+
+    const handler = createChemCamTickHandler(
+      {
+        chemCamUnreadCount: ref(0),
+        chemcamPhase: ref('IDLE'),
+        chemcamShotsRemaining: ref(0),
+        chemcamShotsMax: ref(0),
+        chemcamProgressPct: ref(0),
+        chemCamOverlaySequenceActive: ref(false),
+        chemCamOverlaySequenceProgress: ref(0),
+        chemCamOverlaySequenceLabel: ref(''),
+        chemCamOverlaySequencePulse: ref(false),
+        mastPan: ref(0),
+        mastTilt: ref(0),
+        mastFov: ref(0),
+        mastTargetRange: ref(0),
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        isDrilling: ref(false),
+        drillProgress: ref(0),
+      },
+      {
+        sampleToastRef: ref(null),
+        playerMod: () => 1,
+        awardSP: () => null,
+        startHeldActionSound,
+      },
+    )
+
+    const activeCtx = makeFrameContext(chemCam)
+    handler.tick(activeCtx)
+    expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+
+    handler.tick(makeFrameContext(chemCam, { rover: { ...activeCtx.rover!, mode: 'driving' } }))
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
   })
 
@@ -270,6 +354,49 @@ describe('instrument action sounds', () => {
     drillPrivate.swingAngle = 0.5
     drillPrivate.targetSwing = 0.5
     handler.tick(fctx)
+    expect(mastHandle.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops all drill-owned sounds when leaving active mode', () => {
+    const drillHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => drillHandle)
+    const mastHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => mastHandle)
+    const drill = new DrillController()
+    const drillPrivate = drill as unknown as Record<string, unknown>
+    drillPrivate.drilling = true
+    drillPrivate.drill = {
+      isDrilling: true,
+      progress: 0.4,
+    }
+    drillPrivate.swingAngle = 0
+    drillPrivate.targetSwing = 0.5
+
+    const handler = createDrillTickHandler(
+      {
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        drillProgress: ref(0),
+        isDrilling: ref(false),
+      },
+      {
+        sampleToastRef: ref(null),
+        playerMod: () => 1,
+        awardSP: () => null,
+        startHeldActionSound,
+        startHeldMovementSound,
+      },
+    )
+
+    const activeCtx = makeFrameContext(drill)
+    handler.tick(activeCtx)
+    expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
+
+    handler.tick(makeFrameContext(drill, { rover: { ...activeCtx.rover!, mode: 'instrument' } }))
+    expect(drillHandle.stop).toHaveBeenCalledTimes(1)
     expect(mastHandle.stop).toHaveBeenCalledTimes(1)
   })
 
