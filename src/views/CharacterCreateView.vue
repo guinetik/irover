@@ -162,19 +162,23 @@ function onKeydown(e: KeyboardEvent): void {
     const current = opts.values.indexOf(opts.ref.value as string)
     const next = current <= 0 ? opts.values.length - 1 : current - 1
     opts.ref.value = opts.values[next] as any
+    audio.play('ui.instrument' as AudioSoundId)
   } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
     e.preventDefault()
     const current = opts.values.indexOf(opts.ref.value as string)
     const next = current >= opts.values.length - 1 ? 0 : current + 1
     opts.ref.value = opts.values[next] as any
+    audio.play('ui.instrument' as AudioSoundId)
   } else if (e.key === 'Enter') {
     e.preventDefault()
     if (canAdvance.value) {
+      audio.play('ui.confirm' as AudioSoundId)
       currentStep.value++
     }
   } else if (e.key === 'Backspace' || e.key === 'Escape') {
     e.preventDefault()
     if (currentStep.value > 1) {
+      audio.play('ui.switch' as AudioSoundId)
       currentStep.value--
     }
   }
