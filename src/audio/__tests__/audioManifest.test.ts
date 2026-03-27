@@ -26,8 +26,13 @@ describe('audioManifest', () => {
     expect(AUDIO_SOUND_IDS).toEqual([
       'voice.dsnTransmission',
       'ui.click',
+      'ui.switch',
+      'ui.instrument',
+      'ui.confirm',
+      'ui.science',
       'ui.error',
       'ui.dsnArchivePlay',
+      'ui.dsnArchiveSelect',
       'sfx.dsnIncoming',
       'sfx.rtgShunt',
       'sfx.rtgOverdrive',
@@ -50,6 +55,7 @@ describe('audioManifest', () => {
       'ambient.rtg',
       'ambient.heater',
       'ambient.rems',
+      'music.intro',
       'sfx.uhfLock',
       'sfx.uhfUplink',
       'sfx.lgaUplink',
@@ -104,7 +110,14 @@ describe('audioManifest', () => {
       expect(src.length).toBeGreaterThan(0)
       const isInstrument = INSTRUMENT_ACTION_SOUND_IDS.includes(id as (typeof INSTRUMENT_ACTION_SOUND_IDS)[number])
       const isAmbient = AMBIENT_SOUND_IDS.includes(id as (typeof AMBIENT_SOUND_IDS)[number])
-      const isBundledFileCue = id === 'ui.dsnArchivePlay'
+      const isBundledFileCue =
+        id === 'ui.dsnArchivePlay'
+        || id === 'ui.dsnArchiveSelect'
+        || id === 'ui.switch'
+        || id === 'ui.instrument'
+        || id === 'ui.confirm'
+        || id === 'ui.science'
+        || id === 'music.intro'
       if (isInstrument || isAmbient || isBundledFileCue) {
         expect(src.startsWith('/sound/')).toBe(true)
       } else {
@@ -178,6 +191,34 @@ describe('audioManifest', () => {
       playback: 'restart',
       volume: 0.35,
     })
+    expect(getAudioDefinition('ui.switch')).toMatchObject({
+      src: '/sound/switch.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ui.instrument')).toMatchObject({
+      src: '/sound/instrument.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ui.confirm')).toMatchObject({
+      src: '/sound/confirm.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ui.science')).toMatchObject({
+      src: '/sound/science.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
     expect(getAudioDefinition('ui.error')).toMatchObject({
       src: SILENT_STATIC_WAV_DATA_URI,
       load: 'eager',
@@ -186,6 +227,13 @@ describe('audioManifest', () => {
     })
     expect(getAudioDefinition('ui.dsnArchivePlay')).toMatchObject({
       src: '/sound/dsn-archive-play.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ui.dsnArchiveSelect')).toMatchObject({
+      src: '/sound/dsn-select.mp3',
       category: 'ui',
       load: 'lazy',
       playback: 'restart',
