@@ -4,7 +4,7 @@
       <h1 class="title">I, ROVER</h1>
       <p class="subtitle">Explore the Red Planet</p>
       <div class="actions">
-        <button v-if="continueTarget" class="cta" @click="router.push(continueTarget)">
+        <button v-if="continueTarget" class="cta" @click="handleContinue">
           CONTINUE
         </button>
         <button class="cta" :class="{ secondary: continueTarget }" @click="startNew">
@@ -23,6 +23,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useActiveSite } from '@/composables/useActiveSite'
+import { startIntroMusic } from '@/composables/useIntroMusic'
 
 const router = useRouter()
 const { profile, clearProfile } = usePlayerProfile()
@@ -42,7 +43,15 @@ const continueTarget = computed<string | null>(() => {
   return '/globe'
 })
 
+function handleContinue(): void {
+  if (continueTarget.value) {
+    startIntroMusic()
+    router.push(continueTarget.value)
+  }
+}
+
 function startNew(): void {
+  startIntroMusic()
   clearProfile()
   clearSite()
   router.push('/create')

@@ -9,18 +9,9 @@ const FADE_STEPS = 40
 
 let introHandle: AudioPlaybackHandle | null = null
 let fadeInterval: ReturnType<typeof setInterval> | null = null
-let started = false
 
 function isSiteRoute(path: string): boolean {
   return path.startsWith('/site/')
-}
-
-function startIntro(): void {
-  if (introHandle) return
-  const audio = useAudio()
-  audio.unlock()
-  introHandle = audio.play('music.intro' as AudioSoundId, { loop: true })
-  started = true
 }
 
 function fadeOutAndStop(): void {
@@ -37,14 +28,24 @@ function fadeOutAndStop(): void {
       fadeInterval = null
       handle.stop()
       introHandle = null
-      started = false
     }
   }, stepMs)
 }
 
 /**
- * Manages intro/menu music lifecycle. Call once from App.vue.
- * Plays `music.intro` in a loop on non-site routes, fades out when entering a site.
+ * Start the intro music. Call from a user gesture (e.g. BEGIN MISSION button).
+ * Safe to call multiple times — only the first call starts playback.
+ */
+export function startIntroMusic(): void {
+  if (introHandle) return
+  const audio = useAudio()
+  audio.unlock()
+  introHandle = audio.play('music.intro' as AudioSoundId, { loop: true })
+}
+
+/**
+ * Watches route changes to fade out intro music when entering a site view.
+ * Call once from App.vue.
  */
 export function useIntroMusic(): void {
   const route = useRoute()
@@ -54,8 +55,6 @@ export function useIntroMusic(): void {
     (path) => {
       if (isSiteRoute(path)) {
         if (introHandle) fadeOutAndStop()
-      } else {
-        if (!started && !introHandle) startIntro()
       }
     },
     { immediate: true },
