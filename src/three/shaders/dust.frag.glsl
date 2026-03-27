@@ -20,5 +20,8 @@ void main() {
   if (d > 0.35) discard;
   float alpha = smoothstep(0.35, 0.15, d) * vAlpha;
 
-  gl_FragColor = vec4(uParticleColor, alpha);
+  // Darken particles in storms so they contrast against the haze overlay
+  float stormDarken = smoothstep(0.8, 3.0, uWindSpeed) * 0.65;
+  vec3 color = uParticleColor * (1.0 - stormDarken);
+  gl_FragColor = vec4(color, alpha);
 }
