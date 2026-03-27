@@ -4,10 +4,10 @@
       <h1 class="title">I, ROVER</h1>
       <p class="subtitle">Explore the Red Planet</p>
       <div class="actions">
-        <button v-if="continueTarget" class="cta" @click="handleContinue">
+        <button v-if="continueTarget" class="cta" @mouseenter="playHover" @click="handleContinue">
           CONTINUE
         </button>
-        <button class="cta" :class="{ secondary: continueTarget }" @click="startNew">
+        <button class="cta" :class="{ secondary: continueTarget }" @mouseenter="playHover" @click="startNew">
           {{ continueTarget ? 'NEW MISSION' : 'BEGIN MISSION' }}
         </button>
       </div>
@@ -24,6 +24,10 @@ import { useRouter } from 'vue-router'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useActiveSite } from '@/composables/useActiveSite'
 import { startIntroMusic } from '@/composables/useIntroMusic'
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
+
+const audio = useAudio()
 
 const router = useRouter()
 const { profile, clearProfile } = usePlayerProfile()
@@ -43,14 +47,21 @@ const continueTarget = computed<string | null>(() => {
   return '/globe'
 })
 
+function playHover(): void {
+  audio.unlock()
+  audio.play('ui.instrument' as AudioSoundId)
+}
+
 function handleContinue(): void {
   if (continueTarget.value) {
+    audio.play('ui.confirm' as AudioSoundId)
     startIntroMusic()
     router.push(continueTarget.value)
   }
 }
 
 function startNew(): void {
+  audio.play('ui.confirm' as AudioSoundId)
   startIntroMusic()
   clearProfile()
   clearSite()
