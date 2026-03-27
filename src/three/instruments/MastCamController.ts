@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { ROCK_TYPES, ROCK_TYPE_LIST, type RockTypeId } from '@/three/terrain/RockTypes'
 import { mastPanTiltKeysHeld, mastState, MAST_ACTUATOR_HOLD_POWER_W } from './MastState'
+import type { InstrumentTier } from '@/lib/hazards'
 
 const PAN_SPEED = 0.5      // radians/sec
 const TILT_SPEED = 0.35    // radians/sec
@@ -27,6 +28,7 @@ export class MastCamController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'engineering-components'
+  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 0.8
 

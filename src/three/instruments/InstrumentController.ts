@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { InstrumentTier } from '@/lib/hazards'
 
 /** Emissive tint (hex) on the instrument's GLTF focus subtree while its slot is selected or active. */
 export const INSTRUMENT_SELECTION_GLOW_HEX = 0x40c8f0
@@ -79,6 +80,7 @@ export abstract class InstrumentController {
   readonly usageDecayChance: number = 0.20
   readonly usageDecayAmount: number = 1.0
   readonly repairComponentId: string = 'engineering-components'
+  readonly tier: InstrumentTier = 'standard'
   hazardDecayMultiplier = 1.0
 
   // ── Upgrade system ──────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import {
   danSignalQualityLabel,
   danWaterConfirmChance,
 } from '@/lib/neutron/danSampling'
+import type { InstrumentTier } from '@/lib/hazards'
 
 // --- Sampling ---
 const SAMPLE_INTERVAL_MOVING = 3.0
@@ -26,6 +27,7 @@ export class DANController extends InstrumentController {
   readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'science-components'
+  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 0.8
   readonly billsPassiveBackgroundPower = true

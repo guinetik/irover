@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
+import type { InstrumentTier } from '@/lib/hazards'
 
 const COVER_LERP_SPEED = 2.5  // progress per second (0→1 in ~0.4s)
 const COVER_NAMES = ['cover_01', 'cover_02', 'cover_03']
@@ -15,6 +16,7 @@ export class SAMController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'science-components'
+  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.20
   override readonly usageDecayAmount = 1.5
   override readonly selectionIdlePowerW = 0  // no idle draw — power only when experiments run

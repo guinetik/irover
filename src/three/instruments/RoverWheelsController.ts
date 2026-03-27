@@ -41,6 +41,7 @@ export class RoverWheelsController extends InstrumentController {
   override readonly canActivate = false
   override readonly passiveDecayPerSol = 0.15
   override readonly repairComponentId = 'mechatronics-components'
+  override readonly tier: InstrumentTier = 'rugged'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 0.5
   /**
