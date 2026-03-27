@@ -35,6 +35,7 @@ export interface AntennaTickCallbacks {
   onDSNTransmissionsReceived?: (transmissions: DSNTransmission[]) => void
   playUhfLock: () => void
   startUhfUplinkLoop: () => AudioPlaybackHandle
+  playLgaUplink: () => void
 }
 
 /**
@@ -57,6 +58,7 @@ export function createAntennaTickHandler(
   let currentTxElapsed = 0
   let passNotifiedMissed = false
   let uhfUplinkPlayback: AudioPlaybackHandle | null = null
+  let lastLgaUnreadCount = 0
 
   // --- LGA Tick ---
   function tickLGA(fctx: SiteFrameContext): void {
@@ -92,9 +94,16 @@ export function createAntennaTickHandler(
     // Incoming messages are now delivered by the mission system via pushMessage().
     // The old deterministic test messages (receiveMessage / hasIncomingMessage) are removed.
 
+    // Detect new incoming messages and play LGA uplink sound
+    const currentUnread = mailbox.unreadCount.value
+    if (currentUnread > lastLgaUnreadCount) {
+      callbacks.playLgaUplink()
+    }
+    lastLgaUnreadCount = currentUnread
+
     // Update controller state
-    lgaCtrl.unreadCount = mailbox.unreadCount.value
-    refs.lgaUnreadCount.value = mailbox.unreadCount.value
+    lgaCtrl.unreadCount = currentUnread
+    refs.lgaUnreadCount.value = currentUnread
   }
 
   // --- UHF Tick ---

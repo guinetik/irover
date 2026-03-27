@@ -49,6 +49,7 @@ describe('audioManifest', () => {
       'ambient.rems',
       'sfx.uhfLock',
       'sfx.uhfUplink',
+      'sfx.lgaUplink',
       'sfx.roverDrive',
       'sfx.roverTurn',
       'sfx.roverTurnOut',

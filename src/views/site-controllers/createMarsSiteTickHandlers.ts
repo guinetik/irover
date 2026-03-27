@@ -224,6 +224,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       onDSNTransmissionsReceived: ctx.onDSNTransmissionsReceived,
       playUhfLock: () => ctx.playInstrumentActionSound('sfx.uhfLock'),
       startUhfUplinkLoop: () => ctx.startInstrumentActionLoop('sfx.uhfUplink'),
+      playLgaUplink: () => ctx.playInstrumentActionSound('sfx.lgaUplink'),
     },
   )
 
