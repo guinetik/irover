@@ -7,6 +7,16 @@ import type { AudioEffectPreset } from './audioTypes'
 export const VOICE_DUCK_UI_SFX_MULTIPLIER = 0.55
 
 /**
+ * Fade duration (ms) when voice playback starts and `ui` / `sfx` duck down toward the ducked level.
+ */
+export const VOICE_DUCK_FADE_ATTACK_MS = 140
+
+/**
+ * Fade duration (ms) when the last voice playback ends and `ui` / `sfx` restore toward full mix level.
+ */
+export const VOICE_DUCK_FADE_RELEASE_MS = 220
+
+/**
  * Serializable parameters for a DSP preset (band limits, distortion amount, etc.).
  */
 export interface AudioEffectConfig {

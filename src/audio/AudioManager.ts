@@ -2,6 +2,8 @@ import { Howl, Howler } from 'howler'
 import {
   createEffectChain,
   getAudioEffectConfig,
+  VOICE_DUCK_FADE_ATTACK_MS,
+  VOICE_DUCK_FADE_RELEASE_MS,
   VOICE_DUCK_UI_SFX_MULTIPLIER,
   type AudioEffectConfig,
 } from './audioEffects'
@@ -193,7 +195,7 @@ export class AudioManager {
 
     this.pushActive(def.category, playback)
     if (def.category === 'voice') {
-      this.refreshDuckedCategoryVolumes()
+      this.refreshDuckedCategoryVolumes('duck')
     }
     this.registerPlaybackErrorListenersBeforePlay(howl, playback)
 
@@ -395,7 +397,7 @@ export class AudioManager {
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
     if (wasVoice) {
-      this.refreshDuckedCategoryVolumes()
+      this.refreshDuckedCategoryVolumes('unduck')
     }
     if (!this.isCachedHowlInstance(playback.howl)) {
       playback.howl.unload()
@@ -410,7 +412,7 @@ export class AudioManager {
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
     if (wasVoice) {
-      this.refreshDuckedCategoryVolumes()
+      this.refreshDuckedCategoryVolumes('unduck')
     }
     if (!this.isCachedHowlInstance(playback.howl)) {
       playback.howl.unload()
@@ -441,7 +443,7 @@ export class AudioManager {
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
     if (wasVoice) {
-      this.refreshDuckedCategoryVolumes()
+      this.refreshDuckedCategoryVolumes('unduck')
     }
     this.stopHowlSound(playback.howl, playback.howlPlayId)
     if (!this.isCachedHowlInstance(playback.howl)) {
@@ -487,18 +489,45 @@ export class AudioManager {
   }
 
   /**
-   * Re-applies per-instance volume for active `ui` / `sfx` playbacks when voice ducking changes.
+   * Fades active `ui` / `sfx` toward the ducked or restored target when voice ducking engages or
+   * releases. Uses {@link Howl.fade} with per-instance ids for shared cached Howls when available.
+   *
+   * @param transition - `duck` when voice activity increases; `unduck` when it decreases.
    */
-  private refreshDuckedCategoryVolumes(): void {
+  private refreshDuckedCategoryVolumes(transition: 'duck' | 'unduck'): void {
+    const fadeMs =
+      transition === 'duck' ? VOICE_DUCK_FADE_ATTACK_MS : VOICE_DUCK_FADE_RELEASE_MS
     for (const cat of ['ui', 'sfx'] as const) {
       const list = this.activeByCategory.get(cat)
       if (!list?.length) continue
       for (const p of list) {
-        const def = getAudioDefinition(p.soundId)
-        const vol = p.baseVolumeScale * this.getCategoryVolume(cat)
-        this.applyPerInstanceVolume(p.howl, vol, p.howlPlayId)
+        const targetVol = p.baseVolumeScale * this.getCategoryVolume(cat)
+        const fromVol = this.getPerInstanceVolumeFromHowl(p)
+        if (Math.abs(fromVol - targetVol) < 1e-6) continue
+        if (fadeMs <= 0) {
+          this.applyPerInstanceVolume(p.howl, targetVol, p.howlPlayId)
+          continue
+        }
+        if (p.howlPlayId !== undefined) {
+          p.howl.fade(fromVol, targetVol, fadeMs, p.howlPlayId)
+        } else {
+          p.howl.fade(fromVol, targetVol, fadeMs)
+        }
       }
     }
+  }
+
+  /**
+   * Reads the current Howl gain for this playback (per-instance when {@link Howl.play} returned an id).
+   */
+  private getPerInstanceVolumeFromHowl(playback: ActivePlayback): number {
+    const { howl, howlPlayId } = playback
+    if (howlPlayId !== undefined) {
+      const v = howl.volume(howlPlayId)
+      return typeof v === 'number' && !Number.isNaN(v) ? v : 1
+    }
+    const v = howl.volume()
+    return typeof v === 'number' && !Number.isNaN(v) ? v : 1
   }
 
   private releasePlaybackEffectChain(playback: ActivePlayback): void {

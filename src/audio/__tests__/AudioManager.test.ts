@@ -18,9 +18,14 @@ const {
   mockSeek,
   mockPlaying,
   mockHowlVolume,
+  mockFade,
   mockCtxResume,
   mockOff,
   mockHowlInstances,
+  mockMasterGain,
+  mockCreateBiquadFilter,
+  mockCreateWaveShaper,
+  mockGainNodes,
   playCounterRef,
   syncPlayErrorRef,
 } = vi.hoisted(() => ({
@@ -31,14 +36,36 @@ const {
   mockSeek: vi.fn(() => 3),
   mockPlaying: vi.fn(() => true),
   mockHowlVolume: vi.fn(),
+  mockFade: vi.fn(),
   mockCtxResume: vi.fn(() => Promise.resolve()),
   mockOff: vi.fn(),
   mockHowlInstances: [] as MockHowlProbe[],
+  mockMasterGain: {
+    gain: { value: 1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  },
+  mockCreateBiquadFilter: vi.fn(),
+  mockCreateWaveShaper: vi.fn(),
+  mockGainNodes: [] as Array<{ connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }>,
   playCounterRef: { n: 0 },
   syncPlayErrorRef: { trigger: false },
 }))
 
 vi.mock('howler', () => {
+  mockCreateBiquadFilter.mockImplementation(() => ({
+    type: 'lowpass',
+    frequency: { value: 1000 },
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  }))
+  mockCreateWaveShaper.mockImplementation(() => ({
+    curve: null as Float32Array | null,
+    oversample: '4x' as const,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  }))
+
   class MockHowl {
     src: string[]
     endOnce: Array<{ fn: () => void; id?: number }> = []
@@ -46,6 +73,12 @@ vi.mock('howler', () => {
     playErrorOnce: Array<{ fn: ErrFn; id?: number }> = []
     loadErrorOn: Array<{ fn: ErrFn }> = []
     loadErrorOnce: Array<{ fn: ErrFn; id?: number }> = []
+    private readonly _instanceVol = new Map<number, number>()
+    private readonly _soundsById = new Map<
+      number,
+      { _id: number; _node: { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> } }
+    >()
+    private _groupVol = 1
 
     constructor(opts: { src: string[] | string; volume?: number }) {
       this.src = Array.isArray(opts.src) ? opts.src : [opts.src]
@@ -67,6 +100,13 @@ vi.mock('howler', () => {
     play = () => {
       playCounterRef.n += 1
       const id = mockPlay() ?? playCounterRef.n
+      const gainNode = {
+        gain: { value: 1, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      }
+      mockGainNodes.push(gainNode)
+      this._soundsById.set(id, { _id: id, _node: gainNode })
       if (syncPlayErrorRef.trigger) {
         this.emitPlayError(id)
       }
@@ -113,8 +153,34 @@ vi.mock('howler', () => {
       }
       return this
     })
-    volume = mockHowlVolume
-    fade = vi.fn()
+
+    volume = (...args: unknown[]): number | MockHowl => {
+      if (args.length === 0) return this._groupVol
+      if (args.length === 1 && typeof args[0] === 'number') {
+        const id = args[0]
+        if (this._instanceVol.has(id)) return this._instanceVol.get(id)!
+        return 1
+      }
+      if (args.length === 2 && typeof args[0] === 'number' && typeof args[1] === 'number') {
+        this._instanceVol.set(args[1], args[0])
+        mockHowlVolume(args[0], args[1])
+        return this
+      }
+      return this
+    }
+
+    fade = (from: number, to: number, durationMs: number, id?: number) => {
+      mockFade(from, to, durationMs, id)
+      if (id !== undefined) {
+        this.volume(to, id)
+      } else {
+        this._groupVol = to
+        mockHowlVolume(to)
+      }
+      return this
+    }
+
+    _soundById = (id: number) => this._soundsById.get(id) ?? null
   }
 
   return {
@@ -123,11 +189,14 @@ vi.mock('howler', () => {
       noAudio: false,
       autoUnlock: false,
       _volume: 1,
+      masterGain: mockMasterGain,
       get ctx() {
         return {
           state: 'suspended' as string,
           resume: mockCtxResume,
-          createGain: vi.fn(() => ({ gain: { value: 1 }, connect: vi.fn() })),
+          createGain: vi.fn(() => ({ gain: { value: 1 }, connect: vi.fn(), disconnect: vi.fn() })),
+          createBiquadFilter: mockCreateBiquadFilter,
+          createWaveShaper: mockCreateWaveShaper,
         }
       },
       volume(this: { _volume: number }, vol?: number) {
@@ -142,7 +211,11 @@ vi.mock('howler', () => {
 })
 
 import * as audioManifest from '../audioManifest'
-import { VOICE_DUCK_UI_SFX_MULTIPLIER } from '../audioEffects'
+import {
+  VOICE_DUCK_FADE_ATTACK_MS,
+  VOICE_DUCK_FADE_RELEASE_MS,
+  VOICE_DUCK_UI_SFX_MULTIPLIER,
+} from '../audioEffects'
 import { AudioManager } from '../AudioManager'
 import { resetAudioForTests, useAudio } from '../useAudio'
 
@@ -203,9 +276,11 @@ describe('AudioManager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockHowlInstances.length = 0
+    mockGainNodes.length = 0
     playCounterRef.n = 0
     syncPlayErrorRef.trigger = false
     mockCtxResume.mockImplementation(() => Promise.resolve())
+    mockMasterGain.connect.mockImplementation(() => mockMasterGain)
     manager = new AudioManager()
   })
 
@@ -446,6 +521,66 @@ describe('AudioManager', () => {
     fireRegisteredEndCallbacks()
     expect(manager.getCategoryVolume('ui')).toBe(0.8)
   })
+
+  it('uses attack and release fades for ui/sfx ducking when voice starts and ends', () => {
+    manager.unlock()
+    manager.play('ui.click')
+    manager.play('voice.dsnTransmission', { src: '/logs/fade-duck.mp3' })
+    expect(mockFade).toHaveBeenCalledWith(
+      0.35,
+      0.35 * VOICE_DUCK_UI_SFX_MULTIPLIER,
+      VOICE_DUCK_FADE_ATTACK_MS,
+      1,
+    )
+    fireRegisteredEndCallbacks()
+    expect(mockFade).toHaveBeenCalledWith(
+      0.35 * VOICE_DUCK_UI_SFX_MULTIPLIER,
+      0.35,
+      VOICE_DUCK_FADE_RELEASE_MS,
+      1,
+    )
+  })
+
+  it('inserts the DSN Web Audio effect chain on the per-play gain for voice DSN playback', () => {
+    manager.unlock()
+    manager.play('voice.dsnTransmission', { src: '/logs/dsn-chain.mp3' })
+    expect(mockCreateBiquadFilter).toHaveBeenCalledTimes(2)
+    expect(mockCreateWaveShaper).toHaveBeenCalledTimes(1)
+    const h = getLastMockHowl() as unknown as {
+      _soundById?: (id: number) => { _node: { disconnect: ReturnType<typeof vi.fn>; connect: ReturnType<typeof vi.fn> } } | null
+    }
+    const sound = h._soundById?.(1)
+    expect(sound?._node.disconnect).toHaveBeenCalled()
+    expect(sound?._node.connect).toHaveBeenCalled()
+    const waveShaper = mockCreateWaveShaper.mock.results.at(-1)?.value as {
+      connect: ReturnType<typeof vi.fn>
+    }
+    expect(waveShaper?.connect).toHaveBeenCalledWith(mockMasterGain)
+  })
+
+  it('does not throw when the effect chain cannot connect to the master bus', () => {
+    mockCreateWaveShaper.mockImplementationOnce(() => ({
+      curve: null as Float32Array | null,
+      oversample: '4x' as const,
+      connect: vi.fn(() => {
+        throw new Error('bus connect fail')
+      }),
+      disconnect: vi.fn(),
+    }))
+    manager.unlock()
+    expect(() => manager.play('voice.dsnTransmission', { src: '/logs/chain-fail.mp3' })).not.toThrow()
+  })
+
+  it('releases the DSN effect chain and reconnects the gain to the master bus when voice ends', () => {
+    manager.unlock()
+    manager.play('voice.dsnTransmission', { src: '/logs/effect-release.mp3' })
+    const h = getLastMockHowl() as unknown as {
+      _soundById?: (id: number) => { _node: { connect: ReturnType<typeof vi.fn> } } | null
+    }
+    const node = h._soundById?.(1)?._node
+    fireRegisteredEndCallbacks()
+    expect(node?.connect).toHaveBeenLastCalledWith(mockMasterGain)
+  })
 })
 
 describe('useAudio', () => {
@@ -486,6 +621,12 @@ describe('AudioManagerOptions.initialCategoryState', () => {
     m.play('ui.click')
     expect(mockHowlVolume).toHaveBeenNthCalledWith(1, 0.35 * 0.25, 1)
     m.play('voice.dsnTransmission', { src: '/x.mp3' })
+    expect(mockFade).toHaveBeenCalledWith(
+      0.35 * 0.25,
+      0.35 * 0.25 * VOICE_DUCK_UI_SFX_MULTIPLIER,
+      VOICE_DUCK_FADE_ATTACK_MS,
+      1,
+    )
     expect(mockHowlVolume).toHaveBeenNthCalledWith(2, 0.35 * 0.25 * VOICE_DUCK_UI_SFX_MULTIPLIER, 1)
     expect(mockHowlVolume).toHaveBeenNthCalledWith(3, 0, 2)
   })
