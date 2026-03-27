@@ -9,6 +9,15 @@ import {
   getAudioDefinition,
 } from '../audioManifest'
 
+const AMBIENT_SOUND_IDS = [
+  'ambient.base',
+  'ambient.day',
+  'ambient.night',
+  'ambient.winds',
+  'ambient.storm',
+  'ambient.quake',
+] as const
+
 describe('audioManifest', () => {
   it('registers the seeded sound ids used by the first migration', () => {
     expect(AUDIO_SOUND_IDS).toEqual([
@@ -22,6 +31,12 @@ describe('audioManifest', () => {
       'sfx.drillStart',
       'sfx.mastMove',
       'sfx.danScan',
+      'ambient.base',
+      'ambient.day',
+      'ambient.night',
+      'ambient.winds',
+      'ambient.storm',
+      'ambient.quake',
     ])
   })
 
@@ -68,7 +83,9 @@ describe('audioManifest', () => {
       expect(typeof src).toBe('string')
       if (typeof src !== 'string') throw new Error('expected string src for static entry')
       expect(src.length).toBeGreaterThan(0)
-      if (INSTRUMENT_ACTION_SOUND_IDS.includes(id as (typeof INSTRUMENT_ACTION_SOUND_IDS)[number])) {
+      const isInstrument = INSTRUMENT_ACTION_SOUND_IDS.includes(id as (typeof INSTRUMENT_ACTION_SOUND_IDS)[number])
+      const isAmbient = AMBIENT_SOUND_IDS.includes(id as (typeof AMBIENT_SOUND_IDS)[number])
+      if (isInstrument || isAmbient) {
         expect(src.startsWith('/sound/')).toBe(true)
       } else {
         expect(src.startsWith('data:audio/')).toBe(true)
