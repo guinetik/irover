@@ -18,6 +18,7 @@ export const AUDIO_SOUND_IDS = [
   'ui.instrument',
   'ui.confirm',
   'ui.science',
+  'ui.achievement',
   'ui.error',
   'ui.dsnArchivePlay',
   'ui.dsnArchiveSelect',
@@ -143,6 +144,15 @@ const manifestById: ManifestById = {
   'ui.science': {
     id: 'ui.science',
     src: '/sound/science.mp3',
+    category: 'ui',
+    load: 'lazy',
+    playback: 'restart',
+    volume: 0.45,
+    effect: 'none',
+  },
+  'ui.achievement': {
+    id: 'ui.achievement',
+    src: '/sound/achievement.mp3',
     category: 'ui',
     load: 'lazy',
     playback: 'restart',
@@ -389,7 +399,7 @@ const manifestById: ManifestById = {
     category: 'music',
     load: 'lazy',
     playback: 'single-instance',
-    volume: 0.3,
+    volume: 0.24,
     effect: 'none',
   },
   'sfx.uhfLock': {

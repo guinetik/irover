@@ -1,7 +1,7 @@
 <template>
   <div class="site-hud">
     <div class="site-hud-left">
-      <button type="button" class="back-btn" @click="goBack">BACK</button>
+      <button type="button" class="back-btn" @click="handleBackClick">BACK</button>
       <SolClock
         v-if="showSolClock"
         :sol="marsSol"
@@ -10,12 +10,15 @@
         :ambient-celsius="ambientCelsius"
       />
       <h2 class="site-name">{{ siteTitle }}</h2>
+      <button type="button" class="sound-toggle" :title="muted ? 'Unmute' : 'Mute'" @click="toggleMute">
+        {{ muted ? '🔇' : '🔊' }}
+      </button>
     </div>
     <div class="site-hud-center">
       <SiteCompass :heading="roverHeading" :pois="compassPois" />
     </div>
     <div class="hud-actions">
-      <button class="mission-log-btn" @click="$emit('open-mission-log')">
+      <button class="mission-log-btn" @click="handleMissionLogClick">
         <span class="ml-icon">&#x25CE;</span>
         <span class="ml-label">MISSIONS</span>
         <span v-if="activeMissionCount > 0" class="ml-badge">{{ activeMissionCount }}</span>
@@ -26,7 +29,7 @@
         aria-haspopup="dialog"
         :aria-expanded="achievementsExpanded"
         aria-label="Achievements"
-        @click="$emit('open-achievements')"
+        @click="handleAchievementsClick"
       >
         <span class="ach-trophy" aria-hidden="true">🏆</span>
         <span class="ach-count font-instrument">{{ unlockedAchievementCount }}/{{ totalAchievementCount }}</span>
@@ -37,13 +40,13 @@
         aria-haspopup="dialog"
         :aria-expanded="spLedgerExpanded"
         aria-label="Science points history"
-        @click="$emit('open-sp-ledger')"
+        @click="handleSpLedgerClick"
       >
         <span class="sp-icon" aria-hidden="true">&#x2726;</span>
         <span class="sp-value font-instrument">{{ totalSp }}</span>
         <span class="sp-label">SP</span>
       </button>
-      <button v-if="showArchiveButton" class="hud-btn hud-btn--archive" @click="$emit('open-archive')">
+      <button v-if="showArchiveButton" class="hud-btn hud-btn--archive" @click="handleArchiveClick">
         <span class="hud-btn-icon">&#x29BF;</span>
         <span class="hud-btn-label">ARCHIVE</span>
         <span v-if="archiveUnreadCount > 0" class="hud-badge archive-badge">{{ archiveUnreadCount }}</span>
@@ -52,7 +55,7 @@
         v-if="showScienceButton"
         type="button"
         class="science-hud-btn"
-        @click="$emit('open-science-log')"
+        @click="handleScienceLogClick"
       >
         SCIENCE
       </button>
@@ -61,7 +64,10 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { Howler } from 'howler'
 import { useRouter } from 'vue-router'
+import { useAudio } from '@/audio/useAudio'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { SiteCompassPoi } from '@/components/SiteCompass.vue'
 import SolClock from '@/components/SolClock.vue'
@@ -90,7 +96,15 @@ withDefaults(
   { compassPois: () => [], currentNightFactor: 0, activeMissionCount: 0, showArchiveButton: false, archiveUnreadCount: 0 },
 )
 
-defineEmits<{
+const router = useRouter()
+const audio = useAudio()
+const muted = ref(Howler._muted ?? false)
+
+function toggleMute(): void {
+  muted.value = !muted.value
+  Howler.mute(muted.value)
+}
+const emit = defineEmits<{
   'open-achievements': []
   'open-sp-ledger': []
   'open-science-log': []
@@ -98,7 +112,43 @@ defineEmits<{
   'open-archive': []
 }>()
 
-const router = useRouter()
+/**
+ * Plays the top-navbar confirm cue for navigation and panel open actions.
+ */
+function playConfirmCue(): void {
+  audio.unlock()
+  audio.play('ui.confirm')
+}
+
+function handleBackClick(): void {
+  playConfirmCue()
+  goBack()
+}
+
+function handleMissionLogClick(): void {
+  playConfirmCue()
+  emit('open-mission-log')
+}
+
+function handleAchievementsClick(): void {
+  playConfirmCue()
+  emit('open-achievements')
+}
+
+function handleSpLedgerClick(): void {
+  playConfirmCue()
+  emit('open-sp-ledger')
+}
+
+function handleArchiveClick(): void {
+  playConfirmCue()
+  emit('open-archive')
+}
+
+function handleScienceLogClick(): void {
+  playConfirmCue()
+  emit('open-science-log')
+}
 
 /** Returns to the global Mars globe view. */
 function goBack(): void {
@@ -421,5 +471,20 @@ function goBack(): void {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.sound-toggle {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.sound-toggle:hover {
+  opacity: 0.9;
 }
 </style>
