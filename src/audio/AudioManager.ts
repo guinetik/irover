@@ -316,6 +316,22 @@ export class AudioManager {
   }
 
   /**
+   * Stops every active playback for a specific manifest sound id.
+   *
+   * Useful when gameplay needs a hard ownership boundary, such as force-closing an instrument and
+   * seizing any loop or one-shot that belongs to that instrument immediately.
+   *
+   * @param soundId - Registered manifest sound id to silence.
+   */
+  stopSound(soundId: AudioSoundId): void {
+    if (this.pendingLockedVoice?.soundId === soundId) {
+      this.pendingLockedVoice.stateRef.kind = 'cancelled'
+      this.pendingLockedVoice = null
+    }
+    this.stopAllActiveWithSoundId(soundId)
+  }
+
+  /**
    * Applies manifest {@link AudioDefinition.playback} rules before starting a new instance.
    */
   private applyPlaybackModePrelude(def: Readonly<AudioDefinition>, soundId: AudioSoundId): void {

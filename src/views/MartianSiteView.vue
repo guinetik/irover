@@ -1429,6 +1429,9 @@ function createSiteControllerContext() {
       audio.unlock()
       return audio.play(soundId, { loop: true })
     },
+    stopInstrumentActionSound: (soundId) => {
+      audio.stopSound(soundId)
+    },
     getApxsCompositionWeights: () => apxsCompositionData,
     apxsGameRockUuid,
     apxsGameRockType,

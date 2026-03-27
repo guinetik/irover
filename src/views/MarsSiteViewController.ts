@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import type { InstrumentActionSoundId } from '@/audio/audioManifest'
 import { SiteScene } from '@/three/SiteScene'
 import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
@@ -190,6 +191,37 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
   }
 }
 
+type ActiveInstrumentAudioOwner = 'apxs' | 'chemcam' | 'drill' | 'mastcam'
+
+export interface ActiveInstrumentAudioState {
+  mode: 'driving' | 'instrument' | 'active' | null
+  instrumentId: string | null
+}
+
+const ACTIVE_INSTRUMENT_EXIT_SOUND_IDS: Record<ActiveInstrumentAudioOwner, readonly InstrumentActionSoundId[]> = {
+  apxs: ['sfx.apxsContact', 'sfx.mastMove'],
+  chemcam: ['sfx.chemcamFire'],
+  drill: ['sfx.drillStart', 'sfx.mastMove'],
+  mastcam: ['sfx.mastcamTag'],
+}
+
+/**
+ * Resolves which sound ids must be force-stopped when an active instrument loses focus.
+ *
+ * This covers hard exits like `Escape` and direct instrument switches. The per-instrument handlers
+ * still stop their owned playback handles, but this gives the view a second hard boundary so stale
+ * queued or overlapping instrument audio cannot survive beyond the active instrument transition.
+ */
+export function getExitedActiveInstrumentSoundIds(
+  previous: ActiveInstrumentAudioState,
+  next: ActiveInstrumentAudioState,
+): readonly InstrumentActionSoundId[] {
+  if (previous.mode !== 'active' || previous.instrumentId == null) return []
+  if (next.mode === 'active' && next.instrumentId === previous.instrumentId) return []
+  if (!(previous.instrumentId in ACTIVE_INSTRUMENT_EXIT_SOUND_IDS)) return []
+  return ACTIVE_INSTRUMENT_EXIT_SOUND_IDS[previous.instrumentId as ActiveInstrumentAudioOwner]
+}
+
 /** Vue-facing refs and handlers wired from {@link MartianSiteView.vue}. */
 export interface MarsSiteViewRefs {
   siteLat: Ref<number>
@@ -335,10 +367,11 @@ export interface MarsSiteViewContext {
   awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
   onAPXSLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onAPXSBlockedByCold: () => void
-  playInstrumentActionSound: (soundId: import('@/audio/audioManifest').InstrumentActionSoundId) => void
+  playInstrumentActionSound: (soundId: InstrumentActionSoundId) => void
   startInstrumentActionLoop: (
-    soundId: import('@/audio/audioManifest').InstrumentActionSoundId,
+    soundId: InstrumentActionSoundId,
   ) => import('@/audio/audioTypes').AudioPlaybackHandle
+  stopInstrumentActionSound: (soundId: InstrumentActionSoundId) => void
   onInstrumentActivateRequest: () => void
   onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
@@ -388,6 +421,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     apxsTick,
     totalSP,
     onInstrumentActivateRequest,
+    stopInstrumentActionSound,
     onGlobalKeyDown,
     clearPois,
     devSpawnRandomInventoryItems: devSpawnRandom,
@@ -445,6 +479,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let disposeMarsDevDebugApi: (() => void) | null = null
 
   let lastSkyTimeOfDay = -1
+  let lastActiveInstrumentAudioState: ActiveInstrumentAudioState = { mode: null, instrumentId: null }
   let roverSpawnCaptured = false
   let firstMissionDelivered = false
 
@@ -666,6 +701,18 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         totalSP: totalSP.value,
         activeInstrumentSlot: activeInstrumentSlot.value,
       }
+
+      const nextActiveInstrumentAudioState: ActiveInstrumentAudioState = {
+        mode: controller?.mode ?? null,
+        instrumentId: controller?.activeInstrument?.id ?? null,
+      }
+      for (const soundId of getExitedActiveInstrumentSoundIds(
+        lastActiveInstrumentAudioState,
+        nextActiveInstrumentAudioState,
+      )) {
+        stopInstrumentActionSound(soundId)
+      }
+      lastActiveInstrumentAudioState = nextActiveInstrumentAudioState
 
       // --- Sleep / speed control ---
       if (isSleeping.value && controller) {

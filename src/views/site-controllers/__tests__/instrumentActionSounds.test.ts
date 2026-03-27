@@ -95,7 +95,8 @@ describe('instrument action sounds', () => {
     handler.tick(activeCtx)
     expect(startHeldActionSound).toHaveBeenCalledTimes(1)
 
-    handler.tick(makeFrameContext(mastCam, { rover: { ...activeCtx.rover!, mode: 'driving' } }))
+    const drivingRover = { ...activeCtx.rover!, mode: 'driving' } as SiteFrameContext['rover']
+    handler.tick(makeFrameContext(mastCam, { rover: drivingRover }))
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
   })
 
@@ -243,7 +244,8 @@ describe('instrument action sounds', () => {
     handler.tick(activeCtx)
     expect(startHeldActionSound).toHaveBeenCalledTimes(1)
 
-    handler.tick(makeFrameContext(chemCam, { rover: { ...activeCtx.rover!, mode: 'driving' } }))
+    const drivingRover = { ...activeCtx.rover!, mode: 'driving' } as SiteFrameContext['rover']
+    handler.tick(makeFrameContext(chemCam, { rover: drivingRover }))
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
   })
 
@@ -395,7 +397,8 @@ describe('instrument action sounds', () => {
     expect(startHeldActionSound).toHaveBeenCalledTimes(1)
     expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
 
-    handler.tick(makeFrameContext(drill, { rover: { ...activeCtx.rover!, mode: 'instrument' } }))
+    const instrumentRover = { ...activeCtx.rover!, mode: 'instrument' } as SiteFrameContext['rover']
+    handler.tick(makeFrameContext(drill, { rover: instrumentRover }))
     expect(drillHandle.stop).toHaveBeenCalledTimes(1)
     expect(mastHandle.stop).toHaveBeenCalledTimes(1)
   })

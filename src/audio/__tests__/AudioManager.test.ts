@@ -360,6 +360,13 @@ describe('AudioManager', () => {
     expect(mockUnload).toHaveBeenCalled()
   })
 
+  it('can stop an active sound by id when a gameplay owner is force-closed', () => {
+    manager.unlock()
+    manager.play('sfx.danScan', { loop: true })
+    manager.stopSound('sfx.danScan')
+    expect(mockStop).toHaveBeenCalledTimes(1)
+  })
+
   it('queues dynamic DSN voice while locked and plays on unlock', () => {
     manager.play('voice.dsnTransmission', { src: '/logs/queued.mp3' })
     expect(mockPlay).not.toHaveBeenCalled()
