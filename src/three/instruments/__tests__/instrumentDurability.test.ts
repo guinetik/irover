@@ -138,4 +138,30 @@ describe('InstrumentController durability', () => {
     inst.durabilityPct = inst.breakThreshold
     expect(inst.operational).toBe(false)
   })
+
+  it('applyPassiveDecay uses storm floor when hazardDecayMultiplier > 1.0', () => {
+    const inst = new TestInstrument()
+    // breakThreshold = 25, so storm floor = 35
+    inst.durabilityPct = 36
+    inst.hazardDecayMultiplier = 2.0
+    inst.applyPassiveDecay(100) // large solDelta to force floor
+    expect(inst.durabilityPct).toBe(35) // stops at storm floor, not breakThreshold
+  })
+
+  it('applyPassiveDecay uses normal breakThreshold floor when hazardDecayMultiplier = 1.0', () => {
+    const inst = new TestInstrument()
+    inst.durabilityPct = 30
+    inst.hazardDecayMultiplier = 1.0
+    inst.applyPassiveDecay(100)
+    expect(inst.durabilityPct).toBe(25) // normal breakThreshold floor
+  })
+
+  it('applyPassiveDecay storm floor does not raise durability if already below floor', () => {
+    const inst = new TestInstrument()
+    inst.durabilityPct = 30 // below storm floor of 35, above breakThreshold of 25
+    inst.hazardDecayMultiplier = 2.0
+    inst.applyPassiveDecay(0.001) // tiny delta
+    // Should not decay further since already below storm floor with active hazard
+    expect(inst.durabilityPct).toBe(30)
+  })
 })

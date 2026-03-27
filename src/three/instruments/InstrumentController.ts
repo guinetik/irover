@@ -114,8 +114,12 @@ export abstract class InstrumentController {
 
   applyPassiveDecay(solDelta: number): void {
     if (this.durabilityPct <= this.breakThreshold) return
+    const stormFloor = this.hazardDecayMultiplier > 1.0
+      ? this.breakThreshold + 10
+      : this.breakThreshold
+    if (this.durabilityPct <= stormFloor) return
     this.durabilityPct = Math.max(
-      this.breakThreshold,
+      stormFloor,
       this.durabilityPct - this.passiveDecayPerSol * this.hazardDecayMultiplier * solDelta,
     )
   }
