@@ -11,16 +11,62 @@ import { usePlayerProfile } from './usePlayerProfile'
 
 const BASE_CAPACITY_KG = 5
 
-const stacks = ref<InventoryStack[]>([])
-const { mod } = usePlayerProfile()
+const STORAGE_KEY = 'mars-inventory-v1'
 
-// Seed starter items — placeholder until DAN cones / orbital drops produce them
-if (stacks.value.length === 0) {
-  stacks.value = [
-    { itemId: 'ice', quantity: 10, totalWeightKg: 1.0 },
-    { itemId: 'welding-wire', quantity: 8, totalWeightKg: 2.0 },
-  ]
+/** Default cargo for a new campaign (no saved inventory). */
+const STARTER_STACKS: InventoryStack[] = [
+  { itemId: 'ice', quantity: 10, totalWeightKg: 1.0 },
+  { itemId: 'welding-wire', quantity: 8, totalWeightKg: 2.0 },
+]
+
+/**
+ * Loads serialized stacks from localStorage; returns [] if missing or invalid.
+ */
+function loadFromStorage(): InventoryStack[] {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    const out: InventoryStack[] = []
+    for (const row of parsed) {
+      if (
+        row &&
+        typeof row === 'object' &&
+        typeof (row as InventoryStack).itemId === 'string' &&
+        typeof (row as InventoryStack).quantity === 'number' &&
+        typeof (row as InventoryStack).totalWeightKg === 'number'
+      ) {
+        out.push(row as InventoryStack)
+      }
+    }
+    return out
+  } catch {
+    return []
+  }
 }
+
+/**
+ * Persists current cargo to localStorage (best-effort).
+ */
+function persistInventory(): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stacks.value))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function loadInitialStacks(): InventoryStack[] {
+  const loaded = loadFromStorage()
+  if (loaded.length > 0) return loaded
+  return [...STARTER_STACKS]
+}
+
+const stacks = ref<InventoryStack[]>(loadInitialStacks())
+const { mod } = usePlayerProfile()
 
 export type AddRockSampleResult =
   | { ok: true; payload: CollectedRockSample }
@@ -100,6 +146,7 @@ export function useInventory() {
       })
     }
     stacks.value = next
+    persistInventory()
 
     const payload: CollectedRockSample = {
       rockMeshUuid,
@@ -144,6 +191,7 @@ export function useInventory() {
       })
     }
     stacks.value = next
+    persistInventory()
     return { ok: true }
   }
 
@@ -189,6 +237,7 @@ export function useInventory() {
    */
   function removeStack(itemId: string): void {
     stacks.value = stacks.value.filter((s) => s.itemId !== itemId)
+    persistInventory()
   }
 
   /**
@@ -224,6 +273,7 @@ export function useInventory() {
       }
     }
     stacks.value = next
+    persistInventory()
     return { ok: true }
   }
 
@@ -271,6 +321,7 @@ function tryMergeOneDevItem(itemId: string): boolean {
       })
     }
     stacks.value = next
+    persistInventory()
     return true
   }
 
@@ -301,6 +352,7 @@ function tryMergeOneDevItem(itemId: string): boolean {
       })
     }
     stacks.value = next
+    persistInventory()
     return true
   }
 
@@ -377,6 +429,7 @@ export function devSpawnInventoryItem(itemId: string, quantity = 1): DevSpawnInv
       })
     }
     stacks.value = next
+    persistInventory()
     return { ok: true }
   }
 
@@ -384,8 +437,23 @@ export function devSpawnInventoryItem(itemId: string, quantity = 1): DevSpawnInv
 }
 
 /**
+ * Resets cargo to starter stacks and persists (new campaign from character create).
+ */
+export function resetInventoryForNewCampaign(): void {
+  stacks.value = [...STARTER_STACKS]
+  persistInventory()
+}
+
+/**
  * Test-only reset for the singleton inventory state.
  */
 export function resetInventoryForTests(): void {
   stacks.value = []
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      /* ignore */
+    }
+  }
 }

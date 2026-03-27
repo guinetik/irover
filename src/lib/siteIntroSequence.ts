@@ -20,6 +20,7 @@ export const SITE_INTRO_SKIP_STORAGE_KEY = STORAGE_KEY
  *
  * Precedence: URL `skipIntro` query → `VITE_SKIP_SITE_INTRO` env →
  * localStorage {@link SITE_INTRO_SKIP_STORAGE_KEY} → default `false` (play intro).
+ * The app also sets this key after landing (see {@link setSiteIntroSequenceSkipped}) when you have a saved site.
  *
  * Examples: `?skipIntro=1`, `.env` `VITE_SKIP_SITE_INTRO=true`,
  * `localStorage.setItem('mars.skipSiteIntro', '1')`.
@@ -42,4 +43,29 @@ export function isSiteIntroSequenceSkipped(): boolean {
   }
 
   return false
+}
+
+/**
+ * Persist preference to skip the Martian site descent / deploy sequence on future loads.
+ *
+ * @param skip - When true, writes {@link SITE_INTRO_SKIP_STORAGE_KEY}; when false, removes the key so the default is to play the intro.
+ */
+export function setSiteIntroSequenceSkipped(skip: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (skip) {
+      localStorage.setItem(STORAGE_KEY, '1')
+    } else {
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  } catch {
+    // private mode / quota — ignore
+  }
+}
+
+/**
+ * Clears stored intro-skip preference (e.g. new campaign from character create).
+ */
+export function clearSiteIntroSequencePreference(): void {
+  setSiteIntroSequenceSkipped(false)
 }

@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useUiSound } from '@/composables/useUiSound'
 
 interface AchievementItem {
   id: string
@@ -44,7 +45,14 @@ interface AchievementItem {
 const visible = ref<AchievementItem[]>([])
 const DURATION_MS = 5000
 
+const { playUiCue } = useUiSound()
+
+/**
+ * Shows a toast for a newly unlocked achievement and plays manifest cue `ui.achievement`.
+ * If Howler has not been unlocked yet (no prior user gesture on the site), the manager skips playback.
+ */
 function show(icon: string, title: string, description: string, type = 'ACHIEVEMENT'): void {
+  playUiCue('ui.achievement')
   const id = `ach-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
   const item: AchievementItem = { id, icon, title, description, type }
   visible.value.push(item)

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
+import type { InstrumentTier } from '@/lib/hazards'
 
 /** Toolbar / overlay slot for WHLS — use in Vue bindings instead of a magic number. */
 export const WHLS_SLOT = 13
