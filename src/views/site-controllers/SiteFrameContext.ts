@@ -23,6 +23,12 @@ export interface SiteFrameContext {
   marsTimeOfDay: number
   totalSP: number
   activeInstrumentSlot: number | null
+  /** Wind speed in m/s from site weather model. */
+  windMs: number
+  /** 'none' | 'incoming' | 'active' */
+  dustStormPhase: 'none' | 'incoming' | 'active'
+  /** Storm intensity 1–5, or null when no storm. */
+  dustStormLevel: number | null
 }
 
 /**

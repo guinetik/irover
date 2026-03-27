@@ -44,6 +44,9 @@ function makeFrameContext(activeInstrument: object, overrides: Partial<SiteFrame
     marsTimeOfDay: 0.25,
     totalSP: 0,
     activeInstrumentSlot: (activeInstrument as { slot?: number }).slot ?? null,
+    windMs: 0,
+    dustStormPhase: 'none' as const,
+    dustStormLevel: null,
     ...overrides,
   }
 }

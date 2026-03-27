@@ -700,6 +700,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         marsTimeOfDay: marsTimeOfDay.value,
         totalSP: totalSP.value,
         activeInstrumentSlot: activeInstrumentSlot.value,
+        windMs: siteWeather.value.windMs,
+        dustStormPhase: siteWeather.value.dustStormPhase,
+        dustStormLevel: siteWeather.value.dustStormLevel,
       }
 
       const nextActiveInstrumentAudioState: ActiveInstrumentAudioState = {
@@ -1050,6 +1053,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       marsTimeOfDay: marsTimeOfDay.value,
       totalSP: totalSP.value,
       activeInstrumentSlot: activeInstrumentSlot.value,
+      windMs: 0,
+      dustStormPhase: 'none' as const,
+      dustStormLevel: null,
     }
   }
 
