@@ -8,6 +8,7 @@ const ARM_SWING_MAX = 1.0
 const ARM_EXTEND_MIN = -0.3
 const ARM_EXTEND_MAX = 0.8
 const ARM_LERP = 0.1
+const ARM_ACTUATION_EPSILON = 1e-3
 
 /** Turret head rotation angle (radians) to swing APXS from side to front. Tweak to taste. */
 const TURRET_ROTATION = (225 / 180) * Math.PI
@@ -59,6 +60,15 @@ export class APXSController extends InstrumentController {
     return this.currentTarget !== null && this.currentTarget.rock.userData.apxsAnalyzed !== true
   }
   get currentTargetResult(): TargetResult | null { return this.currentTarget }
+  /**
+   * True while the shared arm is still moving toward the latest AWSD-driven target pose.
+   */
+  get isArmActuating(): boolean {
+    return (
+      Math.abs(this.targetSwing - this.swingAngle) > ARM_ACTUATION_EPSILON
+      || Math.abs(this.targetExtend - this.extendAngle) > ARM_ACTUATION_EPSILON
+    )
+  }
 
   private swingAngle = 0
   private extendAngle = 0

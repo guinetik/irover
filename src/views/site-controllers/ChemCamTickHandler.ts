@@ -3,6 +3,7 @@ import { ChemCamController } from '@/three/instruments'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface ChemCamTickRefs {
@@ -31,6 +32,7 @@ export interface ChemCamTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
+  startHeldActionSound: (soundId: 'sfx.chemcamFire') => AudioPlaybackHandle
 }
 
 /**
@@ -51,9 +53,10 @@ export function createChemCamTickHandler(
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
     isDrilling, drillProgress,
   } = refs
-  const { sampleToastRef, playerMod, awardSP } = callbacks
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound } = callbacks
 
   let targetingInitialised = false
+  let heldFirePlayback: AudioPlaybackHandle | null = null
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (targetingInitialised) return
@@ -81,6 +84,16 @@ export function createChemCamTickHandler(
     const ccInst = controller?.instruments.find(i => i.id === 'chemcam')
     const chemCamIsActiveInstrument =
       controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController
+    const shouldPlayHeldFire =
+      controller?.mode === 'active'
+      && controller.activeInstrument instanceof ChemCamController
+      && controller.activeInstrument.phase === 'PULSE_TRAIN'
+    if (shouldPlayHeldFire) {
+      heldFirePlayback ??= startHeldActionSound('sfx.chemcamFire')
+    } else if (heldFirePlayback) {
+      heldFirePlayback.stop()
+      heldFirePlayback = null
+    }
     if (ccInst instanceof ChemCamController) {
       chemCamUnreadCount.value = ccInst.unreadCount
       ccInst.currentSP = totalSP
@@ -140,7 +153,8 @@ export function createChemCamTickHandler(
   }
 
   function dispose(): void {
-    // No owned resources
+    heldFirePlayback?.stop()
+    heldFirePlayback = null
   }
 
   return { tick, dispose, initIfReady }

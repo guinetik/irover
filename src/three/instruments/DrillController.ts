@@ -12,6 +12,7 @@ const ARM_SWING_MAX = 1.0
 const ARM_EXTEND_MIN = -0.3
 const ARM_EXTEND_MAX = 0.8
 const ARM_LERP = 0.1
+const ARM_ACTUATION_EPSILON = 1e-3
 
 /**
  * Arm-mounted powder drill (slot 3): laser VFX and sampling use the GLTF `Drill` node.
@@ -71,6 +72,15 @@ export class DrillController extends InstrumentController {
   get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
   get hasTarget(): boolean { return this.currentTarget !== null }
   get isInventoryFull(): boolean { return this.inventory.isFull.value }
+  /**
+   * True while the shared arm is still moving toward the latest AWSD-driven target pose.
+   */
+  get isArmActuating(): boolean {
+    return (
+      Math.abs(this.targetSwing - this.swingAngle) > ARM_ACTUATION_EPSILON
+      || Math.abs(this.targetExtend - this.extendAngle) > ARM_ACTUATION_EPSILON
+    )
+  }
 
   /** Instrument accuracy modifier — scales trace element drop count (set each frame by tick handler). */
   accuracyMod = 1.0

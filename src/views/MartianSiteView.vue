@@ -1421,6 +1421,14 @@ function createSiteControllerContext() {
     totalSP,
     triggerDanAchievement,
     awardTransmission,
+    playInstrumentActionSound: (soundId) => {
+      audio.unlock()
+      audio.play(soundId)
+    },
+    startInstrumentActionLoop: (soundId) => {
+      audio.unlock()
+      return audio.play(soundId, { loop: true })
+    },
     getApxsCompositionWeights: () => apxsCompositionData,
     apxsGameRockUuid,
     apxsGameRockType,

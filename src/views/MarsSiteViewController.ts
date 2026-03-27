@@ -275,7 +275,16 @@ export interface MarsSiteViewRefs {
   remsStormIncomingText: Ref<string | null>
   remsStormActiveText: Ref<string | null>
   /** Always-live weather state — updates regardless of REMS instrument toggle. */
-  siteWeather: Ref<{ windMs: number; windDirDeg: number; tempC: number; pressureHpa: number; humidityPct: number; uvIndex: number; dustStormLevel: number | null }>
+  siteWeather: Ref<{
+    windMs: number
+    windDirDeg: number
+    tempC: number
+    pressureHpa: number
+    humidityPct: number
+    uvIndex: number
+    dustStormPhase: 'none' | 'incoming' | 'active'
+    dustStormLevel: number | null
+  }>
   /** REMS passive surveying — drives ambient air HUD availability. */
   remsSurveying: Ref<boolean>
 }
@@ -326,6 +335,10 @@ export interface MarsSiteViewContext {
   awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
   onAPXSLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onAPXSBlockedByCold: () => void
+  playInstrumentActionSound: (soundId: import('@/audio/audioManifest').InstrumentActionSoundId) => void
+  startInstrumentActionLoop: (
+    soundId: import('@/audio/audioManifest').InstrumentActionSoundId,
+  ) => import('@/audio/audioTypes').AudioPlaybackHandle
   onInstrumentActivateRequest: () => void
   onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void

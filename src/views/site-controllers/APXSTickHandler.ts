@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import { APXSController } from '@/three/instruments'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
 
@@ -26,6 +27,8 @@ export interface APXSTickCallbacks {
   onLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onBlockedByCold: () => void
   playerMod: (key: keyof ProfileModifiers) => number
+  playActionSound: (soundId: 'sfx.apxsContact') => void
+  startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
 }
 
 export function createAPXSTickHandler(
@@ -33,11 +36,12 @@ export function createAPXSTickHandler(
   callbacks: APXSTickCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
-  const { onLaunchMinigame, onBlockedByCold, playerMod } = callbacks
+  const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound } = callbacks
   let gameplayInitialised = false
   let countdownTimer = 0
   let coldToastCooldown = 0
   let apxsOwnsCrosshair = false
+  let heldMovementPlayback: AudioPlaybackHandle | null = null
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (gameplayInitialised) return
@@ -51,13 +55,23 @@ export function createAPXSTickHandler(
   function tick(fctx: SiteFrameContext): void {
     const { rover: controller, siteScene, camera, thermalZone } = fctx
 
-    if (apxsState.value === 'playing') return
+    if (apxsState.value === 'playing') {
+      heldMovementPlayback?.stop()
+      heldMovementPlayback = null
+      return
+    }
 
     coldToastCooldown = Math.max(0, coldToastCooldown - fctx.sceneDelta)
 
     if (controller?.mode === 'active' && controller.activeInstrument instanceof APXSController) {
       const apxs = controller.activeInstrument
       apxs.setRoverPosition(siteScene.rover!.position)
+      if (apxs.isArmActuating) {
+        heldMovementPlayback ??= startHeldMovementSound('sfx.mastMove')
+      } else if (heldMovementPlayback) {
+        heldMovementPlayback.stop()
+        heldMovementPlayback = null
+      }
       crosshairVisible.value = true
       apxsOwnsCrosshair = true
       const hasValidTarget = apxs.canAnalyzeTarget
@@ -80,6 +94,7 @@ export function createAPXSTickHandler(
       const canStart = hasValidTarget && duration > 0
 
       if (canStart && apxsState.value === 'idle') {
+        playActionSound('sfx.apxsContact')
         apxsState.value = 'counting'
         countdownTimer = 3
         apxsCountdown.value = 3
@@ -100,6 +115,8 @@ export function createAPXSTickHandler(
         apxsCountdown.value = 0
       }
     } else {
+      heldMovementPlayback?.stop()
+      heldMovementPlayback = null
       // Only clear crosshair if APXS was the last to claim it (avoid clobbering drill/chemcam)
       if (apxsOwnsCrosshair) {
         crosshairVisible.value = false
@@ -112,7 +129,10 @@ export function createAPXSTickHandler(
     }
   }
 
-  function dispose(): void {}
+  function dispose(): void {
+    heldMovementPlayback?.stop()
+    heldMovementPlayback = null
+  }
 
   return { tick, dispose, initIfReady }
 }

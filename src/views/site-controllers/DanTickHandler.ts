@@ -7,6 +7,7 @@ import { danSignalQualityLabel } from '@/lib/neutron/danSampling'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import { DAN_INITIATE_DURATION_SEC, DAN_PROSPECT_DURATION_MARS_HOURS } from '@/views/MarsSiteViewController'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 
@@ -32,6 +33,7 @@ export interface DanTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
+  startHeldActionSound: (soundId: 'sfx.danScan') => AudioPlaybackHandle
   triggerDanAchievement: (event: string) => void
   archiveDanProspect: (params: {
     capturedSol: number
@@ -72,12 +74,33 @@ export function createDanTickHandler(
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,
     passiveUiRevision, siteLat, siteLon, roverWorldX, roverWorldZ, roverSpawnXZ,
   } = refs
-  const { siteId, sampleToastRef, playerMod, awardDAN, triggerDanAchievement, archiveDanProspect } = callbacks
+  const {
+    siteId,
+    sampleToastRef,
+    playerMod,
+    awardDAN,
+    startHeldActionSound,
+    triggerDanAchievement,
+    archiveDanProspect,
+  } = callbacks
 
   let danDiscMesh: THREE.Mesh | null = null
   let danConeMesh: THREE.Mesh | null = null
   const danCompletedDiscs: THREE.Mesh[] = []
   let vfxInitialised = false
+  let heldDanPlayback: AudioPlaybackHandle | null = null
+
+  /**
+   * Keeps the DAN scan loop owned by this handler and tied to the passive subsystem state.
+   */
+  function syncDanScanPlayback(enabled: boolean): void {
+    if (enabled) {
+      heldDanPlayback ??= startHeldActionSound('sfx.danScan')
+      return
+    }
+    heldDanPlayback?.stop()
+    heldDanPlayback = null
+  }
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (vfxInitialised) return
@@ -121,7 +144,10 @@ export function createDanTickHandler(
     const { rover: controller, siteScene, sceneDelta, isSleeping, marsSol } = fctx
 
     const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
-    if (!danInst || !fctx.roverReady) return
+    if (!danInst || !fctx.roverReady) {
+      syncDanScanPlayback(false)
+      return
+    }
 
     danInst.setRoverState(
       siteScene.rover?.position ?? new THREE.Vector3(),
@@ -171,6 +197,7 @@ export function createDanTickHandler(
       danProspectProgress.value = 0
       passiveUiRevision.value++
     }
+    syncDanScanPlayback(danInst.passiveSubsystemEnabled)
 
     // --- Prospect phase state machine ---
     if (danInst.prospectPhase !== 'idle' && danInst.prospectPhase !== 'complete') {
@@ -285,6 +312,7 @@ export function createDanTickHandler(
   }
 
   function dispose(): void {
+    syncDanScanPlayback(false)
     if (danDiscMesh) {
       danDiscMesh.geometry.dispose()
       ;(danDiscMesh.material as THREE.Material).dispose()

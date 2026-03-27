@@ -3,6 +3,7 @@ import { DrillController, MastCamController } from '@/three/instruments'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface DrillTickRefs {
@@ -18,6 +19,8 @@ export interface DrillTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
+  startHeldActionSound: (soundId: 'sfx.drillStart') => AudioPlaybackHandle
+  startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
 }
 
 export interface DrillTickResult {
@@ -37,11 +40,13 @@ export function createDrillTickHandler(
   callbacks: DrillTickCallbacks,
 ): SiteTickHandler & { lastResult: DrillTickResult; initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling } = refs
-  const { sampleToastRef, playerMod, awardSP } = callbacks
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
 
   const lastResult: DrillTickResult = { rockDrilling: false }
   let gameplayInitialised = false
   let cargoFullToastCooldown = 0
+  let heldDrillPlayback: AudioPlaybackHandle | null = null
+  let heldMovementPlayback: AudioPlaybackHandle | null = null
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (gameplayInitialised) return
@@ -73,6 +78,18 @@ export function createDrillTickHandler(
       drillProgress.value = drill.drillProgress
       isDrilling.value = drill.isDrilling
       lastResult.rockDrilling = drill.isDrilling
+      if (drill.isArmActuating) {
+        heldMovementPlayback ??= startHeldMovementSound('sfx.mastMove')
+      } else if (heldMovementPlayback) {
+        heldMovementPlayback.stop()
+        heldMovementPlayback = null
+      }
+      if (drill.isDrilling) {
+        heldDrillPlayback ??= startHeldActionSound('sfx.drillStart')
+      } else if (heldDrillPlayback) {
+        heldDrillPlayback.stop()
+        heldDrillPlayback = null
+      }
 
       // Toast when player tries to drill a rock but cargo is full
       cargoFullToastCooldown = Math.max(0, cargoFullToastCooldown - fctx.sceneDelta)
@@ -109,6 +126,10 @@ export function createDrillTickHandler(
         drill.lastCollected = null
       }
     } else {
+      heldDrillPlayback?.stop()
+      heldDrillPlayback = null
+      heldMovementPlayback?.stop()
+      heldMovementPlayback = null
       crosshairVisible.value = false
       isDrilling.value = false
       drillProgress.value = 0
@@ -117,7 +138,10 @@ export function createDrillTickHandler(
   }
 
   function dispose(): void {
-    // No owned resources
+    heldDrillPlayback?.stop()
+    heldDrillPlayback = null
+    heldMovementPlayback?.stop()
+    heldMovementPlayback = null
   }
 
   return { tick, dispose, lastResult, initIfReady }

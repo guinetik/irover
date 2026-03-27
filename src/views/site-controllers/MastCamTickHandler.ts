@@ -6,6 +6,7 @@ import { recordMastCamTag } from '@/composables/useMastCamTags'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface MastCamTickRefs {
@@ -28,6 +29,7 @@ export interface MastCamTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
   playerMod: (key: keyof ProfileModifiers) => number
+  startHeldActionSound: (soundId: 'sfx.mastcamTag') => AudioPlaybackHandle
 }
 
 /**
@@ -47,9 +49,10 @@ export function createMastCamTickHandler(
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
     isDrilling, drillProgress,
   } = refs
-  const { sampleToastRef, awardSP, playerMod } = callbacks
+  const { sampleToastRef, awardSP, playerMod, startHeldActionSound } = callbacks
 
   let surveyInitialised = false
+  let heldTagPlayback: AudioPlaybackHandle | null = null
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (surveyInitialised) return
@@ -88,11 +91,20 @@ export function createMastCamTickHandler(
     // Enter survey mode when MastCam is active
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
       const mc = controller.activeInstrument
+      if (mc.isScanning) {
+        heldTagPlayback ??= startHeldActionSound('sfx.mastcamTag')
+      } else if (heldTagPlayback) {
+        heldTagPlayback.stop()
+        heldTagPlayback = null
+      }
       mc.durationMultiplier = 1 / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
       }
+    } else if (heldTagPlayback) {
+      heldTagPlayback.stop()
+      heldTagPlayback = null
     }
 
     // Animate tag markers (always, not just in active mode)
@@ -134,7 +146,8 @@ export function createMastCamTickHandler(
   }
 
   function dispose(): void {
-    // No owned resources
+    heldTagPlayback?.stop()
+    heldTagPlayback = null
   }
 
   return { tick, dispose, initIfReady }

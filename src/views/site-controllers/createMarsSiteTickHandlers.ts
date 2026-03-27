@@ -87,6 +87,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       sampleToastRef: ctx.sampleToastRef,
       playerMod: ctx.playerMod,
       awardDAN: ctx.awardDAN,
+      startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.danScan'),
       triggerDanAchievement: ctx.triggerDanAchievement,
       archiveDanProspect: ctx.archiveDanProspect,
     },
@@ -101,7 +102,13 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       drillProgress: refs.drillProgress,
       isDrilling: refs.isDrilling,
     },
-    { sampleToastRef: ctx.sampleToastRef, playerMod: ctx.playerMod, awardSP: ctx.awardSP },
+    {
+      sampleToastRef: ctx.sampleToastRef,
+      playerMod: ctx.playerMod,
+      awardSP: ctx.awardSP,
+      startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.drillStart'),
+      startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
+    },
   )
 
   const mastCamHandler = createMastCamTickHandler(
@@ -120,7 +127,12 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       isDrilling: refs.isDrilling,
       drillProgress: refs.drillProgress,
     },
-    { sampleToastRef: ctx.sampleToastRef, awardSP: ctx.awardSP, playerMod: ctx.playerMod },
+    {
+      sampleToastRef: ctx.sampleToastRef,
+      awardSP: ctx.awardSP,
+      playerMod: ctx.playerMod,
+      startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.mastcamTag'),
+    },
   )
 
   const chemCamHandler = createChemCamTickHandler(
@@ -145,7 +157,12 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       isDrilling: refs.isDrilling,
       drillProgress: refs.drillProgress,
     },
-    { sampleToastRef: ctx.sampleToastRef, playerMod: ctx.playerMod, awardSP: ctx.awardSP },
+    {
+      sampleToastRef: ctx.sampleToastRef,
+      playerMod: ctx.playerMod,
+      awardSP: ctx.awardSP,
+      startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.chemcamFire'),
+    },
   )
 
   const apxsHandler = createAPXSTickHandler(
@@ -161,6 +178,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       onLaunchMinigame: ctx.onAPXSLaunchMinigame,
       onBlockedByCold: ctx.onAPXSBlockedByCold,
       playerMod: ctx.playerMod,
+      playActionSound: () => ctx.playInstrumentActionSound('sfx.apxsContact'),
+      startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
     },
   )
 
