@@ -244,6 +244,9 @@ export class AudioManager {
 
   /**
    * Stops every active sound in a category, unloads non-cached Howls, and clears bookkeeping.
+   *
+   * For dynamic voice streams (e.g. DSN `voice.dsnTransmission` with a runtime `src`), callers
+   * should invoke this with `'voice'` when the owning view unmounts so playback stops and Howls unload.
    */
   stopCategory(category: AudioCategory): void {
     const list = this.activeByCategory.get(category)

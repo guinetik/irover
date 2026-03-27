@@ -557,9 +557,11 @@ import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import { useAudio } from '@/audio/useAudio'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
+const audio = useAudio()
 
 const { tryRepair, tryUpgrade, getBySlot } = useInstrumentDurability()
 const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
@@ -577,31 +579,17 @@ const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-// --- Shared audio element for DSN playback (unlocked on first user gesture) ---
-let dsnAudio: HTMLAudioElement | null = null
+// --- DSN voice playback via shared AudioManager (unlocked on first user gesture) ---
 let audioUnlocked = false
 function ensureAudioUnlocked() {
   if (audioUnlocked) return
   audioUnlocked = true
-  dsnAudio = new Audio()
-  dsnAudio.volume = 0.5
-  // Tiny silent play to unlock the element for future programmatic use
-  dsnAudio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='
-  dsnAudio.play().then(() => dsnAudio!.pause()).catch(() => {})
+  audio.unlock()
   window.removeEventListener('keydown', ensureAudioUnlocked)
   window.removeEventListener('pointerdown', ensureAudioUnlocked)
 }
 window.addEventListener('keydown', ensureAudioUnlocked, { once: false })
 window.addEventListener('pointerdown', ensureAudioUnlocked, { once: false })
-
-function playDsnAudio(url: string) {
-  if (!dsnAudio) {
-    dsnAudio = new Audio()
-    dsnAudio.volume = 0.5
-  }
-  dsnAudio.src = url
-  dsnAudio.play().catch(() => {})
-}
 const roverHeading = ref(0)
 /** Mirrors {@link RoverController.isMoving} into Vue so wheels HUD updates when translation stops (heading alone is not enough). */
 const roverIsMoving = ref(false)
@@ -1449,7 +1437,7 @@ function createSiteControllerContext() {
       // Auto-play the first transmission's audio log if available
       const firstWithAudio = txs.find(tx => tx.audioUrl)
       if (firstWithAudio?.audioUrl) {
-        playDsnAudio(firstWithAudio.audioUrl)
+        audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl })
       }
     },
     clearPois,
@@ -1556,7 +1544,7 @@ onUnmounted(() => {
   siteHandle.value = null
   window.removeEventListener('keydown', ensureAudioUnlocked)
   window.removeEventListener('pointerdown', ensureAudioUnlocked)
-  if (dsnAudio) { dsnAudio.pause(); dsnAudio.src = ''; dsnAudio = null }
+  audio.stopCategory('voice')
 })
 
 

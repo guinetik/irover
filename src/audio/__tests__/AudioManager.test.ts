@@ -301,6 +301,14 @@ describe('AudioManager', () => {
     expect(mockStop).toHaveBeenCalled()
   })
 
+  it('can stop the voice category explicitly when the owning view unmounts', () => {
+    manager.unlock()
+    manager.play('voice.dsnTransmission', { src: '/logs/VASQUEZ-001.mp3' })
+    manager.stopCategory('voice')
+    expect(mockStop).toHaveBeenCalled()
+    expect(mockUnload).toHaveBeenCalled()
+  })
+
   it('resume()s the Web Audio context on unlock when autoUnlock is disabled', () => {
     manager.unlock()
     expect(mockCtxResume).toHaveBeenCalled()
