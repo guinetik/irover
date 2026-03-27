@@ -4,11 +4,13 @@ import { getInventoryItemDef } from '@/types/inventory'
 import { isOrbitalDropItemId, listOrbitalDropItemIds } from '@/types/orbitalDrop'
 import type { useOrbitalDrops } from '@/composables/useOrbitalDrops'
 import type SampleToast from '@/components/SampleToast.vue'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface OrbitalDropTickCallbacks {
   orbitalDrops: ReturnType<typeof useOrbitalDrops>
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
+  startThrusterLoop: () => AudioPlaybackHandle
   roverWorldX: Ref<number>
   roverWorldZ: Ref<number>
   upsertPoi: (poi: { id: string; label: string; x: number; z: number; color: string }) => void
@@ -46,8 +48,10 @@ export function createOrbitalDropTickHandler(
 ): OrbitalDropTickHandler {
   const {
     orbitalDrops, sampleToastRef, roverWorldX, roverWorldZ,
-    upsertPoi, removePoi, setFocusPoi, focusPoiId,
+    upsertPoi, removePoi, setFocusPoi, focusPoiId, startThrusterLoop,
   } = callbacks
+
+  const dropThrusterHandles = new Map<string, AudioPlaybackHandle>()
 
   function resolvePosition(options?: { x?: number; z?: number }): { x: number; z: number } {
     return {
@@ -73,6 +77,7 @@ export function createOrbitalDropTickHandler(
       heightAt: (x, z) => fctx.siteScene!.terrain.heightAt(x, z),
     })
     sampleToastRef.value?.showPayloadStatus('Payload inbound')
+    dropThrusterHandles.set(id, startThrusterLoop())
     return id
   }
 
@@ -102,6 +107,8 @@ export function createOrbitalDropTickHandler(
 
     if (orbitalDrops.lastLandedDrop.value) {
       const landed = orbitalDrops.lastLandedDrop.value
+      dropThrusterHandles.get(landed.id)?.stop()
+      dropThrusterHandles.delete(landed.id)
       upsertPoi({
         id: landed.id,
         label: 'Payload box',
@@ -132,7 +139,8 @@ export function createOrbitalDropTickHandler(
   }
 
   function dispose(): void {
-    // No owned resources — orbitalDrops.disposeAllDrops() called by orchestrator
+    for (const h of dropThrusterHandles.values()) h.stop()
+    dropThrusterHandles.clear()
   }
 
   return { tick, dispose, spawnOrbitalDropItem, spawnRandomOrbitalDrop }

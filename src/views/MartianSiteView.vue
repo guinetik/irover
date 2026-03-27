@@ -592,6 +592,7 @@ const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects, qu
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
+
 const rewardTrackOpen = ref(false)
 const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
@@ -1503,6 +1504,7 @@ function createSiteControllerContext() {
     onInstrumentActivateRequest: handleActivate,
     onGlobalKeyDown,
     playAmbientLoop: (soundId) => audio.play(soundId, { loop: true }),
+    playSoundWithHandle: (soundId) => audio.play(soundId),
     setAmbientVolume: (handle, volume) => handle.setVolume(volume),
     onDSNTransmissionsReceived: (txs) => {
       const count = txs.length

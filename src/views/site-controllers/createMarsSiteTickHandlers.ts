@@ -202,6 +202,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     removePoi: ctx.removePoi,
     setFocusPoi: ctx.setFocusPoi,
     focusPoiId: ctx.focusPoiId,
+    startThrusterLoop: () => ctx.startInstrumentActionLoop('sfx.thrusters'),
   })
 
   const antennaHandler = createAntennaTickHandler(

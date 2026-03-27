@@ -380,6 +380,7 @@ export interface MarsSiteViewContext {
   onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
   playAmbientLoop: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
+  playSoundWithHandle: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
   setAmbientVolume: (handle: import('@/audio/audioTypes').AudioPlaybackHandle, volume: number) => void
   clearPois: () => void
   devSpawnRandomInventoryItems: typeof devSpawnRandomInventoryItems
@@ -492,6 +493,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let landingSoundPlayed = false
   let landingSoundHandle: import('@/audio/audioTypes').AudioPlaybackHandle | null = null
   let landingSoundFadeVol = 0
+  let thrusterSoundHandle: import('@/audio/audioTypes').AudioPlaybackHandle | null = null
 
   const tickHandlers = createMarsSiteTickHandlers(ctx)
   const {
@@ -930,8 +932,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       // --- Deploy state machine ---
       if (siteScene.roverState === 'descending') {
         if (!landingSoundPlayed) {
-          landingSoundHandle = ctx.startInstrumentActionLoop('sfx.landing')
+          landingSoundHandle = ctx.playSoundWithHandle('sfx.landing')
           landingSoundHandle.setVolume(0)
+          thrusterSoundHandle = ctx.startInstrumentActionLoop('sfx.thrusters')
           landingSoundPlayed = true
           landingSoundFadeVol = 0
         }
@@ -944,6 +947,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         deploying.value = false
         if (siteScene.touchedDown) {
           ctx.playInstrumentActionSound('sfx.contact')
+          thrusterSoundHandle?.stop()
+          thrusterSoundHandle = null
         }
       } else if (siteScene.roverState === 'deploying') {
         descending.value = false

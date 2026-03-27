@@ -45,6 +45,7 @@ export const AUDIO_SOUND_IDS = [
   'ambient.heater',
   'ambient.rems',
   'sfx.landing',
+  'sfx.thrusters',
   'sfx.contact',
   'music.intro',
   'music.theme',
@@ -86,6 +87,7 @@ export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.roverTurn',
   'sfx.roverTurnOut',
   'sfx.landing',
+  'sfx.thrusters',
   'sfx.contact',
 ] as const
 
@@ -160,7 +162,7 @@ const manifestById: ManifestById = {
     category: 'ui',
     load: 'lazy',
     playback: 'restart',
-    volume: 0.45,
+    volume: 0.58,
     effect: 'none',
   },
   'ui.error': {
@@ -467,6 +469,15 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'single-instance',
     volume: 0.7,
+    effect: 'none',
+  },
+  'sfx.thrusters': {
+    id: 'sfx.thrusters',
+    src: '/sound/thrusters.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.5,
     effect: 'none',
   },
   'sfx.contact': {
