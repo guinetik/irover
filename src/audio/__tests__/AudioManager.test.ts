@@ -552,7 +552,8 @@ describe('AudioManager', () => {
     const sound = h._soundById?.(1)
     expect(sound?._node.disconnect).toHaveBeenCalled()
     expect(sound?._node.connect).toHaveBeenCalled()
-    const waveShaper = mockCreateWaveShaper.mock.results.at(-1)?.value as {
+    const wsResults = mockCreateWaveShaper.mock.results
+    const waveShaper = wsResults[wsResults.length - 1]?.value as {
       connect: ReturnType<typeof vi.fn>
     }
     expect(waveShaper?.connect).toHaveBeenCalledWith(mockMasterGain)
