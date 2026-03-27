@@ -147,7 +147,7 @@ export function createAntennaTickHandler(
       // Pull DSN archaeology transmissions at end of pass (received via LGA)
       const { unlocked: dsnUnlocked, pullTransmissions: dsnPull } = useDSNArchive()
       const lgaCtrl = fctx.rover?.instruments.find(i => i.id === 'antenna-lg') as AntennaLGController | undefined
-      if (dsnUnlocked.value && lgaCtrl?.passiveSubsystemEnabled) {
+      if (dsnUnlocked.value && lgaCtrl?.passiveSubsystemEnabled && uhfCtrl.passiveSubsystemEnabled) {
         const pulled = dsnPull(marsSol)
         if (pulled.length > 0) {
           callbacks.onDSNTransmissionsReceived?.(pulled)
