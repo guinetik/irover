@@ -10,8 +10,8 @@ import {
   type AudioPlaybackHandle,
 } from './audioTypes'
 
-/** Howl event handler signatures (for symmetric `off` teardown). */
-type HowlErrorEventHandler = (soundId: number, error: unknown) => void
+/** Howl error events may pass `null` for howl-level load failures (see Howler `_emit`). */
+type HowlErrorEventHandler = (soundId: number | null, error: unknown) => void
 
 /** One running instance registered with the manager (supports overlap within a category). */
 interface ActivePlayback {
@@ -110,20 +110,13 @@ export class AudioManager {
           })
         : this.getOrCreateHowl(soundId)
 
-    const howlPlayIdRaw = howl.play()
-    const howlPlayId =
-      typeof howlPlayIdRaw === 'number' && !Number.isNaN(howlPlayIdRaw) ? howlPlayIdRaw : undefined
-
-    const vol = this.computePlaybackVolume(def, options)
-    this.applyPerInstanceVolume(howl, vol, howlPlayId)
-
     const token = this.nextPlaybackToken++
     const playback: ActivePlayback = {
       token,
       soundId,
       category: def.category,
       howl,
-      howlPlayId,
+      howlPlayId: undefined,
       endHandler: () => {},
       playErrorHandler: () => {},
       loadErrorHandler: () => {},
@@ -138,15 +131,36 @@ export class AudioManager {
       }
     }
 
-    const onHowlFailure: HowlErrorEventHandler = (id, _err) => {
+    playback.playErrorHandler = (id, _err) => {
       if (playback.howlPlayId !== undefined && id !== playback.howlPlayId) return
       this.teardownPlaybackFailure(playback)
     }
-    playback.playErrorHandler = onHowlFailure
-    playback.loadErrorHandler = onHowlFailure
+
+    playback.loadErrorHandler = (id, _err) => {
+      if (id == null) {
+        this.teardownPlaybackFailureForHowlLevelLoadError(playback)
+        return
+      }
+      if (playback.howlPlayId !== undefined && id !== playback.howlPlayId) return
+      this.teardownPlaybackFailure(playback)
+    }
 
     this.pushActive(def.category, playback)
-    this.wirePlaybackLifecycle(howl, howlPlayId, playback)
+    this.registerPlaybackErrorListenersBeforePlay(howl, playback)
+
+    const howlPlayIdRaw = howl.play()
+    const resolvedId =
+      typeof howlPlayIdRaw === 'number' && !Number.isNaN(howlPlayIdRaw) ? howlPlayIdRaw : undefined
+    playback.howlPlayId = resolvedId
+
+    if (!this.isPlaybackActive(playback)) {
+      return this.createNoopHandle(soundId)
+    }
+
+    const vol = this.computePlaybackVolume(def, options)
+    this.applyPerInstanceVolume(howl, vol, playback.howlPlayId)
+
+    this.registerEndListenerAfterPlay(howl, playback, playback.howlPlayId)
 
     if (def.playback === 'rate-limited') {
       this.recordRateLimitTrigger(def, soundId, options)
@@ -157,16 +171,20 @@ export class AudioManager {
       stop: () => {
         this.stopPlaybackInstance(playback)
       },
-      playing: () => (howlPlayId !== undefined ? howl.playing(howlPlayId) : howl.playing()),
+      playing: () =>
+        playback.howlPlayId !== undefined
+          ? howl.playing(playback.howlPlayId)
+          : howl.playing(),
       progress: () => {
-        const dur =
-          howlPlayId !== undefined ? howl.duration(howlPlayId) : howl.duration()
-        const pos =
-          howlPlayId !== undefined ? Number(howl.seek(howlPlayId)) : Number(howl.seek())
+        const id = playback.howlPlayId
+        const dur = id !== undefined ? howl.duration(id) : howl.duration()
+        const pos = id !== undefined ? Number(howl.seek(id)) : Number(howl.seek())
         return dur > 0 ? pos / dur : 0
       },
       duration: () =>
-        howlPlayId !== undefined ? howl.duration(howlPlayId) : howl.duration(),
+        playback.howlPlayId !== undefined
+          ? howl.duration(playback.howlPlayId)
+          : howl.duration(),
     }
   }
 
@@ -241,19 +259,28 @@ export class AudioManager {
   }
 
   /**
-   * Registers `end`, `playerror`, and `loaderror` with stable handler refs so interrupted playbacks
-   * can `off()` everything in {@link detachPlaybackListeners}.
+   * Registers `playerror` / `loaderror` before {@link Howl.play} so synchronous failures are not
+   * missed. Uses unscoped `once` (no sound id) to match Howler’s registration API for these events.
    */
-  private wirePlaybackLifecycle(howl: Howl, howlPlayId: number | undefined, playback: ActivePlayback): void {
-    const { endHandler, playErrorHandler, loadErrorHandler } = playback
+  private registerPlaybackErrorListenersBeforePlay(howl: Howl, playback: ActivePlayback): void {
+    const { playErrorHandler, loadErrorHandler } = playback
+    howl.once('playerror', playErrorHandler)
+    howl.once('loaderror', loadErrorHandler)
+  }
+
+  /**
+   * Registers `end` after `play()` returns a sound id (Howler requires the id for per-instance end).
+   */
+  private registerEndListenerAfterPlay(
+    howl: Howl,
+    playback: ActivePlayback,
+    howlPlayId: number | undefined,
+  ): void {
+    const { endHandler } = playback
     if (howlPlayId !== undefined) {
       howl.once('end', endHandler, howlPlayId)
-      howl.once('playerror', playErrorHandler, howlPlayId)
-      howl.once('loaderror', loadErrorHandler, howlPlayId)
     } else {
       howl.once('end', endHandler)
-      howl.once('playerror', playErrorHandler)
-      howl.once('loaderror', loadErrorHandler)
     }
   }
 
@@ -263,14 +290,39 @@ export class AudioManager {
    */
   private detachPlaybackListeners(playback: ActivePlayback): void {
     const { howl, howlPlayId, endHandler, playErrorHandler, loadErrorHandler } = playback
+    howl.off('playerror', playErrorHandler)
+    howl.off('loaderror', loadErrorHandler)
     if (howlPlayId !== undefined) {
       howl.off('end', endHandler, howlPlayId)
-      howl.off('playerror', playErrorHandler, howlPlayId)
-      howl.off('loaderror', loadErrorHandler, howlPlayId)
     } else {
       howl.off('end', endHandler)
-      howl.off('playerror', playErrorHandler)
-      howl.off('loaderror', loadErrorHandler)
+    }
+  }
+
+  private isPlaybackActive(playback: ActivePlayback): boolean {
+    const list = this.activeByCategory.get(playback.category)
+    return list?.some((p) => p.token === playback.token) ?? false
+  }
+
+  /**
+   * Howler emits `loaderror` with a null id for howl-level failures; tear down every active
+   * playback on a cached shared Howl, or this playback’s row for a non-cached (dynamic) Howl.
+   */
+  private teardownPlaybackFailureForHowlLevelLoadError(playback: ActivePlayback): void {
+    if (!this.isCachedHowlInstance(playback.howl)) {
+      this.teardownPlaybackFailure(playback)
+      return
+    }
+    const toTear: ActivePlayback[] = []
+    for (const cat of AUDIO_CATEGORIES) {
+      const list = this.activeByCategory.get(cat)
+      if (!list?.length) continue
+      for (const p of list) {
+        if (p.howl === playback.howl) toTear.push(p)
+      }
+    }
+    for (const p of toTear) {
+      this.teardownPlaybackFailure(p)
     }
   }
 

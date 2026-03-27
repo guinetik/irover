@@ -1,31 +1,62 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mockPlay = vi.fn()
-const mockStop = vi.fn()
-const mockUnload = vi.fn()
-const mockDuration = vi.fn(() => 12)
-const mockSeek = vi.fn(() => 3)
-const mockPlaying = vi.fn(() => true)
-const mockHowlVolume = vi.fn()
+type ErrFn = (id: number | null, err: unknown) => void
 
-const { mockCtxResume, registeredEndHandlers, playErrorHandlers, playCounterRef, mockOff } =
-  vi.hoisted(() => ({
-    mockCtxResume: vi.fn(() => Promise.resolve()),
-    registeredEndHandlers: [] as Array<() => void>,
-    playErrorHandlers: [] as Array<(id: number, err: unknown) => void>,
-    playCounterRef: { n: 0 },
-    mockOff: vi.fn(),
-  }))
+type MockHowlProbe = {
+  endOnce: Array<{ fn: () => void; id?: number }>
+  playErrorOnce: Array<{ fn: ErrFn; id?: number }>
+  loadErrorOnce: Array<{ fn: ErrFn; id?: number }>
+}
+
+const {
+  mockPlay,
+  mockStop,
+  mockUnload,
+  mockDuration,
+  mockSeek,
+  mockPlaying,
+  mockHowlVolume,
+  mockCtxResume,
+  mockOff,
+  mockHowlInstances,
+  playCounterRef,
+  syncPlayErrorRef,
+} = vi.hoisted(() => ({
+  mockPlay: vi.fn(),
+  mockStop: vi.fn(),
+  mockUnload: vi.fn(),
+  mockDuration: vi.fn(() => 12),
+  mockSeek: vi.fn(() => 3),
+  mockPlaying: vi.fn(() => true),
+  mockHowlVolume: vi.fn(),
+  mockCtxResume: vi.fn(() => Promise.resolve()),
+  mockOff: vi.fn(),
+  mockHowlInstances: [] as MockHowlProbe[],
+  playCounterRef: { n: 0 },
+  syncPlayErrorRef: { trigger: false },
+}))
 
 vi.mock('howler', () => {
   class MockHowl {
     src: string[]
+    endOnce: Array<{ fn: () => void; id?: number }> = []
+    playErrorOnce: Array<{ fn: ErrFn; id?: number }> = []
+    loadErrorOnce: Array<{ fn: ErrFn; id?: number }> = []
+
     constructor(opts: { src: string[] | string; volume?: number }) {
       this.src = Array.isArray(opts.src) ? opts.src : [opts.src]
+      mockHowlInstances.push(this)
     }
+
     play = () => {
       playCounterRef.n += 1
-      return mockPlay() ?? playCounterRef.n
+      const id = mockPlay() ?? playCounterRef.n
+      if (syncPlayErrorRef.trigger) {
+        for (const { fn } of this.playErrorOnce) {
+          fn(id, new Error('sync playerror'))
+        }
+      }
+      return id
     }
     stop = mockStop
     unload = mockUnload
@@ -33,55 +64,53 @@ vi.mock('howler', () => {
     seek = mockSeek
     playing = mockPlaying
     on = vi.fn()
-    once = vi.fn((event: string, cb: (...args: unknown[]) => void, _id?: number) => {
+    once = vi.fn((event: string, cb: (...args: unknown[]) => void, id?: number) => {
       if (event === 'end') {
-        registeredEndHandlers.push(cb as () => void)
-      }
-      if (event === 'playerror' || event === 'loaderror') {
-        playErrorHandlers.push(cb as (id: number, err: unknown) => void)
+        this.endOnce.push({ fn: cb as () => void, id })
+      } else if (event === 'playerror') {
+        this.playErrorOnce.push({ fn: cb as ErrFn, id })
+      } else if (event === 'loaderror') {
+        this.loadErrorOnce.push({ fn: cb as ErrFn, id })
       }
       return this
     })
-    off = mockOff.mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
-      if (event === 'end') {
-        const i = registeredEndHandlers.indexOf(cb as () => void)
-        if (i >= 0) registeredEndHandlers.splice(i, 1)
+    off = mockOff.mockImplementation((event: string, cb: (...args: unknown[]) => void, id?: number) => {
+      const match = (arr: Array<{ fn: unknown; id?: number }>) => {
+        const idx = arr.findIndex(
+          (e) => e.fn === cb && (id === undefined ? e.id === undefined : e.id === id),
+        )
+        if (idx >= 0) arr.splice(idx, 1)
       }
-      if (event === 'playerror' || event === 'loaderror') {
-        const i = playErrorHandlers.indexOf(cb as (id: number, err: unknown) => void)
-        if (i >= 0) playErrorHandlers.splice(i, 1)
-      }
+      if (event === 'end') match(this.endOnce as Array<{ fn: unknown; id?: number }>)
+      else if (event === 'playerror') match(this.playErrorOnce as Array<{ fn: unknown; id?: number }>)
+      else if (event === 'loaderror') match(this.loadErrorOnce as Array<{ fn: unknown; id?: number }>)
       return this
     })
     volume = mockHowlVolume
     fade = vi.fn()
   }
 
-  const ctx = {
-    state: 'suspended' as string,
-    resume: mockCtxResume,
-    createGain: vi.fn(() => ({ gain: { value: 1 }, connect: vi.fn() })),
-  }
-
-  const Howler = {
-    noAudio: false,
-    autoUnlock: false,
-    _volume: 1,
-    get ctx() {
-      return ctx
-    },
-    volume(this: { _volume: number; ctx: typeof ctx }, vol?: number) {
-      if (typeof vol === 'number' && vol >= 0 && vol <= 1) {
-        this._volume = vol
-        return this
-      }
-      return this._volume
-    },
-  }
-
   return {
     Howl: MockHowl,
-    Howler,
+    Howler: {
+      noAudio: false,
+      autoUnlock: false,
+      _volume: 1,
+      get ctx() {
+        return {
+          state: 'suspended' as string,
+          resume: mockCtxResume,
+          createGain: vi.fn(() => ({ gain: { value: 1 }, connect: vi.fn() })),
+        }
+      },
+      volume(this: { _volume: number }, vol?: number) {
+        if (typeof vol === 'number' && vol >= 0 && vol <= 1) {
+          this._volume = vol
+          return this
+        }
+        return this._volume
+      },
+    },
   }
 })
 
@@ -89,18 +118,33 @@ import * as audioManifest from '../audioManifest'
 import { AudioManager } from '../AudioManager'
 import { resetAudioForTests, useAudio } from '../useAudio'
 
+function getLastMockHowl(): MockHowlProbe | undefined {
+  return mockHowlInstances[mockHowlInstances.length - 1]
+}
+
 function fireRegisteredEndCallbacks(): void {
-  const copy = [...registeredEndHandlers]
-  registeredEndHandlers.length = 0
-  for (const cb of copy) {
-    cb()
+  const h = getLastMockHowl()
+  if (!h) return
+  const copy = [...h.endOnce]
+  h.endOnce.length = 0
+  for (const { fn } of copy) {
+    fn()
   }
 }
 
-function firePlayErrorForSound(id: number): void {
-  const copy = [...playErrorHandlers]
-  for (const cb of copy) {
-    cb(id, new Error('mock play error'))
+function firePlayErrorOnLastHowl(id: number): void {
+  const h = getLastMockHowl()
+  if (!h) return
+  for (const { fn } of [...h.playErrorOnce]) {
+    fn(id, new Error('mock play error'))
+  }
+}
+
+function fireLoadErrorOnLastHowl(id: number | null): void {
+  const h = getLastMockHowl()
+  if (!h) return
+  for (const { fn } of [...h.loadErrorOnce]) {
+    fn(id, new Error('mock load error'))
   }
 }
 
@@ -109,9 +153,9 @@ describe('AudioManager', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    registeredEndHandlers.length = 0
-    playErrorHandlers.length = 0
+    mockHowlInstances.length = 0
     playCounterRef.n = 0
+    syncPlayErrorRef.trigger = false
     mockCtxResume.mockImplementation(() => Promise.resolve())
     manager = new AudioManager()
   })
@@ -171,11 +215,11 @@ describe('AudioManager', () => {
   it('restart mode stops the prior instance of the same sound before replaying', () => {
     manager.unlock()
     manager.play('ui.click')
-    expect(registeredEndHandlers).toHaveLength(1)
+    expect(getLastMockHowl()?.endOnce).toHaveLength(1)
     manager.play('ui.click')
     expect(mockStop).toHaveBeenCalledTimes(1)
     expect(mockOff).toHaveBeenCalled()
-    expect(registeredEndHandlers).toHaveLength(1)
+    expect(getLastMockHowl()?.endOnce).toHaveLength(1)
   })
 
   it('single-instance mode stops the prior instance before replaying', () => {
@@ -229,7 +273,7 @@ describe('AudioManager', () => {
         ended = true
       },
     })
-    expect(registeredEndHandlers).toHaveLength(1)
+    expect(getLastMockHowl()?.endOnce).toHaveLength(1)
     fireRegisteredEndCallbacks()
     expect(ended).toBe(true)
     expect(mockUnload).toHaveBeenCalled()
@@ -245,19 +289,44 @@ describe('AudioManager', () => {
   it('cleans up active playback and unloads dynamic Howls on playerror', () => {
     manager.unlock()
     manager.play('voice.dsnTransmission', { src: '/logs/fail.mp3' })
-    expect(playErrorHandlers.length).toBeGreaterThan(0)
-    firePlayErrorForSound(1)
+    expect(getLastMockHowl()?.playErrorOnce.length).toBeGreaterThan(0)
+    firePlayErrorOnLastHowl(1)
     expect(mockUnload).toHaveBeenCalled()
-    expect(registeredEndHandlers).toHaveLength(0)
+    expect(getLastMockHowl()?.endOnce).toHaveLength(0)
   })
 
   it('cleans up active playback on playerror matching the play id', () => {
     manager.unlock()
     manager.play('voice.dsnTransmission', { src: '/logs/z.mp3' })
-    firePlayErrorForSound(999)
+    firePlayErrorOnLastHowl(999)
     expect(mockUnload).not.toHaveBeenCalled()
-    firePlayErrorForSound(1)
+    firePlayErrorOnLastHowl(1)
     expect(mockUnload).toHaveBeenCalled()
+  })
+
+  it('handles synchronous playerror during play() without leaving an active playback', () => {
+    syncPlayErrorRef.trigger = true
+    manager.unlock()
+    const h = manager.play('voice.dsnTransmission', { src: '/logs/sync-fail.mp3' })
+    expect(h.playing()).toBe(false)
+    expect(mockUnload).toHaveBeenCalled()
+    syncPlayErrorRef.trigger = false
+  })
+
+  it('cleans up dynamic Howls when loaderror fires with a null sound id', () => {
+    manager.unlock()
+    manager.play('voice.dsnTransmission', { src: '/logs/null-load.mp3' })
+    fireLoadErrorOnLastHowl(null)
+    expect(mockUnload).toHaveBeenCalled()
+  })
+
+  it('removes end listeners with the correct id when off() is called', () => {
+    manager.unlock()
+    manager.play('voice.dsnTransmission', { src: '/logs/off-test.mp3' })
+    const h = getLastMockHowl()
+    expect(h?.endOnce[0]?.id).toBe(1)
+    manager.play('voice.dsnTransmission', { src: '/logs/off-test2.mp3' })
+    expect(mockOff).toHaveBeenCalled()
   })
 })
 
@@ -283,8 +352,7 @@ describe('useAudio', () => {
 
 describe('AudioManagerOptions.initialCategoryState', () => {
   beforeEach(() => {
-    registeredEndHandlers.length = 0
-    playErrorHandlers.length = 0
+    mockHowlInstances.length = 0
     playCounterRef.n = 0
     vi.clearAllMocks()
   })
