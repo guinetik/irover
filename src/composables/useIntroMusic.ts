@@ -36,11 +36,23 @@ function fadeOutAndStop(): void {
  * Start the intro music. Call from a user gesture (e.g. BEGIN MISSION button).
  * Safe to call multiple times — only the first call starts playback.
  */
+const FADE_IN_DURATION_MS = 2000
+const FADE_IN_STEPS = 40
+const BASE_VOLUME = 0.4
+
 export function startIntroMusic(): void {
   if (introHandle) return
   const audio = useAudio()
   audio.unlock()
-  introHandle = audio.play('music.intro' as AudioSoundId, { loop: true })
+  introHandle = audio.play('music.intro' as AudioSoundId, { loop: true, volume: 0 })
+  const handle = introHandle
+  let step = 0
+  const stepMs = FADE_IN_DURATION_MS / FADE_IN_STEPS
+  const interval = setInterval(() => {
+    step++
+    handle.setVolume((step / FADE_IN_STEPS) * BASE_VOLUME)
+    if (step >= FADE_IN_STEPS) clearInterval(interval)
+  }, stepMs)
 }
 
 /**
