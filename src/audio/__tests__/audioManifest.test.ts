@@ -57,6 +57,7 @@ describe('audioManifest', () => {
       'ambient.heater',
       'ambient.rems',
       'sfx.landing',
+      'sfx.contact',
       'music.intro',
       'music.theme',
       'sfx.uhfLock',

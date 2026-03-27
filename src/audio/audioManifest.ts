@@ -45,6 +45,7 @@ export const AUDIO_SOUND_IDS = [
   'ambient.heater',
   'ambient.rems',
   'sfx.landing',
+  'sfx.contact',
   'music.intro',
   'music.theme',
   'sfx.uhfLock',
@@ -85,6 +86,7 @@ export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.roverTurn',
   'sfx.roverTurnOut',
   'sfx.landing',
+  'sfx.contact',
 ] as const
 
 /** Union of instrument-action one-shot ids. */
@@ -464,6 +466,15 @@ const manifestById: ManifestById = {
     category: 'sfx',
     load: 'lazy',
     playback: 'single-instance',
+    volume: 0.7,
+    effect: 'none',
+  },
+  'sfx.contact': {
+    id: 'sfx.contact',
+    src: '/sound/contact.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'restart',
     volume: 0.7,
     effect: 'none',
   },
