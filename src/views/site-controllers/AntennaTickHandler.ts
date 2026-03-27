@@ -12,6 +12,7 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
 export interface AntennaTickRefs {
@@ -32,6 +33,8 @@ export interface AntennaTickCallbacks {
   awardTransmission: (archiveId: string, baseSP: number, label: string) => SPGain | null
   playerMod: (key: keyof ProfileModifiers) => number
   onDSNTransmissionsReceived?: (transmissions: DSNTransmission[]) => void
+  playUhfLock: () => void
+  startUhfUplinkLoop: () => AudioPlaybackHandle
 }
 
 /**
@@ -53,6 +56,7 @@ export function createAntennaTickHandler(
   let currentTxItem: TransmissionQueueItem | null = null
   let currentTxElapsed = 0
   let passNotifiedMissed = false
+  let uhfUplinkPlayback: AudioPlaybackHandle | null = null
 
   // --- LGA Tick ---
   function tickLGA(fctx: SiteFrameContext): void {
@@ -121,6 +125,7 @@ export function createAntennaTickHandler(
 
       if (uhfCtrl.passiveSubsystemEnabled) {
         callbacks.sampleToastRef.value?.showComm?.(`Orbital pass — ${activePass.orbiter} in range`)
+        callbacks.playUhfLock()
       }
     }
 
@@ -195,6 +200,14 @@ export function createAntennaTickHandler(
       passNotifiedMissed = true
     }
 
+    // UHF uplink sound: loop while transmitting, stop otherwise
+    if (uhfCtrl.transmitting) {
+      uhfUplinkPlayback ??= callbacks.startUhfUplinkLoop()
+    } else if (uhfUplinkPlayback) {
+      uhfUplinkPlayback.stop()
+      uhfUplinkPlayback = null
+    }
+
     // Update refs for UI
     refs.uhfPassActive.value = uhfCtrl.passActive
     refs.uhfTransmitting.value = uhfCtrl.transmitting
@@ -222,7 +235,8 @@ export function createAntennaTickHandler(
   }
 
   function dispose(): void {
-    // No meshes or GPU resources to clean up
+    uhfUplinkPlayback?.stop()
+    uhfUplinkPlayback = null
   }
 
   return { tick, dispose }

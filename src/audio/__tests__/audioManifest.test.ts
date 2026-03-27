@@ -47,6 +47,8 @@ describe('audioManifest', () => {
       'ambient.rtg',
       'ambient.heater',
       'ambient.rems',
+      'sfx.uhfLock',
+      'sfx.uhfUplink',
       'sfx.roverDrive',
       'sfx.roverTurn',
       'sfx.roverTurnOut',
@@ -263,6 +265,13 @@ describe('audioManifest', () => {
     })
     expect(getAudioDefinition('ambient.heater')).toMatchObject({
       src: '/sound/htr.mp3',
+      category: 'ambient',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ambient.rems')).toMatchObject({
+      src: '/sound/rems.mp3',
       category: 'ambient',
       load: 'lazy',
       playback: 'single-instance',
