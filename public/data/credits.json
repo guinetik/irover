@@ -16,38 +16,33 @@
         },
         {
           "asset": "sci-fi_cargo_crate.glb",
-          "title": "Sci-fi cargo crate (orbital payload)",
-          "author": "Confirm source in your asset library",
-          "url": "",
-          "notes": "Replace `url` and `author` with the Sketchfab/CGTrader page for the exact file you downloaded."
+          "title": "Sci-fi cargo crate",
+          "author": "andreas9343",
+          "url": "https://sketchfab.com/3d-models/sci-fi-cargo-crate-ac36898521304e51a8e305aa602f1f5b"
         },
         {
           "asset": "rocks.glb",
-          "title": "Rock geometry pool",
-          "author": "Confirm source in your asset library",
-          "url": "",
-          "notes": "Add the author and link for the rock pack you used."
-        },
-        {
-          "asset": "mars_terrain_model.glb",
-          "title": "Mars global terrain mesh",
-          "author": "Confirm DEM / mesh provenance",
-          "url": "https://www.usgs.gov/centers/astrogeo-science-center/science/mars-dems-and-dtms",
-          "notes": "Project mesh may be derived from USGS/NASA Mars elevation products; adjust if your pipeline differs."
-        },
-        {
-          "asset": "desk.glb",
-          "title": "Desk prop",
-          "author": "Add author when you confirm download source",
-          "url": "",
-          "notes": "Untracked asset in `public/` — paste Sketchfab or marketplace link here."
+          "title": "Mars Rocks",
+          "author": "Ivan Vakulko",
+          "url": "https://sketchfab.com/3d-models/mars-rocks-9f5c946255a24f1cb630ea95dceea587"
         },
         {
           "asset": "terminal.glb",
           "title": "Terminal prop",
           "author": "Add author when you confirm download source",
-          "url": "",
-          "notes": "Untracked asset in `public/` — paste Sketchfab or marketplace link here."
+          "url": ""
+        },
+        {
+          "asset": "phobos.glb",
+          "title": "Phobos model",
+          "author": "harperanneviolet",
+          "url": "https://sketchfab.com/3d-models/phobos-1-1000-434a2b5523554918a13c1c41e3ee9be6"
+        },
+        {
+          "asset": "deimos.glb",
+          "title": "Deimos model",
+          "author": "uperesito",
+          "url": "https://sketchfab.com/3d-models/deimos-db9c281d0a7b4452aaac26eb1d3738ad"
         }
       ]
     },
