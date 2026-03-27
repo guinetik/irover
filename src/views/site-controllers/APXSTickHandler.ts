@@ -3,6 +3,7 @@ import { APXSController } from '@/three/instruments'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
+import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
@@ -38,8 +39,8 @@ export function createAPXSTickHandler(
   refs: APXSTickRefs,
   callbacks: APXSTickCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
-  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
-  const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound } = callbacks
+  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState, speedBreakdown } = refs
+  const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
   let gameplayInitialised = false
   let countdownTimer = 0
   let coldToastCooldown = 0
@@ -88,6 +89,11 @@ export function createAPXSTickHandler(
 
       const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) / (playerMod('analysisSpeed') * Math.max(0.1, apxs.durabilityFactor))
 
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+        thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+      })
+
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {
         onBlockedByCold()
@@ -129,6 +135,7 @@ export function createAPXSTickHandler(
         apxsState.value = 'idle'
         apxsCountdown.value = 0
       }
+      speedBreakdown.value = null
     }
   }
 

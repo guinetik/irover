@@ -8,6 +8,7 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface MastCamTickRefs {
@@ -51,9 +52,9 @@ export function createMastCamTickHandler(
     mastcamFilterLabel, mastcamScanning, mastcamScanProgress,
     mastPan, mastTilt, mastFov, mastTargetRange,
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
-    isDrilling, drillProgress,
+    isDrilling, drillProgress, speedBreakdown,
   } = refs
-  const { sampleToastRef, awardSP, playerMod, startHeldActionSound, startHeldMovementSound } = callbacks
+  const { sampleToastRef, awardSP, playerMod, startHeldActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
 
   let surveyInitialised = false
   let heldTagPlayback: AudioPlaybackHandle | null = null
@@ -113,6 +114,10 @@ export function createMastCamTickHandler(
         heldTagPlayback = null
       }
       mc.durationMultiplier = 1 / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+        // MastCam does not use thermal zone for its duration
+      })
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -126,6 +131,7 @@ export function createMastCamTickHandler(
         heldTagPlayback.stop()
         heldTagPlayback = null
       }
+      speedBreakdown.value = null
     }
 
     // Animate tag markers (always, not just in active mode)

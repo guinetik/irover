@@ -95,6 +95,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -102,6 +103,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -140,6 +142,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -147,6 +150,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -203,6 +207,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -210,6 +215,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -253,6 +259,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -260,6 +267,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -320,6 +328,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -327,6 +336,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -362,6 +372,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -369,6 +380,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -408,6 +420,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -415,6 +428,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -457,6 +471,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         isDrilling: ref(false),
         drillProgress: ref(0),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -464,6 +479,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -497,6 +513,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         apxsCountdown: ref(0),
         apxsState: ref<'idle' | 'counting' | 'launching' | 'playing'>('idle'),
+        speedBreakdown: ref(null),
       },
       {
         onLaunchMinigame: vi.fn(),
@@ -504,6 +521,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         playActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -548,6 +566,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         drillProgress: ref(0),
         isDrilling: ref(false),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -555,6 +574,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 
@@ -611,6 +631,7 @@ describe('instrument action sounds', () => {
         crosshairY: ref(0),
         drillProgress: ref(0),
         isDrilling: ref(false),
+        speedBreakdown: ref(null),
       },
       {
         sampleToastRef: ref(null),
@@ -618,6 +639,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         startHeldActionSound,
         startHeldMovementSound,
+        getSpeedBreakdownBase: () => ({ modifierKey: 'analysisSpeed' as const, archetype: null, foundation: null, patron: null, trackModifiers: {} }),
       },
     )
 

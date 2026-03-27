@@ -5,6 +5,7 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface DrillTickRefs {
@@ -42,8 +43,8 @@ export function createDrillTickHandler(
   refs: DrillTickRefs,
   callbacks: DrillTickCallbacks,
 ): SiteTickHandler & { lastResult: DrillTickResult; initIfReady(fctx: SiteFrameContext): void } {
-  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling } = refs
-  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
+  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling, speedBreakdown } = refs
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
 
   const lastResult: DrillTickResult = { rockDrilling: false }
   let gameplayInitialised = false
@@ -74,6 +75,18 @@ export function createDrillTickHandler(
       const z = thermalZone
       const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
       drill.drillDurationMultiplier = thermalMult / (playerMod('analysisSpeed') * Math.max(0.1, drill.durabilityFactor))
+
+      // Speed breakdown for HUD
+      const scanBuff = drill.drill?.scanSpeedMult !== undefined && drill.drill.scanSpeedMult < 1
+      const extras = scanBuff
+        ? [{ label: 'MASTCAM SCAN', value: '+40%', color: '#5dc9a5' }]
+        : undefined
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+        thermalZone: z as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+        extras,
+      })
+
       drill.accuracyMod = playerMod('instrumentAccuracy') * drill.durabilityFactor
       drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
@@ -137,6 +150,7 @@ export function createDrillTickHandler(
       isDrilling.value = false
       drillProgress.value = 0
       lastResult.rockDrilling = false
+      speedBreakdown.value = null
     }
   }
 

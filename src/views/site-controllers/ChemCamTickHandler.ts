@@ -5,6 +5,7 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface ChemCamTickRefs {
@@ -55,9 +56,9 @@ export function createChemCamTickHandler(
     chemCamOverlaySequenceActive, chemCamOverlaySequenceProgress, chemCamOverlaySequenceLabel, chemCamOverlaySequencePulse,
     mastPan, mastTilt, mastFov, mastTargetRange,
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
-    isDrilling, drillProgress,
+    isDrilling, drillProgress, speedBreakdown,
   } = refs
-  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
 
   let targetingInitialised = false
   let heldFirePlayback: AudioPlaybackHandle | null = null
@@ -132,8 +133,15 @@ export function createChemCamTickHandler(
       } else {
         chemCamOverlaySequenceActive.value = false
       }
+
+      // Speed breakdown — show whenever ChemCam card is visible
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+        thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+      })
     } else {
       chemCamOverlaySequenceActive.value = false
+      speedBreakdown.value = null
     }
 
     if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
