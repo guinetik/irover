@@ -306,6 +306,19 @@ describe('AudioManager', () => {
     expect(h.progress()).toBeCloseTo(0.5)
   })
 
+  it('unlocked dynamic DSN play returns a handle with playing() true (archive gesture path)', () => {
+    manager.unlock()
+    const h = manager.play('voice.dsnTransmission', { src: '/logs/archive-gesture.mp3' })
+    expect(h.playing()).toBe(true)
+  })
+
+  it('locked dynamic DSN play returns pending handle with playing() false until unlock', () => {
+    const h = manager.play('voice.dsnTransmission', { src: '/logs/pending-until-unlock.mp3' })
+    expect(h.playing()).toBe(false)
+    manager.unlock()
+    expect(h.playing()).toBe(true)
+  })
+
   it('stops the previous voice sound when an exclusive voice sound starts', () => {
     manager.unlock()
     manager.play('voice.dsnTransmission', { src: '/logs/A.mp3' })

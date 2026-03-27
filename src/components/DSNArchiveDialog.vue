@@ -246,17 +246,25 @@ function toggleAudio(tx: DiscoveredTx) {
   }
   stopAudio()
   if (!tx.audioUrl) return
+  // User gesture: unlock first so we never queue a pending handle or noop from “locked” state.
+  audio.unlock()
   const handle = audio.play('voice.dsnTransmission', {
     src: tx.audioUrl,
     onEnd: stopAudio,
   })
+  if (!handle.playing()) {
+    return
+  }
   currentHandle = handle
   playingTxId.value = tx.id
   isPlaying.value = true
+  audioProgress.value = 0
   progressInterval = setInterval(() => {
     if (!currentHandle) return
     if (currentHandle.playing()) {
       audioProgress.value = currentHandle.progress() * 100
+    } else {
+      stopAudio()
     }
   }, 100)
 }
