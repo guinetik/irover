@@ -127,6 +127,32 @@
   }
 }
 
+/* MIC: cyan pulse while listening */
+.wheels-hud-btn.wheels-hud-btn--mic-on .wheels-hud-mic-icon {
+  color: #40c8f0;
+  animation: wheels-hud-mic-glow 1.5s ease-in-out infinite;
+}
+
+.wheels-hud-btn.active.wheels-hud-btn--mic-on .wheels-hud-mic-icon {
+  color: #60d8ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheels-hud-btn.wheels-hud-btn--mic-on .wheels-hud-mic-icon {
+    animation: none;
+  }
+}
+
+@keyframes wheels-hud-mic-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 1px rgba(64, 200, 240, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 5px rgba(64, 200, 240, 0.85));
+  }
+}
+
 .wheels-hud-name {
   font-size: 11px;
   font-weight: 500;

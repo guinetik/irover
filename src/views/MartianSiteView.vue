@@ -455,6 +455,22 @@
           <span class="wheels-hud-icon wheels-hud-heater-icon" aria-hidden="true">&#x2668;</span>
           <span class="wheels-hud-name">HTR</span>
         </button>
+        <button
+          type="button"
+          class="wheels-hud-btn wheels-hud-btn--mic"
+          :class="{
+            active: activeInstrumentSlot === MIC_SLOT,
+            disabled: wheelsHudBlocked,
+            'wheels-hud-btn--mic-on': micListening,
+          }"
+          :disabled="wheelsHudBlocked"
+          :title="micListening ? 'Microphone [M] — LISTENING' : 'Microphone [M]'"
+          @click="toggleMicPanel"
+        >
+          <span class="wheels-hud-key font-instrument">M</span>
+          <span class="wheels-hud-icon wheels-hud-mic-icon" aria-hidden="true">&#x1F399;</span>
+          <span class="wheels-hud-name">MIC</span>
+        </button>
       </div>
     </div>
   </div>
@@ -532,6 +548,7 @@ import {
   HeaterController,
   HEATER_OVERDRIVE_BATTERY_COST,
   HEATER_SLOT,
+  MIC_SLOT,
   REMS_SLOT,
   RoverWheelsController,
   WHLS_SLOT,
@@ -851,6 +868,12 @@ function toggleHeaterPanel() {
   else siteRover.value.activateInstrument(HEATER_SLOT)
 }
 
+function toggleMicPanel() {
+  if (!siteRover.value) return
+  if (activeInstrumentSlot.value === MIC_SLOT) siteRover.value.activateInstrument(null)
+  else siteRover.value.activateInstrument(MIC_SLOT)
+}
+
 function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string) {
   if (source === 'chemcam') queueChemCamTx(archiveId)
   else if (source === 'dan') queueDanTx(archiveId)
@@ -990,6 +1013,7 @@ const {
   triggerStorm,
 } = useSiteRemsWeather()
 const remsSurveying = ref(false)
+const micListening = ref(false)
 /** True when automatic thermostat is drawing bus power (heaterW from thermal tick). */
 const heaterThermostatOn = computed(() => heaterW.value > 0.5)
 const heaterHudButtonTitle = computed(() =>
@@ -1386,6 +1410,10 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if (e.code === 'Digit0' || e.code === 'Backquote') {
     profileOpen.value = !profileOpen.value
   }
+  if (e.key === 'm' || e.key === 'M') {
+    toggleMicPanel()
+    return
+  }
   if (e.code === 'KeyF' && !e.repeat && orbitalDrops.nearbyDrop.value) {
     e.preventDefault()
     handleOrbitalDropOpen()
@@ -1442,6 +1470,8 @@ function createSiteControllerContext() {
     apxsState,
     onInstrumentActivateRequest: handleActivate,
     onGlobalKeyDown,
+    playAmbientLoop: (soundId) => audio.play(soundId, { loop: true }),
+    setAmbientVolume: (handle, volume) => handle.setVolume(volume),
     onDSNTransmissionsReceived: (txs) => {
       const count = txs.length
       const label = count === 1 ? '1 DSN transmission received' : `${count} DSN transmissions received`
@@ -1539,6 +1569,7 @@ function createSiteControllerContext() {
       remsStormActiveText,
       siteWeather,
       remsSurveying,
+      micEnabled: micListening,
     },
   })
 }

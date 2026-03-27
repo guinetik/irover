@@ -7,6 +7,7 @@ import { createChemCamTickHandler } from './ChemCamTickHandler'
 import { createOrbitalDropTickHandler, type OrbitalDropTickHandler } from './OrbitalDropTickHandler'
 import { createAntennaTickHandler } from './AntennaTickHandler'
 import { createAPXSTickHandler } from './APXSTickHandler'
+import { createMicTickHandler } from './MicTickHandler'
 
 /**
  * All per-frame subsystems created for the Mars site view, plus a single {@link disposeAll} for teardown.
@@ -21,6 +22,7 @@ export interface MarsSiteTickHandlers {
   apxsHandler: ReturnType<typeof createAPXSTickHandler>
   orbitalDropHandler: OrbitalDropTickHandler
   antennaHandler: ReturnType<typeof createAntennaTickHandler>
+  micHandler: ReturnType<typeof createMicTickHandler>
   /** Disposes handlers in a stable order (matches previous inline disposal). */
   disposeAll: () => void
 }
@@ -49,6 +51,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     uhfNextPassInSec,
     uhfTransmittedThisPass,
     lgaUnreadCount,
+    micEnabled,
   } = refs
 
   const roverVfxHandler = createRoverVfxTickHandler({
@@ -215,6 +218,16 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
+  const micHandler = createMicTickHandler(
+    {
+      micEnabled,
+    },
+    {
+      playAmbientLoop: ctx.playAmbientLoop,
+      setAmbientVolume: ctx.setAmbientVolume,
+    },
+  )
+
   function disposeAll(): void {
     roverVfxHandler.dispose()
     danHandler.dispose()
@@ -224,6 +237,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     chemCamHandler.dispose()
     orbitalDropHandler.dispose()
     antennaHandler.dispose()
+    micHandler.dispose()
   }
 
   return {
@@ -235,6 +249,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     apxsHandler,
     orbitalDropHandler,
     antennaHandler,
+    micHandler,
     disposeAll,
   }
 }

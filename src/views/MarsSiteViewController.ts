@@ -45,6 +45,8 @@ import {
   AntennaLGController,
   AntennaUHFController,
   RoverWheelsController,
+  MicController,
+  MIC_SLOT,
   type RTGConservationState,
 } from '@/three/instruments'
 
@@ -319,6 +321,8 @@ export interface MarsSiteViewRefs {
   }>
   /** REMS passive surveying — drives ambient air HUD availability. */
   remsSurveying: Ref<boolean>
+  /** Mic passive subsystem enabled state — drives ambient audio layers. */
+  micEnabled: Ref<boolean>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -375,6 +379,8 @@ export interface MarsSiteViewContext {
   onInstrumentActivateRequest: () => void
   onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
+  playAmbientLoop: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
+  setAmbientVolume: (handle: import('@/audio/audioTypes').AudioPlaybackHandle, volume: number) => void
   clearPois: () => void
   devSpawnRandomInventoryItems: typeof devSpawnRandomInventoryItems
   devSpawnInventoryItemById: typeof import('@/composables/useInventory').devSpawnInventoryItem
@@ -456,6 +462,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     remsHud,
     remsSurveying,
     siteWeather,
+    micEnabled,
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
@@ -582,6 +589,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       new RoverWheelsController(),
       new AntennaLGController(),
       new AntennaUHFController(),
+      new MicController(),
     ]
     if (controller) {
       controller.instruments = instrumentControllers
@@ -836,6 +844,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
 
       antennaHandler.tick(fctx)
+      tickHandlers.micHandler.tick(fctx)
 
       drillHandler.tick(fctx)
       apxsHandler.tick(fctx)
@@ -861,6 +870,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       const remsInst = controller?.instruments.find((i) => i.id === 'rems') as REMSController | undefined
       const remsOn = remsInst?.passiveSubsystemEnabled ?? false
       remsSurveying.value = remsOn
+
+      const micInst = controller?.instruments.find(i => i.id === 'mic') as import('@/three/instruments').MicController | undefined
+      if (micInst) {
+        micEnabled.value = micInst.passiveSubsystemEnabled
+      }
       tickRemsWeather({
         deltaSeconds: sceneDelta,
         timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
