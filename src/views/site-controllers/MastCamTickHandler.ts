@@ -114,10 +114,6 @@ export function createMastCamTickHandler(
         heldTagPlayback = null
       }
       mc.durationMultiplier = 1 / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        // MastCam does not use thermal zone for its duration
-      })
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -131,7 +127,6 @@ export function createMastCamTickHandler(
         heldTagPlayback.stop()
         heldTagPlayback = null
       }
-      speedBreakdown.value = null
     }
 
     // Animate tag markers (always, not just in active mode)
@@ -139,6 +134,12 @@ export function createMastCamTickHandler(
     if (mcInst instanceof MastCamController) {
       mcInst.surveyRange = 5 * playerMod('instrumentAccuracy') * Math.max(0.1, mcInst.durabilityFactor)
       mcInst.updateTagMarkers(simulationTime)
+      // Speed breakdown — show whenever MastCam card is visible
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+      })
+    } else {
+      speedBreakdown.value = null
     }
 
     // HUD state + crosshair + telemetry

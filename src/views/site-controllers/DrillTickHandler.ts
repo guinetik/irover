@@ -76,17 +76,6 @@ export function createDrillTickHandler(
       const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
       drill.drillDurationMultiplier = thermalMult / (playerMod('analysisSpeed') * Math.max(0.1, drill.durabilityFactor))
 
-      // Speed breakdown for HUD
-      const scanBuff = drill.drill?.scanSpeedMult !== undefined && drill.drill.scanSpeedMult < 1
-      const extras = scanBuff
-        ? [{ label: 'MASTCAM SCAN', value: '+40%', color: '#5dc9a5' }]
-        : undefined
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        thermalZone: z as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-        extras,
-      })
-
       drill.accuracyMod = playerMod('instrumentAccuracy') * drill.durabilityFactor
       drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
@@ -150,6 +139,22 @@ export function createDrillTickHandler(
       isDrilling.value = false
       drillProgress.value = 0
       lastResult.rockDrilling = false
+    }
+
+    // Speed breakdown — show whenever drill card is visible (not just active mode)
+    const drillInst = controller?.instruments.find(i => i.id === 'drill')
+    if (drillInst instanceof DrillController) {
+      const z = thermalZone
+      const scanBuff = drillInst.drill?.scanSpeedMult !== undefined && drillInst.drill.scanSpeedMult < 1
+      const extras = scanBuff
+        ? [{ label: 'MASTCAM SCAN', value: '+40%', color: '#5dc9a5' }]
+        : undefined
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+        thermalZone: z as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+        extras,
+      })
+    } else {
       speedBreakdown.value = null
     }
   }

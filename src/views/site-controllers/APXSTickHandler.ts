@@ -89,11 +89,6 @@ export function createAPXSTickHandler(
 
       const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) / (playerMod('analysisSpeed') * Math.max(0.1, apxs.durabilityFactor))
 
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-      })
-
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {
         onBlockedByCold()
@@ -135,6 +130,16 @@ export function createAPXSTickHandler(
         apxsState.value = 'idle'
         apxsCountdown.value = 0
       }
+    }
+
+    // Speed breakdown — show whenever APXS card is visible (not just active mode)
+    const apxsInst = controller?.instruments.find(i => i.id === 'apxs')
+    if (apxsInst instanceof APXSController) {
+      speedBreakdown.value = buildSpeedBreakdown({
+        ...getSpeedBreakdownBase(),
+        thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+      })
+    } else {
       speedBreakdown.value = null
     }
   }
