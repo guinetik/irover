@@ -144,6 +144,24 @@ export class AudioManager {
   }
 
   /**
+   * Ensures static manifest sounds begin decoding by reusing the same cached {@link Howl}
+   * instances as {@link play} (no duplicate Howls per id). Calls {@link Howl.load} so lazy-loaded
+   * entries warm their buffers. Skips ids with no bundled `src` (e.g. dynamic DSN voice).
+   *
+   * @param soundIds - Registered manifest ids to preload.
+   */
+  preload(soundIds: readonly AudioSoundId[]): void {
+    for (const soundId of soundIds) {
+      const def = getAudioDefinition(soundId)
+      if (!('src' in def) || def.src === undefined) {
+        continue
+      }
+      const howl = this.getOrCreateHowl(soundId)
+      howl.load()
+    }
+  }
+
+  /**
    * Plays a registered sound. Dynamic sources pass `options.src` (required for manifest entries
    * with `allowDynamicSrc: true` and no bundled `src`).
    */
@@ -718,13 +736,14 @@ export class AudioManager {
     const pending = this.pendingLockedVoice
     if (!pending || pending.stateRef.kind !== 'pending') return
     this.pendingLockedVoice = null
+    const stateRef = pending.stateRef
     const real = this.play(pending.soundId, pending.options)
-    if (pending.stateRef.kind === 'cancelled') {
+    if (stateRef.kind === 'cancelled') {
       real.stop()
       return
     }
-    pending.stateRef.kind = 'active'
-    pending.stateRef.realHandle = real
+    stateRef.kind = 'active'
+    stateRef.realHandle = real
   }
 
   private createPendingVoiceHandle(

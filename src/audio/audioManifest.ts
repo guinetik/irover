@@ -22,6 +22,12 @@ export const AUDIO_SOUND_IDS = [
 export type AudioSoundId = (typeof AUDIO_SOUND_IDS)[number]
 
 /**
+ * First-migration static cues (everything in {@link AUDIO_SOUND_IDS} except DSN voice).
+ * Bundled silent WAV data URIs; UI/SFX semantics are stable for tests and call sites.
+ */
+export const NON_DSN_SEEDED_SOUND_IDS = ['ui.click', 'ui.error', 'sfx.discovery'] as const
+
+/**
  * Ensures each manifest record key matches its `id` field for compile-time drift checks.
  */
 type ManifestById = {

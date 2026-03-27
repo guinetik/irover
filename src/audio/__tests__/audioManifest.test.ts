@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AUDIO_CATEGORIES,
   AUDIO_SOUND_IDS,
+  NON_DSN_SEEDED_SOUND_IDS,
   SILENT_STATIC_WAV_DATA_URI,
   audioManifest,
   getAudioDefinition,
@@ -56,10 +57,12 @@ describe('audioManifest', () => {
     for (const id of AUDIO_SOUND_IDS) {
       const def = getAudioDefinition(id)
       if (def.allowDynamicSrc === true) continue
-      expect(typeof def.src).toBe('string')
-      expect(def.src.length).toBeGreaterThan(0)
-      expect(def.src.startsWith('data:audio/')).toBe(true)
-      expect(def.src.startsWith('/audio/')).toBe(false)
+      const src = def.src
+      expect(typeof src).toBe('string')
+      if (typeof src !== 'string') throw new Error('expected string src for static entry')
+      expect(src.length).toBeGreaterThan(0)
+      expect(src.startsWith('data:audio/')).toBe(true)
+      expect(src.startsWith('/audio/')).toBe(false)
     }
   })
 
@@ -83,6 +86,35 @@ describe('audioManifest', () => {
       /* frozen */
     }
     expect(getAudioDefinition('ui.click').volume).toBe(0.35)
+  })
+
+  it('locks non-DSN seeded cues to bundled static sources and UI/SFX semantics', () => {
+    expect(NON_DSN_SEEDED_SOUND_IDS).toEqual(['ui.click', 'ui.error', 'sfx.discovery'])
+    for (const id of NON_DSN_SEEDED_SOUND_IDS) {
+      const def = getAudioDefinition(id)
+      expect(def.allowDynamicSrc).toBeUndefined()
+      expect(def.effect).toBe('none')
+      expect(typeof def.src).toBe('string')
+      expect(def.src).toBe(SILENT_STATIC_WAV_DATA_URI)
+    }
+    expect(getAudioDefinition('ui.click')).toMatchObject({
+      category: 'ui',
+      load: 'eager',
+      playback: 'restart',
+      volume: 0.35,
+    })
+    expect(getAudioDefinition('ui.error')).toMatchObject({
+      category: 'ui',
+      load: 'eager',
+      playback: 'restart',
+      volume: 0.45,
+    })
+    expect(getAudioDefinition('sfx.discovery')).toMatchObject({
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'single-instance',
+      volume: 0.55,
+    })
   })
 
   it('lists expected load, playback, volume, and inline src per seeded entry', () => {

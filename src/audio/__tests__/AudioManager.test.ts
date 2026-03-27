@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 type ErrFn = (id: number | null, err: unknown) => void
 
 type MockHowlProbe = {
+  src: string[]
   endOnce: Array<{ fn: () => void; id?: number }>
   playErrorOn: Array<{ fn: ErrFn }>
   playErrorOnce: Array<{ fn: ErrFn; id?: number }>
@@ -14,6 +15,7 @@ const {
   mockPlay,
   mockStop,
   mockUnload,
+  mockLoad,
   mockDuration,
   mockSeek,
   mockPlaying,
@@ -32,6 +34,7 @@ const {
   mockPlay: vi.fn(),
   mockStop: vi.fn(),
   mockUnload: vi.fn(),
+  mockLoad: vi.fn(),
   mockDuration: vi.fn(() => 12),
   mockSeek: vi.fn(() => 3),
   mockPlaying: vi.fn(() => true),
@@ -114,6 +117,9 @@ vi.mock('howler', () => {
     }
     stop = mockStop
     unload = mockUnload
+    load = mockLoad.mockImplementation(function (this: MockHowl) {
+      return this
+    })
     duration = mockDuration
     seek = mockSeek
     playing = mockPlaying
@@ -211,6 +217,7 @@ vi.mock('howler', () => {
 })
 
 import * as audioManifest from '../audioManifest'
+import { NON_DSN_SEEDED_SOUND_IDS } from '../audioManifest'
 import {
   VOICE_DUCK_FADE_ATTACK_MS,
   VOICE_DUCK_FADE_RELEASE_MS,
@@ -388,6 +395,25 @@ describe('AudioManager', () => {
     manager.play('ui.click', { volume: 0.5 })
     expect(mockHowlVolume).toHaveBeenNthCalledWith(1, 1, 1)
     expect(mockHowlVolume).toHaveBeenNthCalledWith(2, 0.5, 2)
+  })
+
+  it('preload warms static sounds via cached Howls and Howl.load without duplicate instances', () => {
+    manager.preload([...NON_DSN_SEEDED_SOUND_IDS])
+    expect(mockHowlInstances).toHaveLength(3)
+    expect(mockLoad).toHaveBeenCalledTimes(3)
+    const afterPreload = mockHowlInstances.length
+    manager.unlock()
+    manager.play('ui.click')
+    expect(mockHowlInstances).toHaveLength(afterPreload)
+    expect(mockPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('preload skips dynamic-only manifest ids and does not throw', () => {
+    expect(() =>
+      manager.preload(['voice.dsnTransmission', 'ui.click']),
+    ).not.toThrow()
+    expect(mockHowlInstances).toHaveLength(1)
+    expect(mockLoad).toHaveBeenCalledTimes(1)
   })
 
   it('tracks multiple concurrent playbacks in the same category when not exclusive', () => {
