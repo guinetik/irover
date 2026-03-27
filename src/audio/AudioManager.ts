@@ -292,6 +292,11 @@ export class AudioManager {
         playback.howlPlayId !== undefined
           ? howl.duration(playback.howlPlayId)
           : howl.duration(),
+      setVolume: (vol: number) => {
+        playback.baseVolumeScale = vol
+        const effectiveVol = vol * this.getCategoryVolume(def.category)
+        this.applyPerInstanceVolume(howl, effectiveVol, playback.howlPlayId)
+      },
     }
   }
 
@@ -845,6 +850,9 @@ export class AudioManager {
       playing: () => (stateRef.kind === 'active' ? (stateRef.realHandle?.playing() ?? false) : false),
       progress: () => (stateRef.kind === 'active' ? (stateRef.realHandle?.progress() ?? 0) : 0),
       duration: () => (stateRef.kind === 'active' ? (stateRef.realHandle?.duration() ?? 0) : 0),
+      setVolume: (vol: number) => {
+        if (stateRef.kind === 'active') stateRef.realHandle?.setVolume(vol)
+      },
     }
   }
 
@@ -855,6 +863,7 @@ export class AudioManager {
       playing: () => false,
       progress: () => 0,
       duration: () => 0,
+      setVolume: () => {},
     }
   }
 }

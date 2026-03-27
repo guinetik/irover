@@ -114,6 +114,8 @@ export interface AudioPlaybackHandle {
   progress(): number
   /** Clip length in seconds (Howler), or 0 when unknown. */
   duration(): number
+  /** Sets the playback volume (0–1) for this instance. */
+  setVolume(volume: number): void
 }
 
 /**
