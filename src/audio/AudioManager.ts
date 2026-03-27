@@ -260,12 +260,22 @@ export class AudioManager {
 
   /**
    * Registers `playerror` / `loaderror` before {@link Howl.play} so synchronous failures are not
-   * missed. Uses unscoped `once` (no sound id) to match Howler’s registration API for these events.
+   * missed.
+   *
+   * For **cached** (shared) Howls, uses {@link Howl.on} with stable handler refs and per-playback
+   * filtering on `soundId` so overlapping plays do not share a single consumable `once` slot.
+   * For **dynamic** (one-shot) Howls, uses `once` like Howler’s default one-play lifecycle.
    */
   private registerPlaybackErrorListenersBeforePlay(howl: Howl, playback: ActivePlayback): void {
     const { playErrorHandler, loadErrorHandler } = playback
-    howl.once('playerror', playErrorHandler)
-    howl.once('loaderror', loadErrorHandler)
+    const cached = this.isCachedHowlInstance(howl)
+    if (cached) {
+      howl.on('playerror', playErrorHandler)
+      howl.on('loaderror', loadErrorHandler)
+    } else {
+      howl.once('playerror', playErrorHandler)
+      howl.once('loaderror', loadErrorHandler)
+    }
   }
 
   /**
