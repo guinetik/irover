@@ -17,6 +17,7 @@ export const AUDIO_SOUND_IDS = [
   'ui.error',
   'ui.dsnArchivePlay',
   'sfx.dsnIncoming',
+  'sfx.rtgShunt',
   'sfx.discovery',
   'sfx.mastcamTag',
   'sfx.chemcamFire',
@@ -56,6 +57,7 @@ export const NON_DSN_SEEDED_SOUND_IDS = ['ui.click', 'ui.error', 'sfx.discovery'
 /** Instrument action one-shots triggered from site-controller state transitions. */
 export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.dsnIncoming',
+  'sfx.rtgShunt',
   'sfx.mastcamTag',
   'sfx.chemcamFire',
   'sfx.apxsContact',
@@ -127,6 +129,15 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'restart',
     volume: 0.6,
+    effect: 'none',
+  },
+  'sfx.rtgShunt': {
+    id: 'sfx.rtgShunt',
+    src: '/sound/rtg-shunt.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'restart',
+    volume: 0.65,
     effect: 'none',
   },
   'sfx.discovery': {

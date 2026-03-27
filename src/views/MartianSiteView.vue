@@ -1397,6 +1397,7 @@ function confirmConservation() {
   if (!siteRover.value || isSleeping.value) return
   const rtg = siteRover.value.instruments.find(i => i.id === 'rtg')
   if (rtg instanceof RTGController && rtg.activateConservation()) {
+    audio.play('sfx.rtgShunt' as import('@/audio/audioManifest').AudioSoundId)
     fillBatteryFull()
     siteRover.value.activateInstrument(null)
     useMissions().notifyRtgShunt()
