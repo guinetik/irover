@@ -15,6 +15,7 @@ export interface PassiveSystemsAudioCallbacks {
   playAmbientLoop: (soundId: AudioSoundId) => AudioPlaybackHandle
   playActionSound: (soundId: InstrumentActionSoundId) => void
   setAmbientVolume: (handle: AudioPlaybackHandle, volume: number) => void
+  showToast: (message: string) => void
 }
 
 interface PassiveLayer {
@@ -56,7 +57,7 @@ export function createPassiveSystemsAudioTickHandler(
   callbacks: PassiveSystemsAudioCallbacks,
 ): SiteTickHandler {
   const { descending, deploying, heaterHeatBoostActive, heaterEffectiveW, remsSurveying } = refs
-  const { playAmbientLoop, playActionSound, setAmbientVolume } = callbacks
+  const { playAmbientLoop, playActionSound, setAmbientVolume, showToast } = callbacks
 
   const rtgLayer: PassiveLayer = { id: 'ambient.rtg' as AudioSoundId, handle: null, currentVol: 0 }
   const heaterLayer: PassiveLayer = { id: 'ambient.heater' as AudioSoundId, handle: null, currentVol: 0 }
@@ -122,8 +123,12 @@ export function createPassiveSystemsAudioTickHandler(
       : heaterVolume(heaterEffectiveW.value)
     const heaterAudible = heaterTargetVolume > 0
 
+    if (!heaterWasAudible && heaterAudible) {
+      showToast('Heater ON — thermostat engaged')
+    }
     if (heaterWasAudible && !heaterAudible) {
       playActionSound('sfx.heaterOff')
+      showToast('Heater OFF')
     }
     heaterWasAudible = heaterAudible
 

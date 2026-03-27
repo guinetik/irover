@@ -250,6 +250,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playAmbientLoop: ctx.playAmbientLoop,
       playActionSound: ctx.playInstrumentActionSound,
       setAmbientVolume: ctx.setAmbientVolume,
+      showToast: (msg) => ctx.sampleToastRef.value?.showComm?.(msg),
     },
   )
 
