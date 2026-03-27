@@ -9,6 +9,8 @@ import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLi
 import { createMarsEnvironment } from '@/three/MarsEnvironment'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
+import { computeDecayMultiplier } from '@/lib/hazards'
+import type { HazardEvent } from '@/lib/hazards'
 import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
@@ -767,7 +769,15 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
       controller?.update(sceneDelta)
       if (controller) {
+        const sw = siteWeather.value
+        const dustStormEvent: HazardEvent = {
+          source: 'dust-storm',
+          active: sw.dustStormPhase === 'active',
+          level: sw.dustStormLevel ?? 0,
+        }
+        const hazardEvents = [dustStormEvent]
         for (const inst of controller.instruments) {
+          inst.hazardDecayMultiplier = computeDecayMultiplier(hazardEvents, inst.tier)
           inst.applyPassiveDecay(solDelta)
         }
       }
