@@ -68,21 +68,21 @@ describe('buildSpeedBreakdown', () => {
   it('adds thermal COLD entry (speed boost)', () => {
     const result = buildSpeedBreakdown(baseInput({ thermalZone: 'COLD' }))
     expect(result.buffs).toHaveLength(1)
-    expect(result.buffs[0].label).toBe('COLD')
+    expect(result.buffs[0].label).toBe('WEATHER (COLD)')
     expect(result.buffs[0].color).toBe(GREEN)
     expect(result.speedPct).toBeCloseTo(117.6, 0)
   })
 
   it('adds thermal FRIGID entry (speed penalty)', () => {
     const result = buildSpeedBreakdown(baseInput({ thermalZone: 'FRIGID' }))
-    expect(result.buffs[0].label).toBe('FRIGID')
+    expect(result.buffs[0].label).toBe('WEATHER (FRIGID)')
     expect(result.buffs[0].color).toBe(RED)
     expect(result.speedPct).toBeCloseTo(80)
   })
 
   it('adds thermal CRITICAL entry (half speed)', () => {
     const result = buildSpeedBreakdown(baseInput({ thermalZone: 'CRITICAL' }))
-    expect(result.buffs[0].label).toBe('CRITICAL')
+    expect(result.buffs[0].label).toBe('WEATHER (CRITICAL)')
     expect(result.buffs[0].color).toBe(RED)
     expect(result.speedPct).toBeCloseTo(50)
   })

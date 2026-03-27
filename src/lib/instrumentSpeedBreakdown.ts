@@ -77,7 +77,7 @@ export function buildSpeedBreakdown(input: SpeedBreakdownInput): SpeedBreakdown 
     thermalSpeedFactor = 1 / durMult
     const pctDelta = thermalSpeedFactor - 1
     buffs.push({
-      label: input.thermalZone,
+      label: `WEATHER (${input.thermalZone})`,
       value: fmtBuff(pctDelta),
       color: pctDelta > 0 ? GREEN : RED,
     })
