@@ -24,8 +24,8 @@ export function createRoverMovementSoundHandler(
 
   function tick(fctx: SiteFrameContext): void {
     const { rover } = fctx
-    const isMoving = rover?.mode === 'driving' && rover.isMoving
-    const isTurning = rover?.mode === 'driving' && (rover as { isTurning?: boolean }).isTurning
+    const isMoving = rover?.isMoving ?? false
+    const isTurning = (rover as { isTurning?: boolean } | null)?.isTurning ?? false
 
     // Drive sound: held while W/S moves the chassis
     if (isMoving) {
