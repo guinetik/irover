@@ -44,6 +44,9 @@ describe('audioManifest', () => {
       'ambient.quake',
       'ambient.rtg',
       'ambient.heater',
+      'sfx.roverDrive',
+      'sfx.roverTurn',
+      'sfx.roverTurnOut',
     ])
   })
 
@@ -238,7 +241,7 @@ describe('audioManifest', () => {
       src: '/sound/dan-prospecting.mp3',
       category: 'sfx',
       load: 'lazy',
-      playback: 'restart',
+      playback: 'single-instance',
       effect: 'none',
     })
     expect(getAudioDefinition('ambient.rtg')).toMatchObject({

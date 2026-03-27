@@ -202,9 +202,9 @@ export interface ActiveInstrumentAudioState {
 
 const ACTIVE_INSTRUMENT_EXIT_SOUND_IDS: Record<ActiveInstrumentAudioOwner, readonly InstrumentActionSoundId[]> = {
   apxs: ['sfx.apxsContact', 'sfx.mastMove'],
-  chemcam: ['sfx.chemcamFire'],
+  chemcam: ['sfx.chemcamFire', 'sfx.cameraMove'],
   drill: ['sfx.drillStart', 'sfx.mastMove'],
-  mastcam: ['sfx.mastcamTag'],
+  mastcam: ['sfx.mastcamTag', 'sfx.cameraMove'],
 }
 
 /**
@@ -866,6 +866,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           heaterInst.zone = thermalZone.value
         }
       }
+      tickHandlers.passiveSystemsAudioHandler.tick(fctx)
+      tickHandlers.roverMovementSoundHandler.tick(fctx)
 
       const remsInst = controller?.instruments.find((i) => i.id === 'rems') as REMSController | undefined
       const remsOn = remsInst?.passiveSubsystemEnabled ?? false

@@ -33,6 +33,9 @@ export const AUDIO_SOUND_IDS = [
   'ambient.quake',
   'ambient.rtg',
   'ambient.heater',
+  'sfx.roverDrive',
+  'sfx.roverTurn',
+  'sfx.roverTurnOut',
 ] as const
 
 /** Union of {@link AUDIO_SOUND_IDS} values. */
@@ -54,6 +57,9 @@ export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.cameraMove',
   'sfx.danScan',
   'sfx.danProspecting',
+  'sfx.roverDrive',
+  'sfx.roverTurn',
+  'sfx.roverTurnOut',
 ] as const
 
 /** Union of instrument-action one-shot ids. */
@@ -180,7 +186,7 @@ const manifestById: ManifestById = {
     src: '/sound/dan-prospecting.mp3',
     category: 'sfx',
     load: 'lazy',
-    playback: 'restart',
+    playback: 'single-instance',
     volume: 0.6,
     effect: 'none',
   },
@@ -254,6 +260,33 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'single-instance',
     volume: 0.2,
+    effect: 'none',
+  },
+  'sfx.roverDrive': {
+    id: 'sfx.roverDrive',
+    src: '/sound/rover.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.45,
+    effect: 'none',
+  },
+  'sfx.roverTurn': {
+    id: 'sfx.roverTurn',
+    src: '/sound/rover-turn.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.45,
+    effect: 'none',
+  },
+  'sfx.roverTurnOut': {
+    id: 'sfx.roverTurnOut',
+    src: '/sound/rover-turn-out.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'restart',
+    volume: 0.45,
     effect: 'none',
   },
 }

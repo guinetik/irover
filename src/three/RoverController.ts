@@ -119,6 +119,8 @@ export class RoverController {
   private shakeTime = 0
   /** True while W/S drive input requests movement (updated each frame). */
   isMoving = false
+  /** True while A/D steer input is held (updated each frame). */
+  isTurning = false
 
   // Wheel animation state
   private wheelAngle = 0
@@ -572,6 +574,7 @@ export class RoverController {
     }
 
     this.isMoving = !drivingDisengaged && moveDir.lengthSq() > 0
+    this.isTurning = !drivingDisengaged && steerSign !== 0
 
     if (this.isMoving) {
       moveDir.normalize()
