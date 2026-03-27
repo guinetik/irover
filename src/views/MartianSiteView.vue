@@ -884,7 +884,7 @@ function toggleHeaterPanel() {
 }
 
 function toggleMicPanel() {
-  if (!siteRover.value) return
+  if (!siteRover.value || isSleeping.value || wheelsHudBlocked.value) return
   if (activeInstrumentSlot.value === MIC_SLOT) siteRover.value.activateInstrument(null)
   else siteRover.value.activateInstrument(MIC_SLOT)
 }
