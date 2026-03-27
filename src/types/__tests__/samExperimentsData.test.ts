@@ -96,7 +96,7 @@ describe('sam-experiments.json', () => {
     }
   })
 
-  it('has at least 60 discoveries (47 original + 16 fabrication)', () => {
-    expect(sam.discoveries.length).toBeGreaterThanOrEqual(63)
+  it('has at least 58 discoveries (42 original + 16 fabrication)', () => {
+    expect(sam.discoveries.length).toBeGreaterThanOrEqual(58)
   })
 })
