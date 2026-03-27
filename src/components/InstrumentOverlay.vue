@@ -417,6 +417,14 @@ const INSTRUMENTS: Record<number, InstrumentData> = {
     temp: '',
     upgName: 'EFFICIENCY MOTORS', upgDesc: 'Lower draw per meter; same top speed.', upgReq: 'Requires: Engineering Package drop',
   },
+  14: {
+    slot: 14, icon: '\uD83C\uDF99', name: 'MIC', type: 'AUDIO SENSOR',
+    desc: 'Rover-mounted microphone capturing Mars ambient sound. Audio sourced from NASA Perseverance recordings. Layers wind, atmosphere, day/night ambience, and storm rumble.',
+    power: '1W', powerColor: '#5dc9a5', status: 'LISTENING', statusColor: '#40c8f0', health: '100%',
+    hint: '~1W on the bus while listening. ACTIVATE / STANDBY or [E] toggles. Ambient audio reacts to wind speed, time of day, and storm intensity.',
+    temp: '',
+    upgName: 'HIGH-FIDELITY MIC', upgDesc: 'Wider frequency response captures faint geological sounds at greater distance.', upgReq: 'Requires: Science Pack Alpha drop',
+  },
 }
 
 defineEmits<{

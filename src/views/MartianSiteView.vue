@@ -648,6 +648,21 @@ const passiveOverlayPatch = computed(() => {
   }
   const w = i.selectionIdlePowerW
   const on = i.passiveSubsystemEnabled
+  if (activeInstrumentSlot.value === MIC_SLOT) {
+    const micInst = siteRover.value?.instruments.find(inst => inst.id === 'mic')
+    if (micInst) {
+      return {
+        only: true as const,
+        enabled: on,
+        hud: {
+          power: micInst.passiveSubsystemEnabled ? '1W' : '0W',
+          powerColor: micInst.passiveSubsystemEnabled ? '#5dc9a5' : '#6b4a30',
+          status: micInst.passiveSubsystemEnabled ? 'LISTENING' : 'STANDBY',
+          statusColor: micInst.passiveSubsystemEnabled ? '#40c8f0' : '#6b4a30',
+        },
+      }
+    }
+  }
   const statusOn: Record<string, string> = {
     dan: 'SCANNING',
     rems: 'SURVEYING',
