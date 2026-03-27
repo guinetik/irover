@@ -113,6 +113,7 @@
       :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
       :wheels-hud="activeInstrumentSlot === WHLS_SLOT ? wheelsOverlayHud : null"
+      :instrument-speed-hud="instrumentSpeedHudForSlot"
       :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, ambientMeasured: remsSurveying, heaterW: heaterEffectiveW, zone: thermalZone } : null"
       :rems-hud="activeInstrumentSlot === REMS_SLOT ? remsHud : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
@@ -781,6 +782,17 @@ const drillSpeedBreakdown = ref<SpeedBreakdown | null>(null)
 const chemCamSpeedBreakdown = ref<SpeedBreakdown | null>(null)
 const mastCamSpeedBreakdown = ref<SpeedBreakdown | null>(null)
 const apxsSpeedBreakdown = ref<SpeedBreakdown | null>(null)
+
+const instrumentSpeedHudForSlot = computed(() => {
+  switch (activeInstrumentSlot.value) {
+    case 3: return drillSpeedBreakdown.value
+    case 2: return chemCamSpeedBreakdown.value
+    case 1: return mastCamSpeedBreakdown.value
+    case 4: return apxsSpeedBreakdown.value
+    default: return null
+  }
+})
+
 const activeChemCamReadout = computed(() => {
   if (!showChemCamResults.value) return null
   const cc = siteRover.value?.instruments.find(i => i.id === 'chemcam')

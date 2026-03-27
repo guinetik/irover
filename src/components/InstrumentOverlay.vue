@@ -101,22 +101,43 @@
         </div>
 
         <!-- WHLS: movement speed indicator -->
-        <div v-if="activeSlot === WHLS_SLOT && wheelsHud" class="ov-whls-speed">
-          <div class="ov-whls-speed-row">
-            <span class="ov-whls-speed-label">MOVE SPD</span>
-            <span class="ov-whls-speed-value" :style="{ color: wheelsSpeedColor }">{{ wheelsSpeedStr }}</span>
+        <div v-if="activeSlot === WHLS_SLOT && wheelsHud" class="ov-spd-speed">
+          <div class="ov-spd-speed-row">
+            <span class="ov-spd-speed-label">MOVE SPD</span>
+            <span class="ov-spd-speed-value" :style="{ color: wheelsSpeedColor }">{{ wheelsSpeedStr }}</span>
           </div>
-          <div class="ov-whls-speed-bar-track">
-            <div class="ov-whls-speed-bar-fill" :style="{ width: wheelsSpeedBarPct + '%', background: wheelsSpeedColor }" />
+          <div class="ov-spd-speed-bar-track">
+            <div class="ov-spd-speed-bar-fill" :style="{ width: wheelsSpeedBarPct + '%', background: wheelsSpeedColor }" />
           </div>
-          <div class="ov-whls-buffs">
+          <div class="ov-spd-buffs">
             <div
               v-for="buff in wheelsHud.speedBuffs"
               :key="buff.label"
-              class="ov-whls-buff"
+              class="ov-spd-buff"
             >
-              <span class="ov-whls-buff-label">{{ buff.label }}</span>
-              <span class="ov-whls-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
+              <span class="ov-spd-buff-label">{{ buff.label }}</span>
+              <span class="ov-spd-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instrument analysis speed indicator -->
+        <div v-if="instrumentSpeedHud && ANALYSIS_INSTRUMENT_SLOTS.has(activeSlot ?? -1)" class="ov-spd-speed">
+          <div class="ov-spd-speed-row">
+            <span class="ov-spd-speed-label">{{ instrumentSpeedLabel }}</span>
+            <span class="ov-spd-speed-value" :style="{ color: instrumentSpeedColor }">{{ instrumentSpeedStr }}</span>
+          </div>
+          <div class="ov-spd-speed-bar-track">
+            <div class="ov-spd-speed-bar-fill" :style="{ width: instrumentSpeedBarPct + '%', background: instrumentSpeedColor }" />
+          </div>
+          <div class="ov-spd-buffs">
+            <div
+              v-for="buff in instrumentSpeedHud.buffs"
+              :key="buff.label"
+              class="ov-spd-buff"
+            >
+              <span class="ov-spd-buff-label">{{ buff.label }}</span>
+              <span class="ov-spd-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
             </div>
           </div>
         </div>
@@ -294,6 +315,7 @@ import { computed, ref, watch, withDefaults } from 'vue'
 import { useUiSound } from '@/composables/useUiSound'
 import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
 import { DUST_STORM_LEVEL_LABELS, type RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
+import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 
 export interface InstrumentData {
   slot: number
@@ -521,6 +543,8 @@ const props = withDefaults(
     hasUpgrade?: boolean
     /** True when the active instrument is already fully upgraded */
     isUpgraded?: boolean
+    /** Speed breakdown for active analysis instruments (Drill, ChemCam, MastCam, APXS). */
+    instrumentSpeedHud?: SpeedBreakdown | null
   }>(),
   {
     canActivate: true,
@@ -686,6 +710,35 @@ const wheelsSpeedColor = computed(() => {
 
 const wheelsSpeedBarPct = computed(() => {
   const pct = props.wheelsHud?.speedPct ?? 100
+  return Math.min(100, Math.max(0, pct / 1.5))
+})
+
+const ANALYSIS_INSTRUMENT_SLOTS = new Set([1, 2, 3, 4])  // MastCam, ChemCam, Drill, APXS
+
+const instrumentSpeedLabel = computed(() => {
+  switch (props.activeSlot) {
+    case 3: return 'DRILL SPD'
+    case 2: return 'SCAN SPD'
+    case 1: return 'SURVEY SPD'
+    case 4: return 'ANALYSIS SPD'
+    default: return 'SPD'
+  }
+})
+
+const instrumentSpeedStr = computed(() => {
+  const pct = props.instrumentSpeedHud?.speedPct ?? 100
+  return `${Math.round(pct)}%`
+})
+
+const instrumentSpeedColor = computed(() => {
+  const pct = props.instrumentSpeedHud?.speedPct ?? 100
+  if (pct > 105) return '#5dc9a5'
+  if (pct >= 95) return '#ef9f27'
+  return '#e05030'
+})
+
+const instrumentSpeedBarPct = computed(() => {
+  const pct = props.instrumentSpeedHud?.speedPct ?? 100
   return Math.min(100, Math.max(0, pct / 1.5))
 })
 
@@ -1146,33 +1199,33 @@ const durabilityColor = computed(() => {
   50% { box-shadow: 0 0 12px rgba(68, 170, 255, 0.5); }
 }
 
-/* WHLS speed section */
-.ov-whls-speed {
+/* Speed section (wheels + instruments) */
+.ov-spd-speed {
   padding: 6px 16px 2px;
   border-top: 1px solid rgba(196, 117, 58, 0.15);
 }
 
-.ov-whls-speed-row {
+.ov-spd-speed-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   margin-bottom: 4px;
 }
 
-.ov-whls-speed-label {
+.ov-spd-speed-label {
   font-size: 10px;
   letter-spacing: 0.12em;
   color: rgba(196, 117, 58, 0.6);
 }
 
-.ov-whls-speed-value {
+.ov-spd-speed-value {
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.05em;
 }
 
-.ov-whls-speed-bar-track {
+.ov-spd-speed-bar-track {
   height: 3px;
   background: rgba(196, 117, 58, 0.12);
   border-radius: 2px;
@@ -1180,31 +1233,31 @@ const durabilityColor = computed(() => {
   overflow: hidden;
 }
 
-.ov-whls-speed-bar-fill {
+.ov-spd-speed-bar-fill {
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease, background 0.3s ease;
 }
 
-.ov-whls-buffs {
+.ov-spd-buffs {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding-bottom: 4px;
 }
 
-.ov-whls-buff {
+.ov-spd-buff {
   display: flex;
   justify-content: space-between;
   font-size: 10px;
   letter-spacing: 0.08em;
 }
 
-.ov-whls-buff-label {
+.ov-spd-buff-label {
   color: rgba(196, 117, 58, 0.45);
 }
 
-.ov-whls-buff-value {
+.ov-spd-buff-value {
   font-family: var(--font-ui);
   font-weight: 600;
 }
