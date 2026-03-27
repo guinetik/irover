@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import dustVert from '@/three/shaders/dust.vert.glsl?raw'
 import dustFrag from '@/three/shaders/dust.frag.glsl?raw'
 
-const PARTICLE_COUNT = 4000
+const PARTICLE_COUNT = 3000
 
 /** Baseline wind speed (m/s) that maps to the original drift factor of 1.0. */
 const WIND_BASELINE_MS = 5
@@ -44,26 +44,26 @@ export class DustParticles {
     let verticalDrift: number
 
     if (isPolar) {
-      particleColor = new THREE.Vector3(0.85, 0.90, 0.95)
+      particleColor = new THREE.Vector3(0.78, 0.80, 0.82)
       speedMultiplier = 0.4
       sizeMultiplier = 0.6
       baseWindDirection = new THREE.Vector3(0.2, -0.15, 0.3).normalize()
       verticalDrift = -0.3
     } else if (isVolcano) {
-      particleColor = new THREE.Vector3(0.35, 0.32, 0.30)
+      particleColor = new THREE.Vector3(0.45, 0.40, 0.36)
       speedMultiplier = 1.0
       sizeMultiplier = 1.0
       baseWindDirection = new THREE.Vector3(0.6, 0.05, 0.4).normalize()
       verticalDrift = 0.0
     } else if (isCanyon) {
-      particleColor = new THREE.Vector3(0.75, 0.50, 0.35)
+      particleColor = new THREE.Vector3(0.68, 0.52, 0.40)
       speedMultiplier = 1.0
       sizeMultiplier = 1.0
       baseWindDirection = new THREE.Vector3(0.8, 0.02, 0.2).normalize()
       verticalDrift = 0.0
     } else {
       // plains, basin, landing-site, default
-      particleColor = new THREE.Vector3(0.82, 0.62, 0.42)
+      particleColor = new THREE.Vector3(0.72, 0.58, 0.44)
       speedMultiplier = 1.0
       sizeMultiplier = 1.0
       baseWindDirection = new THREE.Vector3(0.6, 0.05, 0.4).normalize()
@@ -83,9 +83,9 @@ export class DustParticles {
     const phases = new Float32Array(PARTICLE_COUNT)
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 80
-      positions[i * 3 + 1] = Math.random() * 15 + 0.5
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 80
+      positions[i * 3] = (Math.random() - 0.5) * 24
+      positions[i * 3 + 1] = Math.random() * 18
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 24
       sizes[i] = (0.4 + Math.random() * 0.8) * sizeMultiplier
       speeds[i] = (0.3 + Math.random() * 0.7) * speedMultiplier
       phases[i] = Math.random()
@@ -111,10 +111,13 @@ export class DustParticles {
       fragmentShader: dustFrag,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
+      blending: THREE.NormalBlending,
     })
 
     this.mesh = new THREE.Points(geometry, this.material)
+    // Shader repositions particles around camera — disable frustum culling
+    // so Three.js doesn't cull the mesh based on stale bounding sphere
+    this.mesh.frustumCulled = false
   }
 
   /** Update wind from live REMS telemetry. */

@@ -7,8 +7,8 @@ import fullscreenPassVert from '@/three/shaders/fullscreen-pass.vert.glsl?raw'
 const WIND_BASELINE_MS = 5
 
 export interface DustAtmospherePass extends ShaderPass {
-  /** Update wind from live site weather. */
-  setWeather(windMs: number): void
+  /** Update from live site weather. */
+  setWeather(windMs: number, stormLevel: number): void
 }
 
 export function createDustAtmospherePass(dustCover: number): DustAtmospherePass {
@@ -17,6 +17,7 @@ export function createDustAtmospherePass(dustCover: number): DustAtmospherePass 
       tDiffuse: { value: null },
       uDustCover: { value: dustCover },
       uWindSpeed: { value: 1.0 },
+      uDustStormLevel: { value: 0 },
       uTime: { value: 0 },
       uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
     },
@@ -25,8 +26,9 @@ export function createDustAtmospherePass(dustCover: number): DustAtmospherePass 
   }
 
   const pass = new ShaderPass(shader) as DustAtmospherePass
-  pass.setWeather = (windMs: number) => {
+  pass.setWeather = (windMs: number, stormLevel: number) => {
     pass.uniforms.uWindSpeed.value = windMs / WIND_BASELINE_MS
+    pass.uniforms.uDustStormLevel.value = stormLevel
   }
   return pass
 }

@@ -114,8 +114,8 @@ void main() {
   vec3 skyColor = mix(horizonCol, zenithColor * 0.6, zenithGrad);
 
   // --- Morning blue factor ---
-  // Sky is distinctly blue-gray before timeOfDay 0.35
-  float morningBlue = 1.0 - smoothstep(0.25, 0.40, uTimeOfDay);
+  // Sky is distinctly blue-gray through morning, transitions to warm by midday
+  float morningBlue = 1.0 - smoothstep(0.30, 0.50, uTimeOfDay);
   vec3 blueTint = vec3(0.50, 0.58, 0.68);
   skyColor = mix(skyColor, mix(skyColor, blueTint, 0.4), morningBlue * (1.0 - tPreDawn));
 
@@ -192,12 +192,14 @@ void main() {
 
     // Noctilucent glow: most visible at dawn/dusk
     float noctilucent = duskBand * 0.6 + (1.0 - smoothstep(0.20, 0.35, t)) * 0.3;
-    float cloudBright = mix(0.3, 0.7, noctilucent);
 
-    vec3 cloudColor = mix(vec3(0.85, 0.78, 0.72), vec3(0.70, 0.75, 0.85), noctilucent);
-    cloudColor *= cloudBright;
+    // Clouds are bright white-cream when sunlit, amber-tinted at dusk
+    vec3 cloudColor = mix(vec3(0.95, 0.92, 0.88), vec3(0.85, 0.78, 0.70), noctilucent);
+    // Brighten from sun forward-scatter
+    float sunlit = max(0.0, sunElevation) * 0.5 + 0.5;
+    cloudColor *= sunlit;
 
-    skyColor = mix(skyColor, cloudColor, cloud * cloudDensity * 0.5);
+    skyColor = mix(skyColor, cloudColor, cloud * cloudDensity * 0.6);
   }
 
   // --- Stars at night (round points, hash-based placement) ---

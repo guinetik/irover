@@ -1000,6 +1000,7 @@ const {
   remsStormActiveText,
   siteWeather,
   tickRemsWeather,
+  triggerStorm,
 } = useSiteRemsWeather()
 const remsSurveying = ref(false)
 /** True when automatic thermostat is drawing bus power (heaterW from thermal tick). */
@@ -1419,6 +1420,7 @@ function createSiteControllerContext() {
     tickPower,
     tickThermal,
     tickRemsWeather,
+    triggerStorm,
     sampleToastRef,
     upsertPoi,
     removePoi,

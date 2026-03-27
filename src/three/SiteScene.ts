@@ -305,7 +305,8 @@ export class SiteScene {
     if (!this.scene.fog || !(this.scene.fog instanceof THREE.FogExp2)) return
 
     const windFactor = windMs / 5
-    const density = Math.max(0, windFactor * 0.003 + stormLevel * 0.006)
+    // L0 calm: ~0.003 (subtle haze). L3: ~0.06 (reduced visibility). L5: ~0.14 (near whiteout)
+    const density = Math.max(0, windFactor * 0.003 + stormLevel * 0.024 + stormLevel * stormLevel * 0.002)
     this.scene.fog.density = density
 
     // Sync fog color with sky horizon for seamless blend

@@ -1,6 +1,7 @@
 uniform sampler2D tDiffuse;
 uniform float uDustCover;
 uniform float uWindSpeed;
+uniform float uDustStormLevel;
 uniform float uTime;
 uniform vec2 uResolution;
 
@@ -55,7 +56,7 @@ void main() {
   // windFactor: 0 at dead calm, 1 at baseline (5 m/s), ~4 at severe storm
   float windFactor = clamp(uWindSpeed, 0.0, 6.0);
 
-  vec3 dustColor = vec3(0.78, 0.58, 0.38);
+  vec3 dustColor = vec3(0.85, 0.52, 0.30);
   vec2 uv = vUv * vec2(uResolution.x / uResolution.y, 1.0);
   float dustNoise = fbm(uv * 2.0 + uTime * 0.03 * windFactor);
   float dustNoise2 = fbm(uv * 4.0 - uTime * 0.02 * windFactor + 100.0);
@@ -65,11 +66,19 @@ void main() {
   float edgeVignette = smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
 
   // Calm wind: visible haze; storm: heavy orange blanket
+  float stormBoost = uDustStormLevel / 5.0;
   float dustIntensity = mix(0.25, 0.65, smoothstep(0.5, 3.0, windFactor));
+
+  // Pattern-based haze (textured dust)
   float dustAmount = dustPattern * uDustCover * dustIntensity;
   dustAmount *= (1.0 - heightGrad * 0.5);
   dustAmount *= mix(0.7, 1.0, edgeVignette);
-  color.rgb = mix(color.rgb, dustColor, dustAmount);
+
+  // Storm: uniform blanket layered on top (not pattern-dependent)
+  float stormBlanket = stormBoost * stormBoost * 0.7;
+
+  float totalDust = min(dustAmount + stormBlanket, 0.85);
+  color.rgb = mix(color.rgb, dustColor, totalDust);
 
   // Blend OOB edges into dust color for natural wide-angle falloff
   color.rgb = mix(color.rgb, dustColor * 0.6, oob);

@@ -295,6 +295,8 @@ export interface MarsSiteViewContext {
   tickPower: (deltaSeconds: number, input: PowerTickInput) => void
   tickThermal: (deltaSeconds: number, input: ThermalTickInput) => void
   tickRemsWeather: (input: RemsWeatherTickInput) => void
+  /** Dev: force-trigger a dust storm at level 1-5. */
+  triggerStorm: (level: number) => void
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   upsertPoi: (poi: { id: string; label: string; x: number; z: number; color: string }) => void
   removePoi: (id: string) => void
@@ -597,6 +599,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
             priorCompletedIds,
           }
         },
+        triggerStorm: (level: number) => ctx.triggerStorm(level),
       })
     }
 
@@ -918,8 +921,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       activeInstrumentSlot.value = controller?.activeInstrument?.slot ?? null
 
-      // --- Trails + scene update + render ---
-      if (siteScene.rover && siteScene.trails) {
+      // --- Trails + scene update + render (no tracks during active storms) ---
+      const stormActive = siteWeather.value.dustStormPhase === 'active'
+      if (siteScene.rover && siteScene.trails && !stormActive) {
         siteScene.trails.update(siteScene.rover.position, controller?.heading ?? 0)
       }
 
@@ -944,12 +948,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           marsSol.value,
           siteScene.sky.nightFactor,
           sw.dustStormLevel ?? 0,
+          siteScene.sky.sunDirection,
         )
       }
 
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
-        dustPass.setWeather(siteWeather.value.windMs)
+        dustPass.setWeather(siteWeather.value.windMs, siteWeather.value.dustStormLevel ?? 0)
       }
 
       if (composer) {

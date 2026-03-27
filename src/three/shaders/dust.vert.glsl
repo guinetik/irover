@@ -11,30 +11,49 @@ attribute float aPhase;
 
 varying float vAlpha;
 varying float vDist;
+varying vec2 vWindScreenDir;
 
 void main() {
   vec3 pos = position;
 
-  // Drift with wind + individual turbulence, scaled by REMS wind speed
-  float t = uTime * aSpeed + aPhase;
-  pos += uWindDirection * t * 2.0 * uWindSpeed;
-  float turbulence = 1.0 + (uWindSpeed - 1.0) * 0.3; // turbulence grows mildly with wind
-  pos.x += sin(t * 1.3 + aPhase * 6.28) * 1.5 * turbulence;
-  pos.y += sin(t * 0.7 + aPhase * 3.14) * 0.8 * turbulence + uVerticalDrift * t;
-  pos.z += cos(t * 1.1 + aPhase * 4.71) * 1.5 * turbulence;
+  // Tight box around camera — storms pack even tighter
+  float stormDensity = smoothstep(1.0, 4.0, uWindSpeed);
+  float boxXZ = mix(24.0, 16.0, stormDensity);
+  float boxY = 18.0;
+  pos.xz = mod(pos.xz - uCameraPos.xz + boxXZ * 0.5, vec2(boxXZ)) - boxXZ * 0.5 + uCameraPos.xz;
+  pos.y = mod(pos.y, boxY);
 
-  // Wrap particles within a box around the camera
-  float boxSize = 80.0;
-  pos = mod(pos - uCameraPos + boxSize * 0.5, vec3(boxSize)) - boxSize * 0.5 + uCameraPos;
+  // Wind drift — slow and heavy, not frantic
+  float cappedWind = min(uWindSpeed, 1.8);
+  float t = fract(uTime * aSpeed * 0.08 + aPhase) * 10.0;
+  float windDrift = t * 1.0 * cappedWind;
+  pos += uWindDirection * windDrift;
+  float turbulence = 1.0 + (uWindSpeed - 1.0) * 0.3;
+  pos.x += sin(t * 1.3 + aPhase * 6.28) * 2.0 * turbulence;
+  pos.y += sin(t * 0.7 + aPhase * 3.14) * 1.2 * turbulence + uVerticalDrift * t;
+  pos.z += cos(t * 1.1 + aPhase * 4.71) * 2.0 * turbulence;
+
+  // Keep particles above ground
+  pos.y = max(pos.y, 0.3);
 
   vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
   vDist = -mvPosition.z;
 
   // Fade with distance and near camera
-  float distFade = smoothstep(60.0, 10.0, vDist);
-  float nearFade = smoothstep(1.0, 4.0, vDist);
-  vAlpha = distFade * nearFade * uDustCover * 0.6;
+  float distFade = smoothstep(20.0, 3.0, vDist);
+  float nearFade = smoothstep(0.3, 1.5, vDist);
 
-  gl_PointSize = aSize * (200.0 / -mvPosition.z);
+  // Always visible base + wind adds more
+  float baseAlpha = 0.50;
+  float windAlpha = smoothstep(0.5, 3.0, uWindSpeed) * 0.25;
+  vAlpha = distFade * nearFade * (baseAlpha + windAlpha);
+
+  gl_PointSize = aSize * (120.0 / -mvPosition.z);
   gl_Position = projectionMatrix * mvPosition;
+
+  // Project wind direction to screen space for fragment streaking
+  vec4 windEnd = projectionMatrix * (mvPosition + vec4(uWindDirection * 0.5, 0.0));
+  vec2 screenPos = gl_Position.xy / gl_Position.w;
+  vec2 windScreenPos = windEnd.xy / windEnd.w;
+  vWindScreenDir = normalize(windScreenPos - screenPos + 0.001);
 }

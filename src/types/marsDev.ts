@@ -46,4 +46,13 @@ export interface MarsDevDebugApi {
    * @param index - 0-based index into the loaded mission catalog.
    */
   mission(index: number): DevMissionSetResult
+
+  weather: {
+    /**
+     * Force-triggers a dust storm at the given level (1-5).
+     * The storm goes through the normal incoming → active → cooldown lifecycle.
+     * @param level - Storm intensity 1 (minor) to 5 (extreme). Default 3.
+     */
+    triggerStorm(level?: number): void
+  }
 }

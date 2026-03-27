@@ -11,6 +11,8 @@ export interface InstallMarsDevDebugApiOptions {
   addSciencePoints: (amount: number) => DevAddSciencePointsResult
   /** Clears mission + LGA state and queues the briefing for `missions.json` catalog index. */
   setMissionForDev: (index: number) => DevMissionSetResult
+  /** Force-trigger a dust storm at level 1-5. */
+  triggerStorm: (level: number) => void
 }
 
 declare global {
@@ -40,6 +42,11 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
     },
     mission(index: number) {
       return options.setMissionForDev(index)
+    },
+    weather: {
+      triggerStorm(level = 3) {
+        options.triggerStorm(level)
+      },
     },
   }
 

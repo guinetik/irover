@@ -97,6 +97,15 @@ export function useSiteRemsWeather() {
     remsStormActiveText.value = null
   }
 
+  /** Dev: force-trigger a dust storm at the given level (1-5). */
+  function triggerStorm(level: number): void {
+    const L = Math.max(1, Math.min(5, Math.round(level)))
+    storm = { ...storm, phase: 'incoming', timer: 22, level: L }
+    const label = DUST_STORM_LEVEL_LABELS[L] ?? 'Moderate'
+    remsStormIncomingText.value = `REMS: Level ${L} (${label}) dust storm approaching — expect high winds.`
+    remsStormActiveText.value = null
+  }
+
   function tickRemsWeather(input: RemsWeatherTickInput): void {
     const { terrain, remsOn, ambientEffectiveC, simulationTime, timeOfDay, sol, deltaSeconds } = input
     const dustCover = terrain?.dustCover ?? 0.45
@@ -167,5 +176,7 @@ export function useSiteRemsWeather() {
     tickRemsWeather,
     /** Test hook: clear storm timers. */
     resetStormState,
+    /** Dev: force-trigger a dust storm at the given level (1-5). */
+    triggerStorm,
   }
 }

@@ -16,9 +16,14 @@ export class MarsMoons {
   private deimos: THREE.Object3D | null = null
   private scene: THREE.Scene
   private latDeg = 0
+  /** Dedicated sun light for moons — scene sun is too close to rover to reach distance 500. */
+  private moonSunLight: THREE.DirectionalLight
 
   constructor(scene: THREE.Scene) {
     this.scene = scene
+    this.moonSunLight = new THREE.DirectionalLight(0xffe8d0, 2.0)
+    this.moonSunLight.castShadow = false
+    scene.add(this.moonSunLight)
   }
 
   async init(latDeg?: number): Promise<void> {
@@ -39,8 +44,14 @@ export class MarsMoons {
     this.scene.add(this.deimos)
   }
 
-  update(timeOfDay: number, sol: number, nightFactor: number, stormLevel: number) {
+  update(timeOfDay: number, sol: number, nightFactor: number, stormLevel: number, sunDirection?: THREE.Vector3) {
     const visibility = nightFactor * (1.0 - Math.min(1, stormLevel / 3))
+
+    // Position moon light from sun direction at moon-scale distance
+    if (sunDirection) {
+      this.moonSunLight.position.copy(sunDirection).multiplyScalar(MOON_DISTANCE * 1.5)
+      this.moonSunLight.intensity = 2.0 * (1.0 - nightFactor * 0.3)
+    }
 
     if (this.phobos) {
       const visible = visibility > 0.05 && Math.abs(this.latDeg) < PHOBOS_VISIBILITY_LAT
@@ -97,5 +108,6 @@ export class MarsMoons {
     }
     cleanup(this.phobos)
     cleanup(this.deimos)
+    this.scene.remove(this.moonSunLight)
   }
 }
