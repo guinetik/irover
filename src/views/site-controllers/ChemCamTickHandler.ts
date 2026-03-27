@@ -33,6 +33,7 @@ export interface ChemCamTickCallbacks {
   playerMod: (key: keyof ProfileModifiers) => number
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
   startHeldActionSound: (soundId: 'sfx.chemcamFire') => AudioPlaybackHandle
+  startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
 }
 
 /**
@@ -53,10 +54,11 @@ export function createChemCamTickHandler(
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
     isDrilling, drillProgress,
   } = refs
-  const { sampleToastRef, playerMod, awardSP, startHeldActionSound } = callbacks
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
 
   let targetingInitialised = false
   let heldFirePlayback: AudioPlaybackHandle | null = null
+  let heldMovementPlayback: AudioPlaybackHandle | null = null
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (targetingInitialised) return
@@ -88,11 +90,22 @@ export function createChemCamTickHandler(
       controller?.mode === 'active'
       && controller.activeInstrument instanceof ChemCamController
       && controller.activeInstrument.phase === 'PULSE_TRAIN'
+      && controller.activeInstrument.isFireTriggerHeld
+    const shouldPlayMovement =
+      controller?.mode === 'active'
+      && controller.activeInstrument instanceof ChemCamController
+      && controller.activeInstrument.isMastActuating
     if (shouldPlayHeldFire) {
       heldFirePlayback ??= startHeldActionSound('sfx.chemcamFire')
     } else if (heldFirePlayback) {
       heldFirePlayback.stop()
       heldFirePlayback = null
+    }
+    if (shouldPlayMovement) {
+      heldMovementPlayback ??= startHeldMovementSound('sfx.cameraMove')
+    } else if (heldMovementPlayback) {
+      heldMovementPlayback.stop()
+      heldMovementPlayback = null
     }
     if (ccInst instanceof ChemCamController) {
       chemCamUnreadCount.value = ccInst.unreadCount
@@ -155,6 +168,8 @@ export function createChemCamTickHandler(
   function dispose(): void {
     heldFirePlayback?.stop()
     heldFirePlayback = null
+    heldMovementPlayback?.stop()
+    heldMovementPlayback = null
   }
 
   return { tick, dispose, initIfReady }

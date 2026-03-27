@@ -22,7 +22,7 @@ function makeFrameContext(activeInstrument: object, overrides: Partial<SiteFrame
     heading: 0,
   } as SiteFrameContext['rover']
 
-  return {
+  const base: SiteFrameContext = {
     sceneDelta: 0.016,
     skyDelta: 0.016,
     simulationTime: 0,
@@ -45,9 +45,15 @@ function makeFrameContext(activeInstrument: object, overrides: Partial<SiteFrame
     totalSP: 0,
     activeInstrumentSlot: (activeInstrument as { slot?: number }).slot ?? null,
     windMs: 0,
-    dustStormPhase: 'none' as const,
+    dustStormPhase: 'none',
     dustStormLevel: null,
+  }
+  return {
+    ...base,
     ...overrides,
+    windMs: overrides.windMs ?? base.windMs,
+    dustStormPhase: overrides.dustStormPhase ?? base.dustStormPhase,
+    dustStormLevel: overrides.dustStormLevel ?? base.dustStormLevel,
   }
 }
 
@@ -58,6 +64,7 @@ function makeHandle(): AudioPlaybackHandle {
     playing: () => true,
     progress: () => 0,
     duration: () => 0,
+    setVolume: vi.fn<(volume: number) => void>(),
   }
 }
 
@@ -65,8 +72,11 @@ describe('instrument action sounds', () => {
   it('stops the mastcam shutter sound when leaving active mode', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
     const mastCam = new MastCamController()
     const mastCamPrivate = mastCam as unknown as Record<string, unknown>
+    mastCam.handleInput(new Set(['KeyD', 'KeyE']), 0.016)
     mastCamPrivate.scanning = true
     mastCamPrivate.scanTarget = { userData: {} }
 
@@ -91,12 +101,14 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         playerMod: () => 1,
         startHeldActionSound,
+        startHeldMovementSound,
       },
     )
 
     const activeCtx = makeFrameContext(mastCam)
     handler.tick(activeCtx)
     expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
 
     const drivingRover = { ...activeCtx.rover!, mode: 'driving' } as SiteFrameContext['rover']
     handler.tick(makeFrameContext(mastCam, { rover: drivingRover }))
@@ -106,6 +118,8 @@ describe('instrument action sounds', () => {
   it('starts the mastcam shutter sound while tagging and stops it on release', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
     const mastCam = new MastCamController()
     const mastCamPrivate = mastCam as unknown as Record<string, unknown>
     mastCamPrivate.scanning = false
@@ -132,6 +146,7 @@ describe('instrument action sounds', () => {
         awardSP: () => null,
         playerMod: () => 1,
         startHeldActionSound,
+        startHeldMovementSound,
       },
     )
 
@@ -152,11 +167,68 @@ describe('instrument action sounds', () => {
     mastCamPrivate.scanTarget = null
     handler.tick(fctx)
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+
+    mastCam.handleInput(new Set(['KeyA']), 0.016)
+    handler.tick(fctx)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
+    expect(startHeldMovementSound).toHaveBeenCalledWith('sfx.cameraMove')
+
+    mastCam.handleInput(new Set<string>(), 0.016)
+    handler.tick(fctx)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops the mastcam shutter sound immediately when E is released', () => {
+    const heldHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => heldHandle)
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
+    const mastCam = new MastCamController()
+    const mastCamPrivate = mastCam as unknown as Record<string, unknown>
+    mastCamPrivate.scanning = true
+    mastCamPrivate.scanTarget = { userData: {} }
+
+    const handler = createMastCamTickHandler(
+      {
+        mastcamFilterLabel: ref('ALL TYPES'),
+        mastcamScanning: ref(false),
+        mastcamScanProgress: ref(0),
+        mastPan: ref(0),
+        mastTilt: ref(0),
+        mastFov: ref(0),
+        mastTargetRange: ref(0),
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        isDrilling: ref(false),
+        drillProgress: ref(0),
+      },
+      {
+        sampleToastRef: ref(null),
+        awardSP: () => null,
+        playerMod: () => 1,
+        startHeldActionSound,
+        startHeldMovementSound,
+      },
+    )
+
+    const fctx = makeFrameContext(mastCam)
+    handler.tick(fctx)
+    expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+
+    mastCam.handleInput(new Set<string>(), 0.016)
+    mastCamPrivate.scanTarget = { userData: {} }
+    handler.tick(fctx)
+
+    expect(heldHandle.stop).toHaveBeenCalledTimes(1)
   })
 
   it('starts the chemcam sound while firing and stops it on release', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
     const chemCam = new ChemCamController()
     chemCam.phase = 'ARMED'
 
@@ -187,6 +259,7 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         awardSP: () => null,
         startHeldActionSound,
+        startHeldMovementSound,
       },
     )
 
@@ -194,6 +267,7 @@ describe('instrument action sounds', () => {
     handler.tick(fctx)
     expect(startHeldActionSound).not.toHaveBeenCalled()
 
+    chemCam.handleInput(new Set(['KeyE']), 0.016)
     chemCam.phase = 'PULSE_TRAIN'
     handler.tick(fctx)
     expect(startHeldActionSound).toHaveBeenCalledTimes(1)
@@ -205,12 +279,24 @@ describe('instrument action sounds', () => {
     chemCam.phase = 'COOLDOWN'
     handler.tick(fctx)
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+
+    chemCam.handleInput(new Set(['KeyW']), 0.016)
+    handler.tick(fctx)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
+    expect(startHeldMovementSound).toHaveBeenCalledWith('sfx.cameraMove')
+
+    chemCam.handleInput(new Set<string>(), 0.016)
+    handler.tick(fctx)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
   })
 
-  it('stops the chemcam sound when leaving active mode', () => {
+  it('stops the chemcam firing sound immediately when E is released', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
     const chemCam = new ChemCamController()
+    chemCam.handleInput(new Set(['KeyE']), 0.016)
     chemCam.phase = 'PULSE_TRAIN'
 
     const handler = createChemCamTickHandler(
@@ -240,16 +326,156 @@ describe('instrument action sounds', () => {
         playerMod: () => 1,
         awardSP: () => null,
         startHeldActionSound,
+        startHeldMovementSound,
+      },
+    )
+
+    const fctx = makeFrameContext(chemCam)
+    handler.tick(fctx)
+    expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+
+    chemCam.handleInput(new Set<string>(), 0.016)
+    chemCam.phase = 'PULSE_TRAIN'
+    handler.tick(fctx)
+
+    expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not start mastcam movement audio when opposite mast keys cancel out', () => {
+    const startHeldActionSound = vi.fn(() => makeHandle())
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
+    const mastCam = new MastCamController()
+
+    const handler = createMastCamTickHandler(
+      {
+        mastcamFilterLabel: ref('ALL TYPES'),
+        mastcamScanning: ref(false),
+        mastcamScanProgress: ref(0),
+        mastPan: ref(0),
+        mastTilt: ref(0),
+        mastFov: ref(0),
+        mastTargetRange: ref(0),
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        isDrilling: ref(false),
+        drillProgress: ref(0),
+      },
+      {
+        sampleToastRef: ref(null),
+        awardSP: () => null,
+        playerMod: () => 1,
+        startHeldActionSound,
+        startHeldMovementSound,
+      },
+    )
+
+    const fctx = makeFrameContext(mastCam)
+    mastCam.handleInput(new Set(['KeyA', 'KeyD']), 0.016)
+    handler.tick(fctx)
+    mastCam.handleInput(new Set(['KeyW', 'KeyS']), 0.016)
+    handler.tick(fctx)
+
+    expect(startHeldMovementSound).not.toHaveBeenCalled()
+  })
+
+  it('does not start chemcam movement audio when opposite mast keys cancel out', () => {
+    const startHeldActionSound = vi.fn(() => makeHandle())
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
+    const chemCam = new ChemCamController()
+
+    const handler = createChemCamTickHandler(
+      {
+        chemCamUnreadCount: ref(0),
+        chemcamPhase: ref('IDLE'),
+        chemcamShotsRemaining: ref(0),
+        chemcamShotsMax: ref(0),
+        chemcamProgressPct: ref(0),
+        chemCamOverlaySequenceActive: ref(false),
+        chemCamOverlaySequenceProgress: ref(0),
+        chemCamOverlaySequenceLabel: ref(''),
+        chemCamOverlaySequencePulse: ref(false),
+        mastPan: ref(0),
+        mastTilt: ref(0),
+        mastFov: ref(0),
+        mastTargetRange: ref(0),
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        isDrilling: ref(false),
+        drillProgress: ref(0),
+      },
+      {
+        sampleToastRef: ref(null),
+        playerMod: () => 1,
+        awardSP: () => null,
+        startHeldActionSound,
+        startHeldMovementSound,
+      },
+    )
+
+    const fctx = makeFrameContext(chemCam)
+    chemCam.handleInput(new Set(['KeyA', 'KeyD']), 0.016)
+    handler.tick(fctx)
+    chemCam.handleInput(new Set(['KeyW', 'KeyS']), 0.016)
+    handler.tick(fctx)
+
+    expect(startHeldMovementSound).not.toHaveBeenCalled()
+  })
+
+  it('stops the chemcam sound when leaving active mode', () => {
+    const heldHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => heldHandle)
+    const movementHandle = makeHandle()
+    const startHeldMovementSound = vi.fn(() => movementHandle)
+    const chemCam = new ChemCamController()
+    chemCam.phase = 'PULSE_TRAIN'
+    chemCam.handleInput(new Set(['KeyA', 'KeyE']), 0.016)
+
+    const handler = createChemCamTickHandler(
+      {
+        chemCamUnreadCount: ref(0),
+        chemcamPhase: ref('IDLE'),
+        chemcamShotsRemaining: ref(0),
+        chemcamShotsMax: ref(0),
+        chemcamProgressPct: ref(0),
+        chemCamOverlaySequenceActive: ref(false),
+        chemCamOverlaySequenceProgress: ref(0),
+        chemCamOverlaySequenceLabel: ref(''),
+        chemCamOverlaySequencePulse: ref(false),
+        mastPan: ref(0),
+        mastTilt: ref(0),
+        mastFov: ref(0),
+        mastTargetRange: ref(0),
+        crosshairVisible: ref(false),
+        crosshairColor: ref<'green' | 'red'>('red'),
+        crosshairX: ref(0),
+        crosshairY: ref(0),
+        isDrilling: ref(false),
+        drillProgress: ref(0),
+      },
+      {
+        sampleToastRef: ref(null),
+        playerMod: () => 1,
+        awardSP: () => null,
+        startHeldActionSound,
+        startHeldMovementSound,
       },
     )
 
     const activeCtx = makeFrameContext(chemCam)
     handler.tick(activeCtx)
     expect(startHeldActionSound).toHaveBeenCalledTimes(1)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
 
     const drivingRover = { ...activeCtx.rover!, mode: 'driving' } as SiteFrameContext['rover']
     handler.tick(makeFrameContext(chemCam, { rover: drivingRover }))
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+    expect(startHeldMovementSound).toHaveBeenCalledTimes(1)
   })
 
   it('plays the APXS contact sound when countdown starts', () => {
@@ -409,6 +635,7 @@ describe('instrument action sounds', () => {
   it('starts the DAN sound while passive scanning is enabled and stops it when disabled', () => {
     const heldHandle = makeHandle()
     const startHeldActionSound = vi.fn(() => heldHandle)
+    const playActionSound = vi.fn()
     const dan = new DANController()
 
     const handler = createDanTickHandler(
@@ -433,6 +660,7 @@ describe('instrument action sounds', () => {
         sampleToastRef: ref(null),
         playerMod: () => 1,
         awardDAN: () => null,
+        playActionSound,
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
         startHeldActionSound,
@@ -454,5 +682,68 @@ describe('instrument action sounds', () => {
     dan.passiveSubsystemEnabled = false
     handler.tick(fctx)
     expect(heldHandle.stop).toHaveBeenCalledTimes(1)
+    expect(playActionSound).not.toHaveBeenCalled()
+  })
+
+  it('plays the DAN prospecting cue when prospecting begins', () => {
+    const heldHandle = makeHandle()
+    const startHeldActionSound = vi.fn(() => heldHandle)
+    const playActionSound = vi.fn()
+    const dan = new DANController()
+    dan.passiveSubsystemEnabled = true
+    dan.pendingHit = {
+      worldPosition: new THREE.Vector3(0, 0, 0),
+      signalStrength: 0.7,
+      timestamp: Date.now(),
+    }
+
+    const handler = createDanTickHandler(
+      {
+        siteTerrainParams: ref(null),
+        danTotalSamples: ref(0),
+        danHitAvailable: ref(false),
+        danProspectPhase: ref('idle'),
+        danProspectProgress: ref(0),
+        danSignalStrength: ref(0),
+        danWaterResult: ref(null),
+        danDialogVisible: ref(false),
+        passiveUiRevision: ref(0),
+        siteLat: ref(0),
+        siteLon: ref(0),
+        roverWorldX: ref(0),
+        roverWorldZ: ref(0),
+        roverSpawnXZ: ref({ x: 0, z: 0 }),
+      },
+      {
+        siteId: 'test-site',
+        sampleToastRef: ref(null),
+        playerMod: () => 1,
+        awardDAN: () => null,
+        startHeldActionSound,
+        playActionSound,
+        triggerDanAchievement: () => null,
+        archiveDanProspect: () => null,
+      },
+    )
+
+    const fctx = makeFrameContext(dan, {
+      rover: {
+        ...makeFrameContext(dan).rover!,
+        config: { moveSpeed: 5 },
+      } as SiteFrameContext['rover'],
+    })
+    handler.handleDanProspect(fctx)
+    handler.tick(fctx)
+    expect(playActionSound).not.toHaveBeenCalled()
+
+    handler.tick(makeFrameContext(dan, {
+      sceneDelta: 4.1,
+      rover: {
+        ...fctx.rover!,
+        config: { moveSpeed: 5 },
+      } as SiteFrameContext['rover'],
+    }))
+    expect(playActionSound).toHaveBeenCalledTimes(1)
+    expect(playActionSound).toHaveBeenCalledWith('sfx.danProspecting')
   })
 })

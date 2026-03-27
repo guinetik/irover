@@ -16,6 +16,8 @@ const AMBIENT_SOUND_IDS = [
   'ambient.winds',
   'ambient.storm',
   'ambient.quake',
+  'ambient.rtg',
+  'ambient.heater',
 ] as const
 
 describe('audioManifest', () => {
@@ -24,19 +26,24 @@ describe('audioManifest', () => {
       'voice.dsnTransmission',
       'ui.click',
       'ui.error',
+      'ui.dsnArchivePlay',
       'sfx.discovery',
       'sfx.mastcamTag',
       'sfx.chemcamFire',
       'sfx.apxsContact',
       'sfx.drillStart',
       'sfx.mastMove',
+      'sfx.cameraMove',
       'sfx.danScan',
+      'sfx.danProspecting',
       'ambient.base',
       'ambient.day',
       'ambient.night',
       'ambient.winds',
       'ambient.storm',
       'ambient.quake',
+      'ambient.rtg',
+      'ambient.heater',
     ])
   })
 
@@ -85,7 +92,8 @@ describe('audioManifest', () => {
       expect(src.length).toBeGreaterThan(0)
       const isInstrument = INSTRUMENT_ACTION_SOUND_IDS.includes(id as (typeof INSTRUMENT_ACTION_SOUND_IDS)[number])
       const isAmbient = AMBIENT_SOUND_IDS.includes(id as (typeof AMBIENT_SOUND_IDS)[number])
-      if (isInstrument || isAmbient) {
+      const isBundledFileCue = id === 'ui.dsnArchivePlay'
+      if (isInstrument || isAmbient || isBundledFileCue) {
         expect(src.startsWith('/sound/')).toBe(true)
       } else {
         expect(src.startsWith('data:audio/')).toBe(true)
@@ -164,6 +172,13 @@ describe('audioManifest', () => {
       playback: 'restart',
       volume: 0.45,
     })
+    expect(getAudioDefinition('ui.dsnArchivePlay')).toMatchObject({
+      src: '/sound/dsn-archive-play.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
     expect(getAudioDefinition('sfx.discovery')).toMatchObject({
       src: SILENT_STATIC_WAV_DATA_URI,
       load: 'lazy',
@@ -205,9 +220,37 @@ describe('audioManifest', () => {
       playback: 'single-instance',
       effect: 'none',
     })
+    expect(getAudioDefinition('sfx.cameraMove')).toMatchObject({
+      src: '/sound/camera-move.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
+    })
     expect(getAudioDefinition('sfx.danScan')).toMatchObject({
       src: '/sound/dan.mp3',
       category: 'sfx',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.danProspecting')).toMatchObject({
+      src: '/sound/dan-prospecting.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ambient.rtg')).toMatchObject({
+      src: '/sound/rtg.mp3',
+      category: 'ambient',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ambient.heater')).toMatchObject({
+      src: '/sound/htr.mp3',
+      category: 'ambient',
       load: 'lazy',
       playback: 'single-instance',
       effect: 'none',

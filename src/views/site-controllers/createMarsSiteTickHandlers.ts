@@ -8,6 +8,7 @@ import { createOrbitalDropTickHandler, type OrbitalDropTickHandler } from './Orb
 import { createAntennaTickHandler } from './AntennaTickHandler'
 import { createAPXSTickHandler } from './APXSTickHandler'
 import { createMicTickHandler } from './MicTickHandler'
+import { createPassiveSystemsAudioTickHandler } from './PassiveSystemsAudioTickHandler'
 
 /**
  * All per-frame subsystems created for the Mars site view, plus a single {@link disposeAll} for teardown.
@@ -23,6 +24,7 @@ export interface MarsSiteTickHandlers {
   orbitalDropHandler: OrbitalDropTickHandler
   antennaHandler: ReturnType<typeof createAntennaTickHandler>
   micHandler: ReturnType<typeof createMicTickHandler>
+  passiveSystemsAudioHandler: ReturnType<typeof createPassiveSystemsAudioTickHandler>
   /** Disposes handlers in a stable order (matches previous inline disposal). */
   disposeAll: () => void
 }
@@ -91,6 +93,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playerMod: ctx.playerMod,
       awardDAN: ctx.awardDAN,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.danScan'),
+      playActionSound: () => ctx.playInstrumentActionSound('sfx.danProspecting'),
       triggerDanAchievement: ctx.triggerDanAchievement,
       archiveDanProspect: ctx.archiveDanProspect,
     },
@@ -135,6 +138,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       awardSP: ctx.awardSP,
       playerMod: ctx.playerMod,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.mastcamTag'),
+      startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
     },
   )
 
@@ -165,6 +169,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playerMod: ctx.playerMod,
       awardSP: ctx.awardSP,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.chemcamFire'),
+      startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
     },
   )
 
@@ -228,6 +233,19 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
+  const passiveSystemsAudioHandler = createPassiveSystemsAudioTickHandler(
+    {
+      descending: refs.descending,
+      deploying: refs.deploying,
+      heaterHeatBoostActive: refs.heaterHeatBoostActive,
+      heaterEffectiveW: refs.heaterEffectiveW,
+    },
+    {
+      playAmbientLoop: ctx.playAmbientLoop,
+      setAmbientVolume: ctx.setAmbientVolume,
+    },
+  )
+
   function disposeAll(): void {
     roverVfxHandler.dispose()
     danHandler.dispose()
@@ -238,6 +256,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     orbitalDropHandler.dispose()
     antennaHandler.dispose()
     micHandler.dispose()
+    passiveSystemsAudioHandler.dispose()
   }
 
   return {
@@ -250,6 +269,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     orbitalDropHandler,
     antennaHandler,
     micHandler,
+    passiveSystemsAudioHandler,
     disposeAll,
   }
 }
