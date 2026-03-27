@@ -114,6 +114,7 @@
       :is-active-mode="isInstrumentActive"
       :wheels-hud="activeInstrumentSlot === WHLS_SLOT ? wheelsOverlayHud : null"
       :instrument-speed-hud="instrumentSpeedHudForSlot"
+      :instrument-accuracy-hud="instrumentAccuracyHud"
       :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, ambientMeasured: remsSurveying, heaterW: heaterEffectiveW, zone: thermalZone } : null"
       :rems-hud="activeInstrumentSlot === REMS_SLOT ? remsHud : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
@@ -791,6 +792,19 @@ const instrumentSpeedHudForSlot = computed(() => {
     case 4: return apxsSpeedBreakdown.value
     default: return null
   }
+})
+
+/** Slots that benefit from instrumentAccuracy: MastCam, ChemCam, Drill, DAN, SAM, LGA, UHF */
+const ACCURACY_SLOTS = new Set([1, 2, 3, 5, 6, 11, 12])
+const instrumentAccuracyHud = computed(() => {
+  if (!activeInstrumentSlot.value || !ACCURACY_SLOTS.has(activeInstrumentSlot.value)) return null
+  return buildSpeedBreakdown({
+    modifierKey: 'instrumentAccuracy',
+    archetype: playerProfile.archetype ? ARCHETYPES[playerProfile.archetype] : null,
+    foundation: playerProfile.foundation ? FOUNDATIONS[playerProfile.foundation] : null,
+    patron: playerProfile.patron ? PATRONS[playerProfile.patron] : null,
+    trackModifiers: trackModifiers.value,
+  })
 })
 
 const activeChemCamReadout = computed(() => {

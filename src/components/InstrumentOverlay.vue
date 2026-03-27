@@ -142,6 +142,27 @@
           </div>
         </div>
 
+        <!-- Instrument accuracy indicator -->
+        <div v-if="instrumentAccuracyHud" class="ov-spd-speed">
+          <div class="ov-spd-speed-row">
+            <span class="ov-spd-speed-label">ACCURACY</span>
+            <span class="ov-spd-speed-value" :style="{ color: accuracyColor }">{{ accuracyStr }}</span>
+          </div>
+          <div class="ov-spd-speed-bar-track">
+            <div class="ov-spd-speed-bar-fill" :style="{ width: accuracyBarPct + '%', background: accuracyColor }" />
+          </div>
+          <div class="ov-spd-buffs">
+            <div
+              v-for="buff in instrumentAccuracyHud.buffs"
+              :key="buff.label"
+              class="ov-spd-buff"
+            >
+              <span class="ov-spd-buff-label">{{ buff.label }}</span>
+              <span class="ov-spd-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Durability bar (all instruments) -->
         <div v-if="durabilityPct !== undefined && durabilityPct < 100" class="ov-durability">
           <div class="ov-durability-row">
@@ -545,6 +566,8 @@ const props = withDefaults(
     isUpgraded?: boolean
     /** Speed breakdown for active analysis instruments (Drill, ChemCam, MastCam, APXS). */
     instrumentSpeedHud?: SpeedBreakdown | null
+    /** Accuracy breakdown for instruments that use instrumentAccuracy. */
+    instrumentAccuracyHud?: SpeedBreakdown | null
   }>(),
   {
     canActivate: true,
@@ -739,6 +762,23 @@ const instrumentSpeedColor = computed(() => {
 
 const instrumentSpeedBarPct = computed(() => {
   const pct = props.instrumentSpeedHud?.speedPct ?? 100
+  return Math.min(100, Math.max(0, pct / 1.5))
+})
+
+const accuracyStr = computed(() => {
+  const pct = props.instrumentAccuracyHud?.speedPct ?? 100
+  return `${Math.round(pct)}%`
+})
+
+const accuracyColor = computed(() => {
+  const pct = props.instrumentAccuracyHud?.speedPct ?? 100
+  if (pct > 105) return '#5dc9a5'
+  if (pct >= 95) return '#ef9f27'
+  return '#e05030'
+})
+
+const accuracyBarPct = computed(() => {
+  const pct = props.instrumentAccuracyHud?.speedPct ?? 100
   return Math.min(100, Math.max(0, pct / 1.5))
 })
 
