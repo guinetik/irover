@@ -30,6 +30,7 @@ describe('audioManifest', () => {
       'ui.instrument',
       'ui.confirm',
       'ui.science',
+      'ui.achievement',
       'ui.error',
       'ui.dsnArchivePlay',
       'ui.dsnArchiveSelect',
@@ -55,6 +56,7 @@ describe('audioManifest', () => {
       'ambient.rtg',
       'ambient.heater',
       'ambient.rems',
+      'sfx.landing',
       'music.intro',
       'music.theme',
       'sfx.uhfLock',
@@ -118,6 +120,7 @@ describe('audioManifest', () => {
         || id === 'ui.instrument'
         || id === 'ui.confirm'
         || id === 'ui.science'
+        || id === 'ui.achievement'
         || id === 'music.intro'
         || id === 'music.theme'
       if (isInstrument || isAmbient || isBundledFileCue) {
@@ -216,6 +219,13 @@ describe('audioManifest', () => {
     })
     expect(getAudioDefinition('ui.science')).toMatchObject({
       src: '/sound/science.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ui.achievement')).toMatchObject({
+      src: '/sound/achievement.mp3',
       category: 'ui',
       load: 'lazy',
       playback: 'restart',

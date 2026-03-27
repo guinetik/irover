@@ -36,6 +36,12 @@ interface TouchdownTether {
   mesh: THREE.Mesh
 }
 
+interface ThrusterPlume {
+  root: THREE.Group
+  core: THREE.Mesh
+  glow: THREE.Mesh
+}
+
 export interface RoverWheels {
   wheels: THREE.Object3D[]       // all 6 wheels for spin
   steerFL: THREE.Object3D | null // front-left steering pivot
@@ -85,8 +91,8 @@ export class SiteScene {
   private descentStartY = 0
   private descentGroundY = 0
   private descentTime = 0
-  private readonly DESCENT_DURATION = 3.5 // seconds
-  private readonly DESCENT_HEIGHT = 8     // units above ground
+  private readonly DESCENT_DURATION = 10  // seconds — landing.mp3 continues into deploy
+  private readonly DESCENT_HEIGHT = 25    // units above ground
   private landingDust: THREE.Points | null = null
   private landingDustMaterial: THREE.ShaderMaterial | null = null
   private landingDustTime = 0
@@ -95,6 +101,7 @@ export class SiteScene {
   private touchdownTethers: TouchdownTether[] = []
   private touchdownReleaseElapsed = 0
   private touchdownReleaseActive = false
+  private descentPlumes: ThrusterPlume[] = []
   private dustCover = 0.5
   private waterIceIndex = 0
   private featureType: TerrainParams['featureType'] = 'plain'
@@ -188,6 +195,7 @@ export class SiteScene {
         this.rover.rotation.z = Math.sin(this.descentTime * 2.5) * 0.015 * (1 - t)
         this.rover.rotation.x = Math.cos(this.descentTime * 1.8) * 0.01 * (1 - t)
         this.updateTouchdownRig(t, 0)
+        this.updateDescentPlumes(t, 0, 0)
 
         if (t >= 1) {
           this.rover.position.y = this.descentGroundY
@@ -201,6 +209,9 @@ export class SiteScene {
         this.rover.rotation.z = 0
         this.rover.rotation.x = 0
         this.updateTouchdownRig(1, this.touchdownReleaseElapsed)
+        const retractProgress = getTouchdownTetherRetractProgress(this.touchdownReleaseElapsed)
+        const releaseProgress = getTouchdownReleaseProgress(this.touchdownReleaseElapsed)
+        this.updateDescentPlumes(1, releaseProgress, retractProgress)
 
         if (getTouchdownTetherRetractProgress(this.touchdownReleaseElapsed) >= 1) {
           this.hideTouchdownRig()
@@ -509,6 +520,29 @@ export class SiteScene {
       const thruster = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.16, 0.3, 8), stageMaterial)
       thruster.position.set(x * 0.95, -0.22, z * 0.95)
       stage.add(thruster)
+
+      // Thruster plume (core + glow cone, same visual as orbital drop)
+      const plumeRoot = new THREE.Group()
+      plumeRoot.position.set(x * 0.95, -0.37, z * 0.95)
+      plumeRoot.visible = false
+      const coreMat = new THREE.MeshBasicMaterial({
+        color: 0xfff1b8, transparent: true, opacity: 0.9,
+        depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      })
+      const plumeCore = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.42, 10, 1, true), coreMat)
+      plumeCore.rotation.x = Math.PI
+      plumeCore.position.y = -0.21
+      plumeRoot.add(plumeCore)
+      const glowMat = new THREE.MeshBasicMaterial({
+        color: 0xff8a3a, transparent: true, opacity: 0.45,
+        depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      })
+      const plumeGlow = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.68, 10, 1, true), glowMat)
+      plumeGlow.rotation.x = Math.PI
+      plumeGlow.position.y = -0.34
+      plumeRoot.add(plumeGlow)
+      stage.add(plumeRoot)
+      this.descentPlumes.push({ root: plumeRoot, core: plumeCore, glow: plumeGlow })
     }
 
     rig.add(stage)
@@ -630,6 +664,39 @@ export class SiteScene {
     this.touchdownRig.visible = false
     for (const tether of this.touchdownTethers) {
       tether.mesh.visible = false
+    }
+    for (const plume of this.descentPlumes) {
+      plume.root.visible = false
+    }
+  }
+
+  /**
+   * Animates thruster plume intensity during descent and fades during release/flyaway.
+   * Same visual logic as OrbitalDropController thruster plumes.
+   */
+  private updateDescentPlumes(
+    descentProgress: number,
+    releaseProgress: number,
+    retractProgress: number,
+  ): void {
+    const active = retractProgress < 0.995
+    const fade = (1 - releaseProgress) * (1 - retractProgress)
+    const descentBoost = 0.55 + (1 - Math.min(1, descentProgress)) * 0.45
+
+    for (let i = 0; i < this.descentPlumes.length; i++) {
+      const plume = this.descentPlumes[i]
+      plume.root.visible = active && fade > 0.02
+      if (!plume.root.visible) continue
+
+      const flicker = 0.88 + Math.sin(this.descentTime * 28 + i * 1.7) * 0.12
+      const intensity = fade * descentBoost * flicker
+      plume.core.scale.set(1, 0.7 + intensity * 0.9, 1)
+      plume.glow.scale.set(1.1, 0.8 + intensity * 1.2, 1.1)
+
+      const coreMat = plume.core.material as THREE.MeshBasicMaterial
+      const glowMat = plume.glow.material as THREE.MeshBasicMaterial
+      coreMat.opacity = Math.min(0.98, 0.35 + intensity * 0.7)
+      glowMat.opacity = Math.min(0.65, 0.16 + intensity * 0.42)
     }
   }
 

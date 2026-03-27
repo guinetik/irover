@@ -489,6 +489,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let lastActiveInstrumentAudioState: ActiveInstrumentAudioState = { mode: null, instrumentId: null }
   let roverSpawnCaptured = false
   let firstMissionDelivered = false
+  let landingSoundPlayed = false
+  let landingSoundHandle: import('@/audio/audioTypes').AudioPlaybackHandle | null = null
+  let landingSoundFadeVol = 0
 
   const tickHandlers = createMarsSiteTickHandlers(ctx)
   const {
@@ -926,6 +929,17 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Deploy state machine ---
       if (siteScene.roverState === 'descending') {
+        if (!landingSoundPlayed) {
+          landingSoundHandle = ctx.startInstrumentActionLoop('sfx.landing')
+          landingSoundHandle.setVolume(0)
+          landingSoundPlayed = true
+          landingSoundFadeVol = 0
+        }
+        // Fade in over ~2s using sceneDelta
+        if (landingSoundHandle && landingSoundFadeVol < 0.7) {
+          landingSoundFadeVol = Math.min(0.7, landingSoundFadeVol + sceneDelta * 0.35)
+          landingSoundHandle.setVolume(landingSoundFadeVol)
+        }
         descending.value = true
         deploying.value = false
       } else if (siteScene.roverState === 'deploying') {

@@ -44,6 +44,7 @@ export const AUDIO_SOUND_IDS = [
   'ambient.rtg',
   'ambient.heater',
   'ambient.rems',
+  'sfx.landing',
   'music.intro',
   'music.theme',
   'sfx.uhfLock',
@@ -83,6 +84,7 @@ export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.roverDrive',
   'sfx.roverTurn',
   'sfx.roverTurnOut',
+  'sfx.landing',
 ] as const
 
 /** Union of instrument-action one-shot ids. */
@@ -454,6 +456,15 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'restart',
     volume: 0.6,
+    effect: 'none',
+  },
+  'sfx.landing': {
+    id: 'sfx.landing',
+    src: '/sound/landing.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.7,
     effect: 'none',
   },
 }
