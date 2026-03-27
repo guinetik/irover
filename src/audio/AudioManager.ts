@@ -22,6 +22,12 @@ import {
 /** Howl error events may pass `null` for howl-level load failures (see Howler `_emit`). */
 type HowlErrorEventHandler = (soundId: number | null, error: unknown) => void
 
+/** Tracks a deferred dynamic voice handle: pending until {@link AudioManager.unlock}, then active. */
+interface VoiceHandleState {
+  kind: 'pending' | 'active' | 'cancelled'
+  realHandle?: AudioPlaybackHandle
+}
+
 /** One running instance registered with the manager (supports overlap within a category). */
 interface ActivePlayback {
   /** Stable token for handle.stop bookkeeping. */
@@ -62,6 +68,12 @@ export class AudioManager {
   /** Last trigger time for {@link AudioDefinition} `rate-limited` + `cooldownMs`. */
   private readonly lastRateLimitTriggerAt = new Map<string, number>()
   private nextPlaybackToken = 1
+  /** Dynamic voice play requested while locked; replayed from {@link AudioManager.unlock}. */
+  private pendingLockedVoice: {
+    soundId: AudioSoundId
+    options: AudioPlayOptions
+    stateRef: VoiceHandleState
+  } | null = null
 
   constructor(options: AudioManagerOptions = {}) {
     this.categoryState = { ...DEFAULT_CATEGORY_STATE }
@@ -121,10 +133,14 @@ export class AudioManager {
    * Marks the app as allowed to play audio and attempts to resume the Web Audio `AudioContext`
    * (required when `Howler.autoUnlock` is disabled). Safe to call repeatedly; resume failures are
    * ignored (e.g. strict autoplay policies).
+   *
+   * After the first successful unlock, replays one queued dynamic voice request (e.g. DSN
+   * `voice.dsnTransmission` with a runtime `src`) that arrived while locked, if it was not cancelled.
    */
   unlock(): void {
     this.unlocked = true
     this.resumeHowlerAudioContext()
+    this.flushPendingLockedVoice()
   }
 
   /**
@@ -134,7 +150,17 @@ export class AudioManager {
   play(soundId: AudioSoundId, options: AudioPlayOptions = {}): AudioPlaybackHandle {
     const def = getAudioDefinition(soundId)
     const resolvedSrc = this.resolvePlaySrc(def, options)
-    if (!this.unlocked || resolvedSrc === undefined) {
+    if (resolvedSrc === undefined) {
+      return this.createNoopHandle(soundId)
+    }
+
+    if (!this.unlocked) {
+      if (
+        this.canQueueLockedDynamicVoice(def, resolvedSrc) &&
+        !(def.playback === 'rate-limited' && this.isRateLimited(def, soundId, options))
+      ) {
+        return this.enqueueLockedVoicePlay(soundId, options)
+      }
       return this.createNoopHandle(soundId)
     }
 
@@ -250,6 +276,10 @@ export class AudioManager {
    * (e.g. global mute or tests).
    */
   stopCategory(category: AudioCategory): void {
+    if (category === 'voice' && this.pendingLockedVoice) {
+      this.pendingLockedVoice.stateRef.kind = 'cancelled'
+      this.pendingLockedVoice = null
+    }
     const list = this.activeByCategory.get(category)
     if (!list?.length) return
     const copy = [...list]
@@ -652,6 +682,72 @@ export class AudioManager {
       if (h === howl) return true
     }
     return false
+  }
+
+  /**
+   * Dynamic `voice` + `allowDynamicSrc` with a runtime `src` may be queued while locked, then
+   * replayed after {@link AudioManager.unlock}.
+   */
+  private canQueueLockedDynamicVoice(
+    def: Readonly<AudioDefinition>,
+    resolvedSrc: string | readonly string[],
+  ): boolean {
+    const dynamic = 'allowDynamicSrc' in def && def.allowDynamicSrc === true
+    return dynamic && def.category === 'voice' && typeof resolvedSrc === 'string'
+  }
+
+  /**
+   * Reserves manifest prelude (voice exclusive stop), stores one pending request, returns a handle
+   * that can cancel before unlock or delegate to the real playback after flush.
+   */
+  private enqueueLockedVoicePlay(soundId: AudioSoundId, options: AudioPlayOptions): AudioPlaybackHandle {
+    const def = getAudioDefinition(soundId)
+    this.applyPlaybackModePrelude(def, soundId)
+    const stateRef: VoiceHandleState = {
+      kind: 'pending',
+    }
+    this.pendingLockedVoice = {
+      soundId,
+      options: { ...options },
+      stateRef,
+    }
+    return this.createPendingVoiceHandle(soundId, stateRef)
+  }
+
+  private flushPendingLockedVoice(): void {
+    const pending = this.pendingLockedVoice
+    if (!pending || pending.stateRef.kind !== 'pending') return
+    this.pendingLockedVoice = null
+    const real = this.play(pending.soundId, pending.options)
+    if (pending.stateRef.kind === 'cancelled') {
+      real.stop()
+      return
+    }
+    pending.stateRef.kind = 'active'
+    pending.stateRef.realHandle = real
+  }
+
+  private createPendingVoiceHandle(
+    soundId: AudioSoundId,
+    stateRef: VoiceHandleState,
+  ): AudioPlaybackHandle {
+    return {
+      soundId,
+      stop: () => {
+        if (stateRef.kind === 'cancelled') return
+        if (stateRef.kind === 'active') {
+          stateRef.realHandle?.stop()
+          return
+        }
+        if (this.pendingLockedVoice?.stateRef === stateRef) {
+          this.pendingLockedVoice = null
+        }
+        stateRef.kind = 'cancelled'
+      },
+      playing: () => (stateRef.kind === 'active' ? (stateRef.realHandle?.playing() ?? false) : false),
+      progress: () => (stateRef.kind === 'active' ? (stateRef.realHandle?.progress() ?? 0) : 0),
+      duration: () => (stateRef.kind === 'active' ? (stateRef.realHandle?.duration() ?? 0) : 0),
+    }
   }
 
   private createNoopHandle(soundId: AudioSoundId): AudioPlaybackHandle {

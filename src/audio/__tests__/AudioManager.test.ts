@@ -309,6 +309,36 @@ describe('AudioManager', () => {
     expect(mockUnload).toHaveBeenCalled()
   })
 
+  it('queues dynamic DSN voice while locked and plays on unlock', () => {
+    manager.play('voice.dsnTransmission', { src: '/logs/queued.mp3' })
+    expect(mockPlay).not.toHaveBeenCalled()
+    manager.unlock()
+    expect(mockPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancelled pending DSN voice does not play on unlock', () => {
+    const h = manager.play('voice.dsnTransmission', { src: '/logs/cancel.mp3' })
+    expect(mockPlay).not.toHaveBeenCalled()
+    h.stop()
+    manager.unlock()
+    expect(mockPlay).not.toHaveBeenCalled()
+  })
+
+  it('stopCategory(voice) clears pending locked voice before unlock', () => {
+    manager.play('voice.dsnTransmission', { src: '/logs/cat-clear.mp3' })
+    manager.stopCategory('voice')
+    manager.unlock()
+    expect(mockPlay).not.toHaveBeenCalled()
+  })
+
+  it('replaces queued DSN voice when a newer request arrives while locked', () => {
+    manager.play('voice.dsnTransmission', { src: '/logs/old.mp3' })
+    manager.play('voice.dsnTransmission', { src: '/logs/new.mp3' })
+    manager.unlock()
+    expect(mockPlay).toHaveBeenCalledTimes(1)
+    expect(getLastMockHowl()?.src[0]).toBe('/logs/new.mp3')
+  })
+
   it('resume()s the Web Audio context on unlock when autoUnlock is disabled', () => {
     manager.unlock()
     expect(mockCtxResume).toHaveBeenCalled()

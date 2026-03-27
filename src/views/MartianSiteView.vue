@@ -580,7 +580,7 @@ const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-// --- DSN voice: one owned playback at a time; unlock on mount so early DSN is not a manager no-op ---
+// --- DSN voice: one owned playback; first user gesture unlocks Howler; manager queues early DSN until then ---
 let dsnVoicePlayback: AudioPlaybackHandle | null = null
 function ensureAudioUnlocked() {
   audio.unlock()
@@ -1531,7 +1531,6 @@ function createSiteControllerContext() {
 }
 
 onMounted(async () => {
-  audio.unlock()
   const handle = createMarsSiteViewController(createSiteControllerContext())
   await handle.mount()
   siteHandle.value = handle
