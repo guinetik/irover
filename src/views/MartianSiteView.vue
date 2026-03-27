@@ -597,6 +597,9 @@ const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
+// --- Theme music: loops for the duration of the site view ---
+let themePlayback: AudioPlaybackHandle | null = null
+
 // --- DSN voice: one owned playback; first user gesture unlocks Howler; manager queues early DSN until then ---
 let dsnVoicePlayback: AudioPlaybackHandle | null = null
 function ensureAudioUnlocked() {
@@ -684,6 +687,16 @@ const passiveOverlayPatch = computed(() => {
 
 const isInstrumentActive = ref(false)
 const samDialogVisible = ref(false)
+
+watch(
+  [activeInstrumentSlot, isInstrumentActive],
+  ([newSlot, newIsActive], [oldSlot]) => {
+    // Play once when a different instrument enters overlay mode, regardless of input source.
+    if (newIsActive || newSlot === null || newSlot === oldSlot) return
+    audio.unlock()
+    audio.play('ui.instrument')
+  },
+)
 
 // Antenna system refs
 const uhfPassActive = ref(false)
@@ -1345,6 +1358,8 @@ function handleActivate() {
   } else if (siteRover.value.activeInstrument instanceof HeaterController) {
     showHeaterOverdriveConfirm.value = true
   } else {
+    audio.unlock()
+    audio.play('ui.switch')
     const inst = siteRover.value.activeInstrument
     const passive = inst?.passiveSubsystemOnly
     siteRover.value.enterActiveMode()
@@ -1598,6 +1613,8 @@ onMounted(async () => {
   await handle.mount()
   siteHandle.value = handle
   siteLoading.value = false
+  audio.unlock()
+  themePlayback = audio.play('music.theme' as import('@/audio/audioManifest').AudioSoundId, { loop: true })
   // Kick reactive computeds after upgrade hydration from localStorage (runs on first frame)
   requestAnimationFrame(() => { passiveUiRevision.value++ })
 })
@@ -1607,6 +1624,8 @@ onUnmounted(() => {
   siteHandle.value = null
   window.removeEventListener('keydown', ensureAudioUnlocked)
   window.removeEventListener('pointerdown', ensureAudioUnlocked)
+  themePlayback?.stop()
+  themePlayback = null
   dsnVoicePlayback?.stop()
   dsnVoicePlayback = null
 })

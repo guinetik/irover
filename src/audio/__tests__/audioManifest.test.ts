@@ -56,6 +56,7 @@ describe('audioManifest', () => {
       'ambient.heater',
       'ambient.rems',
       'music.intro',
+      'music.theme',
       'sfx.uhfLock',
       'sfx.uhfUplink',
       'sfx.lgaUplink',
@@ -118,6 +119,7 @@ describe('audioManifest', () => {
         || id === 'ui.confirm'
         || id === 'ui.science'
         || id === 'music.intro'
+        || id === 'music.theme'
       if (isInstrument || isAmbient || isBundledFileCue) {
         expect(src.startsWith('/sound/')).toBe(true)
       } else {

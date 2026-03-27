@@ -44,6 +44,7 @@ export const AUDIO_SOUND_IDS = [
   'ambient.heater',
   'ambient.rems',
   'music.intro',
+  'music.theme',
   'sfx.uhfLock',
   'sfx.uhfUplink',
   'sfx.lgaUplink',
@@ -380,6 +381,15 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'single-instance',
     volume: 0.4,
+    effect: 'none',
+  },
+  'music.theme': {
+    id: 'music.theme',
+    src: '/sound/theme.mp3',
+    category: 'music',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.3,
     effect: 'none',
   },
   'sfx.uhfLock': {
