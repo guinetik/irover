@@ -28,6 +28,7 @@ describe('audioManifest', () => {
       'ui.click',
       'ui.error',
       'ui.dsnArchivePlay',
+      'sfx.dsnIncoming',
       'sfx.discovery',
       'sfx.mastcamTag',
       'sfx.chemcamFire',

@@ -1495,7 +1495,12 @@ function createSiteControllerContext() {
       const firstWithAudio = txs.find(tx => tx.audioUrl)
       if (firstWithAudio?.audioUrl) {
         dsnVoicePlayback?.stop()
-        dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl })
+        // Play DSN incoming cue, then chain into the voice log
+        audio.play('sfx.dsnIncoming' as import('@/audio/audioManifest').AudioSoundId, {
+          onEnd: () => {
+            dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl })
+          },
+        })
       }
     },
     clearPois,

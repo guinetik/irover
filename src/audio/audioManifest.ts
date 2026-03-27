@@ -16,6 +16,7 @@ export const AUDIO_SOUND_IDS = [
   'ui.click',
   'ui.error',
   'ui.dsnArchivePlay',
+  'sfx.dsnIncoming',
   'sfx.discovery',
   'sfx.mastcamTag',
   'sfx.chemcamFire',
@@ -54,6 +55,7 @@ export const NON_DSN_SEEDED_SOUND_IDS = ['ui.click', 'ui.error', 'sfx.discovery'
 
 /** Instrument action one-shots triggered from site-controller state transitions. */
 export const INSTRUMENT_ACTION_SOUND_IDS = [
+  'sfx.dsnIncoming',
   'sfx.mastcamTag',
   'sfx.chemcamFire',
   'sfx.apxsContact',
@@ -116,6 +118,15 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'restart',
     volume: 0.45,
+    effect: 'none',
+  },
+  'sfx.dsnIncoming': {
+    id: 'sfx.dsnIncoming',
+    src: '/sound/dsn.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'restart',
+    volume: 0.6,
     effect: 'none',
   },
   'sfx.discovery': {
