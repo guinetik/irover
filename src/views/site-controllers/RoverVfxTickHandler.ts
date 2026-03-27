@@ -6,6 +6,7 @@ import {
   instrumentSelectionEmissiveIntensity,
   type RTGConservationState,
 } from '@/three/instruments'
+import { RtgSparkBurst } from '@/three/RtgSparkBurst'
 import { formatRtgShuntCooldownLabel } from '@/views/MarsSiteViewController'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
@@ -35,6 +36,10 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
     rtgOverdriveReady, rtgConservationReady, rtgConservationCdLabel, rtgConservationCooldownTitle,
     heaterOverdriveReady, heaterHeatBoostActive, heaterHeatBoostProgressElapsed01,
   } = refs
+
+  let sparkBurst: RtgSparkBurst | null = null
+  let prevRtgPhase: string = 'idle'
+  let prevConservationMode: string = 'off'
 
   function tick(fctx: SiteFrameContext): void {
     const { rover: controller, siteScene, isSleeping, simulationTime, sceneDelta } = fctx
@@ -74,6 +79,31 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
           }
         })
       }
+    }
+
+    // --- RTG spark burst on overdrive / shunt activation edge ---
+    if (rtg) {
+      if (!sparkBurst) {
+        sparkBurst = new RtgSparkBurst(siteScene.scene)
+      }
+
+      const curPhase = rtg.phase
+      const curConservation = rtg.conservationMode
+
+      if (curPhase === 'overdrive' && prevRtgPhase !== 'overdrive' && rtg.node) {
+        const pos = new THREE.Vector3()
+        rtg.node.getWorldPosition(pos)
+        sparkBurst.emit(pos)
+      }
+      if (curConservation === 'active' && prevConservationMode !== 'active' && rtg.node) {
+        const pos = new THREE.Vector3()
+        rtg.node.getWorldPosition(pos)
+        sparkBurst.emit(pos)
+      }
+
+      prevRtgPhase = curPhase
+      prevConservationMode = curConservation
+      sparkBurst.update(sceneDelta)
     }
 
     // --- Sleep mode visual — slow red pulse on entire rover ---
@@ -151,7 +181,8 @@ export function createRoverVfxTickHandler(refs: RoverVfxRefs): SiteTickHandler {
   }
 
   function dispose(): void {
-    // No owned resources to clean up
+    sparkBurst?.dispose()
+    sparkBurst = null
   }
 
   return { tick, dispose }
