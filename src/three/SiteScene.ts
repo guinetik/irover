@@ -136,6 +136,7 @@ export class SiteScene {
 
     // Sky with day/night cycle and lighting
     this.sky = new MarsSky(this.scene)
+    this.sky.setTerrain(params.waterIceIndex)
 
     // Terrain
     await this.terrain.generate(params)
@@ -290,6 +291,20 @@ export class SiteScene {
         b = 0.03 + sunUp * 0.09
       }
       if (this.scene.fog) (this.scene.fog as THREE.FogExp2).color.setRGB(r, g, b)
+    }
+  }
+
+  /** Update fog density and color from weather state. */
+  setAtmosphere(windMs: number, stormLevel: number) {
+    if (!this.scene.fog || !(this.scene.fog instanceof THREE.FogExp2)) return
+
+    const windFactor = windMs / 5
+    const density = Math.max(0, windFactor * 0.003 + stormLevel * 0.006)
+    this.scene.fog.density = density
+
+    // Sync fog color with sky horizon for seamless blend
+    if (this.sky) {
+      this.scene.fog.color.copy(this.sky.horizonColor)
     }
   }
 

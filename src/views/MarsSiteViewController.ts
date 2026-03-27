@@ -275,7 +275,7 @@ export interface MarsSiteViewRefs {
   remsStormIncomingText: Ref<string | null>
   remsStormActiveText: Ref<string | null>
   /** Always-live weather state — updates regardless of REMS instrument toggle. */
-  siteWeather: Ref<{ windMs: number; windDirDeg: number; tempC: number; pressureHpa: number; humidityPct: number; uvIndex: number }>
+  siteWeather: Ref<{ windMs: number; windDirDeg: number; tempC: number; pressureHpa: number; humidityPct: number; uvIndex: number; dustStormLevel: number | null }>
   /** REMS passive surveying — drives ambient air HUD availability. */
   remsSurveying: Ref<boolean>
 }
@@ -924,6 +924,18 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
 
       siteScene.update(simulationTime, sceneDelta, camera.position, skyDelta)
+
+      // Weather drives sky atmosphere and fog
+      const sw = siteWeather.value
+      if (siteScene.sky) {
+        siteScene.sky.setWeather(
+          sw.windMs,
+          sw.dustStormLevel ?? 0,
+          sw.windDirDeg,
+          simulationTime,
+        )
+      }
+      siteScene.setAtmosphere(sw.windMs, sw.dustStormLevel ?? 0)
 
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
