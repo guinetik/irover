@@ -40,7 +40,7 @@
                   type="button"
                   class="inv-dump-btn"
                   title="Dump stack"
-                  @click.stop="$emit('dump', cell.itemId)"
+                  @click.stop="emitDump(cell.itemId)"
                 >
                   ×
                 </button>
@@ -71,6 +71,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useUiSound } from '@/composables/useUiSound'
 import type { InventoryStack } from '@/types/inventory'
 import { getInventoryItemDef } from '@/types/inventory'
 
@@ -89,9 +90,16 @@ const props = defineProps<{
   isFull: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   dump: [itemId: string]
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitDump(itemId: string): void {
+  playUiCue('ui.switch')
+  emit('dump', itemId)
+}
 
 const hoverIdx = ref(-1)
 const tooltipStack = ref<InventoryStack | null>(null)

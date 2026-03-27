@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useAudio } from '@/audio/useAudio'
-import type { AudioSoundId } from '@/audio/audioManifest'
+import { useUiSound } from '@/composables/useUiSound'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import { MARS_SOL_CLOCK_MINUTES } from '@/lib/marsTimeConstants'
 
@@ -15,7 +14,7 @@ const emit = defineEmits<{
   'open-message': [message: LGAMessage]
 }>()
 
-const audio = useAudio()
+const { playUiCue } = useUiSound()
 
 const activeTab = ref<'inbox' | 'sent'>('inbox')
 const expandedId = ref<string | null>(null)
@@ -23,14 +22,6 @@ const expandedId = ref<string | null>(null)
 const inbox = computed(() => props.messages.filter(m => m.direction === 'received').reverse())
 const sent = computed(() => props.messages.filter(m => m.direction === 'sent').reverse())
 const displayedMessages = computed(() => activeTab.value === 'inbox' ? inbox.value : sent.value)
-
-/**
- * Plays a manifest UI cue in the user-gesture stack (unlock + one-shot).
- */
-function playUiCue(soundId: AudioSoundId): void {
-  audio.unlock()
-  audio.play(soundId)
-}
 
 /**
  * Switches inbox / sent tab with the shared tab-toggle cue.

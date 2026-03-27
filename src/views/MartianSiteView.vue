@@ -101,7 +101,7 @@
         :newly-unlocked="newlyUnlockedInstruments"
         @select="(slot: number) => { if (!isSleeping) { siteRover?.activateInstrument(slot); const inst = siteRover?.instruments.find(i => i.slot === slot); if (inst) dismissNewlyUnlocked(inst.id) } }"
         @deselect="siteRover?.activateInstrument(null)"
-        @toggle-inventory="inventoryOpen = !inventoryOpen"
+        @toggle-inventory="toggleInventoryFromToolbar"
       />
     </Transition>
     <InstrumentOverlay
@@ -411,7 +411,7 @@
           class="wheels-hud-btn"
           :class="{ active: profileOpen }"
           title="Rover Profile [0]"
-          @click="profileOpen = !profileOpen"
+          @click="toggleProfilePanel"
         >
           <span class="wheels-hud-key font-instrument">0</span>
           <span class="wheels-hud-icon">&#x1F6F0;</span>
@@ -576,10 +576,12 @@ import MissionTracker from '@/components/MissionTracker.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { useAudio } from '@/audio/useAudio'
+import { useUiSound } from '@/composables/useUiSound'
 
 const route = useRoute()
 const siteId = route.params.siteId as string
 const audio = useAudio()
+const { playUiCue } = useUiSound()
 
 const { tryRepair, tryUpgrade, getBySlot } = useInstrumentDurability()
 const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
@@ -592,6 +594,16 @@ const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects, qu
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
+
+function toggleInventoryFromToolbar(): void {
+  playUiCue('ui.switch')
+  inventoryOpen.value = !inventoryOpen.value
+}
+
+function toggleProfilePanel(): void {
+  playUiCue('ui.switch')
+  profileOpen.value = !profileOpen.value
+}
 
 const rewardTrackOpen = ref(false)
 const showArchive = ref(false)
@@ -899,6 +911,7 @@ function toggleHeaterPanel() {
 
 function toggleMicPanel() {
   if (!siteRover.value || isSleeping.value || wheelsHudBlocked.value) return
+  playUiCue('ui.instrument')
   if (activeInstrumentSlot.value === MIC_SLOT) siteRover.value.activateInstrument(null)
   else siteRover.value.activateInstrument(MIC_SLOT)
 }
@@ -1437,11 +1450,13 @@ function handleDanProspect(): void {
 
 function onGlobalKeyDown(e: KeyboardEvent) {
   if (e.code === 'Tab') {
+    if (e.repeat) return
     e.preventDefault()
-    inventoryOpen.value = !inventoryOpen.value
+    toggleInventoryFromToolbar()
   }
   if (e.code === 'Digit0' || e.code === 'Backquote') {
-    profileOpen.value = !profileOpen.value
+    if (e.repeat) return
+    toggleProfilePanel()
   }
   if (e.key === 'm' || e.key === 'M') {
     toggleMicPanel()

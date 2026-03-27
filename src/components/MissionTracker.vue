@@ -3,7 +3,7 @@
     <div v-if="mission && missionDef" class="mission-tracker">
       <div class="mt-header">
         <span class="mt-name">{{ missionDef.name }}</span>
-        <button class="mt-unpin" @click="$emit('untrack')" title="Hide tracker">&#x2715;</button>
+        <button type="button" class="mt-unpin" title="Hide tracker" @click="emitUntrack">&#x2715;</button>
       </div>
       <ul class="mt-objectives">
         <li
@@ -30,7 +30,7 @@
           class="mt-tx-btn"
           :class="{ disabled: !lgaActive }"
           :disabled="!lgaActive"
-          @click="$emit('transmit')"
+          @click="emitTransmit"
         >
           {{ lgaActive ? 'TRANSMIT RESULTS' : 'ACTIVATE LGA TO TRANSMIT' }}
         </button>
@@ -48,6 +48,7 @@
 </template>
 
 <script setup lang="ts">
+import { useUiSound } from '@/composables/useUiSound'
 import type { MissionState, MissionDef } from '@/types/missions'
 
 defineProps<{
@@ -60,10 +61,22 @@ defineProps<{
   dwellProgress: number
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   untrack: []
   transmit: []
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitUntrack(): void {
+  playUiCue('ui.switch')
+  emit('untrack')
+}
+
+function emitTransmit(): void {
+  playUiCue('ui.confirm')
+  emit('transmit')
+}
 </script>
 
 <style scoped>

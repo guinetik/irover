@@ -15,7 +15,14 @@
               >{{ s }}</span>
             </div>
             <div class="sam-header-right">
-              <span class="sam-esc" @click="emit('close')">[ESC] CLOSE</span>
+              <span
+                class="sam-esc"
+                role="button"
+                tabindex="0"
+                @click="emitClose"
+                @keydown.enter.prevent="emitClose"
+                @keydown.space.prevent="emitClose"
+              >[ESC] CLOSE</span>
             </div>
           </div>
           <div class="sam-body">
@@ -57,6 +64,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useUiSound } from '@/composables/useUiSound'
 import type { InventoryStack } from '@/types/inventory'
 import { INVENTORY_CATALOG } from '@/types/inventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
@@ -79,6 +87,13 @@ const emit = defineEmits<{
   close: []
   enqueue: [entry: any]
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
 
 const samExp = useSamExperiments()
 

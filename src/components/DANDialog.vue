@@ -5,7 +5,7 @@
         <div class="dan-header">
           <span class="dan-icon">&#x2261;</span>
           <span class="dan-title">DAN — NEUTRON PROSPECTING</span>
-          <button class="dan-close" @click="$emit('close')">&times;</button>
+          <button type="button" class="dan-close" aria-label="Close" @click="emitClose">&times;</button>
         </div>
         <div class="dan-body">
           <div class="dan-graphic">
@@ -55,6 +55,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useUiSound } from '@/composables/useUiSound'
 
 const props = defineProps<{
   visible: boolean
@@ -65,7 +66,14 @@ const props = defineProps<{
   waterConfirmed: boolean | null
 }>()
 
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
 
 const danImgSrc = computed(() => {
   try { return new URL('/inspo/dan.png', import.meta.url).href } catch { return '' }

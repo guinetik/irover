@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="open" class="science-overlay" @click.self="$emit('close')">
+      <div v-if="open" class="science-overlay" @click.self="emitClose">
         <div
           class="ach-dialog"
           role="dialog"
@@ -10,7 +10,7 @@
         >
           <div class="science-head">
             <h2 id="ach-dialog-title" class="science-title">ACHIEVEMENTS</h2>
-            <button type="button" class="science-close" aria-label="Close" @click="$emit('close')">&times;</button>
+            <button type="button" class="science-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
           <div class="ach-body">
             <p v-if="libs.length === 0 && dan.length === 0 && survival.length === 0 && rewardTrack.length === 0" class="ach-empty">Loading achievements…</p>
@@ -96,6 +96,7 @@
 </template>
 
 <script setup lang="ts">
+import { useUiSound } from '@/composables/useUiSound'
 import type { RewardTrackMilestone } from '@/lib/rewardTrack'
 
 export interface AchievementBase {
@@ -135,9 +136,16 @@ const props = defineProps<{
   rewardTrack: RewardTrackMilestone[]
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
 
 const DAN_LOCKED: Record<string, string> = {
   'first-hit': 'Detect a hydrogen signal with DAN.',

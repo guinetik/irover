@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="open" class="dsn-overlay" @click.self="emit('close')">
+      <div v-if="open" class="dsn-overlay" @click.self="emitClose">
         <div class="dsn-dialog" role="dialog" aria-modal="true" aria-labelledby="dsn-dialog-title">
           <!-- Header -->
           <div class="dsn-header">
@@ -11,7 +11,7 @@
             </div>
             <div class="dsn-header-right">
               <span class="dsn-counter font-instrument">{{ totalFound }} / {{ totalEntries }}</span>
-              <button type="button" class="dsn-close" aria-label="Close" @click="emit('close')">&#x2715;</button>
+              <button type="button" class="dsn-close" aria-label="Close" @click="emitClose">&#x2715;</button>
             </div>
           </div>
 
@@ -135,15 +135,22 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { useAudio } from '@/audio/useAudio'
+import { useUiSound } from '@/composables/useUiSound'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
 import { startDsnArchivePlayback } from './dsnArchivePlayback'
 
 const audio = useAudio()
+const { playUiCue } = useUiSound()
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
 
 const {
   discoveries, allTransmissions, colonistCount, echoCount,
@@ -208,8 +215,7 @@ const selectedTx = computed(() => {
 
 function selectTransmission(id: string) {
   if (selectedId.value !== id) {
-    audio.unlock()
-    audio.play('ui.dsnArchiveSelect')
+    playUiCue('ui.dsnArchiveSelect')
   }
   selectedId.value = id
   markRead(id)

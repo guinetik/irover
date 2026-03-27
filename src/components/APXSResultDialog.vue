@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="result-fade">
-      <div v-if="result" class="result-backdrop" @click.self="$emit('close')">
+      <div v-if="result" class="result-backdrop" @click.self="emitClose">
         <div class="result-dialog">
           <!-- Grade banner -->
           <div class="result-grade-banner" :class="`grade--${result.grade}`">
@@ -38,7 +38,7 @@
 
           <!-- Actions -->
           <div class="result-actions">
-            <button class="btn-acknowledge" @click="$emit('acknowledge')">
+            <button type="button" class="btn-acknowledge" @click="emitAcknowledge">
               ACKNOWLEDGE
             </button>
           </div>
@@ -49,6 +49,7 @@
 </template>
 
 <script setup lang="ts">
+import { useUiSound } from '@/composables/useUiSound'
 import type { APXSQueueEntry } from '@/composables/useAPXSQueue'
 import type { APXSGrade } from '@/lib/apxsComposition'
 import APXSResultChart from '@/components/APXSResultChart.vue'
@@ -57,10 +58,22 @@ defineProps<{
   result: APXSQueueEntry | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   acknowledge: []
   close: []
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
+
+function emitAcknowledge(): void {
+  playUiCue('ui.confirm')
+  emit('acknowledge')
+}
 
 function gradeLabel(grade: APXSGrade): string {
   const labels: Record<APXSGrade, string> = {

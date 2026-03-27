@@ -164,7 +164,7 @@
             <button
               v-if="chemCamUnread > 0"
               class="ov-btn-see-results"
-              @click="$emit('seeResults')"
+              @click="emitSeeChemCamResults"
             >SEE RESULTS <span class="ov-results-badge font-instrument">{{ chemCamUnread }}</span></button>
           </div>
         </div>
@@ -178,7 +178,7 @@
             </div>
           </div>
           <div v-if="(samUnread ?? 0) > 0" class="ov-chemcam-status">
-            <button class="ov-btn-see-results" @click="$emit('samSeeResults')">
+            <button type="button" class="ov-btn-see-results" @click="emitSamSeeResults">
               SEE RESULTS <span class="ov-results-badge font-instrument">{{ samUnread }}</span>
             </button>
           </div>
@@ -193,7 +193,7 @@
             </div>
           </div>
           <div v-if="(apxsUnread ?? 0) > 0" class="ov-chemcam-status">
-            <button class="ov-btn-see-results" @click="$emit('apxsSeeResults')">
+            <button type="button" class="ov-btn-see-results" @click="emitApxsSeeResults">
               SEE RESULTS <span class="ov-results-badge font-instrument">{{ apxsUnread }}</span>
             </button>
           </div>
@@ -221,7 +221,7 @@
               class="ov-btn-primary ov-btn-rtg-overdrive"
               :class="{ disabled: !heaterOverdriveReady || isActiveMode }"
               :disabled="!heaterOverdriveReady || isActiveMode"
-              @click="heaterOverdriveReady && !isActiveMode && $emit('heaterOverdrive')"
+              @click="emitHeaterOverdrive"
             >OVERDRIVE</button>
           </template>
           <template v-else-if="passiveSubsystemOnly">
@@ -234,7 +234,7 @@
             <button
               v-if="activeSlot === 5 && danHitAvailable && danProspectPhase === 'idle'"
               class="ov-btn-see-results ov-btn-dan-prospect"
-              @click="$emit('danProspect')"
+              @click="emitDanProspect"
             >PROSPECT</button>
           </template>
           <template v-else>
@@ -246,7 +246,7 @@
             >ACTIVATE</button>
           </template>
           <div class="ov-btn-row">
-            <button class="ov-btn-secondary" @click="$emit('repair')"
+            <button type="button" class="ov-btn-secondary" @click="emitRepair"
               :disabled="instrumentOperational === false"
             >
               REPAIR
@@ -260,7 +260,7 @@
               class="ov-btn-secondary"
               :class="{ active: upgradeOpen, disabled: isUpgraded }"
               :disabled="isUpgraded"
-              @click="upgradeOpen = !upgradeOpen"
+              @click="toggleUpgradePanel"
             >{{ isUpgraded ? 'UPGRADED' : 'UPGRADE' }}</button>
           </div>
         </div>
@@ -272,13 +272,13 @@
             <div class="ov-upgrade-name">{{ instrument.upgName }}</div>
             <div class="ov-upgrade-desc">{{ instrument.upgDesc }}</div>
             <div class="ov-upgrade-req">{{ instrument.upgReq }}</div>
-            <button class="ov-btn-primary ov-btn-install" @click="$emit('installUpgrade')">INSTALL</button>
+            <button type="button" class="ov-btn-primary ov-btn-install" @click="emitInstallUpgrade">INSTALL</button>
           </div>
         </Transition>
 
         <!-- DSN Archaeology (LGA slot only, after upgrade) -->
         <div v-if="lgaUpgraded && activeSlot === 11" class="ov-dsn-action">
-          <button class="ov-btn-primary ov-btn-dsn" @click="$emit('toggleDsnArchaeology')">
+          <button type="button" class="ov-btn-primary ov-btn-dsn" @click="emitToggleDsnArchaeology">
             📡 DSN ARCHAEOLOGY
           </button>
         </div>
@@ -291,7 +291,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue'
-import { useAudio } from '@/audio/useAudio'
+import { useUiSound } from '@/composables/useUiSound'
 import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
 import { DUST_STORM_LEVEL_LABELS, type RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
 
@@ -441,7 +441,7 @@ const emit = defineEmits<{
   apxsSeeResults: []
   toggleDsnArchaeology: []
 }>()
-const audio = useAudio()
+const { playUiCue } = useUiSound()
 
 export interface ThermalDisplay {
   internalTempC: number
@@ -576,8 +576,7 @@ function handleActivateClick(): void {
  */
 function handleRtgOverdriveClick(): void {
   if (!props.rtgOverdriveReady || props.isActiveMode) return
-  audio.unlock()
-  audio.play('ui.switch')
+  playUiCue('ui.switch')
   emit('rtgOverdrive')
 }
 
@@ -586,9 +585,54 @@ function handleRtgOverdriveClick(): void {
  */
 function handleRtgConservationClick(): void {
   if (!props.rtgConservationReady || props.isActiveMode) return
-  audio.unlock()
-  audio.play('ui.switch')
+  playUiCue('ui.switch')
   emit('rtgConservation')
+}
+
+function emitSeeChemCamResults(): void {
+  playUiCue('ui.science')
+  emit('seeResults')
+}
+
+function emitSamSeeResults(): void {
+  playUiCue('ui.science')
+  emit('samSeeResults')
+}
+
+function emitApxsSeeResults(): void {
+  playUiCue('ui.science')
+  emit('apxsSeeResults')
+}
+
+function emitDanProspect(): void {
+  playUiCue('ui.confirm')
+  emit('danProspect')
+}
+
+function emitRepair(): void {
+  playUiCue('ui.switch')
+  emit('repair')
+}
+
+function toggleUpgradePanel(): void {
+  playUiCue('ui.switch')
+  upgradeOpen.value = !upgradeOpen.value
+}
+
+function emitInstallUpgrade(): void {
+  playUiCue('ui.confirm')
+  emit('installUpgrade')
+}
+
+function emitToggleDsnArchaeology(): void {
+  playUiCue('ui.switch')
+  emit('toggleDsnArchaeology')
+}
+
+function emitHeaterOverdrive(): void {
+  if (!props.heaterOverdriveReady || props.isActiveMode) return
+  playUiCue('ui.switch')
+  emit('heaterOverdrive')
 }
 
 // Reset upgrade panel when switching instruments

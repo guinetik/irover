@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="open" class="science-overlay" @click.self="$emit('close')">
+      <div v-if="open" class="science-overlay" @click.self="emitClose">
         <div
           class="rt-dialog"
           role="dialog"
@@ -10,7 +10,7 @@
         >
           <div class="science-head">
             <h2 id="rt-dialog-title" class="science-title">SP REWARD TRACK</h2>
-            <button type="button" class="science-close" aria-label="Close" @click="$emit('close')">&times;</button>
+            <button type="button" class="science-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
 
           <!-- Progress summary -->
@@ -66,6 +66,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useUiSound } from '@/composables/useUiSound'
 import type { RewardTrackMilestone } from '@/lib/rewardTrack'
 
 const props = defineProps<{
@@ -75,9 +76,16 @@ const props = defineProps<{
   totalSp: number
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
 
 interface Tier {
   name: string

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="result-fade">
-      <div v-if="result" class="result-backdrop" @click.self="$emit('close')">
+      <div v-if="result" class="result-backdrop" @click.self="emitClose">
         <div class="result-dialog">
           <!-- Rarity banner -->
           <div class="result-rarity-banner" :class="`rarity--${result.discoveryRarity}`">
@@ -41,7 +41,7 @@
 
           <!-- Buttons -->
           <div class="result-actions">
-            <button class="btn-acknowledge" @click="$emit('acknowledge')">
+            <button type="button" class="btn-acknowledge" @click="emitAcknowledge">
               ACKNOWLEDGE
             </button>
             <button class="btn-transmit" disabled>
@@ -56,6 +56,7 @@
 </template>
 
 <script setup lang="ts">
+import { useUiSound } from '@/composables/useUiSound'
 import type { SamQueueEntry } from '@/composables/useSamQueue'
 import { INVENTORY_CATALOG } from '@/types/inventory'
 import type { DiscoveryRarity } from '@/types/samExperiments'
@@ -64,10 +65,22 @@ defineProps<{
   result: SamQueueEntry | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   acknowledge: []
   close: []
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
+
+function emitAcknowledge(): void {
+  playUiCue('ui.confirm')
+  emit('acknowledge')
+}
 
 function rarityLabel(rarity: DiscoveryRarity): string {
   const labels: Record<DiscoveryRarity, string> = {

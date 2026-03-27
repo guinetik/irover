@@ -98,7 +98,7 @@ withDefaults(
 
 const router = useRouter()
 const audio = useAudio()
-const muted = ref(Howler._muted ?? false)
+const muted = ref(Boolean((Howler as unknown as { _muted?: boolean })._muted))
 
 function toggleMute(): void {
   muted.value = !muted.value

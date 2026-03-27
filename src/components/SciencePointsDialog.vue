@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="open" class="science-overlay" @click.self="$emit('close')">
+      <div v-if="open" class="science-overlay" @click.self="emitClose">
         <div
           class="sp-ledger-dialog"
           role="dialog"
@@ -10,7 +10,7 @@
         >
           <div class="science-head">
             <h2 id="sp-ledger-title" class="science-title">SCIENCE POINTS</h2>
-            <button type="button" class="science-close" aria-label="Close" @click="$emit('close')">&times;</button>
+            <button type="button" class="science-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
           <div class="sp-ledger-body">
             <p v-if="entries.length === 0" class="sp-ledger-empty">No science points earned yet.</p>
@@ -30,7 +30,7 @@
             </ul>
           </div>
           <div class="sp-ledger-footer">
-            <button type="button" class="sp-track-btn" @click="$emit('open-track')">
+            <button type="button" class="sp-track-btn" @click="emitOpenTrack">
               <span class="sp-track-icon" aria-hidden="true">&#x25C6;</span>
               VIEW REWARD TRACK
             </button>
@@ -44,15 +44,28 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useSciencePoints, type SPLedgerEntry, type SPSource } from '@/composables/useSciencePoints'
+import { useUiSound } from '@/composables/useUiSound'
 
 defineProps<{
   open: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   'open-track': []
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
+
+function emitOpenTrack(): void {
+  playUiCue('ui.switch')
+  emit('open-track')
+}
 
 const { spLedger } = useSciencePoints()
 

@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="open" class="science-overlay" @click.self="$emit('close')">
+      <div v-if="open" class="science-overlay" @click.self="emitClose">
         <div class="science-dialog" role="dialog" aria-labelledby="science-dialog-title">
           <div class="science-head">
             <h2 id="science-dialog-title" class="science-title">SCIENCE LOG</h2>
-            <button type="button" class="science-close" aria-label="Close" @click="$emit('close')">&times;</button>
+            <button type="button" class="science-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
           <div class="science-panes">
             <nav class="science-cats" aria-label="Categories">
@@ -17,7 +17,7 @@
                   :aria-expanded="chemcamExpanded"
                   aria-controls="science-chemcam-list"
                   id="science-chemcam-trigger"
-                  @click="chemcamExpanded = !chemcamExpanded"
+                  @click="toggleChemcamAccordion"
                 >
                   <span class="science-acc-chev" aria-hidden="true">{{ chemcamExpanded ? '▼' : '▶' }}</span>
                   <span class="science-acc-label">CHEMCAM</span>
@@ -54,7 +54,7 @@
                   :aria-expanded="danExpanded"
                   aria-controls="science-dan-list"
                   id="science-dan-trigger"
-                  @click="danExpanded = !danExpanded"
+                  @click="toggleDanAccordion"
                 >
                   <span class="science-acc-chev" aria-hidden="true">{{ danExpanded ? '▼' : '▶' }}</span>
                   <span class="science-acc-label">DAN</span>
@@ -86,7 +86,7 @@
               <!-- SAM accordion -->
               <div v-if="samResults.length > 0" class="science-accordion science-accordion-sam">
                 <button type="button" class="science-acc-head science-acc-head-sam"
-                  :aria-expanded="samExpanded" @click="samExpanded = !samExpanded">
+                  :aria-expanded="samExpanded" @click="toggleSamAccordion">
                   <span class="science-acc-chev" aria-hidden="true">{{ samExpanded ? '▼' : '▶' }}</span>
                   <span class="science-acc-label">SAM</span>
                   <span class="science-acc-badge science-acc-badge-sam font-instrument">{{ samResults.length }}</span>
@@ -109,7 +109,7 @@
               <div v-if="apxsResults.length > 0" class="science-accordion">
                 <button type="button" class="science-acc-head"
                   :aria-expanded="apxsExpanded"
-                  @click="apxsExpanded = !apxsExpanded">
+                  @click="toggleApxsAccordion">
                   <span class="science-acc-chev" aria-hidden="true">{{ apxsExpanded ? '▼' : '▶' }}</span>
                   <span class="science-acc-label">APXS</span>
                   <span class="science-acc-badge font-instrument">{{ apxsResults.length }}</span>
@@ -180,13 +180,13 @@
                         v-if="!selected.queuedForTransmission"
                         type="button"
                         class="tx-queue-btn tx-queue"
-                        @click="emit('queueForTransmission', 'chemcam', selected.archiveId)"
+                        @click="emitQueueForTx('chemcam', selected.archiveId)"
                       >QUEUE FOR TRANSMISSION</button>
                       <button
                         v-else
                         type="button"
                         class="tx-queue-btn tx-dequeue"
-                        @click="emit('dequeueFromTransmission', 'chemcam', selected.archiveId)"
+                        @click="emitDequeueFromTx('chemcam', selected.archiveId)"
                       >REMOVE FROM QUEUE</button>
                     </div>
                     <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
@@ -218,13 +218,13 @@
                       v-if="!selectedDan.queuedForTransmission"
                       type="button"
                       class="tx-queue-btn tx-queue"
-                      @click="emit('queueForTransmission', 'dan', selectedDan.archiveId)"
+                      @click="emitQueueForTx('dan', selectedDan.archiveId)"
                     >QUEUE FOR TRANSMISSION</button>
                     <button
                       v-else
                       type="button"
                       class="tx-queue-btn tx-dequeue"
-                      @click="emit('dequeueFromTransmission', 'dan', selectedDan.archiveId)"
+                      @click="emitDequeueFromTx('dan', selectedDan.archiveId)"
                     >REMOVE FROM QUEUE</button>
                   </div>
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
@@ -254,13 +254,13 @@
                       v-if="!selectedSam.queuedForTransmission"
                       type="button"
                       class="tx-queue-btn tx-queue"
-                      @click="emit('queueForTransmission', 'sam', selectedSam.archiveId)"
+                      @click="emitQueueForTx('sam', selectedSam.archiveId)"
                     >QUEUE FOR TRANSMISSION</button>
                     <button
                       v-else
                       type="button"
                       class="tx-queue-btn tx-dequeue"
-                      @click="emit('dequeueFromTransmission', 'sam', selectedSam.archiveId)"
+                      @click="emitDequeueFromTx('sam', selectedSam.archiveId)"
                     >REMOVE FROM QUEUE</button>
                   </div>
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
@@ -300,13 +300,13 @@
                       v-if="!selectedApxs.queuedForTransmission"
                       type="button"
                       class="tx-queue-btn tx-queue"
-                      @click="emit('queueForTransmission', 'apxs', selectedApxs.archiveId)"
+                      @click="emitQueueForTx('apxs', selectedApxs.archiveId)"
                     >QUEUE FOR TRANSMISSION</button>
                     <button
                       v-else
                       type="button"
                       class="tx-queue-btn tx-dequeue"
-                      @click="emit('dequeueFromTransmission', 'apxs', selectedApxs.archiveId)"
+                      @click="emitDequeueFromTx('apxs', selectedApxs.archiveId)"
                     >REMOVE FROM QUEUE</button>
                   </div>
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
@@ -322,7 +322,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useAudio } from '@/audio/useAudio'
+import { useUiSound } from '@/composables/useUiSound'
 import type { ArchivedChemCamSpectrum } from '@/types/chemcamArchive'
 import type { SpectrumPeak } from '@/types/chemcam'
 import type { ArchivedDANProspect } from '@/types/danArchive'
@@ -343,7 +343,12 @@ const emit = defineEmits<{
   queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
   dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
 }>()
-const audio = useAudio()
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
 
 const chemcamExpanded = ref(true)
 const selectedId = ref<string | null>(null)
@@ -357,14 +362,43 @@ const selectedSamId = ref<string | null>(null)
 const apxsExpanded = ref(false)
 const selectedApxsId = ref<string | null>(null)
 
+function toggleChemcamAccordion(): void {
+  playUiCue('ui.switch')
+  chemcamExpanded.value = !chemcamExpanded.value
+}
+
+function toggleDanAccordion(): void {
+  playUiCue('ui.switch')
+  danExpanded.value = !danExpanded.value
+}
+
+function toggleSamAccordion(): void {
+  playUiCue('ui.switch')
+  samExpanded.value = !samExpanded.value
+}
+
+function toggleApxsAccordion(): void {
+  playUiCue('ui.switch')
+  apxsExpanded.value = !apxsExpanded.value
+}
+
+function emitQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string): void {
+  playUiCue('ui.switch')
+  emit('queueForTransmission', source, archiveId)
+}
+
+function emitDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string): void {
+  playUiCue('ui.switch')
+  emit('dequeueFromTransmission', source, archiveId)
+}
+
 const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs'>('chemcam')
 
 /**
  * Plays the science-log report selection cue.
  */
 function playScienceSelectionCue(): void {
-  audio.unlock()
-  audio.play('ui.science')
+  playUiCue('ui.science')
 }
 
 function selectChemCamReport(archiveId: string): void {

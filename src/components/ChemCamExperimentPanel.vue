@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="panel-fade">
-      <div v-if="readout" class="chemcam-panel" @click.self="$emit('close')">
+      <div v-if="readout" class="chemcam-panel" @click.self="emitClose">
         <div class="cp-card">
           <!-- Header -->
           <div class="cp-header">
@@ -11,7 +11,7 @@
               <div class="cp-capture-utc">{{ captureUtcLabel }}</div>
             </div>
             <div class="cp-rock-label">{{ readout.rockLabel }}</div>
-            <button class="cp-close" @click="$emit('close')">&times;</button>
+            <button type="button" class="cp-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
 
           <!-- Calibration bar -->
@@ -74,7 +74,7 @@
 
           <!-- Actions -->
           <div class="cp-actions">
-            <button class="cp-btn-ack" @click="$emit('acknowledge', readout.id)">ACKNOWLEDGE</button>
+            <button type="button" class="cp-btn-ack" @click="emitAcknowledge(readout.id)">ACKNOWLEDGE</button>
             <button class="cp-btn-transmit" disabled>TRANSMIT TO EARTH</button>
           </div>
         </div>
@@ -85,12 +85,31 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
+import { useUiSound } from '@/composables/useUiSound'
 import type { ChemCamReadout } from '@/three/instruments/ChemCamController'
 import type { SpectrumPeak } from '@/types/chemcam'
 
 const props = defineProps<{
   readout: ChemCamReadout | null
 }>()
+
+const emit = defineEmits<{
+  close: []
+  acknowledge: [id: string]
+  transmit: [id: string]
+}>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
+
+function emitAcknowledge(id: string): void {
+  playUiCue('ui.confirm')
+  emit('acknowledge', id)
+}
 
 /** ISO-style UTC time when LIBS acquisition finished. */
 const captureUtcLabel = computed(() => {
@@ -103,12 +122,6 @@ const captureUtcLabel = computed(() => {
     return ''
   }
 })
-
-defineEmits<{
-  close: []
-  acknowledge: [id: string]
-  transmit: [id: string]
-}>()
 
 // --- Spectrum layout ---
 const NM_MIN = 380

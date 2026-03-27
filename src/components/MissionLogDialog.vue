@@ -1,11 +1,11 @@
 <template>
   <Teleport to="body">
     <Transition name="science-fade">
-      <div v-if="open" class="ml-overlay" @click.self="$emit('close')">
+      <div v-if="open" class="ml-overlay" @click.self="emitClose">
         <div class="ml-dialog" role="dialog" aria-modal="true">
           <div class="ml-head">
             <h2 class="ml-title">MISSION LOG</h2>
-            <button class="ml-close" @click="$emit('close')">&times;</button>
+            <button type="button" class="ml-close" aria-label="Close" @click="emitClose">&times;</button>
           </div>
           <div class="ml-body">
             <section v-if="activeMissions.length > 0" class="ml-section">
@@ -18,7 +18,7 @@
               >
                 <div class="ml-mission-head">
                   <span class="ml-mission-name">{{ getDef(state.missionId)?.name }}</span>
-                  <button class="ml-track-btn" @click="$emit('track', state.missionId)">
+                  <button type="button" class="ml-track-btn" @click="emitTrack(state.missionId)">
                     {{ state.missionId === trackedMissionId ? 'TRACKING' : 'TRACK' }}
                   </button>
                 </div>
@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import { useUiSound } from '@/composables/useUiSound'
 import type { MissionState, MissionDef } from '@/types/missions'
 
 defineProps<{
@@ -72,10 +73,22 @@ defineProps<{
   getObjLabel: (missionId: string, objectiveId: string) => string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   track: [missionId: string]
 }>()
+
+const { playUiCue } = useUiSound()
+
+function emitClose(): void {
+  playUiCue('ui.confirm')
+  emit('close')
+}
+
+function emitTrack(missionId: string): void {
+  playUiCue('ui.switch')
+  emit('track', missionId)
+}
 </script>
 
 <style scoped>

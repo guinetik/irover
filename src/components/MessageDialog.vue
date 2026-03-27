@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAudio } from '@/audio/useAudio'
+import { useUiSound } from '@/composables/useUiSound'
 import type { LGAMessage } from '@/types/lgaMailbox'
 
 defineProps<{
@@ -48,14 +48,13 @@ const emit = defineEmits<{
   'accept-mission': [missionId: string]
 }>()
 
-const audio = useAudio()
+const { playUiCue } = useUiSound()
 
 /**
  * Navbar / panel open cue — used for LGA message dismissals and mission acceptance.
  */
 function playConfirmCue(): void {
-  audio.unlock()
-  audio.play('ui.confirm')
+  playUiCue('ui.confirm')
 }
 
 function emitClose(): void {
