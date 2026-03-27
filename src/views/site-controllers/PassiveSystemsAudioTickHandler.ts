@@ -25,7 +25,7 @@ interface PassiveLayer {
 }
 
 const LERP_SPEED = 3.0
-const RTG_VOLUME = 0.088
+const RTG_VOLUME = 0.07
 const REMS_VOLUME = 0.2
 const HEATER_ON_THRESHOLD_W = 0.5
 const MAX_EFFECTIVE_HEATER_W = 24
