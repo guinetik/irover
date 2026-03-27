@@ -4,6 +4,9 @@ let sharedAudioManager: AudioManager | null = null
 
 /**
  * Returns the shared {@link AudioManager} instance (singleton for the app lifetime).
+ *
+ * Use {@link AudioManager.play} for manifest sounds; the returned handle exposes `progress()` and
+ * `duration()` for progress UI (e.g. DSN archive playback).
  */
 export function useAudio(): AudioManager {
   if (!sharedAudioManager) {

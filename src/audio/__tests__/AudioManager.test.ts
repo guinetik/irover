@@ -279,6 +279,8 @@ describe('AudioManager', () => {
     mockGainNodes.length = 0
     playCounterRef.n = 0
     syncPlayErrorRef.trigger = false
+    mockDuration.mockImplementation(() => 12)
+    mockSeek.mockImplementation(() => 3)
     mockCtxResume.mockImplementation(() => Promise.resolve())
     mockMasterGain.connect.mockImplementation(() => mockMasterGain)
     manager = new AudioManager()
@@ -292,6 +294,16 @@ describe('AudioManager', () => {
     expect(handle.duration()).toBe(12)
     expect(handle.progress()).toBeCloseTo(0.25)
     expect(mockHowlVolume).toHaveBeenCalledWith(0.6, 1)
+  })
+
+  it('handle progress() tracks seek/duration for dynamic DSN voice', () => {
+    manager.unlock()
+    mockDuration.mockReturnValue(100)
+    mockSeek.mockReturnValue(42)
+    const h = manager.play('voice.dsnTransmission', { src: '/logs/progress-bar.mp3' })
+    expect(h.progress()).toBeCloseTo(0.42)
+    mockSeek.mockReturnValue(50)
+    expect(h.progress()).toBeCloseTo(0.5)
   })
 
   it('stops the previous voice sound when an exclusive voice sound starts', () => {

@@ -99,7 +99,9 @@ export interface AudioPlaybackHandle {
   readonly soundId: string
   stop(): void
   playing(): boolean
+  /** Normalized position in the current clip, in the range 0–1 (`seek / duration`). */
   progress(): number
+  /** Clip length in seconds (Howler), or 0 when unknown. */
   duration(): number
 }
 

@@ -134,8 +134,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
+import { useAudio } from '@/audio/useAudio'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
+
+const audio = useAudio()
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: [] }>()
@@ -214,23 +218,25 @@ function formatBody(body: string): string {
     .replace(/\[LONG STATIC\]/g, '<span class="dsn-static">[LONG STATIC]</span>')
 }
 
-// --- Audio playback ---
-let currentAudio: HTMLAudioElement | null = null
+// --- Audio playback (manifest voice + dynamic src; progress via AudioPlaybackHandle) ---
+let currentHandle: AudioPlaybackHandle | null = null
 const isPlaying = ref(false)
 const playingTxId = ref<string | null>(null)
 const audioProgress = ref(0)
 let progressInterval: ReturnType<typeof setInterval> | null = null
 
 function stopAudio() {
-  if (currentAudio) {
-    currentAudio.pause()
-    currentAudio.src = ''
-    currentAudio = null
+  if (currentHandle) {
+    currentHandle.stop()
+    currentHandle = null
   }
   isPlaying.value = false
   playingTxId.value = null
   audioProgress.value = 0
-  if (progressInterval) { clearInterval(progressInterval); progressInterval = null }
+  if (progressInterval) {
+    clearInterval(progressInterval)
+    progressInterval = null
+  }
 }
 
 function toggleAudio(tx: DiscoveredTx) {
@@ -240,15 +246,18 @@ function toggleAudio(tx: DiscoveredTx) {
   }
   stopAudio()
   if (!tx.audioUrl) return
-  const audio = new Audio(tx.audioUrl)
-  audio.volume = 0.6
-  currentAudio = audio
+  const handle = audio.play('voice.dsnTransmission', {
+    src: tx.audioUrl,
+    onEnd: stopAudio,
+  })
+  currentHandle = handle
   playingTxId.value = tx.id
   isPlaying.value = true
-  audio.play().catch(() => stopAudio())
-  audio.addEventListener('ended', stopAudio)
   progressInterval = setInterval(() => {
-    if (audio.duration > 0) audioProgress.value = (audio.currentTime / audio.duration) * 100
+    if (!currentHandle) return
+    if (currentHandle.playing()) {
+      audioProgress.value = currentHandle.progress() * 100
+    }
   }, 100)
 }
 
