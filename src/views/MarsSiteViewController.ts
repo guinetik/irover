@@ -942,10 +942,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         }
         descending.value = true
         deploying.value = false
-      } else if (siteScene.roverState === 'deploying') {
-        if (descending.value) {
+        if (siteScene.touchedDown) {
           ctx.playInstrumentActionSound('sfx.contact')
         }
+      } else if (siteScene.roverState === 'deploying') {
         descending.value = false
         deploying.value = true
         deployProgress.value = siteScene.deployProgress

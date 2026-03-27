@@ -101,6 +101,8 @@ export class SiteScene {
   private touchdownTethers: TouchdownTether[] = []
   private touchdownReleaseElapsed = 0
   private touchdownReleaseActive = false
+  /** True on the frame the rover touches down (dust spawns). Resets next frame. */
+  touchedDown = false
   private descentPlumes: ThrusterPlume[] = []
   private dustCover = 0.5
   private waterIceIndex = 0
@@ -182,6 +184,7 @@ export class SiteScene {
     cameraPosition: THREE.Vector3,
     skyDelta: number,
   ) {
+    this.touchedDown = false
     // Sky crane descent
     if (this.roverState === 'descending' && this.rover) {
       if (!this.touchdownReleaseActive) {
@@ -201,6 +204,7 @@ export class SiteScene {
           this.rover.position.y = this.descentGroundY
           this.touchdownReleaseActive = true
           this.touchdownReleaseElapsed = 0
+          this.touchedDown = true
           this.spawnLandingDust()
         }
       } else {
