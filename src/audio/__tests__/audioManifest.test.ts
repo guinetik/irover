@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AUDIO_CATEGORIES,
   AUDIO_SOUND_IDS,
+  INSTRUMENT_ACTION_SOUND_IDS,
   NON_DSN_SEEDED_SOUND_IDS,
   SILENT_STATIC_WAV_DATA_URI,
   audioManifest,
@@ -15,6 +16,12 @@ describe('audioManifest', () => {
       'ui.click',
       'ui.error',
       'sfx.discovery',
+      'sfx.mastcamTag',
+      'sfx.chemcamFire',
+      'sfx.apxsContact',
+      'sfx.drillStart',
+      'sfx.mastMove',
+      'sfx.danScan',
     ])
   })
 
@@ -53,7 +60,7 @@ describe('audioManifest', () => {
     }
   })
 
-  it('uses self-contained audio sources for seeded static entries (no missing public fetches)', () => {
+  it('uses valid static sources for bundled entries', () => {
     for (const id of AUDIO_SOUND_IDS) {
       const def = getAudioDefinition(id)
       if (def.allowDynamicSrc === true) continue
@@ -61,7 +68,11 @@ describe('audioManifest', () => {
       expect(typeof src).toBe('string')
       if (typeof src !== 'string') throw new Error('expected string src for static entry')
       expect(src.length).toBeGreaterThan(0)
-      expect(src.startsWith('data:audio/')).toBe(true)
+      if (INSTRUMENT_ACTION_SOUND_IDS.includes(id as (typeof INSTRUMENT_ACTION_SOUND_IDS)[number])) {
+        expect(src.startsWith('/sound/')).toBe(true)
+      } else {
+        expect(src.startsWith('data:audio/')).toBe(true)
+      }
       expect(src.startsWith('/audio/')).toBe(false)
     }
   })
@@ -141,6 +152,48 @@ describe('audioManifest', () => {
       load: 'lazy',
       playback: 'single-instance',
       volume: 0.55,
+    })
+    expect(getAudioDefinition('sfx.mastcamTag')).toMatchObject({
+      src: '/sound/shutter.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.chemcamFire')).toMatchObject({
+      src: '/sound/chemcam.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.apxsContact')).toMatchObject({
+      src: '/sound/apxs.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.drillStart')).toMatchObject({
+      src: '/sound/drill.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.mastMove')).toMatchObject({
+      src: '/sound/mast.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.danScan')).toMatchObject({
+      src: '/sound/dan.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'single-instance',
+      effect: 'none',
     })
   })
 })

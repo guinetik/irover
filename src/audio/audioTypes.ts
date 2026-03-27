@@ -91,12 +91,15 @@ export type AudioDefinition = AudioDefinitionStatic | AudioDefinitionDynamic
  * **`onEnd`** — Invoked when the instance finishes playing naturally (`end`) **and** when playback is
  * torn down after a load or decode failure (`loaderror` / `playerror`), so callers can reset UI state
  * without relying on timeouts. Not invoked for manual {@link AudioPlaybackHandle.stop} (user interrupt).
+ *
+ * **`loop`** — When true, loops the specific playback instance until stopped manually.
  */
 export interface AudioPlayOptions {
   src?: string
   volume?: number
   effect?: AudioEffectPreset
   cooldownKey?: string
+  loop?: boolean
   onEnd?: () => void
 }
 

@@ -20,6 +20,7 @@ const {
   mockSeek,
   mockPlaying,
   mockHowlVolume,
+  mockLoop,
   mockFade,
   mockCtxResume,
   mockOff,
@@ -30,6 +31,7 @@ const {
   mockGainNodes,
   playCounterRef,
   syncPlayErrorRef,
+  deferLoadRef,
 } = vi.hoisted(() => ({
   mockPlay: vi.fn(),
   mockStop: vi.fn(),
@@ -39,6 +41,7 @@ const {
   mockSeek: vi.fn(() => 3),
   mockPlaying: vi.fn(() => true),
   mockHowlVolume: vi.fn(),
+  mockLoop: vi.fn(),
   mockFade: vi.fn(),
   mockCtxResume: vi.fn(() => Promise.resolve()),
   mockOff: vi.fn(),
@@ -53,6 +56,7 @@ const {
   mockGainNodes: [] as Array<{ connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }>,
   playCounterRef: { n: 0 },
   syncPlayErrorRef: { trigger: false },
+  deferLoadRef: { trigger: false },
 }))
 
 vi.mock('howler', () => {
@@ -76,6 +80,7 @@ vi.mock('howler', () => {
     playErrorOnce: Array<{ fn: ErrFn; id?: number }> = []
     loadErrorOn: Array<{ fn: ErrFn }> = []
     loadErrorOnce: Array<{ fn: ErrFn; id?: number }> = []
+    private _state: 'unloaded' | 'loaded'
     private readonly _instanceVol = new Map<number, number>()
     private readonly _soundsById = new Map<
       number,
@@ -83,8 +88,9 @@ vi.mock('howler', () => {
     >()
     private _groupVol = 1
 
-    constructor(opts: { src: string[] | string; volume?: number }) {
+    constructor(opts: { src: string[] | string; volume?: number; preload?: boolean }) {
       this.src = Array.isArray(opts.src) ? opts.src : [opts.src]
+      this._state = opts.preload ? 'loaded' : 'unloaded'
       mockHowlInstances.push(this)
     }
 
@@ -118,8 +124,12 @@ vi.mock('howler', () => {
     stop = mockStop
     unload = mockUnload
     load = mockLoad.mockImplementation(function (this: MockHowl) {
+      if (!deferLoadRef.trigger) {
+        this._state = 'loaded'
+      }
       return this
     })
+    state = () => this._state
     duration = mockDuration
     seek = mockSeek
     playing = mockPlaying
@@ -184,6 +194,14 @@ vi.mock('howler', () => {
         mockHowlVolume(to)
       }
       return this
+    }
+
+    loop = (value?: boolean, id?: number): boolean | MockHowl => {
+      if (typeof value === 'boolean') {
+        mockLoop(value, id)
+        return this
+      }
+      return false
     }
 
     _soundById = (id: number) => this._soundsById.get(id) ?? null
@@ -286,6 +304,7 @@ describe('AudioManager', () => {
     mockGainNodes.length = 0
     playCounterRef.n = 0
     syncPlayErrorRef.trigger = false
+    deferLoadRef.trigger = false
     mockDuration.mockImplementation(() => 12)
     mockSeek.mockImplementation(() => 3)
     mockCtxResume.mockImplementation(() => Promise.resolve())
@@ -412,6 +431,35 @@ describe('AudioManager', () => {
     manager.play('ui.click')
     expect(mockHowlInstances).toHaveLength(afterPreload)
     expect(mockPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads lazy static sounds before first play when the cached Howl is still unloaded', () => {
+    manager.unlock()
+    manager.play('sfx.discovery')
+    expect(mockLoad).toHaveBeenCalledTimes(1)
+    expect(mockPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads dynamic sounds before play when the runtime Howl starts unloaded', () => {
+    manager.unlock()
+    manager.play('voice.dsnTransmission', { src: '/logs/test.mp3' })
+    expect(mockLoad).toHaveBeenCalledTimes(1)
+    expect(mockPlay).toHaveBeenCalledTimes(1)
+  })
+
+  it('applies per-play loop mode when requested', () => {
+    manager.unlock()
+    manager.play('sfx.discovery', { loop: true })
+    expect(mockLoop).toHaveBeenCalledTimes(1)
+    expect(mockLoop).toHaveBeenCalledWith(true, 1)
+  })
+
+  it('unloads a cached sound stopped while still loading to clear queued playback', () => {
+    deferLoadRef.trigger = true
+    manager.unlock()
+    const h = manager.play('sfx.discovery', { loop: true })
+    h.stop()
+    expect(mockUnload).toHaveBeenCalledTimes(1)
   })
 
   it('preload skips dynamic-only manifest ids and does not throw', () => {

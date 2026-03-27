@@ -249,6 +249,7 @@ export class AudioManager {
       this.refreshDuckedCategoryVolumes('duck')
     }
     this.registerPlaybackErrorListenersBeforePlay(howl, playback)
+    this.ensureHowlLoadedBeforePlay(howl)
 
     const howlPlayIdRaw = howl.play()
     const resolvedId =
@@ -261,6 +262,7 @@ export class AudioManager {
 
     const vol = this.computePlaybackVolume(def, options)
     this.applyPerInstanceVolume(howl, vol, playback.howlPlayId)
+    this.applyPlaybackLoopOption(howl, playback.howlPlayId, options.loop)
 
     const effectPreset = options.effect ?? def.effect
     playback.effectRelease = this.tryApplyPlaybackEffectChain(howl, playback.howlPlayId, effectPreset)
@@ -512,6 +514,9 @@ export class AudioManager {
     if (wasVoice) {
       this.refreshDuckedCategoryVolumes('unduck')
     }
+    if (this.clearQueuedHowlByUnloadingIfNotLoaded(playback)) {
+      return
+    }
     this.stopHowlSound(playback.howl, playback.howlPlayId)
     if (!this.isCachedHowlInstance(playback.howl)) {
       playback.howl.unload()
@@ -709,6 +714,48 @@ export class AudioManager {
     })
     this.cachedHowls.set(soundId, howl)
     return howl
+  }
+
+  /**
+   * Howler does not auto-load `preload: false` Howls on `play()`, so lazy static cues and runtime
+   * dynamic Howls must be explicitly loaded the first time they are used.
+   */
+  private ensureHowlLoadedBeforePlay(howl: Howl): void {
+    if (howl.state() === 'unloaded') {
+      howl.load()
+    }
+  }
+
+  /**
+   * Stopping a Howl before it finishes loading can leave queued Howler `play` actions behind.
+   * Unload + cache eviction clears that queue so a cancelled loop cannot resurrect later as an orphan.
+   */
+  private clearQueuedHowlByUnloadingIfNotLoaded(playback: ActivePlayback): boolean {
+    if (playback.howl.state() === 'loaded') {
+      return false
+    }
+    if (this.cachedHowls.get(playback.soundId) === playback.howl) {
+      this.cachedHowls.delete(playback.soundId)
+    }
+    playback.howl.unload()
+    return true
+  }
+
+  /**
+   * Applies an optional loop override to the current play instance so hold-owned tool sounds can run
+   * until their owner explicitly stops them.
+   */
+  private applyPlaybackLoopOption(
+    howl: Howl,
+    howlPlayId: number | undefined,
+    loop: boolean | undefined,
+  ): void {
+    if (loop !== true) return
+    if (howlPlayId !== undefined) {
+      howl.loop(true, howlPlayId)
+      return
+    }
+    howl.loop(true)
   }
 
   private isCachedHowlInstance(howl: Howl): boolean {
