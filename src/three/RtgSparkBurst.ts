@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
 const SPARK_COUNT = 30
-const GRAVITY = 5
-const DRAG = 0.96
+const GRAVITY = 3
+const DRAG = 0.98
 
 /**
  * One-shot electrical spark burst effect for RTG overdrive / power shunt activation.
@@ -25,7 +25,7 @@ export class RtgSparkBurst {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3))
 
     const mat = new THREE.PointsMaterial({
-      color: 0xffcc44,
+      color: 0x44aaff,
       size: 0.035,
       transparent: true,
       opacity: 0.9,
@@ -53,7 +53,7 @@ export class RtgSparkBurst {
       this.velocities[i * 3 + 1] = Math.cos(phi) * speed + 0.3
       this.velocities[i * 3 + 2] = Math.sin(theta) * Math.sin(phi) * speed
 
-      this.lifetimes[i] = 0.2 + Math.random() * 0.4
+      this.lifetimes[i] = 0.5 + Math.random() * 0.8
     }
 
     this.points.visible = true
