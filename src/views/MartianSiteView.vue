@@ -575,6 +575,7 @@ import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
+import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
@@ -803,58 +804,45 @@ const wheelsOverlayHud = computed(() => {
   const powerStr = moving ? `${draw.toFixed(0)} W` : '0 W'
   const statusStr = !w.operational ? 'OFFLINE' : moving ? 'DRIVING' : 'READY'
 
-  // Speed buff breakdown
-  const buffs: { label: string; value: string; color: string }[] = []
-  const fmtBuff = (v: number) => {
-    const pct = Math.round(v * 100)
-    return pct >= 0 ? `+${pct}%` : `${pct}%`
-  }
-  const green = '#5dc9a5'
-  const red = '#e05030'
-  const dim = 'rgba(196,117,58,0.6)'
-
-  // Archetype
-  if (playerProfile.archetype) {
-    const ms = ARCHETYPES[playerProfile.archetype].modifiers.movementSpeed
-    if (ms) buffs.push({ label: ARCHETYPES[playerProfile.archetype].name.toUpperCase(), value: fmtBuff(ms), color: ms > 0 ? green : red })
-  }
-  // Foundation
-  if (playerProfile.foundation) {
-    const ms = FOUNDATIONS[playerProfile.foundation].modifiers.movementSpeed
-    if (ms) buffs.push({ label: FOUNDATIONS[playerProfile.foundation].name.toUpperCase(), value: fmtBuff(ms), color: ms > 0 ? green : red })
-  }
-  // Patron
-  if (playerProfile.patron) {
-    const ms = PATRONS[playerProfile.patron].modifiers.movementSpeed
-    if (ms) buffs.push({ label: PATRONS[playerProfile.patron].name.toUpperCase(), value: fmtBuff(ms), color: ms > 0 ? green : red })
-  }
-  // Reward track
-  const rtMod = trackModifiers.value.movementSpeed
-  if (rtMod) buffs.push({ label: 'REWARD TRACK', value: fmtBuff(rtMod), color: rtMod > 0 ? green : red })
-
-  // Night penalty
+  // Night penalty extra
   const nf = currentNightFactor.value
+  const nightExtras: { label: string; value: string; color: string }[] = []
   if (nf > 0.01) {
     const penaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
     const nightPenalty = -(nf * penaltyFactor)
-    buffs.push({ label: hasPerk('night-vision') ? 'NIGHT (NV)' : 'NIGHT', value: fmtBuff(nightPenalty), color: red })
+    const pct = Math.round(nightPenalty * 100)
+    nightExtras.push({
+      label: hasPerk('night-vision') ? 'NIGHT (NV)' : 'NIGHT',
+      value: pct >= 0 ? `+${pct}%` : `${pct}%`,
+      color: '#e05030',
+    })
   }
 
-  // RTG overdrive
+  // RTG overdrive extra
   const rtg = siteRover.value?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
   const rtgBoost = rtg?.speedMultiplier ?? 1.0
-  if (rtgBoost > 1) buffs.push({ label: 'RTG OVERDRIVE', value: fmtBuff(rtgBoost - 1), color: green })
+  if (rtgBoost > 1) {
+    const pct = Math.round((rtgBoost - 1) * 100)
+    nightExtras.push({ label: 'RTG OVERDRIVE', value: `+${pct}%`, color: '#5dc9a5' })
+  }
 
-  // Final effective speed %
+  // Final speed % (profile * night * rtg)
   const profileMult = playerMod('movementSpeed')
   const nightPenaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
   const nightPenalty = 1.0 - nf * nightPenaltyFactor
   const speedPct = profileMult * nightPenalty * rtgBoost * 100
 
-  // Add base label if no buffs
-  if (buffs.length === 0) buffs.push({ label: 'BASELINE', value: '100%', color: dim })
+  const { buffs: speedBuffs } = buildSpeedBreakdown({
+    modifierKey: 'movementSpeed',
+    archetype: playerProfile.archetype ? ARCHETYPES[playerProfile.archetype] : null,
+    foundation: playerProfile.foundation ? FOUNDATIONS[playerProfile.foundation] : null,
+    patron: playerProfile.patron ? PATRONS[playerProfile.patron] : null,
+    trackModifiers: trackModifiers.value,
+    extras: nightExtras.length > 0 ? nightExtras : undefined,
+    speedPctOverride: speedPct,
+  })
 
-  return { powerStr, statusStr, healthPct: w.durabilityPct, speedPct, speedBuffs: buffs }
+  return { powerStr, statusStr, healthPct: w.durabilityPct, speedPct, speedBuffs }
 })
 
 function handleInstrumentRepair() {
