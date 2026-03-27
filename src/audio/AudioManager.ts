@@ -267,7 +267,9 @@ export class AudioManager {
     const effectPreset = options.effect ?? def.effect
     playback.effectRelease = this.tryApplyPlaybackEffectChain(howl, playback.howlPlayId, effectPreset)
 
-    this.registerEndListenerAfterPlay(howl, playback, playback.howlPlayId)
+    if (!options.loop) {
+      this.registerEndListenerAfterPlay(howl, playback, playback.howlPlayId)
+    }
 
     if (def.playback === 'rate-limited') {
       this.recordRateLimitTrigger(def, soundId, options)
