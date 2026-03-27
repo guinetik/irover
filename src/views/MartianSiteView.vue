@@ -579,6 +579,7 @@ import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
+import { computeStormPerformancePenalty } from '@/lib/hazards'
 import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
 
@@ -798,12 +799,16 @@ const instrumentSpeedHudForSlot = computed(() => {
 const ACCURACY_SLOTS = new Set([1, 2, 3, 5, 6, 11, 12])
 const instrumentAccuracyHud = computed(() => {
   if (!activeInstrumentSlot.value || !ACCURACY_SLOTS.has(activeInstrumentSlot.value)) return null
+  const activeInst = siteRover.value?.instruments.find(i => i.slot === activeInstrumentSlot.value)
+  const activeStormLevel = siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0
   return buildSpeedBreakdown({
     modifierKey: 'instrumentAccuracy',
     archetype: playerProfile.archetype ? ARCHETYPES[playerProfile.archetype] : null,
     foundation: playerProfile.foundation ? FOUNDATIONS[playerProfile.foundation] : null,
     patron: playerProfile.patron ? PATRONS[playerProfile.patron] : null,
     trackModifiers: trackModifiers.value,
+    stormLevel: activeStormLevel,
+    instrumentTier: activeInst?.tier,
   })
 })
 
@@ -1207,10 +1212,14 @@ function handleSamEnqueue(entry: Omit<SamQueueEntry, 'id'>): void {
       consumeItem(ing.itemId, ing.quantity)
     }
   }
-  // Apply analysis speed modifier to processing duration
+  // Apply analysis speed modifier and storm penalty to processing duration
+  const samInst = siteRover.value?.instruments.find(i => i.id === 'sam')
+  const samStormPenalty = siteWeather.value.dustStormPhase === 'active' && samInst
+    ? computeStormPerformancePenalty(siteWeather.value.dustStormLevel ?? 0, samInst.tier)
+    : 1
   const speedMult = playerMod('analysisSpeed')
-  const adjustedRemaining = entry.remainingTimeSec / speedMult
-  const adjustedTotal = entry.totalTimeSec / speedMult
+  const adjustedRemaining = entry.remainingTimeSec * samStormPenalty / speedMult
+  const adjustedTotal = entry.totalTimeSec * samStormPenalty / speedMult
   const fullEntry = { ...entry, startedAtSol: marsSol.value, remainingTimeSec: adjustedRemaining, totalTimeSec: adjustedTotal }
   samEnqueue(fullEntry)
   samDialogVisible.value = false
@@ -1289,7 +1298,11 @@ function handleAPXSComplete(result: {
   )
 
   const baseTime = 10 + Math.random() * 5
-  const processingTime = baseTime / playerMod('analysisSpeed')
+  const apxsInst = siteRover.value?.instruments.find(i => i.id === 'apxs')
+  const apxsStormPenalty = siteWeather.value.dustStormPhase === 'active' && apxsInst
+    ? computeStormPerformancePenalty(siteWeather.value.dustStormLevel ?? 0, apxsInst.tier)
+    : 1
+  const processingTime = baseTime * apxsStormPenalty / playerMod('analysisSpeed')
 
   apxsEnqueue({
     rockMeshUuid: apxsGameRockUuid.value,

@@ -119,4 +119,49 @@ describe('buildSpeedBreakdown', () => {
     expect(result.buffs[0]).toEqual({ label: 'MAKER', value: '+5%', color: GREEN })
     expect(result.speedPct).toBeCloseTo(105)
   })
+
+  it('adds dust storm penalty entry for sensitive instruments', () => {
+    const result = buildSpeedBreakdown(baseInput({
+      stormLevel: 3,
+      instrumentTier: 'sensitive',
+    }))
+    // sensitive coeff = 0.08, level 3 → penalty = 1 + 3*0.08 = 1.24 → speed = 1/1.24 ≈ 0.806
+    expect(result.buffs).toHaveLength(1)
+    expect(result.buffs[0].label).toBe('DUST STORM (L3)')
+    expect(result.buffs[0].color).toBe(RED)
+    expect(result.speedPct).toBeCloseTo(80.6, 0)
+  })
+
+  it('adds dust storm penalty entry for rugged instruments', () => {
+    const result = buildSpeedBreakdown(baseInput({
+      stormLevel: 5,
+      instrumentTier: 'rugged',
+    }))
+    // rugged coeff = 0.02, level 5 → penalty = 1 + 5*0.02 = 1.10 → speed = 1/1.10 ≈ 0.909
+    expect(result.buffs[0].label).toBe('DUST STORM (L5)')
+    expect(result.speedPct).toBeCloseTo(90.9, 0)
+  })
+
+  it('storm stacks with profile and thermal', () => {
+    const result = buildSpeedBreakdown(baseInput({
+      archetype: { id: 'manager', name: 'Manager', modifiers: { analysisSpeed: 0.05 } },
+      thermalZone: 'FRIGID',
+      stormLevel: 2,
+      instrumentTier: 'standard',
+    }))
+    // profile = 1.05, thermal = 1/1.25 = 0.8, storm = 1/(1+2*0.05) = 1/1.10 ≈ 0.909
+    expect(result.buffs).toHaveLength(3)
+    expect(result.buffs[0].label).toBe('MANAGER')
+    expect(result.buffs[1].label).toBe('WEATHER (FRIGID)')
+    expect(result.buffs[2].label).toBe('DUST STORM (L2)')
+    expect(result.speedPct).toBeCloseTo(1.05 * 0.8 * (1 / 1.10) * 100, 0)
+  })
+
+  it('no storm entry when stormLevel is 0', () => {
+    const result = buildSpeedBreakdown(baseInput({
+      stormLevel: 0,
+      instrumentTier: 'sensitive',
+    }))
+    expect(result.buffs[0].label).toBe('BASELINE')
+  })
 })

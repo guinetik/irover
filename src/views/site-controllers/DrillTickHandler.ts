@@ -6,6 +6,7 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
+import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface DrillTickRefs {
@@ -74,9 +75,10 @@ export function createDrillTickHandler(
       const drill = controller.activeInstrument
       const z = thermalZone
       const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
-      drill.drillDurationMultiplier = thermalMult / (playerMod('analysisSpeed') * Math.max(0.1, drill.durabilityFactor))
+      const stormPenalty = fctx.dustStormPhase === 'active' ? computeStormPerformancePenalty(fctx.dustStormLevel ?? 0, drill.tier) : 1
+      drill.drillDurationMultiplier = (thermalMult * stormPenalty) / (playerMod('analysisSpeed') * Math.max(0.1, drill.durabilityFactor))
 
-      drill.accuracyMod = playerMod('instrumentAccuracy') * drill.durabilityFactor
+      drill.accuracyMod = playerMod('instrumentAccuracy') * drill.durabilityFactor / stormPenalty
       drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
       crosshairColor.value = drill.hasTarget && drill.canCollectCurrentTarget ? 'green' : 'red'
@@ -149,9 +151,12 @@ export function createDrillTickHandler(
       const extras = scanBuff
         ? [{ label: 'MASTCAM SCAN', value: '+40%', color: '#5dc9a5' }]
         : undefined
+      const activeStormLevel = fctx.dustStormPhase === 'active' ? (fctx.dustStormLevel ?? 0) : 0
       speedBreakdown.value = buildSpeedBreakdown({
         ...getSpeedBreakdownBase(),
         thermalZone: z as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+        stormLevel: activeStormLevel,
+        instrumentTier: drillInst.tier,
         extras,
       })
     } else {

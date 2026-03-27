@@ -10,6 +10,7 @@ import { DAN_INITIATE_DURATION_SEC, DAN_PROSPECT_DURATION_MARS_HOURS } from '@/v
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import { computeStormPerformancePenalty } from '@/lib/hazards'
 
 export interface DanTickRefs {
   siteTerrainParams: Ref<TerrainParams | null>
@@ -156,7 +157,7 @@ export function createDanTickHandler(
   }
 
   function tick(fctx: SiteFrameContext): void {
-    const { rover: controller, siteScene, sceneDelta, isSleeping, marsSol } = fctx
+    const { rover: controller, siteScene, sceneDelta, isSleeping, marsSol, dustStormPhase, dustStormLevel } = fctx
 
     const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
     if (!danInst || !fctx.roverReady) {
@@ -173,8 +174,9 @@ export function createDanTickHandler(
       danInst.waterIceIndex = siteTerrainParams.value.waterIceIndex ?? 0.1
       danInst.featureType = siteTerrainParams.value.featureType ?? 'plain'
     }
-    danInst.accuracyMod = playerMod('instrumentAccuracy')
-    danInst.analysisSpeedMod = playerMod('analysisSpeed')
+    const danStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, danInst.tier) : 1
+    danInst.accuracyMod = playerMod('instrumentAccuracy') / danStormPenalty
+    danInst.analysisSpeedMod = playerMod('analysisSpeed') / danStormPenalty
     danInst.update(sceneDelta)
 
     danTotalSamples.value = danInst.totalSamples
@@ -245,7 +247,7 @@ export function createDanTickHandler(
             }
           }
         } else if (danInst.prospectPhase === 'prospecting') {
-          const prospectDurationSec = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION / playerMod('analysisSpeed')
+          const prospectDurationSec = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION * danStormPenalty / playerMod('analysisSpeed')
           danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / prospectDurationSec)
           danInst.prospectProgress = danProspectProgress.value
 

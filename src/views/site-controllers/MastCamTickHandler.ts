@@ -9,6 +9,7 @@ import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
+import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export interface MastCamTickRefs {
@@ -92,7 +93,7 @@ export function createMastCamTickHandler(
   }
 
   function tick(fctx: SiteFrameContext): void {
-    const { rover: controller, camera, simulationTime } = fctx
+    const { rover: controller, camera, simulationTime, dustStormPhase, dustStormLevel } = fctx
 
     // Enter survey mode when MastCam is active
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
@@ -113,7 +114,8 @@ export function createMastCamTickHandler(
         heldTagPlayback.stop()
         heldTagPlayback = null
       }
-      mc.durationMultiplier = 1 / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
+      const stormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, mc.tier) : 1
+      mc.durationMultiplier = stormPenalty / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -132,11 +134,15 @@ export function createMastCamTickHandler(
     // Animate tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
-      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy') * Math.max(0.1, mcInst.durabilityFactor)
+      const mcStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, mcInst.tier) : 1
+      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy') * Math.max(0.1, mcInst.durabilityFactor) / mcStormPenalty
       mcInst.updateTagMarkers(simulationTime)
       // Speed breakdown — show whenever MastCam card is visible
+      const activeStormLevel = dustStormPhase === 'active' ? (dustStormLevel ?? 0) : 0
       speedBreakdown.value = buildSpeedBreakdown({
         ...getSpeedBreakdownBase(),
+        stormLevel: activeStormLevel,
+        instrumentTier: mcInst.tier,
       })
     } else {
       speedBreakdown.value = null

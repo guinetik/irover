@@ -4,6 +4,7 @@ import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
+import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
@@ -87,7 +88,8 @@ export function createAPXSTickHandler(
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
-      const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) / (playerMod('analysisSpeed') * Math.max(0.1, apxs.durabilityFactor))
+      const stormPenalty = fctx.dustStormPhase === 'active' ? computeStormPerformancePenalty(fctx.dustStormLevel ?? 0, apxs.tier) : 1
+      const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) * stormPenalty / (playerMod('analysisSpeed') * Math.max(0.1, apxs.durabilityFactor))
 
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {
@@ -135,9 +137,12 @@ export function createAPXSTickHandler(
     // Speed breakdown — show whenever APXS card is visible (not just active mode)
     const apxsInst = controller?.instruments.find(i => i.id === 'apxs')
     if (apxsInst instanceof APXSController) {
+      const activeStormLevel = fctx.dustStormPhase === 'active' ? (fctx.dustStormLevel ?? 0) : 0
       speedBreakdown.value = buildSpeedBreakdown({
         ...getSpeedBreakdownBase(),
         thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+        stormLevel: activeStormLevel,
+        instrumentTier: apxsInst.tier,
       })
     } else {
       speedBreakdown.value = null
