@@ -10,6 +10,9 @@ import {
   type AudioPlaybackHandle,
 } from './audioTypes'
 
+/** Howl event handler signatures (for symmetric `off` teardown). */
+type HowlErrorEventHandler = (soundId: number, error: unknown) => void
+
 /** One running instance registered with the manager (supports overlap within a category). */
 interface ActivePlayback {
   /** Stable token for handle.stop bookkeeping. */
@@ -19,6 +22,10 @@ interface ActivePlayback {
   howl: Howl
   /** Sound id returned by {@link Howl.play} (distinct instances on the same Howl). */
   howlPlayId?: number
+  /** Same references passed to `on`/`once` so `off` can remove listeners on interrupt or failure. */
+  endHandler: () => void
+  playErrorHandler: HowlErrorEventHandler
+  loadErrorHandler: HowlErrorEventHandler
 }
 
 const DEFAULT_CATEGORY_STATE: Record<AudioCategory, AudioCategoryState> = {
@@ -117,10 +124,29 @@ export class AudioManager {
       category: def.category,
       howl,
       howlPlayId,
+      endHandler: () => {},
+      playErrorHandler: () => {},
+      loadErrorHandler: () => {},
     }
-    this.pushActive(def.category, playback)
 
-    this.wirePlaybackEnd(howl, howlPlayId, playback, options)
+    playback.endHandler = () => {
+      try {
+        options.onEnd?.()
+      } finally {
+        this.detachPlaybackListeners(playback)
+        this.finalizePlaybackEnded(playback)
+      }
+    }
+
+    const onHowlFailure: HowlErrorEventHandler = (id, _err) => {
+      if (playback.howlPlayId !== undefined && id !== playback.howlPlayId) return
+      this.teardownPlaybackFailure(playback)
+    }
+    playback.playErrorHandler = onHowlFailure
+    playback.loadErrorHandler = onHowlFailure
+
+    this.pushActive(def.category, playback)
+    this.wirePlaybackLifecycle(howl, howlPlayId, playback)
 
     if (def.playback === 'rate-limited') {
       this.recordRateLimitTrigger(def, soundId, options)
@@ -214,28 +240,52 @@ export class AudioManager {
     }
   }
 
-  private wirePlaybackEnd(
-    howl: Howl,
-    howlPlayId: number | undefined,
-    playback: ActivePlayback,
-    options: AudioPlayOptions,
-  ): void {
-    const handler = () => {
-      try {
-        options.onEnd?.()
-      } finally {
-        this.finalizePlaybackEnded(playback)
-      }
-    }
+  /**
+   * Registers `end`, `playerror`, and `loaderror` with stable handler refs so interrupted playbacks
+   * can `off()` everything in {@link detachPlaybackListeners}.
+   */
+  private wirePlaybackLifecycle(howl: Howl, howlPlayId: number | undefined, playback: ActivePlayback): void {
+    const { endHandler, playErrorHandler, loadErrorHandler } = playback
     if (howlPlayId !== undefined) {
-      howl.once('end', handler, howlPlayId)
+      howl.once('end', endHandler, howlPlayId)
+      howl.once('playerror', playErrorHandler, howlPlayId)
+      howl.once('loaderror', loadErrorHandler, howlPlayId)
     } else {
-      howl.once('end', handler)
+      howl.once('end', endHandler)
+      howl.once('playerror', playErrorHandler)
+      howl.once('loaderror', loadErrorHandler)
     }
   }
 
-  /** Natural completion: drop bookkeeping and unload non-cached Howls. */
+  /**
+   * Removes all listeners registered for this playback (call before stop/interrupt so `end` does
+   * not run after teardown, and so error handlers do not leak on cached Howls).
+   */
+  private detachPlaybackListeners(playback: ActivePlayback): void {
+    const { howl, howlPlayId, endHandler, playErrorHandler, loadErrorHandler } = playback
+    if (howlPlayId !== undefined) {
+      howl.off('end', endHandler, howlPlayId)
+      howl.off('playerror', playErrorHandler, howlPlayId)
+      howl.off('loaderror', loadErrorHandler, howlPlayId)
+    } else {
+      howl.off('end', endHandler)
+      howl.off('playerror', playErrorHandler)
+      howl.off('loaderror', loadErrorHandler)
+    }
+  }
+
+  /** Natural completion: bookkeeping was updated in {@link endHandler}; only list + unload here. */
   private finalizePlaybackEnded(playback: ActivePlayback): void {
+    const removed = this.removeFromActiveList(playback)
+    if (!removed) return
+    if (!this.isCachedHowlInstance(playback.howl)) {
+      playback.howl.unload()
+    }
+  }
+
+  /** Load/decode failure: no `onEnd`; drop bookkeeping and unload dynamic Howls. */
+  private teardownPlaybackFailure(playback: ActivePlayback): void {
+    this.detachPlaybackListeners(playback)
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
     if (!this.isCachedHowlInstance(playback.howl)) {
@@ -259,8 +309,9 @@ export class AudioManager {
     this.activeByCategory.set(category, list)
   }
 
-  /** User stop: remove bookkeeping, stop the instance, unload dynamic Howls. */
+  /** User stop / interrupt: tear down listeners first, then stop and unload dynamic Howls. */
   private stopPlaybackInstance(playback: ActivePlayback): void {
+    this.detachPlaybackListeners(playback)
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
     this.stopHowlSound(playback.howl, playback.howlPlayId)
