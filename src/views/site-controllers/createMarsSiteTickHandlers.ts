@@ -241,9 +241,11 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       deploying: refs.deploying,
       heaterHeatBoostActive: refs.heaterHeatBoostActive,
       heaterEffectiveW: refs.heaterEffectiveW,
+      remsSurveying: refs.remsSurveying,
     },
     {
       playAmbientLoop: ctx.playAmbientLoop,
+      playActionSound: ctx.playInstrumentActionSound,
       setAmbientVolume: ctx.setAmbientVolume,
     },
   )

@@ -18,6 +18,7 @@ const AMBIENT_SOUND_IDS = [
   'ambient.quake',
   'ambient.rtg',
   'ambient.heater',
+  'ambient.rems',
 ] as const
 
 describe('audioManifest', () => {
@@ -36,6 +37,7 @@ describe('audioManifest', () => {
       'sfx.cameraMove',
       'sfx.danScan',
       'sfx.danProspecting',
+      'sfx.heaterOff',
       'ambient.base',
       'ambient.day',
       'ambient.night',
@@ -44,6 +46,7 @@ describe('audioManifest', () => {
       'ambient.quake',
       'ambient.rtg',
       'ambient.heater',
+      'ambient.rems',
       'sfx.roverDrive',
       'sfx.roverTurn',
       'sfx.roverTurnOut',
@@ -242,6 +245,13 @@ describe('audioManifest', () => {
       category: 'sfx',
       load: 'lazy',
       playback: 'single-instance',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('sfx.heaterOff')).toMatchObject({
+      src: '/sound/htr-off.mp3',
+      category: 'sfx',
+      load: 'lazy',
+      playback: 'restart',
       effect: 'none',
     })
     expect(getAudioDefinition('ambient.rtg')).toMatchObject({
