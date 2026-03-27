@@ -15,6 +15,7 @@ export class RtgSparkBurst {
   private velocities: Float32Array
   private lifetimes: Float32Array
   private active = false
+  private delay = 0
 
   constructor(scene: THREE.Scene) {
     this.positions = new Float32Array(SPARK_COUNT * 3)
@@ -57,7 +58,7 @@ export class RtgSparkBurst {
       this.lifetimes[i] = 2.0 + Math.random() * 2.0
     }
 
-    this.points.visible = true
+    this.delay = 0.6
     this.active = true
     ;(this.points.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true
   }
@@ -65,6 +66,14 @@ export class RtgSparkBurst {
   /** Advance particles. Call every frame. */
   update(dt: number): void {
     if (!this.active) return
+
+    if (this.delay > 0) {
+      this.delay -= dt
+      return
+    }
+    if (!this.points.visible) {
+      this.points.visible = true
+    }
 
     const attr = this.points.geometry.getAttribute('position') as THREE.BufferAttribute
     let anyAlive = false
