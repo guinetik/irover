@@ -219,6 +219,9 @@ function formatBody(body: string): string {
 }
 
 // --- Audio playback (manifest voice + dynamic src; progress via AudioPlaybackHandle) ---
+/** Howler may not report `playing()` until decode starts; avoid treating early `false` as failure. */
+const PLAYBACK_STARTUP_GRACE_MS = 2000
+
 let currentHandle: AudioPlaybackHandle | null = null
 const isPlaying = ref(false)
 const playingTxId = ref<string | null>(null)
@@ -252,9 +255,7 @@ function toggleAudio(tx: DiscoveredTx) {
     src: tx.audioUrl,
     onEnd: stopAudio,
   })
-  if (!handle.playing()) {
-    return
-  }
+  const playbackStartedAt = performance.now()
   currentHandle = handle
   playingTxId.value = tx.id
   isPlaying.value = true
@@ -263,7 +264,10 @@ function toggleAudio(tx: DiscoveredTx) {
     if (!currentHandle) return
     if (currentHandle.playing()) {
       audioProgress.value = currentHandle.progress() * 100
-    } else {
+      return
+    }
+    const elapsed = performance.now() - playbackStartedAt
+    if (elapsed > PLAYBACK_STARTUP_GRACE_MS) {
       stopAudio()
     }
   }, 100)
@@ -276,6 +280,19 @@ watch(() => props.open, (open) => {
     selectedId.value = null
     activeSenderFilter.value = 'all'
   } else {
+    stopAudio()
+  }
+})
+
+/** Stop if the playing transmission is no longer the selected row or is hidden by the sender filter. */
+watch([selectedId, activeSenderFilter, discoveredTransmissions], () => {
+  if (!playingTxId.value || !currentHandle) return
+  const pid = playingTxId.value
+  if (selectedId.value !== pid) {
+    stopAudio()
+    return
+  }
+  if (!discoveredTransmissions.value.some((t) => t.id === pid)) {
     stopAudio()
   }
 })
