@@ -15,7 +15,7 @@
           :org-name="orgNames[patron.id]"
           :highlighted="highlightIndex === i"
           @select="selectPatron(patron.id)"
-          @hover="highlightIndex = i"
+          @hover="() => { highlightIndex = i; audio.play('ui.click' as AudioSoundId) }"
         />
       </div>
     </div>
@@ -28,6 +28,10 @@ import { useRouter } from 'vue-router'
 import { usePlayerProfile, PATRONS, type PatronId } from '@/composables/usePlayerProfile'
 import { PatronScene } from '@/three/patron/PatronScene'
 import PatronCard from '@/components/patron/PatronCard.vue'
+import { useAudio } from '@/audio/useAudio'
+import type { AudioSoundId } from '@/audio/audioManifest'
+
+const audio = useAudio()
 
 const router = useRouter()
 const { setProfile, profile } = usePlayerProfile()
@@ -52,6 +56,7 @@ const orgNames: Record<PatronId, string> = {
 }
 
 function selectPatron(id: PatronId): void {
+  audio.play('ui.confirm' as AudioSoundId)
   setProfile(profile.archetype!, profile.foundation!, id)
   formVisible.value = false
   setTimeout(() => {
@@ -63,9 +68,11 @@ function onKeydown(e: KeyboardEvent): void {
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
     e.preventDefault()
     highlightIndex.value = highlightIndex.value >= patronList.value.length - 1 ? 0 : highlightIndex.value + 1
+    audio.play('ui.click' as AudioSoundId)
   } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
     e.preventDefault()
     highlightIndex.value = highlightIndex.value <= 0 ? patronList.value.length - 1 : highlightIndex.value - 1
+    audio.play('ui.click' as AudioSoundId)
   } else if (e.key === 'Enter') {
     e.preventDefault()
     if (highlightIndex.value >= 0 && highlightIndex.value < patronList.value.length) {
