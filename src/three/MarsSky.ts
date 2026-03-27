@@ -15,6 +15,7 @@ export class MarsSky {
   private static readonly NOON_COLOR = new THREE.Color(0xfff0d8)
   private static readonly AMBIENT_DAY = new THREE.Color(0x8b5e3c)
   private static readonly AMBIENT_NIGHT = new THREE.Color(0x1a1018)
+  private static readonly NIGHT_HORIZON = new THREE.Color(0x50351c)
   private readonly _scratchColor = new THREE.Color()
 
   readonly mesh: THREE.Mesh
@@ -22,6 +23,8 @@ export class MarsSky {
   private sunLight: THREE.DirectionalLight
   private ambientLight: THREE.AmbientLight
   private hemiLight: THREE.HemisphereLight
+  private stormLevel = 0
+  readonly horizonColor = new THREE.Color(0xd4b48c)
 
   // Exposed for other systems (terrain shader, dust)
   readonly sunDirection = new THREE.Vector3()
@@ -35,6 +38,11 @@ export class MarsSky {
       uniforms: {
         uSunDirection: { value: new THREE.Vector3() },
         uTimeOfDay: { value: this.timeOfDay },
+        uWindSpeed: { value: 1.0 },
+        uDustStormLevel: { value: 0 },
+        uWaterIceIndex: { value: 0 },
+        uWindDirection: { value: new THREE.Vector3(0.6, 0, 0.4).normalize() },
+        uTime: { value: 0 },
       },
       vertexShader: skyVert,
       fragmentShader: skyFrag,
@@ -128,6 +136,43 @@ export class MarsSky {
     // Ambient color — smooth transition instead of hard toggle
     const ambientT = THREE.MathUtils.smoothstep(elevation, -0.1, 0.2)
     this.ambientLight.color.copy(MarsSky.AMBIENT_NIGHT).lerp(MarsSky.AMBIENT_DAY, ambientT)
+
+    // Storm dimming
+    const stormDim = 1.0 - this.stormLevel * 0.14
+    this.sunLight.intensity *= stormDim
+    this.ambientLight.intensity *= stormDim
+    this.hemiLight.intensity *= stormDim
+
+    // Storm reddens sun color
+    if (this.stormLevel > 0) {
+      const stormT = this.stormLevel / 5
+      this._scratchColor.setHex(0xff6622)
+      this.sunLight.color.lerp(this._scratchColor, stormT * 0.6)
+    }
+
+    // Update horizon color for fog sync
+    const dayT = THREE.MathUtils.smoothstep(elevation, -0.1, 0.3)
+    this._scratchColor.setRGB(0.82, 0.70, 0.55)
+    this._scratchColor.lerp(MarsSky.NIGHT_HORIZON, 1 - dayT)
+    this.horizonColor.copy(this._scratchColor)
+  }
+
+  /** Update sky atmosphere from live weather state. Called each frame. */
+  setWeather(windMs: number, stormLevel: number, windDirDeg: number, simElapsed: number) {
+    const windNorm = windMs / 5
+    this.material.uniforms.uWindSpeed.value = windNorm
+    this.material.uniforms.uDustStormLevel.value = stormLevel
+    this.material.uniforms.uTime.value = simElapsed
+    this.stormLevel = stormLevel
+
+    const rad = (windDirDeg * Math.PI) / 180
+    const windDir = this.material.uniforms.uWindDirection.value as THREE.Vector3
+    windDir.set(-Math.sin(rad), 0, -Math.cos(rad))
+  }
+
+  /** Set terrain-driven sky params (called once at scene init). */
+  setTerrain(waterIceIndex: number) {
+    this.material.uniforms.uWaterIceIndex.value = waterIceIndex
   }
 
   dispose() {
