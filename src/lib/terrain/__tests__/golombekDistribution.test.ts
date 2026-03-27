@@ -24,6 +24,7 @@ const baseTerrain: TerrainParams = {
   craterDensity: 0.3,
   dustCover: 0.5,
   elevation: 0.5,
+  elevationKm: 0,
   ironOxide: 0.5,
   basalt: 0.5,
   seed: 42,
