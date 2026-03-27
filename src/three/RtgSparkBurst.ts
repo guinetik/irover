@@ -1,34 +1,40 @@
 import * as THREE from 'three'
 
-const SPARK_COUNT = 30
-const GRAVITY = 3
-const DRAG = 0.98
+const SPARK_COUNT = 40
+/** Radius of the sphere sparkles spawn on around the RTG center. */
+const SPAWN_RADIUS = 0.25
+/** Total duration before all sparkles have expired. */
+const TOTAL_DURATION = 1.8
 
 /**
- * One-shot electrical spark burst effect for RTG overdrive / power shunt activation.
- * Reusable: call {@link emit} to fire a burst from a world position.
- * Call {@link update} each frame; particles self-expire and hide when done.
+ * Electrical sparkle effect that dances around the RTG body on overdrive / shunt activation.
+ * Particles spawn on a sphere around the origin, jitter in place with random flicker,
+ * and fade out over time — like static discharge crawling over the surface.
  */
 export class RtgSparkBurst {
   private points: THREE.Points
   private positions: Float32Array
-  private velocities: Float32Array
+  private origins: Float32Array
   private lifetimes: Float32Array
+  private maxLifetimes: Float32Array
+  private phases: Float32Array
   private active = false
 
   constructor(scene: THREE.Scene) {
     this.positions = new Float32Array(SPARK_COUNT * 3)
-    this.velocities = new Float32Array(SPARK_COUNT * 3)
+    this.origins = new Float32Array(SPARK_COUNT * 3)
     this.lifetimes = new Float32Array(SPARK_COUNT)
+    this.maxLifetimes = new Float32Array(SPARK_COUNT)
+    this.phases = new Float32Array(SPARK_COUNT)
 
     const geo = new THREE.BufferGeometry()
     geo.setAttribute('position', new THREE.Float32BufferAttribute(this.positions, 3))
 
     const mat = new THREE.PointsMaterial({
-      color: 0x44aaff,
-      size: 0.035,
+      color: 0x55bbff,
+      size: 0.03,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.95,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       sizeAttenuation: true,
@@ -39,21 +45,29 @@ export class RtgSparkBurst {
     scene.add(this.points)
   }
 
-  /** Fire a spark burst from a world-space position. */
-  emit(origin: THREE.Vector3): void {
+  /** Fire sparkles around a world-space center (RTG node position). */
+  emit(center: THREE.Vector3): void {
     for (let i = 0; i < SPARK_COUNT; i++) {
-      this.positions[i * 3] = origin.x
-      this.positions[i * 3 + 1] = origin.y
-      this.positions[i * 3 + 2] = origin.z
-
+      // Random point on sphere surface
       const theta = Math.random() * Math.PI * 2
-      const phi = Math.random() * Math.PI * 0.6
-      const speed = 1.5 + Math.random() * 2.5
-      this.velocities[i * 3] = Math.cos(theta) * Math.sin(phi) * speed
-      this.velocities[i * 3 + 1] = Math.cos(phi) * speed + 0.3
-      this.velocities[i * 3 + 2] = Math.sin(theta) * Math.sin(phi) * speed
+      const phi = Math.acos(2 * Math.random() - 1)
+      const r = SPAWN_RADIUS * (0.6 + Math.random() * 0.4)
+      const ox = center.x + Math.sin(phi) * Math.cos(theta) * r
+      const oy = center.y + Math.sin(phi) * Math.sin(theta) * r
+      const oz = center.z + Math.cos(phi) * r
 
-      this.lifetimes[i] = 0.5 + Math.random() * 0.8
+      this.origins[i * 3] = ox
+      this.origins[i * 3 + 1] = oy
+      this.origins[i * 3 + 2] = oz
+      this.positions[i * 3] = ox
+      this.positions[i * 3 + 1] = oy
+      this.positions[i * 3 + 2] = oz
+
+      // Stagger start times so they don't all pop at once
+      const life = 0.6 + Math.random() * (TOTAL_DURATION - 0.6)
+      this.maxLifetimes[i] = life
+      this.lifetimes[i] = life
+      this.phases[i] = Math.random() * Math.PI * 2
     }
 
     this.points.visible = true
@@ -61,7 +75,7 @@ export class RtgSparkBurst {
     ;(this.points.geometry.getAttribute('position') as THREE.BufferAttribute).needsUpdate = true
   }
 
-  /** Advance particles. Call every frame. */
+  /** Advance sparkles. Call every frame. */
   update(dt: number): void {
     if (!this.active) return
 
@@ -70,32 +84,38 @@ export class RtgSparkBurst {
 
     for (let i = 0; i < SPARK_COUNT; i++) {
       this.lifetimes[i] -= dt
-      if (this.lifetimes[i] <= 0) continue
+      if (this.lifetimes[i] <= 0) {
+        // Hide dead particles far away
+        attr.setXYZ(i, 0, -1000, 0)
+        continue
+      }
 
       anyAlive = true
       const ix = i * 3
+      const t = 1 - this.lifetimes[i] / this.maxLifetimes[i]
+      const phase = this.phases[i]
 
-      // Move
-      this.positions[ix] += this.velocities[ix] * dt
-      this.positions[ix + 1] += this.velocities[ix + 1] * dt
-      this.positions[ix + 2] += this.velocities[ix + 2] * dt
+      // Jitter around origin — electrical crackle feel
+      const jitter = 0.04 * (1 - t * 0.5) // Calms down as it fades
+      const freq = 25 + i * 3
+      const jx = Math.sin(this.lifetimes[i] * freq + phase) * jitter
+      const jy = Math.cos(this.lifetimes[i] * freq * 1.3 + phase * 2) * jitter
+      const jz = Math.sin(this.lifetimes[i] * freq * 0.7 + phase * 3) * jitter
 
-      // Gravity
-      this.velocities[ix + 1] -= GRAVITY * dt
-
-      // Drag
-      this.velocities[ix] *= DRAG
-      this.velocities[ix + 2] *= DRAG
-
-      attr.setXYZ(i, this.positions[ix], this.positions[ix + 1], this.positions[ix + 2])
+      attr.setXYZ(
+        i,
+        this.origins[ix] + jx,
+        this.origins[ix + 1] + jy,
+        this.origins[ix + 2] + jz,
+      )
     }
 
     attr.needsUpdate = true
 
-    // Fade opacity based on oldest surviving particle
+    // Global opacity fade based on how many are still alive
+    const aliveRatio = this.lifetimes.filter(l => l > 0).length / SPARK_COUNT
     const mat = this.points.material as THREE.PointsMaterial
-    const maxLife = Math.max(...this.lifetimes)
-    mat.opacity = Math.max(0, Math.min(0.9, maxLife * 2))
+    mat.opacity = Math.min(0.95, aliveRatio * 1.5)
 
     if (!anyAlive) {
       this.active = false
