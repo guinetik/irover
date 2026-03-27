@@ -273,6 +273,78 @@
       "image": "/inventory/sample-08-bio.png",
       "weightPerUnit": 0.001,
       "maxStack": 50
+    },
+    {
+      "id": "silicate-fiber",
+      "category": "refined",
+      "label": "Silicate Fiber",
+      "description": "Thin translucent amber-orange glass fibers bundled in a coil. Pulled from molten volcanic glass during high-temp pyrolysis. Lightweight structural reinforcement.",
+      "image": "/inventory/refined-silicate-fiber.png",
+      "weightPerUnit": 0.005,
+      "maxStack": 200
+    },
+    {
+      "id": "iron-filament",
+      "category": "refined",
+      "label": "Iron Filament",
+      "description": "Dark metallic spool of fine wire with a slight rust-red sheen. Electrodeposited from dissolved iron oxide. Weldable structural strand.",
+      "image": "/inventory/refined-iron-filament.png",
+      "weightPerUnit": 0.008,
+      "maxStack": 150
+    },
+    {
+      "id": "nickel-steel-billet",
+      "category": "refined",
+      "label": "Nickel-Steel Billet",
+      "description": "Small dense rectangular ingot, gunmetal gray with a mirror-polished cross section showing crystalline Widmanstatten texture. High-strength meteoritic alloy, cold-worked.",
+      "image": "/inventory/refined-nickel-steel-billet.png",
+      "weightPerUnit": 0.015,
+      "maxStack": 100
+    },
+    {
+      "id": "perchlorate-oxidizer",
+      "category": "refined",
+      "label": "Perchlorate Oxidizer",
+      "description": "Sealed cylindrical white canister with orange hazard stripes. Concentrated perchlorate salt extracted from sulfate evaporites. Reactive oxidizer for chemical processing.",
+      "image": "/inventory/refined-perchlorate-oxidizer.png",
+      "weightPerUnit": 0.006,
+      "maxStack": 150
+    },
+    {
+      "id": "magnesium-powder",
+      "category": "refined",
+      "label": "Magnesium Powder",
+      "description": "Pale silvery-white powder in a clear vacuum-sealed pouch, faintly luminescent. Refined from olivine decomposition. Lightweight metal precursor and incendiary compound.",
+      "image": "/inventory/refined-magnesium-powder.png",
+      "weightPerUnit": 0.004,
+      "maxStack": 200
+    },
+    {
+      "id": "sulfuric-acid-vial",
+      "category": "refined",
+      "label": "Sulfuric Acid Vial",
+      "description": "Small sealed glass vial of viscous amber-yellow liquid with vapor condensation inside. Distilled from sulfate thermal decomposition. Universal industrial reagent.",
+      "image": "/inventory/refined-sulfuric-acid-vial.png",
+      "weightPerUnit": 0.005,
+      "maxStack": 150
+    },
+    {
+      "id": "organic-polymer-sheet",
+      "category": "refined",
+      "label": "Organic Polymer Sheet",
+      "description": "Thin flexible translucent sheet with a slight brownish tint, like dark cellophane. Polymerized from organic volatiles captured during mudstone pyrolysis. Sealant and insulation material.",
+      "image": "/inventory/refined-organic-polymer-sheet.png",
+      "weightPerUnit": 0.003,
+      "maxStack": 200
+    },
+    {
+      "id": "regolith-concrete",
+      "category": "refined",
+      "label": "Regolith Concrete",
+      "description": "Rough-textured brick-red cylindrical pellet with visible mineral grain inclusions. Basalt powder sintered with sulfuric binder. Basic structural filler.",
+      "image": "/inventory/refined-regolith-concrete.png",
+      "weightPerUnit": 0.02,
+      "maxStack": 100
     }
   ]
 }
