@@ -142,6 +142,7 @@ vi.mock('howler', () => {
 })
 
 import * as audioManifest from '../audioManifest'
+import { VOICE_DUCK_UI_SFX_MULTIPLIER } from '../audioEffects'
 import { AudioManager } from '../AudioManager'
 import { resetAudioForTests, useAudio } from '../useAudio'
 
@@ -404,6 +405,47 @@ describe('AudioManager', () => {
     manager.play('voice.dsnTransmission', { src: '/logs/off-test2.mp3' })
     expect(mockOff).toHaveBeenCalled()
   })
+
+  it('returns a no-op handle when a dynamic sound has no resolved src', () => {
+    manager.unlock()
+    const h = manager.play('voice.dsnTransmission')
+    expect(mockPlay).not.toHaveBeenCalled()
+    expect(h.playing()).toBe(false)
+    expect(h.progress()).toBe(0)
+  })
+
+  it('resolveEffect(voice.dsnTransmission) returns the DSN radio preset parameters', () => {
+    expect(manager.resolveEffect('voice.dsnTransmission')).toEqual({
+      id: 'dsn-radio',
+      lowpassHz: 3400,
+      highpassHz: 280,
+      distortion: 0.08,
+    })
+  })
+
+  it('ducks ui and sfx category gain to 0.55 of their mixer level while voice is active', () => {
+    manager.unlock()
+    manager.applyCategoryState('ui', { volume: 1, muted: false })
+    manager.applyCategoryState('sfx', { volume: 1, muted: false })
+    expect(manager.getCategoryVolume('ui')).toBe(1)
+    expect(manager.getCategoryVolume('sfx')).toBe(1)
+    manager.play('voice.dsnTransmission', { src: '/logs/duck.mp3' })
+    expect(manager.getCategoryVolume('ui')).toBeCloseTo(0.55)
+    expect(manager.getCategoryVolume('sfx')).toBeCloseTo(0.55)
+    expect(manager.getCategoryVolume('voice')).toBe(1)
+    fireRegisteredEndCallbacks()
+    expect(manager.getCategoryVolume('ui')).toBe(1)
+    expect(manager.getCategoryVolume('sfx')).toBe(1)
+  })
+
+  it('applies voice ducking on top of existing category volume without mutating mixer state', () => {
+    manager.unlock()
+    manager.applyCategoryState('ui', { volume: 0.8, muted: false })
+    manager.play('voice.dsnTransmission', { src: '/logs/duck2.mp3' })
+    expect(manager.getCategoryVolume('ui')).toBeCloseTo(0.44)
+    fireRegisteredEndCallbacks()
+    expect(manager.getCategoryVolume('ui')).toBe(0.8)
+  })
 })
 
 describe('useAudio', () => {
@@ -444,6 +486,7 @@ describe('AudioManagerOptions.initialCategoryState', () => {
     m.play('ui.click')
     expect(mockHowlVolume).toHaveBeenNthCalledWith(1, 0.35 * 0.25, 1)
     m.play('voice.dsnTransmission', { src: '/x.mp3' })
-    expect(mockHowlVolume).toHaveBeenNthCalledWith(2, 0, 2)
+    expect(mockHowlVolume).toHaveBeenNthCalledWith(2, 0.35 * 0.25 * VOICE_DUCK_UI_SFX_MULTIPLIER, 1)
+    expect(mockHowlVolume).toHaveBeenNthCalledWith(3, 0, 2)
   })
 })

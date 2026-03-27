@@ -1,10 +1,17 @@
 import { Howl, Howler } from 'howler'
+import {
+  createEffectChain,
+  getAudioEffectConfig,
+  VOICE_DUCK_UI_SFX_MULTIPLIER,
+  type AudioEffectConfig,
+} from './audioEffects'
 import { getAudioDefinition, type AudioSoundId } from './audioManifest'
 import {
   AUDIO_CATEGORIES,
   type AudioCategory,
   type AudioCategoryState,
   type AudioDefinition,
+  type AudioEffectPreset,
   type AudioManagerOptions,
   type AudioPlayOptions,
   type AudioPlaybackHandle,
@@ -22,6 +29,10 @@ interface ActivePlayback {
   howl: Howl
   /** Sound id returned by {@link Howl.play} (distinct instances on the same Howl). */
   howlPlayId?: number
+  /** `options.volume ?? def.volume` — used when voice ducking refreshes per-instance gain. */
+  baseVolumeScale: number
+  /** Restores Howl gain → `masterGain` after a Web Audio effect chain, if any. */
+  effectRelease?: () => void
   /** Same references passed to `on`/`once` so `off` can remove listeners on interrupt or failure. */
   endHandler: () => void
   playErrorHandler: HowlErrorEventHandler
@@ -72,6 +83,39 @@ export class AudioManager {
   }
 
   /**
+   * Resolves the manifest effect preset for a sound id to concrete DSP parameters.
+   *
+   * @param soundId - Registered manifest id.
+   */
+  resolveEffect(soundId: AudioSoundId): AudioEffectConfig {
+    const def = getAudioDefinition(soundId)
+    return getAudioEffectConfig(def.effect)
+  }
+
+  /**
+   * Effective category gain (0–1) including mute and voice ducking for `ui` / `sfx`.
+   *
+   * @param category - Mixer channel.
+   */
+  getCategoryVolume(category: AudioCategory): number {
+    const base = this.getCategoryBaseVolume(category)
+    if (category === 'ui' || category === 'sfx') {
+      return base * this.getVoiceDuckMultiplier()
+    }
+    return base
+  }
+
+  private getCategoryBaseVolume(category: AudioCategory): number {
+    const state = this.categoryState[category]
+    return state.muted ? 0 : state.volume
+  }
+
+  private getVoiceDuckMultiplier(): number {
+    const voice = this.activeByCategory.get('voice')
+    return voice && voice.length > 0 ? VOICE_DUCK_UI_SFX_MULTIPLIER : 1
+  }
+
+  /**
    * Marks the app as allowed to play audio and attempts to resume the Web Audio `AudioContext`
    * (required when `Howler.autoUnlock` is disabled). Safe to call repeatedly; resume failures are
    * ignored (e.g. strict autoplay policies).
@@ -110,6 +154,7 @@ export class AudioManager {
           })
         : this.getOrCreateHowl(soundId)
 
+    const baseVol = options.volume ?? def.volume
     const token = this.nextPlaybackToken++
     const playback: ActivePlayback = {
       token,
@@ -117,6 +162,7 @@ export class AudioManager {
       category: def.category,
       howl,
       howlPlayId: undefined,
+      baseVolumeScale: baseVol,
       endHandler: () => {},
       playErrorHandler: () => {},
       loadErrorHandler: () => {},
@@ -146,6 +192,9 @@ export class AudioManager {
     }
 
     this.pushActive(def.category, playback)
+    if (def.category === 'voice') {
+      this.refreshDuckedCategoryVolumes()
+    }
     this.registerPlaybackErrorListenersBeforePlay(howl, playback)
 
     const howlPlayIdRaw = howl.play()
@@ -159,6 +208,9 @@ export class AudioManager {
 
     const vol = this.computePlaybackVolume(def, options)
     this.applyPerInstanceVolume(howl, vol, playback.howlPlayId)
+
+    const effectPreset = options.effect ?? def.effect
+    playback.effectRelease = this.tryApplyPlaybackEffectChain(howl, playback.howlPlayId, effectPreset)
 
     this.registerEndListenerAfterPlay(howl, playback, playback.howlPlayId)
 
@@ -338,8 +390,13 @@ export class AudioManager {
 
   /** Natural completion: bookkeeping was updated in {@link endHandler}; only list + unload here. */
   private finalizePlaybackEnded(playback: ActivePlayback): void {
+    const wasVoice = playback.category === 'voice'
+    this.releasePlaybackEffectChain(playback)
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
+    if (wasVoice) {
+      this.refreshDuckedCategoryVolumes()
+    }
     if (!this.isCachedHowlInstance(playback.howl)) {
       playback.howl.unload()
     }
@@ -348,8 +405,13 @@ export class AudioManager {
   /** Load/decode failure: no `onEnd`; drop bookkeeping and unload dynamic Howls. */
   private teardownPlaybackFailure(playback: ActivePlayback): void {
     this.detachPlaybackListeners(playback)
+    const wasVoice = playback.category === 'voice'
+    this.releasePlaybackEffectChain(playback)
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
+    if (wasVoice) {
+      this.refreshDuckedCategoryVolumes()
+    }
     if (!this.isCachedHowlInstance(playback.howl)) {
       playback.howl.unload()
     }
@@ -374,8 +436,13 @@ export class AudioManager {
   /** User stop / interrupt: tear down listeners first, then stop and unload dynamic Howls. */
   private stopPlaybackInstance(playback: ActivePlayback): void {
     this.detachPlaybackListeners(playback)
+    const wasVoice = playback.category === 'voice'
+    this.releasePlaybackEffectChain(playback)
     const removed = this.removeFromActiveList(playback)
     if (!removed) return
+    if (wasVoice) {
+      this.refreshDuckedCategoryVolumes()
+    }
     this.stopHowlSound(playback.howl, playback.howlPlayId)
     if (!this.isCachedHowlInstance(playback.howl)) {
       playback.howl.unload()
@@ -416,12 +483,104 @@ export class AudioManager {
 
   private computePlaybackVolume(def: Readonly<AudioDefinition>, options: AudioPlayOptions): number {
     const baseVol = options.volume ?? def.volume
-    return baseVol * this.effectiveCategoryVolume(def.category)
+    return baseVol * this.getCategoryVolume(def.category)
   }
 
-  private effectiveCategoryVolume(category: AudioCategory): number {
-    const state = this.categoryState[category]
-    return state.muted ? 0 : state.volume
+  /**
+   * Re-applies per-instance volume for active `ui` / `sfx` playbacks when voice ducking changes.
+   */
+  private refreshDuckedCategoryVolumes(): void {
+    for (const cat of ['ui', 'sfx'] as const) {
+      const list = this.activeByCategory.get(cat)
+      if (!list?.length) continue
+      for (const p of list) {
+        const def = getAudioDefinition(p.soundId)
+        const vol = p.baseVolumeScale * this.getCategoryVolume(cat)
+        this.applyPerInstanceVolume(p.howl, vol, p.howlPlayId)
+      }
+    }
+  }
+
+  private releasePlaybackEffectChain(playback: ActivePlayback): void {
+    try {
+      playback.effectRelease?.()
+    } finally {
+      playback.effectRelease = undefined
+    }
+  }
+
+  /**
+   * Inserts the Web Audio effect chain between the Howl per-sound gain and `masterGain` when safe.
+   * Returns a restore function, or `undefined` if the preset is `none` or routing is unavailable.
+   */
+  private tryApplyPlaybackEffectChain(
+    howl: Howl,
+    howlPlayId: number | undefined,
+    effectPreset: AudioEffectPreset,
+  ): (() => void) | undefined {
+    if (effectPreset === 'none' || howlPlayId === undefined || Howler.noAudio) {
+      return undefined
+    }
+    const ctx = Howler.ctx
+    const masterGain = (Howler as unknown as { masterGain?: GainNode }).masterGain
+    if (!ctx || !masterGain) {
+      return undefined
+    }
+
+    const chain = createEffectChain(ctx, effectPreset)
+    if (!chain) {
+      return undefined
+    }
+
+    const sound = (
+      howl as unknown as {
+        _soundById?: (id: number) => { _node?: unknown } | null
+      }
+    )._soundById?.(howlPlayId)
+    const gainNode = sound?._node
+    if (!isWebAudioGainNode(gainNode)) {
+      chain.dispose()
+      return undefined
+    }
+
+    try {
+      gainNode.disconnect()
+    } catch {
+      chain.dispose()
+      return undefined
+    }
+
+    try {
+      gainNode.connect(chain.input)
+      chain.output.connect(masterGain)
+    } catch {
+      try {
+        gainNode.connect(masterGain)
+      } catch {
+        /* ignore */
+      }
+      chain.dispose()
+      return undefined
+    }
+
+    return () => {
+      try {
+        chain.output.disconnect()
+      } catch {
+        /* ignore */
+      }
+      try {
+        gainNode.disconnect()
+      } catch {
+        /* ignore */
+      }
+      chain.dispose()
+      try {
+        gainNode.connect(masterGain)
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   private resolvePlaySrc(
@@ -471,4 +630,15 @@ export class AudioManager {
       duration: () => 0,
     }
   }
+}
+
+/** True when Howler attached a Web Audio `GainNode` for this sound instance. */
+function isWebAudioGainNode(node: unknown): node is GainNode {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    'gain' in node &&
+    typeof (node as GainNode).connect === 'function' &&
+    typeof (node as GainNode).disconnect === 'function'
+  )
 }
