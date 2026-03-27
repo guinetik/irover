@@ -1491,17 +1491,14 @@ function createSiteControllerContext() {
       const count = txs.length
       const label = count === 1 ? '1 DSN transmission received' : `${count} DSN transmissions received`
       sampleToastRef.value?.showComm?.(label)
-      // Auto-play the first transmission's audio log if available
+      // Play DSN incoming cue; chain into voice log if the first transmission has audio
+      dsnVoicePlayback?.stop()
       const firstWithAudio = txs.find(tx => tx.audioUrl)
-      if (firstWithAudio?.audioUrl) {
-        dsnVoicePlayback?.stop()
-        // Play DSN incoming cue, then chain into the voice log
-        audio.play('sfx.dsnIncoming' as import('@/audio/audioManifest').AudioSoundId, {
-          onEnd: () => {
-            dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl })
-          },
-        })
-      }
+      audio.play('sfx.dsnIncoming' as import('@/audio/audioManifest').AudioSoundId, {
+        onEnd: firstWithAudio?.audioUrl
+          ? () => { dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl }) }
+          : undefined,
+      })
     },
     clearPois,
     devSpawnRandomInventoryItems,
