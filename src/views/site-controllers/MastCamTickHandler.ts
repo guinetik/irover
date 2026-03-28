@@ -61,6 +61,8 @@ export function createMastCamTickHandler(
   let surveyInitialised = false
   let heldTagPlayback: AudioPlaybackHandle | null = null
   let heldMovementPlayback: AudioPlaybackHandle | null = null
+  /** Track rock count to detect dynamically added rocks (e.g. meteorites). */
+  let lastKnownRockCount = 0
 
   function initIfReady(fctx: SiteFrameContext): void {
     if (surveyInitialised) return
@@ -123,6 +125,11 @@ export function createMastCamTickHandler(
       mc.durationMultiplier = stormPenalty / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
+        mc.rebuildOverlays()
+        lastKnownRockCount = mc['rocks'].length
+      } else if (mc['rocks'].length !== lastKnownRockCount) {
+        // Rock list changed (meteorite landed or storm cleared) — refresh overlays
+        lastKnownRockCount = mc['rocks'].length
         mc.rebuildOverlays()
       }
     } else {
