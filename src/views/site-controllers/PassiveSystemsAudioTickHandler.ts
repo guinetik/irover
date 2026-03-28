@@ -75,6 +75,7 @@ export function createPassiveSystemsAudioTickHandler(
   const heaterLayer: PassiveLayer = { id: 'ambient.heater' as AudioSoundId, handle: null, currentVol: 0 }
   const remsLayer: PassiveLayer = { id: 'ambient.rems' as AudioSoundId, handle: null, currentVol: 0 }
   const geigerLayer: PassiveLayer = { id: 'ambient.geiger' as any, handle: null, currentVol: 0 }
+  const radHitLayer: PassiveLayer = { id: 'ambient.radHit' as any, handle: null, currentVol: 0 }
   let heaterWasAudible = false
 
   /**
@@ -103,6 +104,7 @@ export function createPassiveSystemsAudioTickHandler(
     stopLayer(heaterLayer)
     stopLayer(remsLayer)
     stopLayer(geigerLayer)
+    stopLayer(radHitLayer)
     heaterWasAudible = false
   }
 
@@ -163,10 +165,15 @@ export function createPassiveSystemsAudioTickHandler(
     syncLayer(geigerLayer, radSurveying.value, geigerVol, fctx.sceneDelta)
 
     // Stereo pan toward nearest safe zone — audio dowsing
-    if (geigerLayer.handle && radSurveying.value) {
-      const pan = callbacks.getGeigerSafePan?.() ?? 0
-      setAmbientStereo(geigerLayer.handle, pan)
+    const safePan = callbacks.getGeigerSafePan?.() ?? null
+    if (geigerLayer.handle && radSurveying.value && safePan !== null) {
+      setAmbientStereo(geigerLayer.handle, safePan)
     }
+
+    // Rad-hit confirmation loop — plays when heading roughly toward safe zone
+    const onTrack = radSurveying.value && safePan !== null && Math.abs(safePan) < 0.35
+    const radHitVol = onTrack ? 0.6 + (0.35 - Math.abs(safePan)) * 1.0 : 0
+    syncLayer(radHitLayer, onTrack, radHitVol, fctx.sceneDelta)
   }
 
   function dispose(): void {

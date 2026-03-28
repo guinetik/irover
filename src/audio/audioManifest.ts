@@ -59,6 +59,7 @@ export const AUDIO_SOUND_IDS = [
   'sfx.roverTurn',
   'sfx.roverTurnOut',
   'ambient.geiger',
+  'ambient.radHit',
   'sfx.radEventSting',
 ] as const
 
@@ -430,6 +431,15 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'single-instance',
     volume: 1.0,
+    effect: 'none',
+  },
+  'ambient.radHit': {
+    id: 'ambient.radHit',
+    src: '/sound/rad-hit.mp3',
+    category: 'ambient',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.8,
     effect: 'none',
   },
   'sfx.radEventSting': {

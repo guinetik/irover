@@ -20,6 +20,7 @@ const AMBIENT_SOUND_IDS = [
   'ambient.heater',
   'ambient.rems',
   'ambient.geiger',
+  'ambient.radHit',
 ] as const
 
 describe('audioManifest', () => {
@@ -72,6 +73,7 @@ describe('audioManifest', () => {
       'sfx.roverTurn',
       'sfx.roverTurnOut',
       'ambient.geiger',
+      'ambient.radHit',
       'sfx.radEventSting',
     ])
   })
