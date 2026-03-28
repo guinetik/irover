@@ -6,12 +6,13 @@ import {
   classifyZone,
   computeZoneThresholds,
   radiationToDoseRate,
+  findNearestSafeZone,
   RAD_NIGHT_DOSE_MULTIPLIER,
   RAD_SPAWN_CONFIG,
   pickWeightedEvent,
   ZONE_CONFIG,
 } from '@/lib/radiation'
-import type { RadiationZone } from '@/lib/radiation'
+import type { RadiationZone, RadiationThresholds } from '@/lib/radiation'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type SampleToast from '@/components/SampleToast.vue'
 
@@ -47,6 +48,12 @@ export interface RadTickHandler extends SiteTickHandler {
   startDecode(): void
   /** End decode minigame. */
   endDecode(): void
+  /**
+   * Stereo pan toward nearest safe zone relative to camera heading.
+   * -1 = safe zone is to the left, 0 = straight ahead/behind, 1 = right.
+   * Returns null when in a safe zone or field not initialized.
+   */
+  getSafePan(): number | null
 }
 
 /**
@@ -83,6 +90,9 @@ export function createRadTickHandler(
   // Event spawn timer
   let eventTimer = randomEventInterval()
   let eventCooldown = 0
+
+  // Safe zone dowsing — cached per-frame for stereo pan
+  let cachedSafePan: number | null = null
 
   function randomEventInterval(): number {
     const base = RAD_SPAWN_CONFIG.baseIntervalSecMin +
@@ -181,6 +191,33 @@ export function createRadTickHandler(
     radLevel.value = zoneLevelForClassification
     radZone.value = zone
 
+    // --- Safe-zone dowsing: compute stereo pan toward nearest safe cell ---
+    if (zone === 'safe') {
+      cachedSafePan = null // already safe — no guidance needed
+    } else {
+      const safe = findNearestSafeZone(field, gridSize, terrainScale, roverPos.x, roverPos.z, thresholds)
+      if (safe) {
+        // Bearing from rover to safe zone in world space
+        const dx = safe.x - roverPos.x
+        const dz = safe.z - roverPos.z
+        const bearingToSafe = Math.atan2(dx, -dz) // world-space angle
+
+        // Camera heading (RoverController stores cameraHeading on the controller)
+        const camHeading = controller?.cameraHeading ?? 0
+
+        // Relative angle: positive = safe zone is to the right of camera
+        let rel = bearingToSafe - camHeading
+        // Normalize to [-PI, PI]
+        while (rel > Math.PI) rel -= Math.PI * 2
+        while (rel < -Math.PI) rel += Math.PI * 2
+
+        // Map to stereo pan: sin gives smooth L/R, clamped to [-1, 1]
+        cachedSafePan = Math.max(-1, Math.min(1, Math.sin(rel)))
+      } else {
+        cachedSafePan = null
+      }
+    }
+
     // ─── RAD-GATED (only when player has activated the instrument) ───
     // The HUD overlay, dose accumulation, zone toasts, and event spawning
     // require the player to opt-in by activating RAD.
@@ -232,5 +269,9 @@ export function createRadTickHandler(
     lastRover = null
   }
 
-  return { tick, dispose, setField, dismissEvent, startDecode, endDecode }
+  function getSafePan(): number | null {
+    return cachedSafePan
+  }
+
+  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan }
 }

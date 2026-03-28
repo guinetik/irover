@@ -299,6 +299,13 @@ export class AudioManager {
         const effectiveVol = vol * this.getCategoryVolume(def.category)
         this.applyPerInstanceVolume(howl, effectiveVol, playback.howlPlayId)
       },
+      setStereo: (pan: number) => {
+        if (playback.howlPlayId !== undefined) {
+          howl.stereo(pan, playback.howlPlayId)
+        } else {
+          howl.stereo(pan)
+        }
+      },
     }
   }
 
@@ -855,6 +862,9 @@ export class AudioManager {
       setVolume: (vol: number) => {
         if (stateRef.kind === 'active') stateRef.realHandle?.setVolume(vol)
       },
+      setStereo: (pan: number) => {
+        if (stateRef.kind === 'active') stateRef.realHandle?.setStereo(pan)
+      },
     }
   }
 
@@ -866,6 +876,7 @@ export class AudioManager {
       progress: () => 0,
       duration: () => 0,
       setVolume: () => {},
+      setStereo: () => {},
     }
   }
 }

@@ -116,6 +116,8 @@ export interface AudioPlaybackHandle {
   duration(): number
   /** Sets the playback volume (0–1) for this instance. */
   setVolume(volume: number): void
+  /** Sets stereo pan (-1 = full left, 0 = center, 1 = full right). */
+  setStereo(pan: number): void
 }
 
 /**

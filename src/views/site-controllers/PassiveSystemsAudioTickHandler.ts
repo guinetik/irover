@@ -16,12 +16,18 @@ export interface PassiveSystemsAudioCallbacks {
   playAmbientLoop: (soundId: AudioSoundId) => AudioPlaybackHandle
   playActionSound: (soundId: InstrumentActionSoundId) => void
   setAmbientVolume: (handle: AudioPlaybackHandle, volume: number) => void
+  setAmbientStereo: (handle: AudioPlaybackHandle, pan: number) => void
   showToast: (message: string) => void
   /**
    * When false (intro video overlay), keep RTG/heater/REMS beds silent — matches site simulation hold.
    * Defaults to audible when omitted.
    */
   passiveAmbienceAudible?: () => boolean
+  /**
+   * Stereo pan toward nearest safe radiation zone (-1 left, 0 center, 1 right).
+   * Null when no safe zone found or RAD field not initialized.
+   */
+  getGeigerSafePan?: () => number | null
 }
 
 interface PassiveLayer {
@@ -63,7 +69,7 @@ export function createPassiveSystemsAudioTickHandler(
   callbacks: PassiveSystemsAudioCallbacks,
 ): SiteTickHandler {
   const { descending, deploying, heaterHeatBoostActive, heaterEffectiveW, remsSurveying, radSurveying } = refs
-  const { playAmbientLoop, playActionSound, setAmbientVolume, showToast, passiveAmbienceAudible } = callbacks
+  const { playAmbientLoop, playActionSound, setAmbientVolume, setAmbientStereo, showToast, passiveAmbienceAudible } = callbacks
 
   const rtgLayer: PassiveLayer = { id: 'ambient.rtg' as AudioSoundId, handle: null, currentVol: 0 }
   const heaterLayer: PassiveLayer = { id: 'ambient.heater' as AudioSoundId, handle: null, currentVol: 0 }
@@ -155,6 +161,12 @@ export function createPassiveSystemsAudioTickHandler(
       ? GEIGER_BASE_VOL + Math.min(GEIGER_MAX_VOL - GEIGER_BASE_VOL, fctx.radiationLevel * 0.6)
       : 0
     syncLayer(geigerLayer, radSurveying.value, geigerVol, fctx.sceneDelta)
+
+    // Stereo pan toward nearest safe zone — audio dowsing
+    if (geigerLayer.handle && radSurveying.value) {
+      const pan = callbacks.getGeigerSafePan?.() ?? 0
+      setAmbientStereo(geigerLayer.handle, pan)
+    }
   }
 
   function dispose(): void {

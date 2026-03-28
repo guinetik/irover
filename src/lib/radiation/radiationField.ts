@@ -162,6 +162,53 @@ export function sampleRadiationAt(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Find the nearest safe zone position in world space from a given world position.
+ * Returns `null` if no safe cell exists in the field.
+ */
+export function findNearestSafeZone(
+  field: Float32Array,
+  gridSize: number,
+  terrainScale: number,
+  worldX: number,
+  worldZ: number,
+  thresholds: RadiationThresholds,
+): { x: number; z: number; dist: number } {
+  // Convert world pos to grid coords
+  const gMax = gridSize - 1
+  const roverGx = (worldX / terrainScale + 0.5) * gMax
+  const roverGz = (worldZ / terrainScale + 0.5) * gMax
+
+  let bestDist2 = Infinity
+  let bestGx = -1
+  let bestGz = -1
+
+  for (let gz = 0; gz < gridSize; gz++) {
+    for (let gx = 0; gx < gridSize; gx++) {
+      if (field[gz * gridSize + gx] >= thresholds.safeMax) continue
+      const dx = gx - roverGx
+      const dz = gz - roverGz
+      const dist2 = dx * dx + dz * dz
+      if (dist2 < bestDist2) {
+        bestDist2 = dist2
+        bestGx = gx
+        bestGz = gz
+      }
+    }
+  }
+
+  if (bestGx < 0) {
+    throw new Error('No safe zone found in radiation field — every map must have at least one safe cell')
+  }
+
+  // Convert back to world coords
+  const wx = (bestGx / gMax - 0.5) * terrainScale
+  const wz = (bestGz / gMax - 0.5) * terrainScale
+  const dx = wx - worldX
+  const dz = wz - worldZ
+  return { x: wx, z: wz, dist: Math.sqrt(dx * dx + dz * dz) }
+}
+
+/**
  * Convert a normalised radiation field value to a dose rate in mGy/day.
  *
  * Linear mapping:

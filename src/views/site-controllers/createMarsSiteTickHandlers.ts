@@ -266,30 +266,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
-  const passiveSystemsAudioHandler = createPassiveSystemsAudioTickHandler(
-    {
-      descending: refs.descending,
-      deploying: refs.deploying,
-      heaterHeatBoostActive: refs.heaterHeatBoostActive,
-      heaterEffectiveW: refs.heaterEffectiveW,
-      remsSurveying: refs.remsSurveying,
-      radSurveying: refs.radEnabled,
-    },
-    {
-      playAmbientLoop: ctx.playAmbientLoop,
-      playActionSound: ctx.playInstrumentActionSound,
-      setAmbientVolume: ctx.setAmbientVolume,
-      showToast: (msg) => ctx.sampleToastRef.value?.showComm?.(msg),
-      passiveAmbienceAudible: () => ctx.descentSfxAudible(),
-    },
-  )
-
-  const roverMovementSoundHandler = createRoverMovementSoundHandler({
-    startDriveLoop: () => ctx.startInstrumentActionLoop('sfx.roverDrive'),
-    startTurnLoop: () => ctx.startInstrumentActionLoop('sfx.roverTurn'),
-    playTurnOut: () => ctx.playInstrumentActionSound('sfx.roverTurnOut'),
-  })
-
   const radHandler = createRadTickHandler(
     {
       radZone: refs.radZone,
@@ -311,6 +287,32 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       hasLeadLined: () => ctx.hasPerk('lead-lined'),
     },
   )
+
+  const passiveSystemsAudioHandler = createPassiveSystemsAudioTickHandler(
+    {
+      descending: refs.descending,
+      deploying: refs.deploying,
+      heaterHeatBoostActive: refs.heaterHeatBoostActive,
+      heaterEffectiveW: refs.heaterEffectiveW,
+      remsSurveying: refs.remsSurveying,
+      radSurveying: refs.radEnabled,
+    },
+    {
+      playAmbientLoop: ctx.playAmbientLoop,
+      playActionSound: ctx.playInstrumentActionSound,
+      setAmbientVolume: ctx.setAmbientVolume,
+      setAmbientStereo: (handle, pan) => handle.setStereo(pan),
+      showToast: (msg) => ctx.sampleToastRef.value?.showComm?.(msg),
+      passiveAmbienceAudible: () => ctx.descentSfxAudible(),
+      getGeigerSafePan: () => radHandler.getSafePan(),
+    },
+  )
+
+  const roverMovementSoundHandler = createRoverMovementSoundHandler({
+    startDriveLoop: () => ctx.startInstrumentActionLoop('sfx.roverDrive'),
+    startTurnLoop: () => ctx.startInstrumentActionLoop('sfx.roverTurn'),
+    playTurnOut: () => ctx.playInstrumentActionSound('sfx.roverTurnOut'),
+  })
 
   function disposeAll(): void {
     roverVfxHandler.dispose()
