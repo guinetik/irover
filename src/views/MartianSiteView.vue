@@ -252,6 +252,19 @@
       @dump="removeInventoryStack"
     />
     <ProfilePanel :open="profileOpen" />
+    <MapOverlay
+      :open="mapOpen"
+      :site-name="siteId"
+      :map-canvas-mars="mapCanvasMars"
+      :map-canvas-hypso="mapCanvasHypso"
+      :base-lat="siteLat"
+      :base-lon="siteLon"
+      :rover-x="roverWorldX"
+      :rover-z="roverWorldZ"
+      :terrain-scale="terrainScale"
+      :grid-size="terrainGridSize"
+      @close="mapOpen = false"
+    />
     <SAMDialog
       :visible="samDialogVisible"
       :stacks="inventoryStacks"
@@ -527,10 +540,10 @@
             'wheels-hud-btn--mic-on': micListening,
           }"
           :disabled="wheelsHudBlocked"
-          :title="micListening ? 'Microphone [M] — LISTENING' : 'Microphone [M]'"
+          :title="micListening ? 'Microphone [P] — LISTENING' : 'Microphone [P]'"
           @click="toggleMicPanel"
         >
-          <span class="wheels-hud-key font-instrument">M</span>
+          <span class="wheels-hud-key font-instrument">P</span>
           <span class="wheels-hud-icon wheels-hud-mic-icon" aria-hidden="true">&#x1F399;</span>
           <span class="wheels-hud-name">MIC</span>
         </button>
@@ -589,6 +602,7 @@ import RADEventAlert from '@/components/RADEventAlert.vue'
 import RADDecodeOverlay from '@/components/RADDecodeOverlay.vue'
 import RADResultDisplay from '@/components/RADResultDisplay.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
+import MapOverlay from '@/components/MapOverlay.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
 import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
@@ -681,6 +695,10 @@ const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
 const siteRover = computed(() => siteHandle.value?.rover ?? null)
+const mapCanvasMars = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasMars ?? null)
+const mapCanvasHypso = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasHypso ?? null)
+const terrainScale = computed(() => siteHandle.value?.siteScene?.terrain.scale ?? 1000)
+const terrainGridSize = computed(() => 512)
 const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra, queueForTransmission: queueChemCamTx, dequeueFromTransmission: dequeueChemCamTx } = useChemCamArchive()
 const {
   archiveProspect: archiveDanProspect,
@@ -934,6 +952,7 @@ const wheelsHudBlocked = computed(
 
 const inventoryOpen = ref(false)
 const profileOpen = ref(false)
+const mapOpen = ref(false)
 const crosshairVisible = ref(false)
 const crosshairColor = ref<'green' | 'red'>('red')
 const crosshairX = ref(50)
@@ -1105,6 +1124,12 @@ function toggleHeaterPanel() {
   if (!siteRover.value || isSleeping.value || wheelsHudBlocked.value) return
   if (activeInstrumentSlot.value === HEATER_SLOT) siteRover.value.activateInstrument(null)
   else siteRover.value.activateInstrument(HEATER_SLOT)
+}
+
+function toggleMapOverlay() {
+  if (isSleeping.value || wheelsHudBlocked.value) return
+  playUiCue('ui.switch')
+  mapOpen.value = !mapOpen.value
 }
 
 function toggleMicPanel() {
@@ -1843,6 +1868,10 @@ function onGlobalKeyDown(e: KeyboardEvent) {
     toggleProfilePanel()
   }
   if (e.key === 'm' || e.key === 'M') {
+    toggleMapOverlay()
+    return
+  }
+  if (e.key === 'p' || e.key === 'P') {
     toggleMicPanel()
     return
   }
