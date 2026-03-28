@@ -9,7 +9,7 @@
           </div>
           <div class="science-panes">
             <nav class="science-cats" aria-label="Categories">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0" class="science-empty-side">No discoveries yet.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0" class="science-empty-side">No discoveries yet.</div>
               <div v-if="spectra.length > 0" class="science-accordion">
                 <button
                   type="button"
@@ -128,9 +128,31 @@
                   </li>
                 </ul>
               </div>
+              <!-- RAD accordion -->
+              <div v-if="radEvents.length > 0" class="science-accordion science-accordion-rad">
+                <button type="button" class="science-acc-head science-acc-head-rad"
+                  :aria-expanded="radExpanded" @click="toggleRadAccordion">
+                  <span class="science-acc-chev" aria-hidden="true">{{ radExpanded ? '&#x25BC;' : '&#x25B6;' }}</span>
+                  <span class="science-acc-label">RAD</span>
+                  <span class="science-acc-badge science-acc-badge-rad font-instrument">{{ radEvents.length }}</span>
+                </button>
+                <ul v-show="radExpanded" class="science-acc-list" role="list">
+                  <li v-for="r in sortedRadEvents" :key="r.archiveId">
+                    <button type="button" class="science-acc-item"
+                      :class="{ active: r.archiveId === selectedRadId }"
+                      @click="selectRadReport(r.archiveId)">
+                      <span class="sai-rock" :style="{ color: RARITY_COLORS[r.rarity] ?? '#888' }">{{ r.eventName }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ r.capturedSol }} · {{ r.rarity.toUpperCase() }}
+                        <span v-if="r.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="r.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </nav>
             <div class="science-detail">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0" class="science-empty">No archived data.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0" class="science-empty">No archived data.</div>
               <!-- ChemCam detail -->
               <template v-if="detailMode === 'chemcam'">
                 <div v-if="!selected" class="science-detail-hint">Select a spectrum in the list.</div>
@@ -312,6 +334,61 @@
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
                 </div>
               </template>
+              <!-- RAD detail -->
+              <template v-if="detailMode === 'rad' && selectedRad">
+                <div class="science-detail-header">
+                  <div class="sdh-instrument" style="color: #44dd88">RAD EVENT ANALYSIS</div>
+                  <div class="sdh-rock">{{ selectedRad.eventName }}</div>
+                  <div class="sdh-sol">Sol {{ selectedRad.capturedSol }}</div>
+                </div>
+                <div class="science-detail-body">
+                  <!-- Rarity badge -->
+                  <div class="sam-detail-rarity" :style="{ background: RARITY_COLORS[selectedRad.rarity] + '22', borderColor: RARITY_COLORS[selectedRad.rarity] + '44' }">
+                    <span :style="{ color: RARITY_COLORS[selectedRad.rarity] }">{{ selectedRad.rarity.toUpperCase() }}</span>
+                  </div>
+                  <!-- Grade -->
+                  <div style="margin: 8px 0; text-align: center;">
+                    <span style="font-size: 11px; color: #44dd88; letter-spacing: 0.1em;">GRADE: </span>
+                    <span class="font-instrument" style="font-size: 24px; font-weight: bold;"
+                      :style="{ color: selectedRad.grade === 'S' ? '#ffdd33' : selectedRad.grade === 'A' ? '#44dd88' : '#e8a060' }">
+                      {{ selectedRad.grade }}
+                    </span>
+                  </div>
+                  <!-- Catch rate -->
+                  <div style="text-align: center; font-size: 12px; color: rgba(196,117,58,0.7); margin-bottom: 8px;">
+                    Catch: {{ selectedRad.caught }} / {{ selectedRad.total }} ({{ Math.round(selectedRad.caught / Math.max(1, selectedRad.total) * 100) }}%)
+                  </div>
+                  <!-- Classification -->
+                  <div v-if="!selectedRad.resolved" style="text-align: center; font-size: 11px; color: #ff6644; margin-bottom: 8px;">
+                    UNRESOLVED — Classification confidence {{ Math.round(selectedRad.confidence * 100) }}% (below 70% threshold)
+                  </div>
+                  <div v-else style="text-align: center; font-size: 11px; color: rgba(68,221,136,0.6); margin-bottom: 8px;">
+                    Classification confidence: {{ Math.round(selectedRad.confidence * 100) }}%
+                  </div>
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Event</dt><dd :style="{ color: RARITY_COLORS[selectedRad.rarity] }">{{ selectedRad.eventName }}</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedRad.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Lat / Lon</dt><dd class="sm-instr">{{ formatLatLon(selectedRad.latitudeDeg, selectedRad.longitudeDeg) }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedRad.capturedSol }} · {{ formatUtc(selectedRad.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>SP Earned</dt><dd class="sm-instr" style="color: #44dd88">+{{ selectedRad.spEarned }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedRad.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                  <!-- Side products -->
+                  <div v-if="selectedRad.sideProducts.length > 0" style="margin-top: 8px; font-size: 10px; color: #e8a54b;">
+                    Side products: {{ selectedRad.sideProducts.map(p => p.itemId).join(', ') }}
+                  </div>
+                  <!-- TX queue -->
+                  <div v-if="!selectedRad.transmitted" class="tx-queue-actions">
+                    <button v-if="!selectedRad.queuedForTransmission" type="button"
+                      class="tx-queue-btn tx-queue"
+                      @click="emitQueueForTx('rad', selectedRad.archiveId)">QUEUE FOR TRANSMISSION</button>
+                    <button v-else type="button"
+                      class="tx-queue-btn tx-dequeue"
+                      @click="emitDequeueFromTx('rad', selectedRad.archiveId)">REMOVE FROM QUEUE</button>
+                  </div>
+                  <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -328,6 +405,7 @@ import type { SpectrumPeak } from '@/types/chemcam'
 import type { ArchivedDANProspect } from '@/types/danArchive'
 import type { ArchivedSAMDiscovery } from '@/types/samArchive'
 import type { ArchivedAPXSAnalysis } from '@/composables/useAPXSArchive'
+import type { ArchivedRADEvent } from '@/types/radArchive'
 import APXSResultChart from '@/components/APXSResultChart.vue'
 
 const props = defineProps<{
@@ -336,12 +414,13 @@ const props = defineProps<{
   danProspects: ArchivedDANProspect[]
   samResults: ArchivedSAMDiscovery[]
   apxsResults: ArchivedAPXSAnalysis[]
+  radEvents: ArchivedRADEvent[]
 }>()
 
 const emit = defineEmits<{
   close: []
-  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
-  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string]
+  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string]
+  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string]
 }>()
 const { playUiCue } = useUiSound()
 
@@ -382,17 +461,20 @@ function toggleApxsAccordion(): void {
   apxsExpanded.value = !apxsExpanded.value
 }
 
-function emitQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string): void {
+function emitQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string): void {
   playUiCue('ui.switch')
   emit('queueForTransmission', source, archiveId)
 }
 
-function emitDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string): void {
+function emitDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string): void {
   playUiCue('ui.switch')
   emit('dequeueFromTransmission', source, archiveId)
 }
 
-const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs'>('chemcam')
+const radExpanded = ref(false)
+const selectedRadId = ref<string | null>(null)
+
+const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad'>('chemcam')
 
 /**
  * Plays the science-log report selection cue.
@@ -421,6 +503,16 @@ function selectApxsReport(archiveId: string): void {
   selectedApxsId.value = archiveId
 }
 
+function toggleRadAccordion(): void {
+  playUiCue('ui.switch')
+  radExpanded.value = !radExpanded.value
+}
+
+function selectRadReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedRadId.value = archiveId
+}
+
 watch(selectedDanId, (id) => {
   if (id) detailMode.value = 'dan'
 })
@@ -432,6 +524,9 @@ watch(selectedSamId, (id) => {
 })
 watch(selectedApxsId, (id) => {
   if (id) detailMode.value = 'apxs'
+})
+watch(selectedRadId, (id) => {
+  if (id) detailMode.value = 'rad'
 })
 
 watch(
@@ -471,6 +566,14 @@ const sortedApxsResults = computed(() =>
 
 const selectedApxs = computed(() =>
   sortedApxsResults.value.find((s) => s.archiveId === selectedApxsId.value) ?? null,
+)
+
+const sortedRadEvents = computed(() =>
+  [...props.radEvents].sort((a, b) => b.capturedAtMs - a.capturedAtMs),
+)
+
+const selectedRad = computed(() =>
+  sortedRadEvents.value.find((e) => e.archiveId === selectedRadId.value) ?? null,
 )
 
 const RARITY_COLORS: Record<string, string> = {
@@ -1080,4 +1183,10 @@ function formatLatLon(lat: number, lon: number): string {
   font-size: 10px;
   color: rgba(196, 117, 58, 0.5);
 }
+
+.science-acc-head-rad { color: #44dd88; background: rgba(68, 221, 136, 0.08); }
+.science-acc-head-rad:hover { background: rgba(68, 221, 136, 0.14); }
+.science-acc-badge-rad { background: rgba(68, 221, 136, 0.75); }
+.science-accordion-rad { border-color: rgba(68, 221, 136, 0.15); }
+.science-accordion-rad .science-acc-chev { color: rgba(68, 221, 136, 0.65); }
 </style>

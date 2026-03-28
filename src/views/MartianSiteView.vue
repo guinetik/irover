@@ -181,6 +181,7 @@
       :dan-prospects="danArchivedProspects"
       :sam-results="samArchivedDiscoveries"
       :apxs-results="apxsArchivedAnalyses"
+      :rad-events="radArchivedEvents"
       @close="scienceLogOpen = false"
       @queue-for-transmission="handleQueueForTx"
       @dequeue-from-transmission="handleDequeueFromTx"
@@ -627,6 +628,9 @@ import { useOrbitalPasses } from '@/composables/useOrbitalPasses'
 import APXSMinigame from '@/components/APXSMinigame.vue'
 import APXSResultDialog from '@/components/APXSResultDialog.vue'
 import { useAPXSArchive } from '@/composables/useAPXSArchive'
+import { useRadArchive } from '@/composables/useRadArchive'
+import { RAD_EVENT_DEFS } from '@/lib/radiation'
+import type { RadQualityGrade } from '@/lib/radiation'
 import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
@@ -1099,18 +1103,20 @@ function toggleMicPanel() {
   else siteRover.value.activateInstrument(MIC_SLOT)
 }
 
-function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string) {
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string) {
   if (source === 'chemcam') queueChemCamTx(archiveId)
   else if (source === 'dan') queueDanTx(archiveId)
   else if (source === 'sam') queueSamTx(archiveId)
   else if (source === 'apxs') queueAPXSTx(archiveId)
+  else if (source === 'rad') queueRadTx(archiveId)
 }
 
-function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs', archiveId: string) {
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string) {
   if (source === 'chemcam') dequeueChemCamTx(archiveId)
   else if (source === 'dan') dequeueDanTx(archiveId)
   else if (source === 'sam') dequeueSamTx(archiveId)
   else if (source === 'apxs') dequeueAPXSTx(archiveId)
+  else if (source === 'rad') dequeueRadTx(archiveId)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -1379,6 +1385,7 @@ const {
 } = useSamQueue()
 const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries, queueForTransmission: queueSamTx, dequeueFromTransmission: dequeueSamTx } = useSamArchive()
 const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis, queueForTransmission: queueAPXSTx, dequeueFromTransmission: dequeueAPXSTx } = useAPXSArchive()
+const { events: radArchivedEvents, archiveRadEvent, queueForTransmission: queueRadTx, dequeueFromTransmission: dequeueRadTx } = useRadArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 
@@ -1756,6 +1763,25 @@ function onRadDecodeComplete(result: {
   if (result.sideProducts.length > 0) {
     addComponentsBatch(result.sideProducts.map(sp => ({ itemId: sp.itemId, quantity: sp.quantity })))
   }
+
+  // Archive RAD event
+  archiveRadEvent({
+    eventId: result.eventId,
+    classifiedAs: result.classifiedAs,
+    eventName: RAD_EVENT_DEFS[result.classifiedAs].name,
+    rarity: RAD_EVENT_DEFS[result.classifiedAs].rarity,
+    resolved: result.resolved,
+    confidence: result.confidence,
+    caught: result.caught,
+    total: result.total,
+    grade: result.grade as RadQualityGrade,
+    spEarned: result.sp,
+    sideProducts: result.sideProducts,
+    capturedSol: marsSol.value,
+    siteId,
+    latitudeDeg: siteLat.value,
+    longitudeDeg: siteLon.value,
+  })
 
   // Show result screen
   radResultData.value = {

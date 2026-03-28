@@ -4,6 +4,7 @@ import { useChemCamArchive } from './useChemCamArchive'
 import { useDanArchive } from './useDanArchive'
 import { useSamArchive } from './useSamArchive'
 import { useAPXSArchive } from './useAPXSArchive'
+import { useRadArchive } from './useRadArchive'
 import type { TransmissionQueueItem } from '@/types/transmissionQueue'
 import { BANDWIDTH_SEC } from '@/types/transmissionQueue'
 
@@ -22,6 +23,7 @@ export function useTransmissionQueue(): {
   const dan = useDanArchive()
   const sam = useSamArchive()
   const apxs = useAPXSArchive()
+  const rad = useRadArchive()
 
   const queue = computed<TransmissionQueueItem[]>(() => {
     const items: (TransmissionQueueItem & { _capturedAtMs: number })[] = []
@@ -79,6 +81,19 @@ export function useTransmissionQueue(): {
       })
     }
 
+    // RAD events — rarity comes from archive row
+    for (const event of rad.pendingTransmission.value) {
+      items.push({
+        archiveId: event.archiveId,
+        source: 'rad',
+        label: `RAD: ${event.eventName}`,
+        rarity: event.rarity,
+        bandwidthSec: BANDWIDTH_SEC[event.rarity],
+        originalSP: event.spEarned,
+        _capturedAtMs: event.capturedAtMs,
+      })
+    }
+
     // FIFO sort by capture time (oldest first)
     items.sort((a, b) => a._capturedAtMs - b._capturedAtMs)
 
@@ -97,6 +112,8 @@ export function useTransmissionQueue(): {
       sam.markTransmitted(item.archiveId)
     } else if (item.source === 'apxs') {
       apxs.markTransmitted(item.archiveId)
+    } else if (item.source === 'rad') {
+      rad.markTransmitted(item.archiveId)
     }
   }
 
