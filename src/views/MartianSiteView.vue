@@ -437,6 +437,14 @@
       :heading="roverHeading"
       :target-range="mastTargetRange"
     />
+    <RADHud
+      :enabled="radEnabled"
+      :zone="radZone"
+      :level="radLevel"
+      :dose-rate="radDoseRate"
+      :cumulative-dose="radCumulativeDose"
+      :particle-rate="radParticleRate"
+    />
     <div v-if="introComplete" class="power-hud-stack">
       <div v-if="!isSleeping" class="power-hud-top-controls">
         <button
@@ -556,6 +564,7 @@ import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
+import RADHud from '@/components/RADHud.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
