@@ -10,6 +10,37 @@ import type { AudioSoundId } from '@/audio/audioManifest'
 
 const METEOR_MARKER_COLOR = 0xff6633
 
+/** Max audible distance for meteor sounds (beyond this, volume is 0). */
+const AUDIO_MAX_DISTANCE = 400
+
+/**
+ * Compute distance-based volume (1.0 at 0m, fading to 0 at AUDIO_MAX_DISTANCE)
+ * and stereo pan (-1 left, +1 right) from the camera's perspective.
+ */
+function computeSpatialAudio(
+  soundPos: THREE.Vector3,
+  roverPos: THREE.Vector3,
+  camera: THREE.PerspectiveCamera | null,
+): { volume: number; pan: number } {
+  const dist = roverPos.distanceTo(soundPos)
+  // Inverse-square-ish falloff, clamped
+  const volume = dist >= AUDIO_MAX_DISTANCE ? 0 : Math.max(0, 1 - (dist / AUDIO_MAX_DISTANCE)) ** 0.7
+
+  // Stereo pan based on camera heading
+  let pan = 0
+  if (camera && dist > 1) {
+    const toSound = new THREE.Vector3().subVectors(soundPos, roverPos).normalize()
+    // Camera forward in XZ plane
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    forward.y = 0
+    forward.normalize()
+    // Cross product Y gives left/right: positive = sound is to the right
+    pan = Math.max(-1, Math.min(1, forward.x * toSound.z - forward.z * toSound.x))
+  }
+
+  return { volume, pan }
+}
+
 /** Number of trail points — ~1 second at 60 fps. */
 const TRAIL_LENGTH = 60
 
@@ -83,6 +114,7 @@ export class MeteorFallRenderer {
   private camera: THREE.PerspectiveCamera | null = null
   private audioManager: AudioManager | null = null
   private shake: ShakeState | null = null
+  private lastRoverPos: THREE.Vector3 | null = null
   private trailMaterial: THREE.PointsMaterial
 
   constructor(scene: THREE.Scene) {
@@ -156,10 +188,18 @@ export class MeteorFallRenderer {
     mesh.material = burnMat
     this.visuals.set(fall.id, visual)
 
-    this.audioManager?.play('sfx.meteorFall' as AudioSoundId)
+    // Spatial audio: volume + pan based on distance/angle to target
+    if (this.audioManager && this.lastRoverPos) {
+      const handle = this.audioManager.play('sfx.meteorFall' as AudioSoundId)
+      const { volume, pan } = computeSpatialAudio(targetVec, this.lastRoverPos, this.camera)
+      handle.setVolume(volume)
+      handle.setStereo(pan)
+    }
   }
 
   update(delta: number, roverPosition: THREE.Vector3): void {
+    this.lastRoverPos = roverPosition
+
     // Falling meshes
     for (const [, visual] of this.visuals) {
       const { fall, mesh, origin, target, burnMaterial } = visual
@@ -314,14 +354,19 @@ export class MeteorFallRenderer {
       this.shake = { intensity: shakeIntensity, duration: shakeDuration, elapsed: 0 }
     }
 
-    // Impact sound with Mars speed-of-sound delay
+    // Impact sound with Mars speed-of-sound delay + spatial audio
+    const { volume, pan } = computeSpatialAudio(target, roverPosition, this.camera)
+    const playImpact = () => {
+      if (!this.audioManager) return
+      const handle = this.audioManager.play('sfx.meteorImpact' as AudioSoundId)
+      handle.setVolume(volume)
+      handle.setStereo(pan)
+    }
     const soundDelay = computeSoundDelay(distance)
     if (soundDelay < 0.05) {
-      this.audioManager?.play('sfx.meteorImpact' as AudioSoundId)
+      playImpact()
     } else {
-      setTimeout(() => {
-        this.audioManager?.play('sfx.meteorImpact' as AudioSoundId)
-      }, soundDelay * 1000)
+      setTimeout(playImpact, soundDelay * 1000)
     }
 
     this.removeMarker(fall)
