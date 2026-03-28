@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useUiSound } from '@/composables/useUiSound'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import { MARS_SOL_CLOCK_MINUTES } from '@/lib/marsTimeConstants'
+import ScrambleText from '@/components/ScrambleText.vue'
 
 const props = defineProps<{
   messages: LGAMessage[]
@@ -17,11 +18,14 @@ const emit = defineEmits<{
 const { playUiCue } = useUiSound()
 
 const activeTab = ref<'inbox' | 'sent'>('inbox')
-const expandedId = ref<string | null>(null)
 
 const inbox = computed(() => props.messages.filter(m => m.direction === 'received').reverse())
 const sent = computed(() => props.messages.filter(m => m.direction === 'sent').reverse())
 const displayedMessages = computed(() => activeTab.value === 'inbox' ? inbox.value : sent.value)
+
+const emptyLabel = computed(() =>
+  activeTab.value === 'inbox' ? 'No received messages' : 'No sent messages',
+)
 
 /**
  * Switches inbox / sent tab with the shared tab-toggle cue.
@@ -32,16 +36,11 @@ function setTab(tab: 'inbox' | 'sent'): void {
   activeTab.value = tab
 }
 
-function toggleMessage(msg: LGAMessage) {
-  if (expandedId.value === msg.id) {
-    playUiCue('ui.switch')
-    expandedId.value = null
-  } else {
-    playUiCue('ui.science')
-    expandedId.value = msg.id
-    if (!msg.read) emit('markRead', msg.id)
-    emit('open-message', msg)
-  }
+/** Opens the message dialog; list rows stay ellipsized previews (full text only in the overlay dialog). */
+function openMessageRow(msg: LGAMessage): void {
+  playUiCue('ui.science')
+  if (!msg.read && msg.direction === 'received') emit('markRead', msg.id)
+  emit('open-message', msg)
 }
 
 function formatTimeOfDay(tod: number): string {
@@ -55,7 +54,9 @@ function formatTimeOfDay(tod: number): string {
 <template>
   <div class="lga-mailbox">
     <div class="mailbox-header">
-      <span class="mailbox-title">LGA MAILBOX</span>
+      <span class="mailbox-title">
+        <ScrambleText text="LGA MAILBOX" :speed="22" :scramble-frames="10" :stagger="1" />
+      </span>
     </div>
 
     <div class="mailbox-tabs">
@@ -65,8 +66,16 @@ function formatTimeOfDay(tod: number): string {
         type="button"
         @click="setTab('inbox')"
       >
-        INBOX
-        <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
+        <ScrambleText text="INBOX" :speed="28" :scramble-frames="6" :stagger="1" />
+        <span v-if="unreadCount > 0" class="unread-badge">
+          <ScrambleText
+            :key="`n-${unreadCount}`"
+            :text="String(unreadCount)"
+            :speed="24"
+            :scramble-frames="4"
+            :stagger="0"
+          />
+        </span>
       </button>
       <button
         class="tab-btn"
@@ -74,32 +83,40 @@ function formatTimeOfDay(tod: number): string {
         type="button"
         @click="setTab('sent')"
       >
-        SENT
+        <ScrambleText text="SENT" :speed="28" :scramble-frames="6" :stagger="1" />
       </button>
     </div>
 
     <div class="mailbox-list">
       <div v-if="displayedMessages.length === 0" class="mailbox-empty">
-        No {{ activeTab === 'inbox' ? 'received' : 'sent' }} messages
+        <ScrambleText
+          :key="emptyLabel"
+          :text="emptyLabel"
+          :speed="26"
+          :scramble-frames="8"
+          :stagger="1"
+        />
       </div>
 
       <div
         v-for="msg in displayedMessages"
         :key="msg.id"
         class="mailbox-item"
-        :class="{ unread: !msg.read, expanded: expandedId === msg.id }"
-        @click="toggleMessage(msg)"
+        :class="{ unread: !msg.read && msg.direction === 'received' }"
+        @click="openMessageRow(msg)"
       >
         <div class="msg-row">
-          <span class="msg-dot" :class="{ unread: !msg.read }">●</span>
+          <span class="msg-dot" :class="{ unread: !msg.read && msg.direction === 'received' }">●</span>
           <span v-if="msg.type === 'mission'" class="msg-mission-badge">[M]</span>
-          <span class="msg-subject">{{ msg.subject }}</span>
+          <span class="msg-subject">
+            <span class="msg-subject-clip" :title="msg.subject">{{ msg.subject }}</span>
+          </span>
         </div>
         <div class="msg-meta">
           SOL {{ msg.sol }} — {{ formatTimeOfDay(msg.timeOfDay) }}
         </div>
         <div class="msg-body-preview">
-          {{ msg.body }}
+          <span class="msg-body-clip" :title="msg.body">{{ msg.body }}</span>
         </div>
       </div>
     </div>
@@ -132,6 +149,10 @@ function formatTimeOfDay(tod: number): string {
   text-transform: uppercase;
 }
 
+.mailbox-title :deep(.scramble-text) {
+  color: inherit;
+}
+
 .mailbox-tabs {
   display: flex;
   gap: 2px;
@@ -140,6 +161,10 @@ function formatTimeOfDay(tod: number): string {
 }
 
 .tab-btn {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 4px;
   background: none;
   border: 1px solid rgba(136, 204, 255, 0.15);
   border-radius: 4px;
@@ -152,10 +177,18 @@ function formatTimeOfDay(tod: number): string {
   transition: all 0.15s ease;
 }
 
+.tab-btn :deep(.scramble-text) {
+  color: inherit;
+}
+
 .tab-btn.active {
   color: rgba(136, 204, 255, 0.95);
   border-color: rgba(136, 204, 255, 0.4);
   background: rgba(136, 204, 255, 0.08);
+}
+
+.tab-btn.active :deep(.scramble-text) {
+  color: inherit;
 }
 
 .unread-badge {
@@ -167,6 +200,10 @@ function formatTimeOfDay(tod: number): string {
   font-size: 9px;
   margin-left: 4px;
   font-weight: bold;
+}
+
+.unread-badge :deep(.scramble-text) {
+  color: inherit;
 }
 
 .mailbox-list {
@@ -182,6 +219,10 @@ function formatTimeOfDay(tod: number): string {
   font-style: italic;
 }
 
+.mailbox-empty :deep(.scramble-text) {
+  color: inherit;
+}
+
 .mailbox-item {
   padding: 6px 12px;
   cursor: pointer;
@@ -191,10 +232,6 @@ function formatTimeOfDay(tod: number): string {
 
 .mailbox-item:hover {
   background: rgba(136, 204, 255, 0.05);
-}
-
-.mailbox-item.expanded {
-  background: rgba(136, 204, 255, 0.08);
 }
 
 .msg-row {
@@ -223,13 +260,24 @@ function formatTimeOfDay(tod: number): string {
 
 .msg-subject {
   color: rgba(200, 200, 220, 0.7);
-  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.msg-subject-clip {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mailbox-item.unread .msg-subject {
   color: rgba(200, 200, 220, 0.95);
+  font-weight: bold;
+}
+
+.mailbox-item.unread .msg-subject-clip {
+  color: inherit;
   font-weight: bold;
 }
 
@@ -247,6 +295,10 @@ function formatTimeOfDay(tod: number): string {
   font-family: var(--font-instrument);
   font-size: 9px;
   line-height: 1.3;
+}
+
+.msg-body-clip {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

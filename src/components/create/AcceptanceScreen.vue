@@ -63,15 +63,15 @@ const roverId = `MSL-2187-${String.fromCharCode(65 + Math.floor(Math.random() * 
   font-size: 13px;
   line-height: 1.8;
   margin: 0;
-  color: rgba(196, 149, 106, 0.9);
+  color: rgba(255, 215, 165, 0.95);
 }
 
 .line.dim {
-  color: rgba(196, 149, 106, 0.5);
+  color: rgba(255, 200, 145, 0.72);
 }
 
 .line.bright {
-  color: #c4956a;
+  color: rgba(255, 205, 140, 1);
   font-weight: 600;
 }
 
@@ -79,8 +79,8 @@ const roverId = `MSL-2187-${String.fromCharCode(65 + Math.floor(Math.random() * 
   margin-top: 40px;
   align-self: flex-start;
   background: none;
-  border: 1px solid rgba(196, 149, 106, 0.4);
-  color: #c4956a;
+  border: 1px solid rgba(255, 190, 120, 0.5);
+  color: rgba(255, 200, 130, 1);
   font-family: var(--font-mono);
   font-size: 13px;
   padding: 10px 32px;
@@ -90,7 +90,7 @@ const roverId = `MSL-2187-${String.fromCharCode(65 + Math.floor(Math.random() * 
 }
 
 .btn:hover {
-  border-color: rgba(196, 149, 106, 0.8);
-  color: rgba(196, 149, 106, 1);
+  border-color: rgba(255, 210, 150, 0.9);
+  color: rgba(255, 220, 170, 1);
 }
 </style>

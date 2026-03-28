@@ -17,8 +17,8 @@ describe('useLGAMailbox mission extensions', () => {
     resetForTests()
   })
 
-  it('pushMessage adds a message with generated id and read=false', () => {
-    const { pushMessage, messages } = useLGAMailbox()
+  it('pushMessage sets read=false for received and read=true for sent (no phantom inbox unread)', () => {
+    const { pushMessage, messages, unreadCount } = useLGAMailbox()
     pushMessage({
       direction: 'received',
       sol: 1,
@@ -29,13 +29,19 @@ describe('useLGAMailbox mission extensions', () => {
       from: 'Mission Control',
       missionId: 'm01-triangulate',
     })
-    expect(messages.value.length).toBe(1)
-    const msg = messages.value[0]
-    expect(msg.id).toBeTruthy()
-    expect(msg.read).toBe(false)
-    expect(msg.type).toBe('mission')
-    expect(msg.from).toBe('Mission Control')
-    expect(msg.missionId).toBe('m01-triangulate')
+    pushMessage({
+      direction: 'sent',
+      sol: 1,
+      timeOfDay: 0.5,
+      subject: 'MISSION COMPLETE: Test',
+      body: 'Done',
+      type: 'info',
+      from: 'Rover',
+    })
+    expect(messages.value.length).toBe(2)
+    expect(messages.value[0].read).toBe(false)
+    expect(messages.value[1].read).toBe(true)
+    expect(unreadCount.value).toBe(1)
   })
 
   it('pushMessage persists to localStorage', () => {
@@ -80,5 +86,35 @@ describe('useLGAMailbox mission extensions', () => {
       missionId: 'm01-triangulate',
     })
     expect(unreadCount.value).toBe(1)
+  })
+
+  it('pushMessage is idempotent for the same missionId and direction', () => {
+    const { pushMessage, messages } = useLGAMailbox()
+    const payload = {
+      direction: 'received' as const,
+      sol: 5,
+      timeOfDay: 0.2,
+      subject: 'Mission brief',
+      body: 'Details here',
+      type: 'mission' as const,
+      missionId: 'm02-repeat',
+    }
+    pushMessage(payload)
+    pushMessage(payload)
+    expect(messages.value.length).toBe(1)
+  })
+
+  it('pushMessage is idempotent for the same sol, subject, and body (no missionId)', () => {
+    const { pushMessage, messages } = useLGAMailbox()
+    const payload = {
+      direction: 'received' as const,
+      sol: 7,
+      timeOfDay: 0.1,
+      subject: 'STATUS',
+      body: 'Ping',
+    }
+    pushMessage(payload)
+    pushMessage({ ...payload, timeOfDay: 0.99 })
+    expect(messages.value.length).toBe(1)
   })
 })

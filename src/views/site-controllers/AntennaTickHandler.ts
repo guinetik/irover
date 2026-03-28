@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import { solFractionFromMarsClockHours, sceneSecondsFromSolFraction, secondsPerSol } from '@/lib/missionTime'
 
 import { AntennaLGController } from '@/three/instruments/AntennaLGController'
@@ -24,7 +24,7 @@ export interface AntennaTickRefs {
   uhfWindowRemainingSec: Ref<number>
   uhfNextPassInSec: Ref<number>
   uhfTransmittedThisPass: Ref<number>
-  lgaUnreadCount: Ref<number>
+  lgaUnreadCount: Ref<number> | ComputedRef<number>
   passiveUiRevision: Ref<number>
 }
 
@@ -71,7 +71,6 @@ export function createAntennaTickHandler(
 
     // Always sync unread count (mission pushMessage can add messages while LGA is off)
     lgaCtrl.unreadCount = mailbox.unreadCount.value
-    refs.lgaUnreadCount.value = mailbox.unreadCount.value
 
     if (!lgaCtrl.passiveSubsystemEnabled) return
 
@@ -103,7 +102,6 @@ export function createAntennaTickHandler(
 
     // Update controller state
     lgaCtrl.unreadCount = currentUnread
-    refs.lgaUnreadCount.value = currentUnread
   }
 
   // --- UHF Tick ---

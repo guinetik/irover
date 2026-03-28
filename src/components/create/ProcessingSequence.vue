@@ -87,18 +87,18 @@ onUnmounted(() => {
   font-size: 13px;
   line-height: 1.8;
   margin: 0;
-  color: rgba(196, 149, 106, 0.9);
+  color: rgba(255, 215, 165, 0.95);
 }
 
 .line.dim {
-  color: rgba(196, 149, 106, 0.5);
+  color: rgba(255, 200, 145, 0.72);
 }
 
 .snark {
   margin-top: 16px;
   font-size: 13px;
   line-height: 1.8;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 228, 200, 0.92);
   max-width: 64ch;
 }
 
@@ -106,8 +106,8 @@ onUnmounted(() => {
   margin-top: 32px;
   align-self: flex-start;
   background: none;
-  border: 1px solid rgba(196, 149, 106, 0.3);
-  color: #c4956a;
+  border: 1px solid rgba(255, 190, 120, 0.45);
+  color: rgba(255, 200, 130, 1);
   font-family: var(--font-mono);
   font-size: 13px;
   padding: 8px 24px;
@@ -117,7 +117,7 @@ onUnmounted(() => {
 }
 
 .btn:hover {
-  border-color: rgba(196, 149, 106, 0.7);
-  color: rgba(196, 149, 106, 1);
+  border-color: rgba(255, 210, 150, 0.85);
+  color: rgba(255, 220, 170, 1);
 }
 </style>

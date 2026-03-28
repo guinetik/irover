@@ -21,6 +21,7 @@ export const AUDIO_SOUND_IDS = [
   'ui.processing',
   'ui.science',
   'ui.achievement',
+  'ui.reward',
   'ui.error',
   'ui.dsnArchivePlay',
   'ui.dsnArchiveSelect',
@@ -179,6 +180,15 @@ const manifestById: ManifestById = {
   'ui.achievement': {
     id: 'ui.achievement',
     src: '/sound/achievement.mp3',
+    category: 'ui',
+    load: 'lazy',
+    playback: 'restart',
+    volume: 0.58,
+    effect: 'none',
+  },
+  'ui.reward': {
+    id: 'ui.reward',
+    src: '/sound/reward.mp3',
     category: 'ui',
     load: 'lazy',
     playback: 'restart',

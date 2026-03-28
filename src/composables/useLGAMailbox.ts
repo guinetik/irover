@@ -57,7 +57,10 @@ export function resetMailboxForDev(): void {
 }
 
 export function useLGAMailbox() {
-  const unreadCount = computed(() => messages.value.filter((m) => !m.read).length)
+  /** Inbox badge: received mail only (outbox rows must not count as “unread”). */
+  const unreadCount = computed(
+    () => messages.value.filter((m) => m.direction === 'received' && !m.read).length,
+  )
 
   /**
    * Send a status heartbeat for the given sol.
@@ -105,10 +108,28 @@ export function useLGAMailbox() {
     saveToStorage(next)
   }
 
-  /** Push an arbitrary message into the mailbox (e.g. from mission system). */
+  /**
+   * True when an equivalent row is already stored (avoids duplicates after remount / repeated mission hooks).
+   */
+  function hasDuplicateMessage(msg: Omit<LGAMessage, 'id' | 'read'>): boolean {
+    return messages.value.some((m) => {
+      if (m.direction !== msg.direction) return false
+      if (msg.missionId != null && m.missionId === msg.missionId) return true
+      return m.sol === msg.sol && m.subject === msg.subject && m.body === msg.body
+    })
+  }
+
+  /**
+   * Push an arbitrary message into the mailbox (e.g. from mission system).
+   * Outgoing rows start {@link LGAMessage.read} `true` so they never inflate the inbox unread badge.
+   * Idempotent: same {@link LGAMessage.missionId} (if set) and direction, or same sol+subject+body, is a no-op.
+   */
   function pushMessage(msg: Omit<LGAMessage, 'id' | 'read'>): void {
+    if (hasDuplicateMessage(msg)) return
+
     const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const next = [...messages.value, { ...msg, id, read: false }]
+    const read = msg.direction === 'sent'
+    const next = [...messages.value, { ...msg, id, read }]
     messages.value = next
     saveToStorage(next)
   }

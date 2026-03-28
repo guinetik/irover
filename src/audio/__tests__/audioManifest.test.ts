@@ -29,9 +29,11 @@ describe('audioManifest', () => {
       'ui.switch',
       'ui.instrument',
       'ui.confirm',
+      'ui.type',
       'ui.processing',
       'ui.science',
       'ui.achievement',
+      'ui.reward',
       'ui.error',
       'ui.dsnArchivePlay',
       'ui.dsnArchiveSelect',
@@ -122,9 +124,11 @@ describe('audioManifest', () => {
         || id === 'ui.switch'
         || id === 'ui.instrument'
         || id === 'ui.confirm'
+        || id === 'ui.type'
         || id === 'ui.processing'
         || id === 'ui.science'
         || id === 'ui.achievement'
+        || id === 'ui.reward'
         || id === 'music.intro'
         || id === 'music.theme'
       if (isInstrument || isAmbient || isBundledFileCue) {
@@ -230,6 +234,13 @@ describe('audioManifest', () => {
     })
     expect(getAudioDefinition('ui.achievement')).toMatchObject({
       src: '/sound/achievement.mp3',
+      category: 'ui',
+      load: 'lazy',
+      playback: 'restart',
+      effect: 'none',
+    })
+    expect(getAudioDefinition('ui.reward')).toMatchObject({
+      src: '/sound/reward.mp3',
       category: 'ui',
       load: 'lazy',
       playback: 'restart',

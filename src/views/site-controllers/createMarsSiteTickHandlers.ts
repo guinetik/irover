@@ -242,7 +242,10 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       onDSNTransmissionsReceived: ctx.onDSNTransmissionsReceived,
       playUhfLock: () => ctx.playInstrumentActionSound('sfx.uhfLock'),
       startUhfUplinkLoop: () => ctx.startInstrumentActionLoop('sfx.uhfUplink'),
-      playLgaUplink: () => ctx.playInstrumentActionSound('sfx.lgaUplink'),
+      playLgaUplink: () => {
+        if (!ctx.commCuesAudible()) return
+        ctx.playInstrumentActionSound('sfx.lgaUplink')
+      },
     },
   )
 
@@ -269,6 +272,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playActionSound: ctx.playInstrumentActionSound,
       setAmbientVolume: ctx.setAmbientVolume,
       showToast: (msg) => ctx.sampleToastRef.value?.showComm?.(msg),
+      passiveAmbienceAudible: () => ctx.descentSfxAudible(),
     },
   )
 

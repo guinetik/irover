@@ -71,6 +71,24 @@ describe('PassiveSystemsAudioTickHandler', () => {
     expect(playAmbientLoop).not.toHaveBeenCalled()
   })
 
+  it('keeps passive ambients silent while intro cinematic covers the site', () => {
+    const playAmbientLoop = vi.fn()
+    const handler = createPassiveSystemsAudioTickHandler(
+      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      {
+        playAmbientLoop,
+        playActionSound: vi.fn(),
+        setAmbientVolume: vi.fn(),
+        showToast: vi.fn(),
+        passiveAmbienceAudible: () => false,
+      },
+    )
+
+    handler.tick(makeFctx({ roverReady: true }))
+
+    expect(playAmbientLoop).not.toHaveBeenCalled()
+  })
+
   it('keeps a quiet constant RTG bed even with heater off', () => {
     const setAmbientVolume = vi.fn()
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())

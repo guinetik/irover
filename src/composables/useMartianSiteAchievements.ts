@@ -236,7 +236,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
       if (!unlockedTrackIds.value.includes(m.id)) {
         unlockedTrackIds.value = [...unlockedTrackIds.value, m.id]
         unlockedAchievementIds.value = [...unlockedAchievementIds.value, m.id]
-        achievementRef.value?.show(m.icon, m.title, m.description, m.type)
+        achievementRef.value?.show(m.icon, m.title, m.description, m.type, 'ui.reward')
       }
     }
     rewardTrackPrevSP.value = sp

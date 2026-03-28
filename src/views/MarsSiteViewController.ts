@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import type { ComputedRef, Ref } from 'vue'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -306,7 +306,7 @@ export interface MarsSiteViewRefs {
   uhfWindowRemainingSec: Ref<number>
   uhfNextPassInSec: Ref<number>
   uhfTransmittedThisPass: Ref<number>
-  lgaUnreadCount: Ref<number>
+  lgaUnreadCount: Ref<number> | ComputedRef<number>
   /** Sol clock ambient segment — null when REMS not surveying. */
   solClockAmbientC: Ref<number | null>
   remsHud: Ref<RemsHudSnapshot>
@@ -389,6 +389,15 @@ export interface MarsSiteViewContext {
   playAmbientLoop: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
   playSoundWithHandle: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
   setAmbientVolume: (handle: import('@/audio/audioTypes').AudioPlaybackHandle, volume: number) => void
+  /**
+   * When false, suppress LGA “incoming message” SFX so they do not play over the intro video.
+   * The view should defer DSN receive cues until this is true as well.
+   */
+  commCuesAudible: () => boolean
+  /**
+   * When false, intro MP4 is showing: site simulation (descent, deploy, sky, ticks) and descent SFX stay off.
+   */
+  descentSfxAudible: () => boolean
   clearPois: () => void
   devSpawnRandomInventoryItems: typeof devSpawnRandomInventoryItems
   devSpawnInventoryItemById: typeof import('@/composables/useInventory').devSpawnInventoryItem
@@ -691,10 +700,18 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       const rawDelta = clock.getDelta()
       const sceneDelta = gameClock.getSceneDelta(rawDelta)
-      const solDelta = sceneDelta / secondsPerSol()
       const skyDelta = gameClock.getSkyDelta(rawDelta)
-      gameClock.missionCooldowns.tick(sceneDelta)
-      simulationTime += sceneDelta
+      /**
+       * Intro video runs first; sky-crane / deploy / sol progression stay frozen until it finishes
+       * (see MartianSiteView `descentSfxAudible` ↔ intro overlay visible).
+       */
+      const introSimulationHold = !ctx.descentSfxAudible()
+      const effSceneDelta = introSimulationHold ? 0 : sceneDelta
+      const effSkyDelta = introSimulationHold ? 0 : skyDelta
+      const solDelta = effSceneDelta / secondsPerSol()
+
+      gameClock.missionCooldowns.tick(effSceneDelta)
+      simulationTime += effSceneDelta
 
       const roverReady = siteScene.roverState === 'ready'
       const nightFactor = siteScene.sky?.nightFactor ?? 0
@@ -708,8 +725,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Build per-frame context ---
       const fctx: SiteFrameContext = {
-        sceneDelta,
-        skyDelta,
+        sceneDelta: effSceneDelta,
+        skyDelta: effSkyDelta,
         simulationTime,
         camera,
         siteScene,
@@ -763,7 +780,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       if (controller) {
         controller.criticalPowerMobilitySuspended = isSleeping.value
       }
-      controller?.update(sceneDelta)
+      controller?.update(effSceneDelta)
       if (controller) {
         const sw = siteWeather.value
         const dustStormEvent: HazardEvent = {
@@ -801,7 +818,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
 
       // --- POI dwell detection + mission objective checks ---
-      tickPoiArrivals(roverWorldX.value, roverWorldZ.value, missionPoisRef.value, sceneDelta)
+      tickPoiArrivals(roverWorldX.value, roverWorldZ.value, missionPoisRef.value, effSceneDelta)
       // Update waypoint marker colors based on dwell progress
       for (const poi of missionPoisRef.value) {
         const progress = getPoiDwellProgress(poi.id)
@@ -813,7 +830,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         missionPoisRef.value,
         marsSol.value,
       )
-      tickTransmit(sceneDelta, marsSol.value)
+      tickTransmit(effSceneDelta, marsSol.value)
       updateWaypointMarkers(simulationTime)
 
       // --- Delegated ticks ---
@@ -840,7 +857,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const samCtl2 = controller?.instruments.find(i => i.id === 'sam') as SAMController | undefined
         if (samCtl2) {
           samCtl2.experimentRunning = samIsProcessing.value
-          const completed = samTick(sceneDelta)
+          const completed = samTick(effSceneDelta)
           if (completed) {
             sampleToastRef.value?.showDAN(`SAM: ${completed.modeName} complete`)
           }
@@ -848,7 +865,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
       {
         // APXS queue processing
-        const apxsCompleted = apxsTick(sceneDelta)
+        const apxsCompleted = apxsTick(effSceneDelta)
         if (apxsCompleted) {
           sampleToastRef.value?.showDAN('APXS analysis complete')
         }
@@ -877,7 +894,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Thermal + heater ---
       if (siteTerrainParams.value) {
-        tickThermal(sceneDelta, {
+        tickThermal(effSceneDelta, {
           timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
           temperatureMinK: siteTerrainParams.value.temperatureMinK,
           temperatureMaxK: siteTerrainParams.value.temperatureMaxK,
@@ -904,7 +921,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         micEnabled.value = micInst.passiveSubsystemEnabled
       }
       tickRemsWeather({
-        deltaSeconds: sceneDelta,
+        deltaSeconds: effSceneDelta,
         timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
         sol: marsSol.value,
         simulationTime,
@@ -937,7 +954,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           awakeForPower && wheelsForPower && (controller?.isMoving ?? false)
             ? wheelsForPower.getDrivePowerW()
             : 0
-        tickPower(sceneDelta, {
+        tickPower(effSceneDelta, {
           nightFactor,
           roverInSunlight: siteScene.roverInSunlight,
           moving: awakeForPower && (controller?.isMoving ?? false),
@@ -952,22 +969,33 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Deploy state machine ---
       if (siteScene.roverState === 'descending') {
-        if (!landingSoundPlayed) {
-          landingSoundHandle = ctx.playSoundWithHandle('sfx.landing')
-          landingSoundHandle.setVolume(0)
-          thrusterSoundHandle = ctx.startInstrumentActionLoop('sfx.thrusters')
-          landingSoundPlayed = true
+        const descentAudioOk = ctx.descentSfxAudible()
+        if (descentAudioOk) {
+          if (!landingSoundPlayed) {
+            landingSoundHandle = ctx.playSoundWithHandle('sfx.landing')
+            landingSoundHandle.setVolume(0)
+            thrusterSoundHandle = ctx.startInstrumentActionLoop('sfx.thrusters')
+            landingSoundPlayed = true
+            landingSoundFadeVol = 0
+          }
+          if (landingSoundHandle && landingSoundFadeVol < 0.7) {
+            landingSoundFadeVol = Math.min(0.7, landingSoundFadeVol + effSceneDelta * 0.35)
+            landingSoundHandle.setVolume(landingSoundFadeVol)
+          }
+        } else {
+          thrusterSoundHandle?.stop()
+          thrusterSoundHandle = null
+          landingSoundHandle?.stop()
+          landingSoundHandle = null
+          landingSoundPlayed = false
           landingSoundFadeVol = 0
-        }
-        // Fade in over ~2s using sceneDelta
-        if (landingSoundHandle && landingSoundFadeVol < 0.7) {
-          landingSoundFadeVol = Math.min(0.7, landingSoundFadeVol + sceneDelta * 0.35)
-          landingSoundHandle.setVolume(landingSoundFadeVol)
         }
         descending.value = true
         deploying.value = false
         if (siteScene.touchedDown) {
-          ctx.playInstrumentActionSound('sfx.contact')
+          if (descentAudioOk) {
+            ctx.playInstrumentActionSound('sfx.contact')
+          }
           thrusterSoundHandle?.stop()
           thrusterSoundHandle = null
         }
@@ -1054,7 +1082,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         siteScene.trails.update(siteScene.rover.position, controller?.heading ?? 0)
       }
 
-      siteScene.update(simulationTime, sceneDelta, camera.position, skyDelta)
+      siteScene.update(simulationTime, effSceneDelta, camera.position, effSkyDelta)
 
       // Weather drives sky atmosphere and fog (storm *visuals* only in FSM `active`; `incoming` is REMS warning only)
       const sw = siteWeather.value

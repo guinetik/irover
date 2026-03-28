@@ -1,9 +1,11 @@
 <template>
   <div class="intro-video-overlay">
+    <!-- TEMP: muted — drop `muted` when you want intro clip audio back -->
     <video
       ref="videoRef"
       class="intro-video"
       autoplay
+      muted
       playsinline
       @ended="onVideoEnded"
     >
@@ -195,6 +197,8 @@ onUnmounted(() => {
 }
 
 .intro-video {
+  position: relative;
+  z-index: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -205,21 +209,43 @@ onUnmounted(() => {
 .telemetry-hud {
   position: absolute;
   inset: 0;
+  z-index: 5;
   pointer-events: none;
+  isolation: isolate;
 }
 
 .telemetry-corner {
   position: absolute;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-family: monospace;
   font-size: 11px;
   letter-spacing: 0.12em;
-  color: rgba(228, 175, 90, 0.85);
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 1px 3px rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  /* Hard white core + stacked white bloom (phosphor / CRT leak) */
+  text-shadow:
+    0 0 1px #fff,
+    0 0 2px rgba(255, 255, 255, 1),
+    0 0 8px rgba(255, 255, 255, 0.95),
+    0 0 16px rgba(255, 255, 255, 0.85),
+    0 0 28px rgba(255, 255, 255, 0.65),
+    0 0 44px rgba(255, 255, 255, 0.45),
+    0 0 64px rgba(255, 255, 255, 0.28);
   text-transform: uppercase;
   padding: 24px;
+}
+
+/* Component roots don’t inherit parent text-shadow — match corner glow */
+.telemetry-corner :deep(.scramble-text) {
+  color: #ffffff;
+  text-shadow: inherit;
+}
+
+.telemetry-line,
+.mission-clock {
+  text-shadow: inherit;
 }
 
 .telemetry-corner.tl { top: 0; left: 0; }
@@ -229,23 +255,28 @@ onUnmounted(() => {
 
 .telemetry-line {
   white-space: nowrap;
+  color: #ffffff;
 }
 
 .mission-clock {
   font-size: 13px;
-  color: rgba(228, 185, 100, 0.9);
+  color: #ffffff;
 }
 
 .skip-prompt {
   position: absolute;
+  z-index: 6;
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
   font-family: monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
-  color: rgba(228, 175, 90, 0.7);
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  text-shadow:
+    0 0 2px #fff,
+    0 0 10px rgba(255, 255, 255, 0.9),
+    0 0 24px rgba(255, 255, 255, 0.55);
 }
 
 .deploy-fade-enter-active,
@@ -275,17 +306,18 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-/* Scanlines — matches shader's sin-based scan line banding */
+/* Scanlines — behind HUD copy (z-index) so type stays white, not striped gray */
 .telemetry-hud::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 0;
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.06) 2px,
-    rgba(0, 0, 0, 0.06) 4px
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
   );
   pointer-events: none;
 }
@@ -328,7 +360,7 @@ onUnmounted(() => {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 0;
   /* Subtle red/cyan fringe at edges — simulates chromatic aberration */
   box-shadow:
     inset 2px 0 8px -2px rgba(255, 60, 30, 0.08),

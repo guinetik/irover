@@ -16,6 +16,11 @@ export interface PassiveSystemsAudioCallbacks {
   playActionSound: (soundId: InstrumentActionSoundId) => void
   setAmbientVolume: (handle: AudioPlaybackHandle, volume: number) => void
   showToast: (message: string) => void
+  /**
+   * When false (intro video overlay), keep RTG/heater/REMS beds silent — matches site simulation hold.
+   * Defaults to audible when omitted.
+   */
+  passiveAmbienceAudible?: () => boolean
 }
 
 interface PassiveLayer {
@@ -57,7 +62,7 @@ export function createPassiveSystemsAudioTickHandler(
   callbacks: PassiveSystemsAudioCallbacks,
 ): SiteTickHandler {
   const { descending, deploying, heaterHeatBoostActive, heaterEffectiveW, remsSurveying } = refs
-  const { playAmbientLoop, playActionSound, setAmbientVolume, showToast } = callbacks
+  const { playAmbientLoop, playActionSound, setAmbientVolume, showToast, passiveAmbienceAudible } = callbacks
 
   const rtgLayer: PassiveLayer = { id: 'ambient.rtg' as AudioSoundId, handle: null, currentVol: 0 }
   const heaterLayer: PassiveLayer = { id: 'ambient.heater' as AudioSoundId, handle: null, currentVol: 0 }
@@ -113,6 +118,11 @@ export function createPassiveSystemsAudioTickHandler(
 
   function tick(fctx: SiteFrameContext): void {
     if (!fctx.roverReady) {
+      stopAll()
+      return
+    }
+
+    if (passiveAmbienceAudible && !passiveAmbienceAudible()) {
       stopAll()
       return
     }

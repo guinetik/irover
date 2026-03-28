@@ -48,6 +48,7 @@
       :longitude="siteLon"
       :archetype-name="playerProfile.archetype ?? 'UNKNOWN'"
       @intro-complete="onIntroComplete"
+      @video-overlay-visible="introVideoOverlayVisible = $event"
     />
     <Transition name="deploy-fade">
       <div v-if="apxsState === 'counting'" class="apxs-countdown-overlay" key="apxs-countdown">
@@ -597,6 +598,7 @@ import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
 import { computeAPXSSp, APXS_ELEMENTS, type APXSComposition, type APXSElementId } from '@/lib/apxsComposition'
 import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
+import type { DSNTransmission } from '@/types/dsnArchive'
 import { useMissionUI } from '@/composables/useMissionUI'
 import { useMissions } from '@/composables/useMissions'
 import { useDSNArchive } from '@/composables/useDSNArchive'
@@ -652,6 +654,26 @@ let themePlayback: AudioPlaybackHandle | null = null
 
 // --- DSN voice: one owned playback; first user gesture unlocks Howler; manager queues early DSN until then ---
 let dsnVoicePlayback: AudioPlaybackHandle | null = null
+
+/** Toast + DSN SFX/voice batched here when transmissions arrive before {@link introComplete}. */
+const pendingDsnTransmissionsForCue = ref<DSNTransmission[] | null>(null)
+
+/**
+ * Mission toast, DSN incoming sting, and optional voice log for pulled archive transmissions.
+ */
+function playDsnReceiveCue(txs: DSNTransmission[]): void {
+  const count = txs.length
+  const label = count === 1 ? '1 DSN transmission received' : `${count} DSN transmissions received`
+  sampleToastRef.value?.showComm?.(label)
+  dsnVoicePlayback?.stop()
+  const firstWithAudio = txs.find(tx => tx.audioUrl)
+  audio.play('sfx.dsnIncoming' as import('@/audio/audioManifest').AudioSoundId, {
+    onEnd: firstWithAudio?.audioUrl
+      ? () => { dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl }) }
+      : undefined,
+  })
+}
+
 function ensureAudioUnlocked() {
   audio.unlock()
   window.removeEventListener('keydown', ensureAudioUnlocked)
@@ -667,6 +689,8 @@ const controlsHintDismissed = ref(false)
 const siteLoading = ref(true)
 const skipIntro = isSiteIntroSequenceSkipped()
 const introComplete = ref(skipIntro)
+/** True while the intro MP4 overlay is up; sky-crane SFX stay off so muted video matches silent ambience. */
+const introVideoOverlayVisible = ref(!skipIntro)
 
 function onIntroComplete() {
   introComplete.value = true
@@ -766,7 +790,6 @@ const uhfQueueLength = ref(0)
 const uhfWindowRemainingSec = ref(0)
 const uhfNextPassInSec = ref(0)
 const uhfTransmittedThisPass = ref(0)
-const lgaUnreadCount = ref(0)
 const uhfEnabled = computed(() => {
   void passiveUiRevision.value
   return siteRover.value?.instruments.find(i => i.id === 'antenna-uhf')?.passiveSubsystemEnabled ?? false
@@ -1155,7 +1178,23 @@ const {
 })
 
 const lgaMailbox = useLGAMailbox()
+/** Single source of truth with {@link useLGAMailbox} (avoids stale ref only updated inside antenna tick). */
+const lgaUnreadCount = computed(() => lgaMailbox.unreadCount.value)
 const orbitalPasses = useOrbitalPasses()
+
+watch(introComplete, (done, wasDone) => {
+  if (!done) return
+  if (pendingDsnTransmissionsForCue.value?.length) {
+    const txs = pendingDsnTransmissionsForCue.value
+    pendingDsnTransmissionsForCue.value = null
+    playDsnReceiveCue(txs)
+  }
+  // Mail may have arrived while the intro video ran; LGA chime was suppressed — play once when systems wake.
+  if (wasDone === false && lgaMailbox.unreadCount.value > 0) {
+    audio.unlock()
+    audio.play('sfx.lgaUplink' as import('@/audio/audioManifest').AudioSoundId)
+  }
+})
 
 // --- Mission UI (extracted to composable) ---
 const mission = useMissionUI({
@@ -1636,18 +1675,15 @@ function createSiteControllerContext() {
     playAmbientLoop: (soundId) => audio.play(soundId, { loop: true }),
     playSoundWithHandle: (soundId) => audio.play(soundId),
     setAmbientVolume: (handle, volume) => handle.setVolume(volume),
+    commCuesAudible: () => introComplete.value,
+    descentSfxAudible: () => !introVideoOverlayVisible.value,
     onDSNTransmissionsReceived: (txs) => {
-      const count = txs.length
-      const label = count === 1 ? '1 DSN transmission received' : `${count} DSN transmissions received`
-      sampleToastRef.value?.showComm?.(label)
-      // Play DSN incoming cue; chain into voice log if the first transmission has audio
-      dsnVoicePlayback?.stop()
-      const firstWithAudio = txs.find(tx => tx.audioUrl)
-      audio.play('sfx.dsnIncoming' as import('@/audio/audioManifest').AudioSoundId, {
-        onEnd: firstWithAudio?.audioUrl
-          ? () => { dsnVoicePlayback = audio.play('voice.dsnTransmission', { src: firstWithAudio.audioUrl }) }
-          : undefined,
-      })
+      if (!introComplete.value) {
+        const cur = pendingDsnTransmissionsForCue.value
+        pendingDsnTransmissionsForCue.value = cur?.length ? [...cur, ...txs] : txs
+        return
+      }
+      playDsnReceiveCue(txs)
     },
     clearPois,
     devSpawnRandomInventoryItems,
