@@ -106,20 +106,20 @@ function computeShockwaveDamage(
 
 At the kill zone edge, a sensitive instrument takes 0.15 durability. At the shockwave edge, damage approaches zero. A heavy shower with multiple nearby impacts stacks up.
 
-### hazardDecay.ts Integration
+### No hazardDecay Integration
 
-Add `'meteor'` to `TIER_COEFFICIENTS`:
+Meteor shockwave is a **one-shot flat deduction**, not continuous decay. The existing `computeDecayMultiplier` returns a rate (1.0 + bonus) designed for per-frame continuous hazards like dust storms and radiation. Forcing a one-shot event through that system would require multiplying by frame delta for a single tick — yielding a tiny, meaningless number.
 
-```typescript
-'meteor': { rugged: 0.03, standard: 0.08, sensitive: 0.15 }
-```
+Instead, `computeShockwaveDamage()` is applied **directly** to each instrument's durability as a flat subtraction at the moment of impact. No `HazardEvent`, no decay multiplier. Clean and honest about what it is.
 
-Fire a one-shot `HazardEvent` with `source: 'meteor'`, `level` based on proximity (1-3). Apply via `computeDecayMultiplier`, then immediately deactivate.
+### Gameplay Intent
+
+The shockwave radius (~4.5m) is deliberately tight. Across a 640m × 640m play area, you will almost never take shockwave damage by accident. This is a **greed tax** — the player who camps the markers to get first dibs on the meteorite risks instrument damage. The correct play is: wait for impact, let the dust settle, then approach with MastCam's iron-meteorite filter from safe distance.
 
 ### Knockback Effects
 
 - **Camera shake:** Heavy, 1.5 seconds (stronger than the existing Pass 1 shake for impacts within blast radius)
-- **Dust whiteout:** If within 15m — screen goes near-opaque brown for 1-2 seconds via a CSS overlay with opacity transition
+- **Dust whiteout:** If within 15m — screen goes near-opaque brown for 1-2 seconds. Driven by a Vue overlay component (`MeteorShockOverlay.vue`) with a reactive ref from the controller — same pattern as REMS text refs. The renderer (Three.js layer) does NOT touch the DOM.
 - **Visual rover push:** If within 10m — rover mesh slides 0.5-1m away from blast center, cosmetic only (no physics simulation)
 
 ---
@@ -148,9 +148,9 @@ On impact:
    - `dist < radius`: push Y down with cosine bowl profile
    - `radius < dist < radius * 1.3`: push Y up for raised rim (gaussian bump)
 
-2. **Update mesh vertices** — Find all mesh vertices within the affected region. For each vertex, sample the new heightmap value and update its Y position. Flag `geometry.attributes.position.needsUpdate = true`.
+2. **Update mesh vertices** — `GlbTerrainGenerator` stores `terrainMeshes: THREE.Mesh[]` (the GLB can contain multiple mesh children). The implementation must iterate ALL terrain meshes and deform vertices in each one that fall within the crater radius. For each affected vertex, sample the new heightmap value and update its Y position. Flag `geometry.attributes.position.needsUpdate = true` on each modified geometry.
 
-3. **Recompute normals** — Call `geometry.computeVertexNormals()` on the affected mesh. Only the vertices within the crater region changed, but Three.js recomputes all normals. This is acceptable since it runs once per impact, not per frame.
+3. **Recompute normals** — Call `geometry.computeVertexNormals()` on each affected mesh. Only the vertices within the crater region changed, but Three.js recomputes all normals per mesh. This is acceptable since it runs once per impact, not per frame.
 
 4. **Reposition the meteorite** — The rock mesh's Y position must account for the new ground level at the crater center (the deepest point).
 
@@ -225,20 +225,21 @@ Click or Enter on `[ RESTART MISSION ]` → reload the current site (same landma
 
 | File | Purpose |
 |------|---------|
-| `src/lib/meteor/shockwaveDamage.ts` | `computeShockwaveDamage()` pure function |
+| `src/lib/meteor/shockwaveDamage.ts` | `computeShockwaveDamage()` pure function — standalone flat deduction, no hazardDecay |
 | `src/lib/meteor/craterProfile.ts` | Crater bowl/rim heightmap math (pure functions) |
 | `src/components/MeteorDeathOverlay.vue` | Game over overlay with signal breakup + terminal |
+| `src/components/MeteorShockOverlay.vue` | Dust whiteout overlay — reactive ref driven from controller |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
-| `src/three/MeteorFallRenderer.ts` | Add trail particles, dust whiteout overlay |
+| `src/three/MeteorFallRenderer.ts` | Add trail particles (Three.js Points buffer per fall) |
 | `src/three/MarsSky.ts` | Add `uMeteorShowerIntensity` uniform, red tint in shader |
-| `src/three/shaders/sky.frag.glsl` | Apply meteor tint when uniform > 0 |
+| `src/three/shaders/mars-sky.frag.glsl` | Apply meteor tint when uniform > 0 |
 | `src/views/site-controllers/MeteorController.ts` | Wire shockwave damage, kill detection, sky intensity, crater creation |
 | `src/views/site-controllers/MeteorTickHandler.ts` | No changes needed (phase logic unchanged) |
-| `src/lib/hazards/hazardDecay.ts` | Add `'meteor'` tier coefficients |
+| `src/views/MartianSiteView.vue` | Mount `MeteorShockOverlay`, wire whiteout ref |
 | `src/three/terrain/TerrainGenerator.ts` | Add `deformCrater()` to `ITerrainGenerator` interface + implementation |
 | `src/three/terrain/GlbTerrainGenerator.ts` | Implement `deformCrater()` |
 | `src/three/terrain/MarsGlobalTerrainGenerator.ts` | Implement `deformCrater()` |
