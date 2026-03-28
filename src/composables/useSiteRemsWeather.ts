@@ -86,6 +86,9 @@ export function useSiteRemsWeather() {
     uvIndex: 3,
     dustStormPhase: 'none',
     dustStormLevel: null,
+    renderWindMs: 5,
+    renderWindDirDeg: 0,
+    renderDustStormLevel: 0,
   })
 
   let storm: StormState = createStormState()

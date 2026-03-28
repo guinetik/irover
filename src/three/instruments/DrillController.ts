@@ -71,6 +71,12 @@ export class DrillController extends InstrumentController {
   lastTraceDrops: { element: string; label: string }[] | null = null
 
   get drillProgress(): number { return this.drill?.progress ?? 0 }
+  /**
+   * MastCam scan drill-speed factor from the laser drill (&lt; 1 = faster); `1` when the drill is not ready.
+   */
+  get mastcamScanDrillSpeedMult(): number {
+    return this.drill?.scanSpeedMult ?? 1
+  }
   get isDrilling(): boolean { return this.drilling && (this.drill?.isDrilling ?? false) }
   get hasTarget(): boolean { return this.currentTarget !== null }
   get isInventoryFull(): boolean { return this.inventory.isFull.value }

@@ -7,6 +7,7 @@ import { useSiteMissionPois } from './useSiteMissionPois'
 import { addWaypointMarker, removeWaypointMarker } from '@/three/WaypointMarkers'
 import { setRtgTutorialMode } from '@/lib/missionTime'
 import type { MarsSiteViewControllerHandle } from '@/views/MarsSiteViewController'
+import { isOrbitalDropItemId } from '@/types/orbitalDrop'
 
 /**
  * All mission-related UI state and logic, extracted from MartianSiteView.
@@ -92,10 +93,81 @@ export function useMissionUI(deps: {
     )),
   )
 
+  const missionCompleted = computed(() =>
+    !!(openedMessage.value?.missionId &&
+      completedMissions.value.some((m) => m.missionId === openedMessage.value?.missionId)
+    ),
+  )
+
   // --- POI reveal logic ---
   // Pre-computed positions for go-to objectives (stored at accept time, revealed progressively)
   const plannedPoiPositions = new Map<string, { x: number; z: number; label: string }>()
   const revealedPoiIds = new Set<string>()
+
+  /**
+   * Recomputes go-to POI world positions from the rover (same geometry as mission accept)
+   * and reveals eligible markers. Call after refresh so active missions stay playable.
+   */
+  function seedGoToPoisForMission(missionId: string): void {
+    const def = getMissionDef(missionId)
+    if (!def) return
+    const rx = roverWorldX.value
+    const rz = roverWorldZ.value
+    const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
+    goToObjs.forEach((obj, i) => {
+      const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
+      const dist = 8 + i * 15
+      const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
+      const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
+      plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
+    })
+    revealEligiblePois(missionId)
+  }
+
+  /**
+   * Spawns orbital supply boxes for gather objectives at the first go-to site (matches accept flow).
+   *
+   * @param incompleteOnly - When true (page reload), skip gathers already marked done.
+   */
+  function spawnMissionGatherOrbitalDrops(missionId: string, incompleteOnly: boolean): void {
+    const def = getMissionDef(missionId)
+    const state = activeMissions.value.find((m) => m.missionId === missionId)
+    if (!def || !state) return
+    const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
+    if (goToObjs.length === 0) return
+    const firstPos = plannedPoiPositions.get(goToObjs[0].params.poiId)
+    if (!firstPos) return
+
+    for (let i = 0; i < def.objectives.length; i++) {
+      const obj = def.objectives[i]
+      if (obj.type !== 'gather') continue
+      if (incompleteOnly && state.objectives[i]?.done) continue
+      const itemId = obj.params.itemId as string
+      if (!isOrbitalDropItemId(itemId)) continue
+      try {
+        siteHandle.value?.spawnOrbitalDropItem(itemId, {
+          x: firstPos.x,
+          z: firstPos.z,
+          quantity: obj.params.quantity ?? 1,
+        })
+      } catch {
+        /* scene not ready */
+      }
+    }
+  }
+
+  /** After load: restore POI layout and orbital crates for every active mission (same rules as accept). */
+  function syncActiveMissionsLayoutFromRover(): void {
+    for (const m of activeMissions.value) {
+      if (m.status !== 'active') continue
+      const def = getMissionDef(m.missionId)
+      if (!def) continue
+      const hasGoTo = def.objectives.some((o) => o.type === 'go-to')
+      if (!hasGoTo) continue
+      seedGoToPoisForMission(m.missionId)
+      spawnMissionGatherOrbitalDrops(m.missionId, true)
+    }
+  }
 
   function revealEligiblePois(missionId: string): void {
     const def = getMissionDef(missionId)
@@ -109,16 +181,18 @@ export function useMissionUI(deps: {
       if (objState.done) continue // already completed
 
       const poiId = objDef.params.poiId
-      if (revealedPoiIds.has(poiId)) continue // already visible
-
       // Only reveal if this objective is eligible (sequential gating)
       if (!isObjectiveEligible(missionId, objDef.id)) continue
 
       const pos = plannedPoiPositions.get(poiId)
       if (!pos) continue
 
-      revealedPoiIds.add(poiId)
+      // Always refresh compass / dwell list (static site-pois load can replace `pois` after first sync).
       upsertPoi({ id: poiId, label: pos.label, x: pos.x, z: pos.z, color: '#66ffee' })
+
+      if (revealedPoiIds.has(poiId)) continue
+
+      revealedPoiIds.add(poiId)
       const scene = siteHandle.value?.siteScene
       if (scene) {
         const groundY = scene.terrain.heightAt(pos.x, pos.z)
@@ -143,36 +217,8 @@ export function useMissionUI(deps: {
 
     const def = getMissionDef(missionId)
     if (def) {
-      const rx = roverWorldX.value
-      const rz = roverWorldZ.value
-      const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
-
-      // Pre-compute positions for all go-to POIs
-      goToObjs.forEach((obj, i) => {
-        const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-        const dist = 8 + i * 15
-        const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
-        const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
-        plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
-      })
-
-      // Only reveal POIs for currently eligible objectives
-      revealEligiblePois(missionId)
-
-      // Spawn orbital drops at the first go-to POI for any gather objectives
-      const gatherObjs = def.objectives.filter((o) => o.type === 'gather')
-      if (gatherObjs.length > 0 && goToObjs.length > 0) {
-        const firstPos = plannedPoiPositions.get(goToObjs[0].params.poiId)
-        if (firstPos) {
-          for (const gather of gatherObjs) {
-            try {
-              siteHandle.value?.spawnOrbitalDropItem(gather.params.itemId, {
-                x: firstPos.x, z: firstPos.z, quantity: gather.params.quantity ?? 1,
-              })
-            } catch { /* scene not ready */ }
-          }
-        }
-      }
+      seedGoToPoisForMission(missionId)
+      spawnMissionGatherOrbitalDrops(missionId, false)
     }
 
     openedMessage.value = null
@@ -283,6 +329,7 @@ export function useMissionUI(deps: {
     activeDwellProgress,
     lgaActive,
     missionAccepted,
+    missionCompleted,
 
     // Helpers
     getMissionDef,
@@ -300,5 +347,6 @@ export function useMissionUI(deps: {
     handleUntrack,
     newlyUnlockedInstruments,
     dismissNewlyUnlocked,
+    syncActiveMissionsLayoutFromRover,
   }
 }

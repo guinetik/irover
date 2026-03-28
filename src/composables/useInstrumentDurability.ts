@@ -30,6 +30,33 @@ function saveUpgrades(ids: string[]): void {
   try { localStorage.setItem(UPGRADES_STORAGE_KEY, JSON.stringify(ids)) } catch {}
 }
 
+// --- Durability persistence ---
+const DURABILITY_STORAGE_KEY = 'mars-instrument-durability-v1'
+
+interface DurabilityRecord {
+  durabilityPct: number
+  maxDurability: number
+}
+
+function loadDurability(): Record<string, DurabilityRecord> {
+  try {
+    const raw = localStorage.getItem(DURABILITY_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
+
+function saveDurability(instruments: InstrumentController[]): void {
+  try {
+    const data: Record<string, DurabilityRecord> = {}
+    for (const inst of instruments) {
+      if (inst.durabilityPct < 100 || inst.maxDurability < 100) {
+        data[inst.id] = { durabilityPct: inst.durabilityPct, maxDurability: inst.maxDurability }
+      }
+    }
+    localStorage.setItem(DURABILITY_STORAGE_KEY, JSON.stringify(data))
+  } catch {}
+}
+
 export function useInstrumentDurability() {
   const { stacks, consumeItem } = useInventory()
 
@@ -42,15 +69,27 @@ export function useInstrumentDurability() {
   function syncFromControllers(instruments: InstrumentController[]): void {
     instrumentRefs = instruments
 
-    // Restore persisted upgrades once on first sync
+    // Restore persisted state once on first sync
     if (!upgradesHydrated) {
       upgradesHydrated = true
-      const saved = loadUpgrades()
-      for (const id of saved) {
+      const savedUpgrades = loadUpgrades()
+      for (const id of savedUpgrades) {
         const inst = instruments.find(i => i.id === id)
         if (inst && !inst.upgraded) inst.applyUpgrade()
       }
+      const savedDurability = loadDurability()
+      for (const [id, record] of Object.entries(savedDurability)) {
+        const inst = instruments.find(i => i.id === id)
+        if (inst) {
+          inst.durabilityPct = record.durabilityPct
+          inst.maxDurability = record.maxDurability
+        }
+      }
     }
+
+    // Persist durability each frame (writes are cheap — only stores damaged instruments)
+    saveDurability(instruments)
+
     snapshots.value = instruments.map(inst => ({
       id: inst.id,
       name: inst.name,
@@ -100,6 +139,7 @@ export function useInstrumentDurability() {
     }
 
     inst.repair()
+    saveDurability(instrumentRefs)
     return { ok: true }
   }
 

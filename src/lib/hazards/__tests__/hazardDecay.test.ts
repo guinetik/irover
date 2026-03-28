@@ -18,35 +18,35 @@ describe('computeDecayMultiplier', () => {
 
   it('returns correct multiplier for rugged tier', () => {
     const event: HazardEvent = { source: 'dust-storm', active: true, level: 1 }
-    expect(computeDecayMultiplier([event], 'rugged')).toBeCloseTo(1.15)
+    expect(computeDecayMultiplier([event], 'rugged')).toBeCloseTo(1.30)
 
     event.level = 3
-    expect(computeDecayMultiplier([event], 'rugged')).toBeCloseTo(1.45)
+    expect(computeDecayMultiplier([event], 'rugged')).toBeCloseTo(1.90)
 
     event.level = 5
-    expect(computeDecayMultiplier([event], 'rugged')).toBeCloseTo(1.75)
+    expect(computeDecayMultiplier([event], 'rugged')).toBeCloseTo(2.50)
   })
 
   it('returns correct multiplier for standard tier', () => {
     const event: HazardEvent = { source: 'dust-storm', active: true, level: 1 }
-    expect(computeDecayMultiplier([event], 'standard')).toBeCloseTo(1.25)
+    expect(computeDecayMultiplier([event], 'standard')).toBeCloseTo(1.50)
 
     event.level = 3
-    expect(computeDecayMultiplier([event], 'standard')).toBeCloseTo(1.75)
+    expect(computeDecayMultiplier([event], 'standard')).toBeCloseTo(2.50)
 
     event.level = 5
-    expect(computeDecayMultiplier([event], 'standard')).toBeCloseTo(2.25)
+    expect(computeDecayMultiplier([event], 'standard')).toBeCloseTo(3.50)
   })
 
   it('returns correct multiplier for sensitive tier', () => {
     const event: HazardEvent = { source: 'dust-storm', active: true, level: 1 }
-    expect(computeDecayMultiplier([event], 'sensitive')).toBeCloseTo(1.35)
+    expect(computeDecayMultiplier([event], 'sensitive')).toBeCloseTo(1.70)
 
     event.level = 3
-    expect(computeDecayMultiplier([event], 'sensitive')).toBeCloseTo(2.05)
+    expect(computeDecayMultiplier([event], 'sensitive')).toBeCloseTo(3.10)
 
     event.level = 5
-    expect(computeDecayMultiplier([event], 'sensitive')).toBeCloseTo(2.75)
+    expect(computeDecayMultiplier([event], 'sensitive')).toBeCloseTo(4.50)
   })
 
   it('stacks multiple active hazards additively', () => {
@@ -54,8 +54,8 @@ describe('computeDecayMultiplier', () => {
       { source: 'dust-storm', active: true, level: 5 },
       { source: 'dust-storm', active: true, level: 3 },
     ]
-    // rugged: 1.0 + 5*0.15 + 3*0.15 = 1.0 + 0.75 + 0.45 = 2.20
-    expect(computeDecayMultiplier(events, 'rugged')).toBeCloseTo(2.2)
+    // rugged: 1.0 + 5*0.30 + 3*0.30 = 1.0 + 1.50 + 0.90 = 3.40
+    expect(computeDecayMultiplier(events, 'rugged')).toBeCloseTo(3.4)
   })
 
   it('ignores unknown source names', () => {

@@ -24,6 +24,18 @@ export interface SiteWeatherSnapshot {
   uvIndex: number
   dustStormPhase: WeatherStormPhase
   dustStormLevel: number | null
+  /**
+   * Wind (m/s) for sky shader, fog, and dust post — matches pre-storm air during `incoming`
+   * so the warning phase has no scene weather motion; same as {@link windMs} when not incoming.
+   */
+  renderWindMs: number
+  /**
+   * Wind direction for sky — frozen to pre-storm during `incoming` when storm jitter would
+   * otherwise move the sky layer.
+   */
+  renderWindDirDeg: number
+  /** Storm level for sky/fog/moons/dust pass — nonzero only while FSM phase is `active`. */
+  renderDustStormLevel: number
 }
 
 export interface StormState {
@@ -133,6 +145,7 @@ export function computeSiteWeather(
     let humidityPct = 2
     let tempC = ambientEffectiveC
     let uvIndex = 3
+    const windMsBeforeStorm = windMs
     if (stormAffects) {
       const peak = peakStormWindMs(storm.level, dustCover, simulationTime)
       const ramp =
@@ -143,7 +156,22 @@ export function computeSiteWeather(
       uvIndex = Math.max(0, uvIndex - storm.level * 0.8)
       tempC -= 0.15 * storm.level
     }
-    return { windMs, windDirDeg, pressureHpa, humidityPct, tempC, uvIndex, dustStormPhase, dustStormLevel }
+    const renderWindMs = stormAffects && storm.phase === 'incoming' ? windMsBeforeStorm : windMs
+    const renderWindDirDeg = windDirDeg
+    const renderDustStormLevel = stormAffects && storm.phase === 'active' ? storm.level : 0
+    return {
+      windMs,
+      windDirDeg,
+      pressureHpa,
+      humidityPct,
+      tempC,
+      uvIndex,
+      dustStormPhase,
+      dustStormLevel,
+      renderWindMs,
+      renderWindDirDeg,
+      renderDustStormLevel,
+    }
   }
 
   const seed = terrain.seed
@@ -191,6 +219,9 @@ export function computeSiteWeather(
     ),
   )
 
+  const windMsBeforeStorm = windMs
+  const windDirBeforeStorm = windDirDeg
+
   // Storm effects on all readings
   if (stormAffects) {
     const peak = peakStormWindMs(storm.level, dustCover, simulationTime)
@@ -203,5 +234,21 @@ export function computeSiteWeather(
     tempC -= 0.4 * storm.level + dustCover * 0.6
   }
 
-  return { windMs, windDirDeg, pressureHpa, humidityPct, tempC, uvIndex, dustStormPhase, dustStormLevel }
+  const renderWindMs = stormAffects && storm.phase === 'incoming' ? windMsBeforeStorm : windMs
+  const renderWindDirDeg = stormAffects && storm.phase === 'incoming' ? windDirBeforeStorm : windDirDeg
+  const renderDustStormLevel = stormAffects && storm.phase === 'active' ? storm.level : 0
+
+  return {
+    windMs,
+    windDirDeg,
+    pressureHpa,
+    humidityPct,
+    tempC,
+    uvIndex,
+    dustStormPhase,
+    dustStormLevel,
+    renderWindMs,
+    renderWindDirDeg,
+    renderDustStormLevel,
+  }
 }

@@ -247,7 +247,7 @@ export class SiteScene {
 
     const roverPos = this.rover?.position
     this.sky?.update(skyDelta, roverPos)
-    this.dust?.update(simElapsed, cameraPosition)
+    this.dust?.update(simElapsed, cameraPosition, roverPos)
 
     // Sync terrain shader sun direction with sky
     if (this.sky && this.terrain.terrainMaterial) {

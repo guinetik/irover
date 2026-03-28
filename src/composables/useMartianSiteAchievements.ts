@@ -8,6 +8,28 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type AchievementBanner from '@/components/AchievementBanner.vue'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 
+const ACHIEVEMENTS_UNLOCKED_STORAGE_KEY = 'mars-achievements-unlocked-v1'
+
+function loadPersistedAchievementIds(): string[] {
+  try {
+    const raw = localStorage.getItem(ACHIEVEMENTS_UNLOCKED_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((x): x is string => typeof x === 'string')
+  } catch {
+    return []
+  }
+}
+
+function persistAchievementIds(ids: string[]): void {
+  try {
+    localStorage.setItem(ACHIEVEMENTS_UNLOCKED_STORAGE_KEY, JSON.stringify(ids))
+  } catch {
+    /* ignore */
+  }
+}
+
 interface Achievement {
   id: string
   icon: string
@@ -85,7 +107,13 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
   const apxsAchievementsData = ref<EventAchievement[]>([])
   const dsnAchievementsData = ref<EventAchievement[]>([])
 
-  const unlockedAchievementIds = ref<string[]>([])
+  const unlockedAchievementIds = ref<string[]>(loadPersistedAchievementIds())
+
+  watch(
+    unlockedAchievementIds,
+    (ids) => persistAchievementIds(ids),
+    { deep: true },
+  )
 
   const totalAchievementCount = computed(
     () =>
@@ -218,6 +246,34 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
     applyRewardTrack(trackModifiers.value)
   })
 
+  /**
+   * Keeps reward-track milestone ids in `unlockedAchievementIds` / `unlockedTrackIds`
+   * aligned with lifetime SP (dialog + toast idempotency) without showing banners.
+   */
+  watch(
+    () =>
+      [
+        rewardTrackLoaded.value,
+        rewardTrackMilestones.value,
+        totalSP.value,
+      ] as const,
+    () => {
+      if (!rewardTrackLoaded.value || rewardTrackMilestones.value.length === 0) return
+      const sp = totalSP.value
+      const earnedIds = rewardTrackMilestones.value.filter((m) => m.sp <= sp).map((m) => m.id)
+      const missingAch = earnedIds.filter((id) => !unlockedAchievementIds.value.includes(id))
+      const missingTrack = earnedIds.filter((id) => !unlockedTrackIds.value.includes(id))
+      if (missingAch.length === 0 && missingTrack.length === 0) return
+      if (missingAch.length > 0) {
+        unlockedAchievementIds.value = [...unlockedAchievementIds.value, ...missingAch]
+      }
+      if (missingTrack.length > 0) {
+        unlockedTrackIds.value = [...unlockedTrackIds.value, ...missingTrack]
+      }
+    },
+    { deep: true },
+  )
+
   watchEffect(() => {
     const sol = marsSol.value
     void survivalAchievements.value
@@ -246,5 +302,16 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
     triggerAPXSAchievement,
     dsnAchievementsData,
     triggerDSNAchievement,
+  }
+}
+
+/**
+ * Clears persisted unlocked-achievement ids. For unit tests only.
+ */
+export function resetMartianAchievementsStorageForTests(): void {
+  try {
+    localStorage.removeItem(ACHIEVEMENTS_UNLOCKED_STORAGE_KEY)
+  } catch {
+    /* ignore */
   }
 }

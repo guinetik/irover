@@ -4,8 +4,14 @@ import dustFrag from '@/three/shaders/dust.frag.glsl?raw'
 
 const PARTICLE_COUNT = 3000
 
-/** Baseline wind speed (m/s) that maps to the original drift factor of 1.0. */
+/** Baseline wind speed (m/s) that maps to a normalized factor of 1.0. */
 const WIND_BASELINE_MS = 5
+
+/**
+ * Height of the rover-relative particle box (world units).
+ * Must match the `boxY` constant in `dust.vert.glsl`.
+ */
+const BOX_Y = 5.0
 
 /** Convert meteorological wind direction (degrees, 0 = north, CW) to a unit XZ vector. */
 function windDirToVec3(deg: number): THREE.Vector3 {
@@ -83,35 +89,41 @@ export class DustParticles {
     const phases = new Float32Array(PARTICLE_COUNT)
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 24
-      positions[i * 3 + 1] = Math.random() * 18
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 24
-      sizes[i] = (0.4 + Math.random() * 0.8) * sizeMultiplier
+      positions[i * 3]     = (Math.random() - 0.5) * 22
+      // Y initialized within the rover-relative box height; shader wraps to rover Y at runtime
+      positions[i * 3 + 1] = Math.random() * BOX_Y
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 22
+      sizes[i]  = (0.4 + Math.random() * 0.8) * sizeMultiplier
       speeds[i] = (0.3 + Math.random() * 0.7) * speedMultiplier
       phases[i] = Math.random()
     }
 
     const geometry = new THREE.BufferGeometry()
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1))
-    geometry.setAttribute('aSpeed', new THREE.BufferAttribute(speeds, 1))
-    geometry.setAttribute('aPhase', new THREE.BufferAttribute(phases, 1))
+    geometry.setAttribute('aSize',    new THREE.BufferAttribute(sizes,     1))
+    geometry.setAttribute('aSpeed',   new THREE.BufferAttribute(speeds,    1))
+    geometry.setAttribute('aPhase',   new THREE.BufferAttribute(phases,    1))
 
     this.material = new THREE.ShaderMaterial({
       uniforms: {
-        uTime: { value: 0 },
-        uDustCover: { value: dustCover },
+        uTime:          { value: 0 },
+        uDustCover:     { value: dustCover },
         uWindDirection: { value: windDirection },
-        uWindSpeed: { value: (config.windSpeedMs ?? WIND_BASELINE_MS) / WIND_BASELINE_MS },
-        uCameraPos: { value: new THREE.Vector3() },
+        uWindSpeed:     { value: (config.windSpeedMs ?? WIND_BASELINE_MS) / WIND_BASELINE_MS },
+        uCameraPos:     { value: new THREE.Vector3() },
         uParticleColor: { value: particleColor },
         uVerticalDrift: { value: verticalDrift },
+        /**
+         * World-space Y of the rover (terrain surface level).
+         * Initialised to 0; updated every frame via {@link update}.
+         */
+        uRoverY:        { value: 0.0 },
       },
-      vertexShader: dustVert,
+      vertexShader:   dustVert,
       fragmentShader: dustFrag,
       transparent: true,
-      depthWrite: false,
-      blending: THREE.NormalBlending,
+      depthWrite:  false,
+      blending:    THREE.NormalBlending,
     })
 
     this.mesh = new THREE.Points(geometry, this.material)
@@ -128,9 +140,21 @@ export class DustParticles {
     this.material.uniforms.uWindDirection.value.copy(dir)
   }
 
-  update(elapsed: number, cameraPosition: THREE.Vector3) {
+  /**
+   * @param elapsed        Accumulated simulation time (seconds).
+   * @param cameraPosition World-space camera position.
+   * @param roverPosition  World-space rover position. Particles wrap their Y
+   *                       around this so they stay near the terrain surface
+   *                       regardless of site elevation. Falls back to an
+   *                       estimate below the camera if not provided.
+   */
+  update(elapsed: number, cameraPosition: THREE.Vector3, roverPosition?: THREE.Vector3) {
     this.material.uniforms.uTime.value = elapsed
     this.material.uniforms.uCameraPos.value.copy(cameraPosition)
+    // Use rover Y when available; otherwise estimate terrain as 4 units below camera
+    this.material.uniforms.uRoverY.value = roverPosition
+      ? roverPosition.y
+      : cameraPosition.y - 4.0
   }
 
   dispose() {

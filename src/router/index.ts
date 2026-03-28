@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { useActiveSite } from '@/composables/useActiveSite'
+import { clearSiteIntroSequencePreference } from '@/lib/siteIntroSequence'
+import { resetInventoryForNewCampaign } from '@/composables/useInventory'
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -46,6 +48,8 @@ router.beforeEach((to) => {
   if (to.name === 'create') {
     clearProfile()
     clearSite()
+    clearSiteIntroSequencePreference()
+    resetInventoryForNewCampaign()
     return true
   }
 
