@@ -168,6 +168,9 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       getSpeedBreakdownBase,
       onMeteoriteTagged: (rock: THREE.Mesh, _rockType: string) => {
         const { archiveObservation } = useMeteorArchive()
+        // Weight from iron-meteorite range (0.5–1.5 kg) scaled by mesh size
+        const baseWeight = 0.5 + Math.random() * 1.0
+        const weightKg = Math.round(baseWeight * (rock.scale.x || 1) * 100) / 100
         archiveObservation({
           siteId: ctx.siteId,
           capturedSol: refs.marsSol.value,
@@ -175,7 +178,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
           roverWorldZ: roverWorldZ.value,
           showerId: (rock.userData.showerId as string) ?? '',
           meteoriteVariant: (rock.userData.meteoriteVariant as string) ?? '',
-          distanceM: 0,
+          weightKg,
           sp: 20,
         })
       },

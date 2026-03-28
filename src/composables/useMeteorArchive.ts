@@ -49,7 +49,7 @@ export function useMeteorArchive() {
     roverWorldZ: number
     showerId: string
     meteoriteVariant: string
-    distanceM: number
+    weightKg: number
     sp: number
   }): ArchivedMeteorObservation {
     const obs: ArchivedMeteorObservation = {

@@ -14,7 +14,8 @@ export interface ArchivedMeteorObservation {
   subject: 'meteorite'
   showerId: string
   meteoriteVariant: string
-  distanceM: number
+  /** Estimated mass in kg (from iron-meteorite weightRange 0.5–1.5) */
+  weightKg: number
   sp: number
   /** Player has queued this item for UHF transmission */
   queuedForTransmission: boolean

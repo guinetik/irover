@@ -422,7 +422,7 @@
                   <dl class="science-meta">
                     <div class="sm-row"><dt>Variant</dt><dd style="color: #cc88ff">{{ selectedMeteor.meteoriteVariant }}</dd></div>
                     <div class="sm-row"><dt>Shower ID</dt><dd class="sm-instr">{{ selectedMeteor.showerId }}</dd></div>
-                    <div class="sm-row"><dt>Distance</dt><dd class="sm-instr">{{ selectedMeteor.distanceM.toFixed(1) }} m</dd></div>
+                    <div class="sm-row"><dt>Mass</dt><dd class="sm-instr">{{ selectedMeteor.weightKg.toFixed(2) }} kg</dd></div>
                     <div class="sm-row"><dt>SP Earned</dt><dd class="sm-instr" style="color: #5dc9a5">+{{ selectedMeteor.sp }}</dd></div>
                     <div class="sm-row"><dt>Site</dt><dd>{{ selectedMeteor.siteId }}</dd></div>
                     <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedMeteor.capturedSol }} · {{ formatUtc(selectedMeteor.capturedAtMs) }}</dd></div>
