@@ -513,6 +513,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let landingSoundFadeVol = 0
   let thrusterSoundHandle: import('@/audio/audioTypes').AudioPlaybackHandle | null = null
 
+  let prevRoverX = 0
+  let prevRoverZ = 0
+  let roverPosInitialized = false
+
   const tickHandlers = createMarsSiteTickHandlers(ctx)
   const {
     roverVfxHandler,
@@ -808,6 +812,18 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       if (siteScene?.rover) {
         roverWorldX.value = siteScene.rover.position.x
         roverWorldZ.value = siteScene.rover.position.z
+        // Cumulative distance for avionics-test objective
+        if (roverPosInitialized) {
+          const dx = siteScene.rover.position.x - prevRoverX
+          const dz = siteScene.rover.position.z - prevRoverZ
+          const dist = Math.sqrt(dx * dx + dz * dz)
+          if (dist > 0.001) {
+            missions.addAvionicsDistance(dist)
+          }
+        }
+        prevRoverX = siteScene.rover.position.x
+        prevRoverZ = siteScene.rover.position.z
+        roverPosInitialized = true
       }
       if (siteScene && roverReady && siteScene.rover && !roverSpawnCaptured) {
         roverSpawnXZ.value = {
