@@ -12,7 +12,7 @@ import { createRadiationAtmospherePass, type RadiationAtmospherePass } from '@/t
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { computeDecayMultiplier } from '@/lib/hazards'
 import type { HazardEvent } from '@/lib/hazards'
-import { generateRadiationField } from '@/lib/radiation'
+import { generateRadiationField, computeZoneThresholds, sampleRadiationAt, findNearestSafeZone } from '@/lib/radiation'
 import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
@@ -625,6 +625,19 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         terrainParams.seed,
       )
       tickHandlers.radHandler.setField(radField, radGridSize, tScale)
+
+      // On tier 1-2 maps, ensure the rover spawns in a safe zone.
+      // If the current spawn point is in an unsafe zone, relocate to nearest safe cell.
+      const siteTier = landmarks.value.find(l => l.id === siteId)?.tier ?? 2
+      if (siteTier <= 2 && siteScene.rover) {
+        const spawnThresholds = computeZoneThresholds(terrainParams.radiationIndex ?? 0.25)
+        const spawnRad = sampleRadiationAt(radField, radGridSize, tScale, siteScene.rover.position.x, siteScene.rover.position.z)
+        if (spawnRad >= spawnThresholds.safeMax) {
+          const safe = findNearestSafeZone(radField, radGridSize, tScale, siteScene.rover.position.x, siteScene.rover.position.z, spawnThresholds)
+          const groundY = siteScene.terrain.heightAt(safe.x, safe.z)
+          siteScene.rover.position.set(safe.x, groundY, safe.z)
+        }
+      }
     }
 
     // Procedural Mars environment map — gives PBR metals something to reflect
