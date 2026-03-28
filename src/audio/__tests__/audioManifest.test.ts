@@ -75,6 +75,8 @@ describe('audioManifest', () => {
       'ambient.geiger',
       'ambient.radHit',
       'sfx.radEventSting',
+      'sfx.meteorFall',
+      'sfx.meteorImpact',
     ])
   })
 
