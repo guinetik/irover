@@ -190,6 +190,48 @@
       "type": "APXS ANALYSIS"
     }
   ],
+  "rad-dosimetry": [
+    {
+      "id": "rad-first-decode",
+      "event": "first-decode",
+      "icon": "☢",
+      "title": "PARTICLE RAIN",
+      "description": "First RAD event decoded. The sky is full of invisible weather.",
+      "type": "RAD DOSIMETRY"
+    },
+    {
+      "id": "rad-first-sep",
+      "event": "first-sep",
+      "icon": "☀",
+      "title": "SOLAR TOUCH",
+      "description": "First Solar Energetic Particle event captured. The Sun reached Mars today.",
+      "type": "RAD DOSIMETRY"
+    },
+    {
+      "id": "rad-forbush",
+      "event": "forbush-detected",
+      "icon": "✦",
+      "title": "THE SILENCE",
+      "description": "Forbush Decrease detected. A CME swept the cosmic rays away — the absence was the signal.",
+      "type": "RAD DOSIMETRY"
+    },
+    {
+      "id": "rad-five-decodes",
+      "event": "five-decodes",
+      "icon": "📊",
+      "title": "FLUX MONITOR",
+      "description": "Five radiation events decoded. The particle environment is mapped.",
+      "type": "RAD DOSIMETRY"
+    },
+    {
+      "id": "rad-s-grade",
+      "event": "s-grade",
+      "icon": "🎯",
+      "title": "PERFECT CATCH",
+      "description": "S-grade decode — 95% particle interception. Not a single cosmic ray escaped.",
+      "type": "RAD DOSIMETRY"
+    }
+  ],
   "dsn-archaeology": [
     {
       "id": "dsn-signal-acquired",

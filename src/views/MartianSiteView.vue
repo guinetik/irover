@@ -1262,6 +1262,7 @@ const {
   triggerDanAchievement,
   triggerSamAchievement,
   triggerAPXSAchievement,
+  triggerRadAchievement,
 } = useMartianSiteAchievements({
   achievementRef,
   sampleToastRef,
@@ -1782,6 +1783,23 @@ function onRadDecodeComplete(result: {
     latitudeDeg: siteLat.value,
     longitudeDeg: siteLon.value,
   })
+
+  // RAD achievements
+  const radDecodeCount = radArchivedEvents.value.length
+  if (radDecodeCount === 1) triggerRadAchievement('first-decode')
+  if (radDecodeCount === 5) triggerRadAchievement('five-decodes')
+
+  const classifiedId = result.classifiedAs
+  if (classifiedId === 'soft-sep' || classifiedId === 'hard-sep') {
+    triggerRadAchievement('first-sep')
+  }
+  if (classifiedId === 'forbush-decrease') {
+    triggerRadAchievement('forbush-detected')
+  }
+
+  if (result.grade === 'S') {
+    triggerRadAchievement('s-grade')
+  }
 
   // Show result screen
   radResultData.value = {

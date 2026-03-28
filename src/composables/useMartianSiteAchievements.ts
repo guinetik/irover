@@ -105,6 +105,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
   const survivalAchievements = ref<SurvivalAchievement[]>([])
   const samAchievementsData = ref<EventAchievement[]>([])
   const apxsAchievementsData = ref<EventAchievement[]>([])
+  const radAchievementsData = ref<EventAchievement[]>([])
   const dsnAchievementsData = ref<EventAchievement[]>([])
 
   const unlockedAchievementIds = ref<string[]>(loadPersistedAchievementIds())
@@ -122,6 +123,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
       survivalAchievements.value.length +
       samAchievementsData.value.length +
       apxsAchievementsData.value.length +
+      radAchievementsData.value.length +
       dsnAchievementsData.value.length +
       rewardTrackMilestones.value.length,
   )
@@ -136,6 +138,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
         'mars-survival'?: SurvivalAchievement[]
         'sam-analysis'?: EventAchievement[]
         'apxs-analysis'?: EventAchievement[]
+        'rad-dosimetry'?: EventAchievement[]
         'dsn-archaeology'?: EventAchievement[]
         'reward-track'?: RewardTrackMilestone[]
       }) => {
@@ -144,6 +147,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
         survivalAchievements.value = data['mars-survival'] ?? []
         samAchievementsData.value = data['sam-analysis'] ?? []
         apxsAchievementsData.value = data['apxs-analysis'] ?? []
+        radAchievementsData.value = data['rad-dosimetry'] ?? []
         dsnAchievementsData.value = data['dsn-archaeology'] ?? []
         if (data['reward-track']) void loadRewardTrack(data['reward-track'])
       },
@@ -170,6 +174,15 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
 
   function triggerAPXSAchievement(event: string): void {
     for (const ach of apxsAchievementsData.value) {
+      if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
+        unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
+        achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+      }
+    }
+  }
+
+  function triggerRadAchievement(event: string): void {
+    for (const ach of radAchievementsData.value) {
       if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
         unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
         achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
@@ -294,12 +307,14 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
     survivalAchievements,
     samAchievementsData,
     apxsAchievementsData,
+    radAchievementsData,
     unlockedAchievementIds,
     totalAchievementCount,
     unlockedAchievementCount,
     triggerDanAchievement,
     triggerSamAchievement,
     triggerAPXSAchievement,
+    triggerRadAchievement,
     dsnAchievementsData,
     triggerDSNAchievement,
   }
