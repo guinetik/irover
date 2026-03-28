@@ -1,45 +1,50 @@
 <template>
-  <div class="power-panel" :class="{ 'low-soc': socPct < 20 }">
+  <div class="power-panel" :class="{ 'low-soc': booted !== false && socPct < 20 }">
     <div class="pp-label">PWR</div>
-    <div class="pp-bar-track">
-      <div
-        class="pp-bar-fill"
-        :class="barClass"
-        :style="{ height: Math.min(100, socPct) + '%' }"
-      />
-      <div
-        class="pp-bar-threshold"
-        role="img"
-        :aria-label="`Sleep threshold at ${POWER_SLEEP_THRESHOLD_PCT} percent charge`"
-        :style="{ bottom: POWER_SLEEP_THRESHOLD_PCT + '%' }"
-      />
-    </div>
-    <div class="pp-wh-row" aria-label="State of charge watt-hours">
-      <span class="pp-wh-main">{{ whDisplay }}</span><span class="pp-wh-cap">/{{ capDisplay }}Wh</span>
-    </div>
-    <div class="pp-divider" />
-    <HudCursorTooltip title="Net power" :body="tipNet" as="div">
-      <div class="pp-net" :class="netPositive ? 'charge' : 'drain'">
-        {{ netPositive ? '+' : '' }}{{ netW.toFixed(0) }}W
+    <template v-if="booted !== false">
+      <div class="pp-bar-track">
+        <div
+          class="pp-bar-fill"
+          :class="barClass"
+          :style="{ height: Math.min(100, socPct) + '%' }"
+        />
+        <div
+          class="pp-bar-threshold"
+          role="img"
+          :aria-label="`Sleep threshold at ${POWER_SLEEP_THRESHOLD_PCT} percent charge`"
+          :style="{ bottom: POWER_SLEEP_THRESHOLD_PCT + '%' }"
+        />
       </div>
-    </HudCursorTooltip>
-    <HudCursorTooltip title="Generation" :body="tipGeneration" as="div">
-      <div class="pp-detail">
-        <span class="pp-detail-val">{{ generationW.toFixed(0) }}</span>W gen
+      <div class="pp-wh-row" aria-label="State of charge watt-hours">
+        <span class="pp-wh-main">{{ whDisplay }}</span><span class="pp-wh-cap">/{{ capDisplay }}Wh</span>
       </div>
-    </HudCursorTooltip>
-    <HudCursorTooltip title="Consumption" :body="tipConsumption" as="div">
-      <div class="pp-detail pp-use" :class="useLevelClass">
-        <span class="pp-detail-val">{{ consumptionW.toFixed(0) }}</span>W use
-      </div>
-    </HudCursorTooltip>
-    <div class="pp-divider" />
-    <HudCursorTooltip title="Solar at a glance" :body="tipSolarIcons" as="div">
-      <div class="pp-source-icons">{{ solarIcons }}</div>
-    </HudCursorTooltip>
-    <HudCursorTooltip title="RTG" :body="tipRtg" as="div">
-      <div class="pp-source-label">&#x25C9; RTG</div>
-    </HudCursorTooltip>
+      <div class="pp-divider" />
+      <HudCursorTooltip title="Net power" :body="tipNet" as="div">
+        <div class="pp-net" :class="netPositive ? 'charge' : 'drain'">
+          {{ netPositive ? '+' : '' }}{{ netW.toFixed(0) }}W
+        </div>
+      </HudCursorTooltip>
+      <HudCursorTooltip title="Generation" :body="tipGeneration" as="div">
+        <div class="pp-detail">
+          <span class="pp-detail-val">{{ generationW.toFixed(0) }}</span>W gen
+        </div>
+      </HudCursorTooltip>
+      <HudCursorTooltip title="Consumption" :body="tipConsumption" as="div">
+        <div class="pp-detail pp-use" :class="useLevelClass">
+          <span class="pp-detail-val">{{ consumptionW.toFixed(0) }}</span>W use
+        </div>
+      </HudCursorTooltip>
+      <div class="pp-divider" />
+      <HudCursorTooltip title="Solar at a glance" :body="tipSolarIcons" as="div">
+        <div class="pp-source-icons">{{ solarIcons }}</div>
+      </HudCursorTooltip>
+      <HudCursorTooltip title="RTG" :body="tipRtg" as="div">
+        <div class="pp-source-label">&#x25C9; RTG</div>
+      </HudCursorTooltip>
+    </template>
+    <template v-else>
+      <button type="button" class="pp-boot-btn" @click="emit('boot')">&#x26A1; BOOT POWER</button>
+    </template>
   </div>
 </template>
 
@@ -56,6 +61,11 @@ const props = defineProps<{
   netW: number
   socPct: number
   nightFactor?: number
+  booted?: boolean
+}>()
+
+const emit = defineEmits<{
+  boot: []
 }>()
 
 const { powerGenerationDetail, powerConsumptionLines, powerBusLoadFactor } = useMarsPower()
@@ -333,5 +343,31 @@ const tipRtg = computed(() => {
   letter-spacing: normal;
   white-space: nowrap;
   text-align: center;
+}
+
+.pp-boot-btn {
+  all: unset;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  margin: 4px 0;
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #e8a060;
+  background: rgba(196, 117, 58, 0.1);
+  border: 1px solid rgba(196, 117, 58, 0.35);
+  border-radius: 4px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.pp-boot-btn:hover {
+  background: rgba(196, 117, 58, 0.25);
+  border-color: rgba(196, 117, 58, 0.6);
 }
 </style>
