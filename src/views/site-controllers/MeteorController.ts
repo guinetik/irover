@@ -35,6 +35,8 @@ export function createMeteorController(
   setSceneComponents: (components: MeteorSceneComponents) => void
   onStormActive: () => void
   getActiveMeteoriteRocks: () => THREE.Mesh[]
+  /** Dev: force-trigger a meteor shower at the given severity. */
+  triggerShower: (severity: ShowerSeverity) => void
 } {
   const {
     meteorRisk,
@@ -146,5 +148,9 @@ export function createMeteorController(
     onStormActive()
   }
 
-  return { tick, dispose, setSceneComponents, onStormActive, getActiveMeteoriteRocks }
+  function triggerShower(severity: ShowerSeverity): void {
+    tickHandler.forceShower(severity)
+  }
+
+  return { tick, dispose, setSceneComponents, onStormActive, getActiveMeteoriteRocks, triggerShower }
 }

@@ -54,6 +54,13 @@ export interface MarsDevDebugApi {
      * @param level - Storm intensity 1 (minor) to 5 (extreme). Default 3.
      */
     triggerStorm(level?: number): void
+
+    /**
+     * Force-triggers a meteor shower at the given severity.
+     * Bypasses the per-sol probability roll — starts immediately.
+     * @param severity - 'light' (1-2 meteors), 'moderate' (3-5), or 'heavy' (6-10). Default 'moderate'.
+     */
+    triggerMeteorShower(severity?: 'light' | 'moderate' | 'heavy'): void
   }
 
   camera: {

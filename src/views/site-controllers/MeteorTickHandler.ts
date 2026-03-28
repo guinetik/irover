@@ -165,5 +165,51 @@ export function createMeteorTickHandler(
     scheduledShower = null
   }
 
-  return { tick, dispose }
+  /**
+   * Dev: force-trigger a meteor shower immediately, bypassing the per-sol probability roll.
+   * The shower starts on the current frame (no sol-fraction wait).
+   */
+  function forceShower(severity: MeteorShower['severity']): void {
+    const meteorCount = rollMeteorCount(severity)
+    const half = TERRAIN_SCALE / 2
+
+    const shower: MeteorShower = {
+      id: `shower-dev-${Date.now()}`,
+      severity,
+      meteorCount,
+      startSol: lastSol,
+      triggerAtSolFraction: 0,
+    }
+
+    const falls: MeteorFall[] = []
+    for (let i = 0; i < meteorCount; i++) {
+      const targetX = (Math.random() - 0.5) * half * 1.6
+      const targetZ = (Math.random() - 0.5) * half * 1.6
+      const groundY = heightAt(targetX, targetZ)
+      if (Number.isNaN(groundY)) continue
+
+      falls.push({
+        id: `${shower.id}-fall-${i}`,
+        showerId: shower.id,
+        variant: pickMeteoriteVariant(),
+        targetX,
+        targetZ,
+        groundY,
+        markerDuration: rollMarkerDuration(),
+        entryAngle: rollEntryAngle(),
+        azimuth: rollAzimuth(),
+        phase: 'marker',
+        elapsed: 0,
+        staggerOffset: (i / Math.max(1, meteorCount - 1)) * STAGGER_SPREAD_SEC,
+      })
+    }
+
+    pendingFalls = falls
+    showerElapsed = 0
+    allFallsCompleted = false
+    scheduledShower = { ...shower, triggered: true, warningFired: true }
+    callbacks.onShowerScheduled(shower)
+  }
+
+  return { tick, dispose, forceShower }
 }
