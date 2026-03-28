@@ -839,10 +839,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           active: sw.dustStormPhase === 'active',
           level: sw.dustStormLevel ?? 0,
         }
+        // Lead Lined perk halves radiation hazard decay on instruments
+        const radHazardLevel = Math.ceil(radLevel.value * 5)
         const radiationEvent: HazardEvent = {
           source: 'radiation',
           active: radLevel.value > 0.25,
-          level: Math.ceil(radLevel.value * 5),
+          level: hasPerk('lead-lined') ? Math.ceil(radHazardLevel * 0.5) : radHazardLevel,
         }
         const hazardEvents = [dustStormEvent, radiationEvent]
         for (const inst of controller.instruments) {

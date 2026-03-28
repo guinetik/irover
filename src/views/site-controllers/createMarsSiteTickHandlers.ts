@@ -307,6 +307,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       sampleToastRef: ctx.sampleToastRef,
       playEventSting: () => ctx.playInstrumentActionSound('sfx.radEventSting' as any),
       getRadiationTolerance: () => ctx.playerMod('radiationTolerance') - 1,
+      hasStormChaser: () => ctx.hasPerk('storm-chaser'),
+      hasLeadLined: () => ctx.hasPerk('lead-lined'),
     },
   )
 

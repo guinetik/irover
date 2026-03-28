@@ -32,6 +32,10 @@ export interface RadTickCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playEventSting?: () => void
   getRadiationTolerance?: () => number
+  /** True when 'storm-chaser' perk is unlocked — event spawn interval halved. */
+  hasStormChaser?: () => boolean
+  /** True when 'lead-lined' perk is unlocked — radiation hazard decay halved. */
+  hasLeadLined?: () => boolean
 }
 
 export interface RadTickHandler extends SiteTickHandler {
@@ -81,8 +85,10 @@ export function createRadTickHandler(
   let eventCooldown = 0
 
   function randomEventInterval(): number {
-    return RAD_SPAWN_CONFIG.baseIntervalSecMin +
+    const base = RAD_SPAWN_CONFIG.baseIntervalSecMin +
       Math.random() * (RAD_SPAWN_CONFIG.baseIntervalSecMax - RAD_SPAWN_CONFIG.baseIntervalSecMin)
+    // Storm Chaser perk halves the spawn interval
+    return callbacks.hasStormChaser?.() ? base * 0.5 : base
   }
 
   function setField(f: Float32Array, gs: number, ts: number): void {

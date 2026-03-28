@@ -539,6 +539,15 @@
       "perkId": "overclock"
     },
     {
+      "sp": 545,
+      "id": "track-lead-lined",
+      "icon": "☢",
+      "title": "LEAD LINED",
+      "description": "Instrument bays reinforced with hydrogen-rich polymer shielding. Radiation performance penalties halved in intermediate zones.",
+      "type": "PERK",
+      "perkId": "lead-lined"
+    },
+    {
       "sp": 560,
       "id": "track-iron-treads",
       "icon": "🛞",
@@ -683,6 +692,15 @@
       "type": "REWARD TRACK",
       "modifierKey": "powerConsumption",
       "modifierValue": -0.015
+    },
+    {
+      "sp": 905,
+      "id": "track-storm-chaser",
+      "icon": "⚡",
+      "title": "STORM CHASER",
+      "description": "RAD event detection algorithms optimized. Radiation events detected twice as often — more science in the particle rain.",
+      "type": "PERK",
+      "perkId": "storm-chaser"
     },
     {
       "sp": 920,
