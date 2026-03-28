@@ -244,6 +244,16 @@ onUnmounted(() => {
   color: rgba(228, 147, 62, 0.5);
 }
 
+.deploy-fade-enter-active,
+.deploy-fade-leave-active {
+  transition: opacity 0.8s ease;
+}
+
+.deploy-fade-enter-from,
+.deploy-fade-leave-to {
+  opacity: 0;
+}
+
 /* Subtle scanline effect */
 .telemetry-hud::after {
   content: '';
