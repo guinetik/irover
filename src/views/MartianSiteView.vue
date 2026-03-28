@@ -279,6 +279,11 @@
       :water-confirmed="danWaterResult"
       @close="danDialogVisible = false"
     />
+    <RADEventAlert
+      :visible="radEventAlertPending"
+      @decode="onRadDecode"
+      @dismiss="onRadDismiss"
+    />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
     <MissionCompleteBanner ref="missionCompleteRef" />
@@ -1682,6 +1687,14 @@ function handleOrbitalDropOpen(): void {
 
 function handleDanProspect(): void {
   siteHandle.value?.handleDanProspect()
+}
+
+function onRadDecode(): void {
+  siteHandle.value?.handleRadDecode()
+}
+
+function onRadDismiss(): void {
+  siteHandle.value?.handleRadDismiss()
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {

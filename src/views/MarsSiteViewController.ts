@@ -425,6 +425,8 @@ export interface MarsSiteViewControllerHandle {
   ) => string
   spawnRandomOrbitalDrop: (options?: { x?: number; z?: number; quantity?: number }) => string
   handleDanProspect: () => void
+  handleRadDecode: () => void
+  handleRadDismiss: () => void
 }
 
 /**
@@ -1286,6 +1288,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     handleDanProspect: () => {
       const fctx = buildFrameContext()
       if (fctx) danHandler.handleDanProspect(fctx)
+    },
+    handleRadDecode: () => {
+      tickHandlers.radHandler.startDecode()
+    },
+    handleRadDismiss: () => {
+      tickHandlers.radHandler.dismissEvent()
     },
   }
 }
