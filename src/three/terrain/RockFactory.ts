@@ -343,9 +343,27 @@ export class RockFactory {
     }
   }
 
-  /** Returns only small rocks (excludes boulders with scale >= 2.0) */
+  /**
+   * Returns a live array of small rocks (excludes boulders with scale >= 2.0).
+   * The same array instance is returned every call — instruments that store this
+   * reference will automatically see new rocks (e.g. meteorites) as they are added.
+   */
+  private _smallRocks: THREE.Mesh[] | null = null
   getSmallRocks(): THREE.Mesh[] {
-    return this.rocks.filter(r => r.scale.x < 2.0)
+    if (!this._smallRocks) {
+      this._smallRocks = this.rocks.filter(r => r.scale.x < 2.0)
+    }
+    return this._smallRocks
+  }
+
+  /** Rebuild the small-rocks cache. Call after adding or removing rocks. */
+  private refreshSmallRocks(): void {
+    if (this._smallRocks) {
+      this._smallRocks.length = 0
+      for (const r of this.rocks) {
+        if (r.scale.x < 2.0) this._smallRocks.push(r)
+      }
+    }
   }
 
   /**
@@ -388,6 +406,7 @@ export class RockFactory {
       height: sc * rock.scale.y,
     })
     this.gridInsert(this.colliders.length - 1)
+    this.refreshSmallRocks()
   }
 
   /**
@@ -397,6 +416,7 @@ export class RockFactory {
     group.remove(rock)
     const idx = this.rocks.indexOf(rock)
     if (idx !== -1) this.rocks.splice(idx, 1)
+    this.refreshSmallRocks()
   }
 
   /** Removes all spawned rocks from the group and resets state. */
@@ -410,6 +430,7 @@ export class RockFactory {
     this.rocks.length = 0
     this.colliders.length = 0
     this.grid.clear()
+    this.refreshSmallRocks()
   }
 
   private createBoulderGeometries(): THREE.BufferGeometry[] {
