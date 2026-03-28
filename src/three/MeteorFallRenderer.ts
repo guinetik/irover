@@ -10,6 +10,15 @@ import type { AudioSoundId } from '@/audio/audioManifest'
 
 const METEOR_MARKER_COLOR = 0xff6633
 
+/** Max distance (m) at which impact VFX are spawned. */
+const VFX_MAX_DISTANCE = 500
+
+/** Duration of the dust plume animation in seconds. */
+const DUST_PLUME_DURATION = 5
+
+/** Duration of the blast ring animation in seconds. */
+const BLAST_RING_DURATION = 1.5
+
 function createBurnMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
     color: 0xff8844,
@@ -37,8 +46,31 @@ interface ShakeState {
   elapsed: number
 }
 
+interface ImpactVfx {
+  /** Brown/ochre dust cloud that rises and expands. */
+  dustPlume: THREE.Mesh
+  /** Expanding shockwave ring on the ground. */
+  blastRing: THREE.Mesh
+  elapsed: number
+}
+
+// Shared geometries — created once, reused per impact
+let dustGeo: THREE.SphereGeometry | null = null
+let ringGeo: THREE.TorusGeometry | null = null
+
+function getDustGeo(): THREE.SphereGeometry {
+  if (!dustGeo) dustGeo = new THREE.SphereGeometry(1, 12, 8)
+  return dustGeo
+}
+
+function getRingGeo(): THREE.TorusGeometry {
+  if (!ringGeo) ringGeo = new THREE.TorusGeometry(1, 0.15, 6, 24)
+  return ringGeo
+}
+
 export class MeteorFallRenderer {
   private visuals = new Map<string, ActiveFallVisual>()
+  private impactVfx: ImpactVfx[] = []
   private scene: THREE.Scene
   private camera: THREE.PerspectiveCamera | null = null
   private audioManager: AudioManager | null = null
@@ -94,12 +126,13 @@ export class MeteorFallRenderer {
   }
 
   update(delta: number, roverPosition: THREE.Vector3): void {
+    // Falling meshes
     for (const [, visual] of this.visuals) {
       const { fall, mesh, origin, target, burnMaterial } = visual
 
       if (fall.phase === 'falling') {
         const t = Math.min(fall.elapsed / FALL_DURATION, 1)
-        const eased = t * t // quadratic ease-in
+        const eased = t * t
         mesh.position.lerpVectors(origin, target, eased)
         burnMaterial.emissiveIntensity = 2.5 + eased * 3.0
         mesh.rotation.x += delta * 2.0
@@ -119,6 +152,41 @@ export class MeteorFallRenderer {
       }
     }
 
+    // Impact VFX — dust plumes and blast rings
+    for (let i = this.impactVfx.length - 1; i >= 0; i--) {
+      const vfx = this.impactVfx[i]
+      vfx.elapsed += delta
+
+      // Dust plume: rises, expands, fades over DUST_PLUME_DURATION
+      const dustT = vfx.elapsed / DUST_PLUME_DURATION
+      if (dustT < 1) {
+        const easeOut = 1 - (1 - dustT) * (1 - dustT)
+        const scale = 2 + easeOut * 8
+        vfx.dustPlume.scale.set(scale, scale * 1.5, scale)
+        vfx.dustPlume.position.y += delta * 3 * (1 - dustT)
+        const mat = vfx.dustPlume.material as THREE.MeshBasicMaterial
+        mat.opacity = 0.5 * (1 - dustT)
+      }
+
+      // Blast ring: expands rapidly, fades over BLAST_RING_DURATION
+      const ringT = vfx.elapsed / BLAST_RING_DURATION
+      if (ringT < 1) {
+        const ringScale = 1 + ringT * 12
+        vfx.blastRing.scale.set(ringScale, ringScale, ringScale)
+        const mat = vfx.blastRing.material as THREE.MeshBasicMaterial
+        mat.opacity = 0.6 * (1 - ringT)
+      }
+
+      // Clean up when both animations are done
+      if (dustT >= 1 && ringT >= 1) {
+        this.scene.remove(vfx.dustPlume)
+        this.scene.remove(vfx.blastRing)
+        ;(vfx.dustPlume.material as THREE.Material).dispose()
+        ;(vfx.blastRing.material as THREE.Material).dispose()
+        this.impactVfx.splice(i, 1)
+      }
+    }
+
     // Camera shake
     if (this.shake && this.camera) {
       this.shake.elapsed += delta
@@ -132,9 +200,6 @@ export class MeteorFallRenderer {
         this.camera.position.z += (Math.random() - 0.5) * magnitude
       }
     }
-
-    // Suppress unused parameter warning — roverPosition used only in onImpact
-    void roverPosition
   }
 
   onImpact(fall: MeteorFall, roverPosition: THREE.Vector3): void {
@@ -160,8 +225,13 @@ export class MeteorFallRenderer {
     visual.flash = flash
     visual.flashElapsed = 0
 
-    // Camera shake based on distance
+    // Distance-gated impact VFX (dust plume + blast ring)
     const distance = roverPosition.distanceTo(target)
+    if (distance < VFX_MAX_DISTANCE) {
+      this.spawnImpactVfx(target)
+    }
+
+    // Camera shake based on distance
     let shakeIntensity = 0
     let shakeDuration = 0
     if (distance < 30) {
@@ -191,6 +261,40 @@ export class MeteorFallRenderer {
     this.removeMarker(fall)
   }
 
+  private spawnImpactVfx(position: THREE.Vector3): void {
+    // Dust plume — brown/ochre expanding sphere that rises
+    const dustMat = new THREE.MeshBasicMaterial({
+      color: 0x8b6914,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+    const dustPlume = new THREE.Mesh(getDustGeo(), dustMat)
+    dustPlume.position.copy(position)
+    dustPlume.position.y += 0.5
+    dustPlume.scale.set(2, 2, 2)
+    dustPlume.renderOrder = 5
+    this.scene.add(dustPlume)
+
+    // Blast ring — expanding torus on the ground plane
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffaa44,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+    const blastRing = new THREE.Mesh(getRingGeo(), ringMat)
+    blastRing.position.copy(position)
+    blastRing.position.y += 0.2
+    blastRing.rotation.x = -Math.PI / 2
+    blastRing.renderOrder = 4
+    this.scene.add(blastRing)
+
+    this.impactVfx.push({ dustPlume, blastRing, elapsed: 0 })
+  }
+
   completeFall(fallId: string): void {
     const visual = this.visuals.get(fallId)
     if (!visual) return
@@ -212,6 +316,13 @@ export class MeteorFallRenderer {
       visual.burnMaterial.dispose()
     }
     this.visuals.clear()
+    for (const vfx of this.impactVfx) {
+      this.scene.remove(vfx.dustPlume)
+      this.scene.remove(vfx.blastRing)
+      ;(vfx.dustPlume.material as THREE.Material).dispose()
+      ;(vfx.blastRing.material as THREE.Material).dispose()
+    }
+    this.impactVfx.length = 0
     this.shake = null
   }
 }

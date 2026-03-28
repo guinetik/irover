@@ -35,27 +35,27 @@ describe('rollShowerSeverity', () => {
 })
 
 describe('rollMeteorCount', () => {
-  it('returns 2-4 for light', () => {
+  it('returns 3-5 for light', () => {
     for (let i = 0; i < 50; i++) {
       const n = rollMeteorCount('light')
-      expect(n).toBeGreaterThanOrEqual(2)
-      expect(n).toBeLessThanOrEqual(4)
+      expect(n).toBeGreaterThanOrEqual(3)
+      expect(n).toBeLessThanOrEqual(5)
     }
   })
 
-  it('returns 6-10 for moderate', () => {
+  it('returns 8-12 for moderate', () => {
     for (let i = 0; i < 50; i++) {
       const n = rollMeteorCount('moderate')
-      expect(n).toBeGreaterThanOrEqual(6)
-      expect(n).toBeLessThanOrEqual(10)
+      expect(n).toBeGreaterThanOrEqual(8)
+      expect(n).toBeLessThanOrEqual(12)
     }
   })
 
-  it('returns 12-20 for heavy', () => {
+  it('returns 15-25 for heavy', () => {
     for (let i = 0; i < 50; i++) {
       const n = rollMeteorCount('heavy')
-      expect(n).toBeGreaterThanOrEqual(12)
-      expect(n).toBeLessThanOrEqual(20)
+      expect(n).toBeGreaterThanOrEqual(15)
+      expect(n).toBeLessThanOrEqual(25)
     }
   })
 })
