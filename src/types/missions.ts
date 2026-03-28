@@ -12,6 +12,9 @@ export type ObjectiveType =
   | 'rems-activate'
   | 'use-repair-kit'
   | 'install-upgrade'
+  | 'power-boot'
+  | 'ui-inspect'
+  | 'avionics-test'
 
 export interface ObjectiveDef {
   id: string
