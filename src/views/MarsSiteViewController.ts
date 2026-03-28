@@ -316,6 +316,8 @@ export interface MarsSiteViewRefs {
   remsMeteorIncomingText: Ref<string | null>
   /** REMS meteor shower active alert text — null when no shower in progress. */
   remsMeteorActiveText: Ref<string | null>
+  /** Drives the shockwave dust-whiteout overlay on near impacts. */
+  meteorShockWhiteout: Ref<boolean>
   drillSpeedBreakdown: Ref<SpeedBreakdown | null>
   chemCamSpeedBreakdown: Ref<SpeedBreakdown | null>
   mastCamSpeedBreakdown: Ref<SpeedBreakdown | null>
@@ -397,6 +399,8 @@ export interface MarsSiteViewContext {
   ) => import('@/audio/audioTypes').AudioPlaybackHandle
   stopInstrumentActionSound: (soundId: InstrumentActionSoundId) => void
   onInstrumentActivateRequest: () => void
+  /** Called when a direct meteor impact kills the rover — triggers death overlay. */
+  onMeteorGameOver: () => void
   onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
   playAmbientLoop: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
@@ -666,6 +670,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       rockFactory: siteScene.terrain.rockSpawner,
       terrainGroup: siteScene.terrain.group,
       heightAt: (x, z) => siteScene!.terrain.heightAt(x, z),
+      sky: siteScene.sky,
     })
 
     // Procedural Mars environment map — gives PBR metals something to reflect

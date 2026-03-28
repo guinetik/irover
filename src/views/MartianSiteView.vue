@@ -559,12 +559,18 @@
         </button>
       </div>
     </div>
+    <MeteorShockOverlay :active="meteorShockWhiteout" />
+    <MeteorDeathOverlay
+      :active="meteorGameOver"
+      @restart="restartSite"
+      @site-select="goToSiteSelect"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   MARS_TIME_OF_DAY_06_00,
   MARS_SOL_CLOCK_MINUTES,
@@ -613,6 +619,8 @@ import RADDecodeOverlay from '@/components/RADDecodeOverlay.vue'
 import RADResultDisplay from '@/components/RADResultDisplay.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import MapOverlay from '@/components/MapOverlay.vue'
+import MeteorShockOverlay from '@/components/MeteorShockOverlay.vue'
+import MeteorDeathOverlay from '@/components/MeteorDeathOverlay.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
 import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
@@ -681,10 +689,28 @@ import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
 
 const route = useRoute()
+const router = useRouter()
 const siteId = route.params.siteId as string
 const audio = useAudio()
 const { playUiCue } = useUiSound()
 const { incrementLegacy } = useLegacy()
+
+// --- Meteor overlay refs ---
+const meteorShockWhiteout = ref(false)
+const meteorGameOver = ref(false)
+
+function onMeteorGameOver(): void {
+  meteorGameOver.value = true
+  useMarsGameClock().setClockPaused(true)
+}
+
+function restartSite(): void {
+  window.location.reload()
+}
+
+function goToSiteSelect(): void {
+  void router.push('/')
+}
 
 const POWER_BOOTED_KEY = 'mars-power-booted'
 const powerBooted = ref(localStorage.getItem(POWER_BOOTED_KEY) === '1')
@@ -1952,6 +1978,7 @@ function createSiteControllerContext() {
     apxsMinigameOpen,
     apxsState,
     onInstrumentActivateRequest: handleActivate,
+    onMeteorGameOver,
     onGlobalKeyDown,
     playAmbientLoop: (soundId) => audio.play(soundId, { loop: true }),
     playSoundWithHandle: (soundId) => audio.play(soundId),
@@ -2052,6 +2079,7 @@ function createSiteControllerContext() {
       remsStormActiveText,
       remsMeteorIncomingText,
       remsMeteorActiveText,
+      meteorShockWhiteout,
       siteWeather,
       remsSurveying,
       micEnabled: micListening,

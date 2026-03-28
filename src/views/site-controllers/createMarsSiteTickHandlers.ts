@@ -314,6 +314,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     audioManager: useAudio(),
     remsMeteorIncomingText: refs.remsMeteorIncomingText,
     remsMeteorActiveText: refs.remsMeteorActiveText,
+    shockWhiteoutActive: refs.meteorShockWhiteout,
+    onGameOver: ctx.onMeteorGameOver,
   })
 
   const passiveSystemsAudioHandler = createPassiveSystemsAudioTickHandler(
