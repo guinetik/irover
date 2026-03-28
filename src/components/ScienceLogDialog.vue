@@ -9,7 +9,7 @@
           </div>
           <div class="science-panes">
             <nav class="science-cats" aria-label="Categories">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0" class="science-empty-side">No discoveries yet.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0 && meteorObservations.length === 0" class="science-empty-side">No discoveries yet.</div>
               <div v-if="spectra.length > 0" class="science-accordion">
                 <button
                   type="button"
@@ -150,9 +150,31 @@
                   </li>
                 </ul>
               </div>
+              <!-- METEOR SCIENCE accordion -->
+              <div v-if="meteorObservations.length > 0" class="science-accordion science-accordion-meteor">
+                <button type="button" class="science-acc-head science-acc-head-meteor"
+                  :aria-expanded="meteorExpanded" @click="toggleMeteorAccordion">
+                  <span class="science-acc-chev" aria-hidden="true">{{ meteorExpanded ? '&#x25BC;' : '&#x25B6;' }}</span>
+                  <span class="science-acc-label">METEOR SCIENCE</span>
+                  <span class="science-acc-badge science-acc-badge-meteor font-instrument">{{ meteorObservations.length }}</span>
+                </button>
+                <ul v-show="meteorExpanded" class="science-acc-list" role="list">
+                  <li v-for="o in sortedMeteorObservations" :key="o.archiveId">
+                    <button type="button" class="science-acc-item"
+                      :class="{ active: o.archiveId === selectedMeteorId }"
+                      @click="selectMeteorReport(o.archiveId)">
+                      <span class="sai-rock">{{ o.meteoriteVariant }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ o.capturedSol }}
+                        <span v-if="o.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="o.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </nav>
             <div class="science-detail">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0" class="science-empty">No archived data.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0 && meteorObservations.length === 0" class="science-empty">No archived data.</div>
               <!-- ChemCam detail -->
               <template v-if="detailMode === 'chemcam'">
                 <div v-if="!selected" class="science-detail-hint">Select a spectrum in the list.</div>
@@ -389,6 +411,34 @@
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
                 </div>
               </template>
+              <!-- METEOR detail -->
+              <template v-if="detailMode === 'meteor' && selectedMeteor">
+                <div class="science-detail-header">
+                  <div class="sdh-instrument" style="color: #cc88ff">METEOR SCIENCE</div>
+                  <div class="sdh-rock">{{ selectedMeteor.meteoriteVariant }}</div>
+                  <div class="sdh-sol">Sol {{ selectedMeteor.capturedSol }}</div>
+                </div>
+                <div class="science-detail-body">
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Variant</dt><dd style="color: #cc88ff">{{ selectedMeteor.meteoriteVariant }}</dd></div>
+                    <div class="sm-row"><dt>Shower ID</dt><dd class="sm-instr">{{ selectedMeteor.showerId }}</dd></div>
+                    <div class="sm-row"><dt>Distance</dt><dd class="sm-instr">{{ selectedMeteor.distanceM.toFixed(1) }} m</dd></div>
+                    <div class="sm-row"><dt>SP Earned</dt><dd class="sm-instr" style="color: #5dc9a5">+{{ selectedMeteor.sp }}</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedMeteor.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedMeteor.capturedSol }} · {{ formatUtc(selectedMeteor.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedMeteor.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                  <div v-if="!selectedMeteor.transmitted" class="tx-queue-actions">
+                    <button v-if="!selectedMeteor.queuedForTransmission" type="button"
+                      class="tx-queue-btn tx-queue"
+                      @click="emitQueueForTx('meteor', selectedMeteor.archiveId)">QUEUE FOR TRANSMISSION</button>
+                    <button v-else type="button"
+                      class="tx-queue-btn tx-dequeue"
+                      @click="emitDequeueFromTx('meteor', selectedMeteor.archiveId)">REMOVE FROM QUEUE</button>
+                  </div>
+                  <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -407,6 +457,7 @@ import type { ArchivedSAMDiscovery } from '@/types/samArchive'
 import type { ArchivedAPXSAnalysis } from '@/composables/useAPXSArchive'
 import type { ArchivedRADEvent } from '@/types/radArchive'
 import APXSResultChart from '@/components/APXSResultChart.vue'
+import { useMeteorArchive } from '@/composables/useMeteorArchive'
 
 const props = defineProps<{
   open: boolean
@@ -419,9 +470,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string]
-  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string]
+  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string]
+  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string]
 }>()
+const { observations: meteorObservations } = useMeteorArchive()
 const { playUiCue } = useUiSound()
 
 function emitClose(): void {
@@ -461,12 +513,12 @@ function toggleApxsAccordion(): void {
   apxsExpanded.value = !apxsExpanded.value
 }
 
-function emitQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string): void {
+function emitQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string): void {
   playUiCue('ui.switch')
   emit('queueForTransmission', source, archiveId)
 }
 
-function emitDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string): void {
+function emitDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string): void {
   playUiCue('ui.switch')
   emit('dequeueFromTransmission', source, archiveId)
 }
@@ -474,7 +526,10 @@ function emitDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', a
 const radExpanded = ref(false)
 const selectedRadId = ref<string | null>(null)
 
-const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad'>('chemcam')
+const meteorExpanded = ref(false)
+const selectedMeteorId = ref<string | null>(null)
+
+const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor'>('chemcam')
 
 /**
  * Plays the science-log report selection cue.
@@ -513,6 +568,16 @@ function selectRadReport(archiveId: string): void {
   selectedRadId.value = archiveId
 }
 
+function toggleMeteorAccordion(): void {
+  playUiCue('ui.switch')
+  meteorExpanded.value = !meteorExpanded.value
+}
+
+function selectMeteorReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedMeteorId.value = archiveId
+}
+
 watch(selectedDanId, (id) => {
   if (id) detailMode.value = 'dan'
 })
@@ -527,6 +592,9 @@ watch(selectedApxsId, (id) => {
 })
 watch(selectedRadId, (id) => {
   if (id) detailMode.value = 'rad'
+})
+watch(selectedMeteorId, (id) => {
+  if (id) detailMode.value = 'meteor'
 })
 
 watch(
@@ -574,6 +642,14 @@ const sortedRadEvents = computed(() =>
 
 const selectedRad = computed(() =>
   sortedRadEvents.value.find((e) => e.archiveId === selectedRadId.value) ?? null,
+)
+
+const sortedMeteorObservations = computed(() =>
+  [...meteorObservations.value].sort((a, b) => b.capturedAtMs - a.capturedAtMs),
+)
+
+const selectedMeteor = computed(() =>
+  sortedMeteorObservations.value.find((o) => o.archiveId === selectedMeteorId.value) ?? null,
 )
 
 const RARITY_COLORS: Record<string, string> = {

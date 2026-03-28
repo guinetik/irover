@@ -653,6 +653,7 @@ import APXSMinigame from '@/components/APXSMinigame.vue'
 import APXSResultDialog from '@/components/APXSResultDialog.vue'
 import { useAPXSArchive } from '@/composables/useAPXSArchive'
 import { useRadArchive } from '@/composables/useRadArchive'
+import { useMeteorArchive } from '@/composables/useMeteorArchive'
 import { RAD_EVENT_DEFS } from '@/lib/radiation'
 import type { RadQualityGrade } from '@/lib/radiation'
 import { useAPXSQueue, type APXSQueueEntry } from '@/composables/useAPXSQueue'
@@ -1148,20 +1149,22 @@ function toggleMicPanel() {
   else siteRover.value.activateInstrument(MIC_SLOT)
 }
 
-function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string) {
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string) {
   if (source === 'chemcam') queueChemCamTx(archiveId)
   else if (source === 'dan') queueDanTx(archiveId)
   else if (source === 'sam') queueSamTx(archiveId)
   else if (source === 'apxs') queueAPXSTx(archiveId)
   else if (source === 'rad') queueRadTx(archiveId)
+  else if (source === 'meteor') queueMeteorTx(archiveId)
 }
 
-function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad', archiveId: string) {
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string) {
   if (source === 'chemcam') dequeueChemCamTx(archiveId)
   else if (source === 'dan') dequeueDanTx(archiveId)
   else if (source === 'sam') dequeueSamTx(archiveId)
   else if (source === 'apxs') dequeueAPXSTx(archiveId)
   else if (source === 'rad') dequeueRadTx(archiveId)
+  else if (source === 'meteor') dequeueMeteorTx(archiveId)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -1432,6 +1435,7 @@ const {
 const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveries, queueForTransmission: queueSamTx, dequeueFromTransmission: dequeueSamTx } = useSamArchive()
 const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis, queueForTransmission: queueAPXSTx, dequeueFromTransmission: dequeueAPXSTx } = useAPXSArchive()
 const { events: radArchivedEvents, archiveRadEvent, queueForTransmission: queueRadTx, dequeueFromTransmission: dequeueRadTx } = useRadArchive()
+const { queueForTransmission: queueMeteorTx, dequeueFromTransmission: dequeueMeteorTx } = useMeteorArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 
