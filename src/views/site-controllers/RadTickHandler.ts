@@ -194,7 +194,8 @@ export function createRadTickHandler(
     radInst.particleRate = particleRate
 
     // --- Update radLevel/radZone (drives VFX pass + instrument blocking) ---
-    radLevel.value = zoneLevelForClassification
+    // Safe zone = no VFX. Only pass through the level for intermediate/hazardous.
+    radLevel.value = zone === 'safe' ? 0 : zoneLevelForClassification
     radZone.value = zone
 
     // --- Safe-zone dowsing: compute stereo pan toward nearest safe cell ---
