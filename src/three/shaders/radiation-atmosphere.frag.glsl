@@ -19,9 +19,10 @@ float hash1(float v) {
 void main() {
   vec4 color = texture2D(tDiffuse, vUv);
 
-  // Instrument cameras are sensitive CCDs — radiation hits harder.
-  float ampLevel = mix(uRadiationLevel, min(1.2, uRadiationLevel * 1.8), uInstrumentCamera);
-  float radStrength = smoothstep(0.25, 1.0, ampLevel);
+  // Base radiation strength — same in both third-person and instrument camera.
+  // CCD-specific artifacts (streaks, banding, saturation) add on top but the
+  // base tint/scanlines/hotpixels stay consistent so the player isn't surprised.
+  float radStrength = smoothstep(0.25, 1.0, uRadiationLevel);
 
   if (radStrength <= 0.0) {
     gl_FragColor = color;
@@ -33,8 +34,7 @@ void main() {
   // ── 1. Green shadow push ─────────────────────────────────────────────────
   float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
   float shadowMask = 1.0 - smoothstep(0.4, 0.85, lum);
-  float tintStrength = mix(0.35, 0.55, uInstrumentCamera); // stronger through CCD
-  color.rgb = mix(color.rgb, radTint, shadowMask * radStrength * tintStrength);
+  color.rgb = mix(color.rgb, radTint, shadowMask * radStrength * 0.35);
 
   // ── 2. Fast thin scanlines (scrolling upward) ────────────────────────────
   float scanSpeed   = 1.8;
@@ -42,16 +42,14 @@ void main() {
   float scanPhase   = vUv.y + uTime * scanSpeed;
   float rawScan     = sin(scanPhase * scanFreq) * 0.5 + 0.5;
   float scanLine    = pow(rawScan, 8.0);
-  float scanOpacity = radStrength * mix(0.10, 0.20, uInstrumentCamera);
+  float scanOpacity = radStrength * 0.10;
   color.rgb += vec3(0.0, scanLine, 0.15 * scanLine) * scanOpacity;
 
   // ── 3. Hot pixel clusters ────────────────────────────────────────────────
   float frameKey   = floor(uTime * 15.0);
   vec2  pixelCoord = floor(vUv * uResolution);
   float pixHash    = hash(pixelCoord * 0.01 + vec2(frameKey * 0.371, frameKey * 0.618));
-  // Instrument CCD: much denser hot pixels
-  float baseThresh = mix(0.996, 0.960, radStrength * radStrength);
-  float hotThresh  = mix(baseThresh, baseThresh - 0.02, uInstrumentCamera);
+  float hotThresh  = mix(0.996, 0.960, radStrength * radStrength);
   float hotPixel   = step(hotThresh, pixHash);
   float hotBright  = mix(0.5, 1.2, hash(pixelCoord * 0.02 + frameKey));
   color.rgb += vec3(0.05, hotBright, 0.15) * hotPixel;
@@ -71,7 +69,7 @@ void main() {
 
   // ── 5. Reversed chromatic aberration ─────────────────────────────────────
   if (radStrength > 0.4) {
-    float caAmt = smoothstep(0.4, 1.0, radStrength) * mix(0.006, 0.012, uInstrumentCamera);
+    float caAmt = smoothstep(0.4, 1.0, radStrength) * 0.006;
     vec2  cDir  = (vUv - 0.5);
     float r2    = dot(cDir, cDir);
     vec2  caOff = cDir * (caAmt + r2 * 0.004);
@@ -140,7 +138,7 @@ void main() {
   vec2 centered = vUv - 0.5;
   float vigDist = length(centered) * 2.0;
   float vigBase  = smoothstep(0.5, 1.5, vigDist) * 0.25;
-  float vigExtra = smoothstep(0.4, 1.3, vigDist) * radStrength * mix(0.30, 0.45, uInstrumentCamera);
+  float vigExtra = smoothstep(0.4, 1.3, vigDist) * radStrength * 0.30;
   color.rgb *= 1.0 - vigBase - vigExtra;
 
   gl_FragColor = color;
