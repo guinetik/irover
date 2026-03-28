@@ -14,6 +14,7 @@ import { RockFactory, type RockCollider } from "./RockFactory";
 import { GlbTerrainGenerator } from "./GlbTerrainGenerator";
 import { MarsGlobalTerrainGenerator } from "./MarsGlobalTerrainGenerator";
 import { ElevationTerrainGenerator } from "./ElevationTerrainGenerator";
+import { generateMapCanvas, MARS_COLOR_RAMP, HYPSOMETRIC_RAMP } from '@/lib/terrain/mapColors'
 
 const GRID_SIZE = 256;
 
@@ -89,6 +90,9 @@ export class DefaultTerrainGenerator implements ITerrainGenerator {
       if (this.heightmap[i] > this.heightMax)
         this.heightMax = this.heightmap[i];
     }
+
+    this.mapCanvasMars = generateMapCanvas(this.heightmap!, GRID_SIZE, this.heightMin, this.heightMax, MARS_COLOR_RAMP)
+    this.mapCanvasHypso = generateMapCanvas(this.heightmap!, GRID_SIZE, this.heightMin, this.heightMax, HYPSOMETRIC_RAMP)
 
     this.buildTerrainMesh(params);
     this.rockSpawner.spawn(

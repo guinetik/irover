@@ -91,7 +91,16 @@ function pixelToLatLon(px: number, py: number, canvasW: number, canvasH: number)
   }
 }
 
-const roverPixel = computed(() => worldToPixel(props.roverX, props.roverZ))
+const roverPixel = computed(() => {
+  const dc = displayCanvas.value
+  if (!dc) return null
+  // Normalized [0,1] position
+  const nx = props.roverX / props.terrainScale + 0.5
+  const ny = props.roverZ / props.terrainScale + 0.5
+  // Map to CSS displayed size
+  const rect = dc.getBoundingClientRect()
+  return { x: nx * rect.width, y: ny * rect.height }
+})
 
 function onMouseMove(e: MouseEvent) {
   const canvas = displayCanvas.value
