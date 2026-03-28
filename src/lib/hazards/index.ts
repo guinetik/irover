@@ -1,2 +1,2 @@
-export { computeDecayMultiplier, computeStormPerformancePenalty } from './hazardDecay'
+export { computeDecayMultiplier, computeStormPerformancePenalty, computeRadiationPerformancePenalty } from './hazardDecay'
 export type { HazardEvent, InstrumentTier } from './hazardTypes'
