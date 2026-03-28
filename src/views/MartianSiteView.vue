@@ -458,6 +458,8 @@
         :consumption-w="consumptionW"
         :net-w="netW"
         :soc-pct="socPct"
+        :booted="powerBooted"
+        @boot="handlePowerBoot"
       />
       <div v-if="!isSleeping" class="power-hud-side-controls">
         <button
@@ -622,6 +624,20 @@ const siteId = route.params.siteId as string
 const audio = useAudio()
 const { playUiCue } = useUiSound()
 
+const POWER_BOOTED_KEY = 'mars-power-booted'
+const powerBooted = ref(localStorage.getItem(POWER_BOOTED_KEY) === '1')
+
+function handlePowerBoot(): void {
+  powerBooted.value = true
+  try { localStorage.setItem(POWER_BOOTED_KEY, '1') } catch { /* ignore */ }
+  useMissions().notifyPowerBooted()
+  playUiCue('ui.switch')
+}
+
+if (powerBooted.value) {
+  useMissions().notifyPowerBooted()
+}
+
 const { tryRepair, tryUpgrade, getBySlot } = useInstrumentDurability()
 const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
 
@@ -642,6 +658,7 @@ function toggleInventoryFromToolbar(): void {
 function toggleProfilePanel(): void {
   playUiCue('ui.switch')
   profileOpen.value = !profileOpen.value
+  if (profileOpen.value) useMissions().notifyUiInspected('profile')
 }
 
 const rewardTrackOpen = ref(false)
@@ -780,6 +797,12 @@ watch(
     audio.play('ui.instrument')
   },
 )
+
+watch(activeInstrumentSlot, (slot) => {
+  if (slot === WHLS_SLOT) useMissions().notifyUiInspected('wheels')
+  if (slot === HEATER_SLOT) useMissions().notifyUiInspected('heater')
+  if (slot === 11) useMissions().notifyUiInspected('lga')
+})
 
 // Antenna system refs
 const uhfPassActive = ref(false)
@@ -1195,6 +1218,23 @@ watch(introComplete, (done, wasDone) => {
     audio.play('sfx.lgaUplink' as import('@/audio/audioManifest').AudioSoundId)
   }
 })
+
+// Transmission teaching toasts for m00-checkout
+watch(
+  () => useMissions().awaitingTransmit.value,
+  (awaiting) => {
+    const isCheckout = awaiting.some(s => s.missionId === 'm00-checkout')
+    if (!isCheckout) return
+
+    // Toast 1: immediate guidance
+    sampleToastRef.value?.showComm?.('Select the LGA [R] to transmit completed missions')
+
+    // Toast 2: delayed flavor (after reward/achievement toasts settle)
+    setTimeout(() => {
+      sampleToastRef.value?.showComm?.('Transmission is how data becomes science. Get used to the uplink.')
+    }, 10_000)
+  },
+)
 
 // --- Mission UI (extracted to composable) ---
 const mission = useMissionUI({
