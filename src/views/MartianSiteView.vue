@@ -603,6 +603,7 @@ import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import type { DSNTransmission } from '@/types/dsnArchive'
 import { useMissionUI } from '@/composables/useMissionUI'
 import { useMissions } from '@/composables/useMissions'
+import { useLegacy } from '@/composables/useLegacy'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { LGAMessage } from '@/types/lgaMailbox'
 import MessageDialog from '@/components/MessageDialog.vue'
@@ -623,6 +624,7 @@ const route = useRoute()
 const siteId = route.params.siteId as string
 const audio = useAudio()
 const { playUiCue } = useUiSound()
+const { incrementLegacy } = useLegacy()
 
 const POWER_BOOTED_KEY = 'mars-power-booted'
 const powerBooted = ref(localStorage.getItem(POWER_BOOTED_KEY) === '1')
@@ -1233,6 +1235,22 @@ watch(
     setTimeout(() => {
       sampleToastRef.value?.showComm?.('Transmission is how data becomes science. Get used to the uplink.')
     }, 10_000)
+  },
+)
+
+// Increment legacy when m13-deep-signal completes
+watch(
+  () => useMissions().completedMissions.value,
+  (completed, prev) => {
+    const wasCompleted = prev?.some(s => s.missionId === 'm13-deep-signal') ?? false
+    const nowCompleted = completed.some(s => s.missionId === 'm13-deep-signal')
+    if (nowCompleted && !wasCompleted) {
+      const { landmarks } = useMarsData()
+      const site = landmarks.value.find(l => l.id === siteId)
+      if (site) {
+        incrementLegacy(site.tier)
+      }
+    }
   },
 )
 
