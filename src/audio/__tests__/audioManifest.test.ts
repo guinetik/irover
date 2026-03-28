@@ -29,6 +29,7 @@ describe('audioManifest', () => {
       'ui.switch',
       'ui.instrument',
       'ui.confirm',
+      'ui.processing',
       'ui.science',
       'ui.achievement',
       'ui.error',
@@ -121,6 +122,7 @@ describe('audioManifest', () => {
         || id === 'ui.switch'
         || id === 'ui.instrument'
         || id === 'ui.confirm'
+        || id === 'ui.processing'
         || id === 'ui.science'
         || id === 'ui.achievement'
         || id === 'music.intro'
