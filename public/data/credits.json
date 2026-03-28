@@ -47,6 +47,18 @@
       ]
     },
     {
+      "id": "video",
+      "label": "Video",
+      "items": [
+        {
+          "asset": "intro.mp4",
+          "title": "Curiosity Rover Mission Animation",
+          "author": "NASA Jet Propulsion Laboratory",
+          "url": "https://www.youtube.com/watch?v=BudlaGh1A0o"
+        }
+      ]
+    },
+    {
       "id": "imagery-data",
       "label": "Imagery & data",
       "items": [
