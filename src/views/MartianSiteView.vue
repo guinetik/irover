@@ -903,6 +903,17 @@ const radResultData = ref<{
   sideProducts: [],
 })
 
+// If RAD is turned off or power dies during processing/results, lose the analysis
+watch(radEnabled, (enabled) => {
+  if (!enabled && (radResultVisible.value || radDecoding.value)) {
+    radResultVisible.value = false
+    radDecoding.value = false
+    radEventAlertPending.value = false
+    radActiveEventId.value = null
+    sampleToastRef.value?.showComm?.('RAD powered off — analysis lost')
+  }
+})
+
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const rtgConservationMode = ref<RTGConservationState>('off')
