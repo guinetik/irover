@@ -61,6 +61,8 @@ export const AUDIO_SOUND_IDS = [
   'ambient.geiger',
   'ambient.radHit',
   'sfx.radEventSting',
+  'sfx.meteorFall',
+  'sfx.meteorImpact',
 ] as const
 
 /** Union of {@link AUDIO_SOUND_IDS} values. */
@@ -96,6 +98,8 @@ export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.thrusters',
   'sfx.contact',
   'sfx.radEventSting',
+  'sfx.meteorFall',
+  'sfx.meteorImpact',
 ] as const
 
 /** Union of instrument-action one-shot ids. */
@@ -548,6 +552,24 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'restart',
     volume: 0.7,
+    effect: 'none',
+  },
+  'sfx.meteorFall': {
+    id: 'sfx.meteorFall',
+    src: '/sound/meteor-fall.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'overlap',
+    volume: 0.6,
+    effect: 'none',
+  },
+  'sfx.meteorImpact': {
+    id: 'sfx.meteorImpact',
+    src: '/sound/meteor-impact.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'overlap',
+    volume: 0.75,
     effect: 'none',
   },
 }
