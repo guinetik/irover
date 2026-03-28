@@ -1076,17 +1076,6 @@ watch(marsSol, (sol) => {
   const id = route.params.siteId as string
   if (id) setMissionSolForSite(id, sol)
 })
-watch(
-  () => route.params.siteId as string,
-  (id) => {
-    controlsHintDismissed.value = false
-    if (id) {
-      marsSol.value = getMissionSolForSite(id)
-      void loadPoisForSite(id)
-    }
-  },
-  { immediate: true },
-)
 const mastPan = ref(0)
 const mastTilt = ref(0)
 const mastFov = ref(50)
@@ -1189,6 +1178,23 @@ const {
   newlyUnlockedInstruments, dismissNewlyUnlocked,
   syncActiveMissionsLayoutFromRover,
 } = mission
+
+/** Static site POIs load asynchronously; when they replace `missionPois`, re-apply active mission go-tos. */
+watch(
+  () => route.params.siteId as string,
+  (id) => {
+    controlsHintDismissed.value = false
+    if (!id) return
+    marsSol.value = getMissionSolForSite(id)
+    void (async () => {
+      await loadPoisForSite(id)
+      await nextTick()
+      if (siteHandle.value) syncActiveMissionsLayoutFromRover()
+    })()
+  },
+  { immediate: true },
+)
+
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
 // --- SAM experiment system ---

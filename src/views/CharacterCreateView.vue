@@ -13,66 +13,85 @@
       }"
     >
       <div class="form-content">
-        <header v-if="currentStep <= 5" class="header">
-          <p class="org">MARS EXPLORATION CONSORTIUM — OPERATOR APPLICATION PORTAL v7.3.1</p>
-          <p class="form-id">Form MEC-7720-B | Remote Vehicle Operations Division</p>
-          <p class="section">SECTION {{ currentStep }} OF 5 — {{ sectionTitle }}</p>
-        </header>
+        <template v-if="phase === 'active' || phase === 'exit'">
+          <header v-if="currentStep <= 5" class="header">
+            <p class="org">
+              <ScrambleText 
+                text="MARS EXPLORATION CONSORTIUM — OPERATOR APPLICATION PORTAL v7.3.1" 
+                :play-sound="true"
+              />
+            </p>
+            <p class="form-id">
+              <ScrambleText 
+                text="Form MEC-7720-B | Remote Vehicle Operations Division" 
+              />
+            </p>
+            <p class="section">
+              <ScrambleText 
+                :text="`SECTION ${currentStep} OF 5 — ${sectionTitle}`" 
+              />
+            </p>
+          </header>
 
-        <main class="content">
-          <Transition name="fade" mode="out-in">
-            <StepArchetype
-              v-if="currentStep === 1"
-              key="archetype"
-              v-model="archetype"
-            />
-            <StepMotivation
-              v-else-if="currentStep === 2"
-              key="motivation"
-              v-model="motivation"
-            />
-            <StepOrigin
-              v-else-if="currentStep === 3"
-              key="origin"
-              v-model="origin"
-            />
-            <StepFoundation
-              v-else-if="currentStep === 4"
-              key="foundation"
-              v-model="foundation"
-            />
-            <StepPosition
-              v-else-if="currentStep === 5"
-              key="position"
-              v-model="position"
-            />
-            <ProcessingSequence
-              v-else-if="currentStep === 6"
-              key="processing"
-              :position-choice="position!"
-              @continue="currentStep = 7"
-            />
-            <AcceptanceScreen
-              v-else-if="currentStep === 7"
-              key="acceptance"
-              @accept="onAccept"
-            />
-          </Transition>
-        </main>
+          <main class="content">
+            <Transition name="fade" mode="out-in">
+              <StepArchetype
+                v-if="currentStep === 1"
+                key="archetype"
+                v-model="archetype"
+              />
+              <StepMotivation
+                v-else-if="currentStep === 2"
+                key="motivation"
+                v-model="motivation"
+              />
+              <StepOrigin
+                v-else-if="currentStep === 3"
+                key="origin"
+                v-model="origin"
+              />
+              <StepFoundation
+                v-else-if="currentStep === 4"
+                key="foundation"
+                v-model="foundation"
+              />
+              <StepPosition
+                v-else-if="currentStep === 5"
+                key="position"
+                v-model="position"
+              />
+              <ProcessingSequence
+                v-else-if="currentStep === 6"
+                key="processing"
+                :position-choice="position!"
+                @continue="currentStep = 7"
+              />
+              <AcceptanceScreen
+                v-else-if="currentStep === 7"
+                key="acceptance"
+                @accept="onAccept"
+              />
+            </Transition>
+          </main>
 
-        <footer v-if="currentStep <= 5" class="nav">
-          <button
-            v-if="currentStep > 1"
-            class="nav-btn"
-            @click="goBack"
-          >[ &lt; BACK ]</button>
-          <span v-else />
-          <button
-            class="nav-btn"
-            :disabled="!canAdvance"
-            @click="goNext"
-          >[ NEXT &gt; ]</button>
-        </footer>
+          <footer v-if="currentStep <= 5" class="nav">
+            <button
+              v-if="currentStep > 1"
+              class="nav-btn"
+              @click="goBack"
+            >
+              <ScrambleText :key="`back-${currentStep}`" text="[ < BACK ]" />
+            </button>
+            <span v-else />
+            <button
+              class="nav-btn"
+              :disabled="!canAdvance"
+              @click="goNext"
+            >
+              <ScrambleText :key="`next-${currentStep}`" text="[ NEXT > ]" />
+            </button>
+          </footer>
+        </template>
       </div>
     </div>
   </div>
@@ -93,6 +112,7 @@ import ProcessingSequence from '@/components/create/ProcessingSequence.vue'
 import AcceptanceScreen from '@/components/create/AcceptanceScreen.vue'
 import { useAudio } from '@/audio/useAudio'
 import type { AudioSoundId } from '@/audio/audioManifest'
+import ScrambleText from '@/components/ScrambleText.vue'
 
 const router = useRouter()
 const { setProfile, setIdentity } = usePlayerProfile()

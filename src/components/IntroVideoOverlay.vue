@@ -216,7 +216,8 @@ onUnmounted(() => {
   font-family: monospace;
   font-size: 11px;
   letter-spacing: 0.12em;
-  color: rgba(228, 147, 62, 0.5);
+  color: rgba(228, 175, 90, 0.85);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8), 0 1px 3px rgba(0, 0, 0, 0.6);
   text-transform: uppercase;
   padding: 24px;
 }

@@ -310,6 +310,15 @@
   color: #a08060;
 }
 
+.restart-confirm-dialog {
+  border-color: rgba(224, 80, 48, 0.45);
+}
+
+.overdrive-btn.confirm.restart-confirm-btn {
+  background: linear-gradient(90deg, #8b2a1a, #c43d28);
+  color: #fff5f0;
+}
+
 /* Sleep mode overlay */
 .sleep-overlay {
   position: fixed;

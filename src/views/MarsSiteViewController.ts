@@ -28,6 +28,7 @@ import {
 } from '@/composables/useMarsPower'
 import type { ThermalTickInput, ThermalZone } from '@/composables/useMarsThermal'
 import type { RemsHudSnapshot, RemsWeatherTickInput } from '@/composables/useSiteRemsWeather'
+import type { SiteWeatherSnapshot } from '@/lib/weather/siteWeather'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type SampleToast from '@/components/SampleToast.vue'
@@ -66,7 +67,7 @@ import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { secondsPerSol } from '@/lib/missionTime'
-import { updateWaypointMarkers, setWaypointMarkerProgress } from '@/three/WaypointMarkers'
+import { updateWaypointMarkers, setWaypointMarkerProgress, clearWaypointMarkers } from '@/three/WaypointMarkers'
 import { tickPoiArrivals, getPoiDwellProgress } from '@/composables/usePoiArrival'
 
 /** Seconds to hold position before DAN prospecting begins. */
@@ -312,16 +313,7 @@ export interface MarsSiteViewRefs {
   remsStormIncomingText: Ref<string | null>
   remsStormActiveText: Ref<string | null>
   /** Always-live weather state — updates regardless of REMS instrument toggle. */
-  siteWeather: Ref<{
-    windMs: number
-    windDirDeg: number
-    tempC: number
-    pressureHpa: number
-    humidityPct: number
-    uvIndex: number
-    dustStormPhase: 'none' | 'incoming' | 'active'
-    dustStormLevel: number | null
-  }>
+  siteWeather: Ref<SiteWeatherSnapshot>
   /** REMS passive surveying — drives ambient air HUD availability. */
   remsSurveying: Ref<boolean>
   /** Mic passive subsystem enabled state — drives ambient audio layers. */
@@ -759,8 +751,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const speedMult = playerMod('movementSpeed')
         const wheelsCtrl = controller.instruments.find(i => i.id === 'wheels')
         const wheelsDurability = Math.max(0.1, wheelsCtrl?.durabilityFactor ?? 1.0)
-        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * speedMult * wheelsDurability
-        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * speedMult * wheelsDurability
+        const swNow = siteWeather.value
+        const stormPenalty = swNow.dustStormPhase === 'active'
+          ? 1.0 - (swNow.dustStormLevel! * 0.12)
+          : 1.0
+        controller.config.moveSpeed = 1.5 * nightPenalty * stormPenalty * rtgBoost * speedMult * wheelsDurability
+        controller.config.turnSpeed = 0.75 * nightPenalty * stormPenalty * rtgBoost * speedMult * wheelsDurability
       }
 
       // --- Core rover update + position sync ---
@@ -1060,17 +1056,17 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       siteScene.update(simulationTime, sceneDelta, camera.position, skyDelta)
 
-      // Weather drives sky atmosphere and fog
+      // Weather drives sky atmosphere and fog (storm *visuals* only in FSM `active`; `incoming` is REMS warning only)
       const sw = siteWeather.value
       if (siteScene.sky) {
         siteScene.sky.setWeather(
-          sw.windMs,
-          sw.dustStormLevel ?? 0,
-          sw.windDirDeg,
+          sw.renderWindMs,
+          sw.renderDustStormLevel,
+          sw.renderWindDirDeg,
           simulationTime,
         )
       }
-      siteScene.setAtmosphere(sw.windMs, sw.dustStormLevel ?? 0)
+      siteScene.setAtmosphere(sw.renderWindMs, sw.renderDustStormLevel)
 
       // Moon orbital positions
       if (siteScene.moons && siteScene.sky) {
@@ -1078,14 +1074,23 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           siteScene.sky.timeOfDay,
           marsSol.value,
           siteScene.sky.nightFactor,
-          sw.dustStormLevel ?? 0,
+          sw.renderDustStormLevel,
           siteScene.sky.sunDirection,
         )
       }
 
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
-        dustPass.setWeather(siteWeather.value.windMs, siteWeather.value.dustStormLevel ?? 0)
+        dustPass.setWeather(sw.renderWindMs, sw.renderDustStormLevel)
+
+        // Storm-reactive glitch: derive composite intensity from live weather.
+        // glitchIntensity — 0 when idle/cooldown, stormLevel/5 when active.
+        // incomingFactor  — 1.0 during the FSM `incoming` warning phase.
+        const glitchIntensity = sw.dustStormPhase === 'active' && sw.dustStormLevel != null
+          ? sw.dustStormLevel / 5
+          : 0
+        const incomingFactor = sw.dustStormPhase === 'incoming' ? 1.0 : 0.0
+        dustPass.setStormGlitch(glitchIntensity, incomingFactor)
       }
 
       if (composer) {
@@ -1142,6 +1147,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     tickHandlers.disposeAll()
 
     controller?.dispose()
+    if (siteScene) {
+      clearWaypointMarkers(siteScene.scene)
+    }
     if (cameraFillLight && siteScene) {
       siteScene.scene.remove(cameraFillLight.target)
       siteScene.scene.remove(cameraFillLight)

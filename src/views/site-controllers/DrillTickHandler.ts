@@ -147,7 +147,7 @@ export function createDrillTickHandler(
     const drillInst = controller?.instruments.find(i => i.id === 'drill')
     if (drillInst instanceof DrillController) {
       const z = thermalZone
-      const scanBuff = drillInst.drill?.scanSpeedMult !== undefined && drillInst.drill.scanSpeedMult < 1
+      const scanBuff = drillInst.mastcamScanDrillSpeedMult < 1
       const extras = scanBuff
         ? [{ label: 'MASTCAM SCAN', value: '+40%', color: '#5dc9a5' }]
         : undefined
