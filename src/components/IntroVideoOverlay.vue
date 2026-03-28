@@ -233,7 +233,7 @@ onUnmounted(() => {
 
 .mission-clock {
   font-size: 13px;
-  color: rgba(228, 147, 62, 0.6);
+  color: rgba(228, 185, 100, 0.9);
 }
 
 .skip-prompt {
@@ -244,7 +244,8 @@ onUnmounted(() => {
   font-family: monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
-  color: rgba(228, 147, 62, 0.5);
+  color: rgba(228, 175, 90, 0.7);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
 }
 
 .deploy-fade-enter-active,
