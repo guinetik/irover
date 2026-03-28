@@ -58,6 +58,8 @@ export const AUDIO_SOUND_IDS = [
   'sfx.roverDrive',
   'sfx.roverTurn',
   'sfx.roverTurnOut',
+  'ambient.geiger',
+  'sfx.radEventSting',
 ] as const
 
 /** Union of {@link AUDIO_SOUND_IDS} values. */
@@ -92,6 +94,7 @@ export const INSTRUMENT_ACTION_SOUND_IDS = [
   'sfx.landing',
   'sfx.thrusters',
   'sfx.contact',
+  'sfx.radEventSting',
 ] as const
 
 /** Union of instrument-action one-shot ids. */
@@ -418,6 +421,24 @@ const manifestById: ManifestById = {
     load: 'lazy',
     playback: 'single-instance',
     volume: 0.2,
+    effect: 'none',
+  },
+  'ambient.geiger': {
+    id: 'ambient.geiger',
+    src: '/sound/geiger.mp3',
+    category: 'ambient',
+    load: 'lazy',
+    playback: 'single-instance',
+    volume: 0.25,
+    effect: 'none',
+  },
+  'sfx.radEventSting': {
+    id: 'sfx.radEventSting',
+    src: '/sound/rad-event-sting.mp3',
+    category: 'sfx',
+    load: 'lazy',
+    playback: 'restart',
+    volume: 0.6,
     effect: 'none',
   },
   'music.intro': {

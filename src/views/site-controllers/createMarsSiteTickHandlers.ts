@@ -273,6 +273,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       heaterHeatBoostActive: refs.heaterHeatBoostActive,
       heaterEffectiveW: refs.heaterEffectiveW,
       remsSurveying: refs.remsSurveying,
+      radSurveying: refs.radEnabled,
     },
     {
       playAmbientLoop: ctx.playAmbientLoop,
@@ -304,6 +305,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     {
       radiationIndex: refs.siteTerrainParams.value?.radiationIndex ?? 0.25,
       sampleToastRef: ctx.sampleToastRef,
+      playEventSting: () => ctx.playInstrumentActionSound('sfx.radEventSting' as any),
     },
   )
 

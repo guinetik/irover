@@ -47,6 +47,7 @@ function makeFrameContext(activeInstrument: object, overrides: Partial<SiteFrame
     windMs: 0,
     dustStormPhase: 'none',
     dustStormLevel: null,
+    radiationLevel: 0,
   }
   return {
     ...base,

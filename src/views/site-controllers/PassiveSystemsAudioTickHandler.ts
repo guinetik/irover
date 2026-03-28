@@ -9,6 +9,7 @@ export interface PassiveSystemsAudioRefs {
   heaterHeatBoostActive: Ref<boolean>
   heaterEffectiveW: Ref<number>
   remsSurveying: Ref<boolean>
+  radSurveying: Ref<boolean>
 }
 
 export interface PassiveSystemsAudioCallbacks {
@@ -61,12 +62,13 @@ export function createPassiveSystemsAudioTickHandler(
   refs: PassiveSystemsAudioRefs,
   callbacks: PassiveSystemsAudioCallbacks,
 ): SiteTickHandler {
-  const { descending, deploying, heaterHeatBoostActive, heaterEffectiveW, remsSurveying } = refs
+  const { descending, deploying, heaterHeatBoostActive, heaterEffectiveW, remsSurveying, radSurveying } = refs
   const { playAmbientLoop, playActionSound, setAmbientVolume, showToast, passiveAmbienceAudible } = callbacks
 
   const rtgLayer: PassiveLayer = { id: 'ambient.rtg' as AudioSoundId, handle: null, currentVol: 0 }
   const heaterLayer: PassiveLayer = { id: 'ambient.heater' as AudioSoundId, handle: null, currentVol: 0 }
   const remsLayer: PassiveLayer = { id: 'ambient.rems' as AudioSoundId, handle: null, currentVol: 0 }
+  const geigerLayer: PassiveLayer = { id: 'ambient.geiger' as any, handle: null, currentVol: 0 }
   let heaterWasAudible = false
 
   /**
@@ -94,6 +96,7 @@ export function createPassiveSystemsAudioTickHandler(
     stopLayer(rtgLayer)
     stopLayer(heaterLayer)
     stopLayer(remsLayer)
+    stopLayer(geigerLayer)
     heaterWasAudible = false
   }
 
@@ -145,6 +148,13 @@ export function createPassiveSystemsAudioTickHandler(
     syncLayer(rtgLayer, introSequenceComplete, RTG_VOLUME, fctx.sceneDelta)
     syncLayer(heaterLayer, true, heaterTargetVolume, fctx.sceneDelta)
     syncLayer(remsLayer, remsSurveying.value, REMS_VOLUME, fctx.sceneDelta)
+
+    const GEIGER_BASE_VOL = 0.15
+    const GEIGER_MAX_VOL = 0.5
+    const geigerVol = radSurveying.value
+      ? GEIGER_BASE_VOL + Math.min(GEIGER_MAX_VOL - GEIGER_BASE_VOL, fctx.radiationLevel * 0.4)
+      : 0
+    syncLayer(geigerLayer, radSurveying.value, geigerVol, fctx.sceneDelta)
   }
 
   function dispose(): void {

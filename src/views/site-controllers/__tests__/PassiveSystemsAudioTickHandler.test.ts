@@ -28,6 +28,7 @@ function makeFctx(overrides: Partial<SiteFrameContext> = {}): SiteFrameContext {
     windMs: 3,
     dustStormPhase: 'none',
     dustStormLevel: null,
+    radiationLevel: 0,
     ...overrides,
   }
 }
@@ -49,7 +50,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
     let callIdx = 0
     const playAmbientLoop = vi.fn().mockImplementation(() => handles[callIdx++])
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending: ref(false), deploying: ref(true), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      { descending: ref(false), deploying: ref(true), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false), radSurveying: ref(false) },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume: vi.fn(), showToast: vi.fn() },
     )
 
@@ -62,7 +63,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
   it('waits until the rover is ready before starting passive system audio', () => {
     const playAmbientLoop = vi.fn()
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false), radSurveying: ref(false) },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume: vi.fn(), showToast: vi.fn() },
     )
 
@@ -74,7 +75,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
   it('keeps passive ambients silent while intro cinematic covers the site', () => {
     const playAmbientLoop = vi.fn()
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false), radSurveying: ref(false) },
       {
         playAmbientLoop,
         playActionSound: vi.fn(),
@@ -93,7 +94,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
     const setAmbientVolume = vi.fn()
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false), radSurveying: ref(false) },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume, showToast: vi.fn() },
     )
 
@@ -119,7 +120,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
     const heaterEffectiveW = ref(12)
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW, remsSurveying: ref(false) },
+      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW, remsSurveying: ref(false), radSurveying: ref(false) },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume, showToast: vi.fn() },
     )
 
@@ -140,7 +141,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
     let callIdx = 0
     const playAmbientLoop = vi.fn().mockImplementation(() => handles[callIdx++])
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      { descending: ref(false), deploying: ref(false), heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false), radSurveying: ref(false) },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume: vi.fn(), showToast: vi.fn() },
     )
 
@@ -156,7 +157,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
     const descending = ref(false)
     const deploying = ref(true)
     const handler = createPassiveSystemsAudioTickHandler(
-      { descending, deploying, heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false) },
+      { descending, deploying, heaterHeatBoostActive: ref(false), heaterEffectiveW: ref(0), remsSurveying: ref(false), radSurveying: ref(false) },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume: vi.fn(), showToast: vi.fn() },
     )
 
@@ -178,6 +179,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
         heaterHeatBoostActive: ref(true),
         heaterEffectiveW: ref(0),
         remsSurveying: ref(false),
+        radSurveying: ref(false),
       },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume, showToast: vi.fn() },
     )
@@ -206,6 +208,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
         heaterHeatBoostActive: ref(false),
         heaterEffectiveW,
         remsSurveying: ref(false),
+        radSurveying: ref(false),
       },
       { playAmbientLoop, playActionSound, setAmbientVolume, showToast: vi.fn() },
     )
@@ -232,6 +235,7 @@ describe('PassiveSystemsAudioTickHandler', () => {
         heaterHeatBoostActive: ref(false),
         heaterEffectiveW: ref(0),
         remsSurveying,
+        radSurveying: ref(false),
       },
       { playAmbientLoop, playActionSound: vi.fn(), setAmbientVolume: vi.fn(), showToast: vi.fn() },
     )
