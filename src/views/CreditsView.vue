@@ -28,6 +28,26 @@
             >github.com/guinetik/irover</a
           >
         </p>
+        <p class="personal-note">I am not an artist. I can't model, I can't texture, and my concept art looks like engineering diagrams. This game exists because incredible artists share their work openly under licenses that let people like me build things we could never build alone. Every 3D model, every texture, every piece of reference material listed below was made by someone far more talented than me. Thank you.</p>
+      </section>
+
+      <section class="team" aria-label="Team">
+        <h2 class="group-label">Team</h2>
+        <ul class="list">
+          <li class="item">
+            <div class="item-head">
+              <span class="item-title">guinetik</span>
+              <span class="asset">Game Design, Code, UI</span>
+            </div>
+          </li>
+          <li class="item">
+            <div class="item-head">
+              <span class="item-title">Claude</span>
+              <span class="asset">Systems Engineer</span>
+            </div>
+            <p class="author">Anthropic</p>
+          </li>
+        </ul>
       </section>
 
       <p v-if="data?.intro" class="intro">{{ data.intro }}</p>
@@ -193,6 +213,19 @@ onMounted(async () => {
 .creator-sep {
   color: rgba(255, 255, 255, 0.25);
   user-select: none;
+}
+
+.personal-note {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 16px 0 0;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.team {
+  margin-bottom: 32px;
 }
 
 .intro {
