@@ -131,10 +131,13 @@ export function createRadTickHandler(
     // Sync enabled state
     radEnabled.value = radInst.passiveSubsystemEnabled
 
-    if (!radInst.passiveSubsystemEnabled || !field) {
+    // ─── ALWAYS ACTIVE (independent of RAD being enabled) ───
+    // The radiation environment exists whether or not the player has turned
+    // on the RAD instrument.  VFX, hazard decay, and instrument blocking
+    // are driven by radLevel which must always reflect the true field value.
+
+    if (!field) {
       radLevel.value = 0
-      radDoseRate.value = 0
-      radParticleRate.value = 0
       radZone.value = 'safe'
       return
     }
@@ -154,19 +157,34 @@ export function createRadTickHandler(
     // --- Particle rate (counts per minute) — linear from level ---
     const particleRate = Math.round(level * 120)
 
-    // --- Update RADController live state ---
+    // --- Update controller state (always, for hazard pipeline) ---
     radInst.radiationLevel = level
     radInst.zone = zone
     radInst.doseRate = doseRate
     radInst.particleRate = particleRate
+
+    // --- Update radLevel/radZone (drives VFX pass + instrument blocking) ---
+    radLevel.value = level
+    radZone.value = zone
+
+    // ─── RAD-GATED (only when player has activated the instrument) ───
+    // The HUD overlay, dose accumulation, zone toasts, and event spawning
+    // require the player to opt-in by activating RAD.
+
+    if (!radInst.passiveSubsystemEnabled) {
+      radDoseRate.value = 0
+      radParticleRate.value = 0
+      radCumulativeDose.value = 0
+      return
+    }
+
+    // --- Accumulate dose ---
     radInst.accumulateDose(doseRate, sceneDelta, marsSol)
 
-    // --- Update Vue refs ---
-    radLevel.value = level
+    // --- Update HUD refs ---
     radDoseRate.value = doseRate
     radCumulativeDose.value = radInst.cumulativeDoseSol
     radParticleRate.value = particleRate
-    radZone.value = zone
 
     // --- Zone transition toasts ---
     if (!zoneInitialised) {
