@@ -85,23 +85,23 @@ export function generateRadiationField(
     for (let col = 0; col < gridSize; col++) {
       const idx = row * gridSize + col
 
-      // 1. Elevation baseline: higher terrain → more radiation exposure.
-      //    heightmap values in [0, 1]; contribute a baseline in [0, 0.5].
+      // 1. Elevation baseline: higher terrain → more cosmic-ray exposure.
       const elev = heightmap[idx] ?? 0.5
-      const elevBaseline = 0.10 + elev * 0.40
+      const elevBaseline = elev * 0.50
 
       // 2. Medium-scale noise pockets (regional features).
       const medNoise = noise.n2(col * medScale, row * medScale)       // [-1, 1]
-      const medContrib = medNoise * 0.20
+      const medContrib = medNoise * 0.15
 
       // 3. Fine-scale noise (local hotspots).
       const fineNoise = noise.n2(col * fineScale + 100, row * fineScale + 100)
-      const fineContrib = fineNoise * 0.10
+      const fineContrib = fineNoise * 0.08
 
-      // 4. radiationIndex shifts the overall level upward.
-      const indexBias = radiationIndex * 0.40
-
-      const raw = elevBaseline + medContrib + fineContrib + indexBias
+      // 4. radiationIndex is the PRIMARY driver — it scales the entire field.
+      //    Low-index sites (0.10–0.20) produce mostly safe values.
+      //    High-index sites (0.70+) push most cells into intermediate/hazardous.
+      //    A small floor (0.05) ensures the field is never uniformly zero.
+      const raw = 0.05 + (elevBaseline + 0.20 + medContrib + fineContrib) * radiationIndex
       field[idx] = Math.max(0.05, Math.min(1.20, raw))
     }
   }
