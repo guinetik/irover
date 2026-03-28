@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import type { InstrumentTier } from '@/lib/hazards'
+import type { RadiationZone, RadEventId } from '@/lib/radiation'
 
 export class RADController extends InstrumentController {
   readonly id = 'rad'
@@ -14,19 +15,53 @@ export class RADController extends InstrumentController {
   override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true
   override readonly passiveSubsystemOnly = true
-  /** Start STANDBY until the player ACTIVATEs (matches DAN / UHF opt-in). */
+  /** Start STANDBY until the player ACTIVATEs. */
   override passiveSubsystemEnabled = false
   readonly focusNodeName = 'RAD'
   readonly focusOffset = new THREE.Vector3(0.2, 0.15, 0.2)
   readonly viewAngle = 0.45
-  /** Deck orbit from above the chassis (REMS uses mast-side framing). */
   readonly viewPitch = 1.0
   override readonly selectionIdlePowerW = 2
 
-  // Fake radiation data
-  doseMsvPerSol = 0.67       // millisieverts per sol
-  cumulativeMsv = 12.4       // total accumulated
-  particleRate = 23           // counts per minute
-  solarActivity = 'NOMINAL'  // NOMINAL | ELEVATED | STORM
-  shieldIntegrity = 96        // percent
+  // --- Live radiation state (synced by RadTickHandler each frame) ---
+
+  /** Current radiation scalar at rover position (0.0–1.2). */
+  radiationLevel = 0.0
+
+  /** Current zone classification. */
+  zone: RadiationZone = 'safe'
+
+  /** Current dose rate in mGy/day. */
+  doseRate = 0.0
+
+  /** Cumulative dose this sol (mGy). Resets each sol. */
+  cumulativeDoseSol = 0.0
+
+  /** Particle count rate (counts per minute), derived from radiation level. */
+  particleRate = 0
+
+  /** Active radiation event being decoded, or null. */
+  activeEvent: RadEventId | null = null
+
+  /** Whether an event alert is pending player response. */
+  eventAlertPending = false
+
+  /** Whether decode minigame is active. */
+  decoding = false
+
+  /** Last sol number for cumulative dose reset. */
+  private lastSol = -1
+
+  /**
+   * Update dose accumulation. Called each frame by RadTickHandler.
+   */
+  accumulateDose(doseRateMGy: number, deltaSec: number, currentSol: number): void {
+    if (currentSol !== this.lastSol) {
+      this.cumulativeDoseSol = 0
+      this.lastSol = currentSol
+    }
+    // doseRate is mGy/day; Mars sol ≈ 88775 seconds
+    const dayFraction = deltaSec / 88775
+    this.cumulativeDoseSol += doseRateMGy * dayFraction
+  }
 }
