@@ -10,6 +10,9 @@ import type { AudioSoundId } from '@/audio/audioManifest'
 
 const METEOR_MARKER_COLOR = 0xff6633
 
+/** Number of trail points — ~1 second at 60 fps. */
+const TRAIL_LENGTH = 60
+
 /** Max distance (m) at which impact VFX are spawned. */
 const VFX_MAX_DISTANCE = 500
 
@@ -38,6 +41,11 @@ interface ActiveFallVisual {
   target: THREE.Vector3
   flash: THREE.PointLight | null
   flashElapsed: number
+  trail: THREE.Points | null
+  trailPositions: Float32Array
+  trailSizes: Float32Array
+  trailHead: number
+  trailCount: number
 }
 
 interface ShakeState {
@@ -75,9 +83,19 @@ export class MeteorFallRenderer {
   private camera: THREE.PerspectiveCamera | null = null
   private audioManager: AudioManager | null = null
   private shake: ShakeState | null = null
+  private trailMaterial: THREE.PointsMaterial
 
   constructor(scene: THREE.Scene) {
     this.scene = scene
+    this.trailMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.8,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    })
   }
 
   setCamera(camera: THREE.PerspectiveCamera): void {
@@ -109,6 +127,17 @@ export class MeteorFallRenderer {
     this.scene.add(mesh)
 
     const burnMat = createBurnMaterial()
+
+    // Trail geometry — positions and per-point sizes start zeroed out
+    const trailPositions = new Float32Array(TRAIL_LENGTH * 3)
+    const trailSizes = new Float32Array(TRAIL_LENGTH)
+    const trailGeo = new THREE.BufferGeometry()
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3))
+    trailGeo.setAttribute('size', new THREE.BufferAttribute(trailSizes, 1))
+    trailGeo.setDrawRange(0, 0)
+    const trail = new THREE.Points(trailGeo, this.trailMaterial)
+    this.scene.add(trail)
+
     const visual: ActiveFallVisual = {
       fall,
       mesh,
@@ -118,6 +147,11 @@ export class MeteorFallRenderer {
       target: targetVec,
       flash: null,
       flashElapsed: 0,
+      trail,
+      trailPositions,
+      trailSizes,
+      trailHead: 0,
+      trailCount: 0,
     }
     mesh.material = burnMat
     this.visuals.set(fall.id, visual)
@@ -137,6 +171,31 @@ export class MeteorFallRenderer {
         burnMaterial.emissiveIntensity = 2.5 + eased * 3.0
         mesh.rotation.x += delta * 2.0
         mesh.rotation.z += delta * 1.5
+
+        // Trail — write current position into circular buffer slot
+        if (visual.trail) {
+          const { trailPositions, trailSizes } = visual
+          const head = visual.trailHead
+          trailPositions[head * 3]     = mesh.position.x
+          trailPositions[head * 3 + 1] = mesh.position.y
+          trailPositions[head * 3 + 2] = mesh.position.z
+          trailSizes[head] = 1.0
+
+          visual.trailHead = (head + 1) % TRAIL_LENGTH
+          visual.trailCount = Math.min(visual.trailCount + 1, TRAIL_LENGTH)
+
+          // Age all sizes: shrink toward 0 so older points vanish
+          for (let i = 0; i < TRAIL_LENGTH; i++) {
+            trailSizes[i] = Math.max(0, trailSizes[i] - delta * 1.5)
+          }
+          // Restore the freshly written point's size (aging loop may have touched it)
+          trailSizes[head] = 1.0
+
+          const geo = visual.trail.geometry
+          geo.setDrawRange(0, visual.trailCount)
+          ;(geo.attributes.position as THREE.BufferAttribute).needsUpdate = true
+          ;(geo.attributes.size as THREE.BufferAttribute).needsUpdate = true
+        }
       }
 
       if (visual.flash) {
@@ -207,6 +266,13 @@ export class MeteorFallRenderer {
     if (!visual) return
 
     const { mesh, originMaterial, target } = visual
+
+    // Remove trail
+    if (visual.trail) {
+      this.scene.remove(visual.trail)
+      visual.trail.geometry.dispose()
+      visual.trail = null
+    }
 
     // Strip burn, restore original material
     mesh.material = originMaterial
@@ -302,6 +368,11 @@ export class MeteorFallRenderer {
       this.scene.remove(visual.flash)
       visual.flash.dispose()
     }
+    if (visual.trail) {
+      this.scene.remove(visual.trail)
+      visual.trail.geometry.dispose()
+      visual.trail = null
+    }
     visual.burnMaterial.dispose()
     this.visuals.delete(fallId)
   }
@@ -313,9 +384,15 @@ export class MeteorFallRenderer {
         this.scene.remove(visual.flash)
         visual.flash.dispose()
       }
+      if (visual.trail) {
+        this.scene.remove(visual.trail)
+        visual.trail.geometry.dispose()
+        visual.trail = null
+      }
       visual.burnMaterial.dispose()
     }
     this.visuals.clear()
+    this.trailMaterial.dispose()
     for (const vfx of this.impactVfx) {
       this.scene.remove(vfx.dustPlume)
       this.scene.remove(vfx.blastRing)
