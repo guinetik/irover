@@ -13,7 +13,7 @@
     </Transition>
     <MartianSiteNavbar
       :site-title="siteId"
-      :show-sol-clock="!deploying && !descending"
+      :show-sol-clock="introComplete"
       :mars-sol="marsSol"
       :mars-time-of-day="marsTimeOfDay"
       :current-night-factor="currentNightFactor"
@@ -23,7 +23,7 @@
       :unlocked-achievement-count="unlockedAchievementCount"
       :total-achievement-count="totalAchievementCount"
       :total-sp="totalSP"
-      :show-science-button="hasScienceDiscoveries && !deploying && !descending"
+      :show-science-button="hasScienceDiscoveries && introComplete"
       :achievements-expanded="achievementsOpen"
       :sp-ledger-expanded="spLedgerOpen"
       :active-mission-count="activeMissions.length"
@@ -34,12 +34,20 @@
       @open-science-log="scienceLogOpen = true"
       @open-mission-log="handleOpenMissionLog"
       @open-archive="showArchive = true"
+      @request-restart="showRestartConfirm = true"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
-    <RoverDeployOverlays
+    <IntroSequence
+      :skip-intro="skipIntro"
+      :site-loading="siteLoading"
       :descending="descending"
       :deploying="deploying"
       :deploy-progress="deployProgress"
+      :site-id="siteId"
+      :latitude="siteLat"
+      :longitude="siteLon"
+      :archetype-name="playerProfile.archetype ?? 'UNKNOWN'"
+      @intro-complete="onIntroComplete"
     />
     <Transition name="deploy-fade">
       <div v-if="apxsState === 'counting'" class="apxs-countdown-overlay" key="apxs-countdown">
@@ -89,7 +97,7 @@
     </Transition>
     <Transition name="deploy-fade">
       <InstrumentToolbar
-        v-if="!deploying && !descending"
+        v-if="introComplete"
         :active-slot="activeInstrumentSlot"
         :inventory-open="inventoryOpen"
         :chem-cam-unread="chemCamUnreadCount"
@@ -196,6 +204,7 @@
     <MessageDialog
       :message="openedMessage"
       :mission-accepted="missionAccepted"
+      :mission-completed="missionCompleted"
       @close="handleCloseMessage"
       @accept-mission="handleAcceptMission"
     />
@@ -210,7 +219,7 @@
       @track="handleTrackMission"
     />
     <MissionTracker
-      v-if="!deploying && !descending"
+      v-if="introComplete"
       :mission="trackedMission"
       :mission-def="trackedMissionDef"
       :is-eligible="(objId: string) => trackedMissionId ? isObjectiveEligible(trackedMissionId, objId) : false"
@@ -340,9 +349,30 @@
           </div>
         </div>
       </Transition>
+      <Transition name="deploy-fade">
+        <div v-if="showRestartConfirm" key="restart-confirm" class="overdrive-confirm-overlay">
+          <div class="overdrive-confirm restart-confirm-dialog">
+            <div class="overdrive-icon">&#x21BB;</div>
+            <div class="overdrive-title">RESTART</div>
+            <div class="overdrive-desc">
+              Clear all saved game data in this browser and return to the main menu. Progress includes science points,
+              missions, inventory, achievements, and site state.
+            </div>
+            <div class="overdrive-warning">
+              This cannot be undone.
+            </div>
+            <div class="overdrive-buttons">
+              <button type="button" class="overdrive-btn confirm restart-confirm-btn" @click="confirmRestart()">
+                RESTART
+              </button>
+              <button type="button" class="overdrive-btn cancel" @click="cancelRestart()">CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
     <Transition name="deploy-fade">
-      <div v-if="isSleeping && !deploying && !descending" class="sleep-overlay">
+      <div v-if="isSleeping && introComplete" class="sleep-overlay">
         <div class="sleep-content">
           <div class="sleep-icon">&#x26A0;</div>
           <div class="sleep-title">CRITICAL POWER</div>
@@ -361,7 +391,7 @@
       </div>
     </Transition>
     <CommToolbar
-      v-if="!deploying && !descending"
+      v-if="introComplete"
       :active-slot="activeInstrumentSlot"
       :uhf-unlocked="playerProfile.sandbox || unlockedInstruments.includes('antenna-uhf')"
       :lga-alert="lgaUnreadCount > 0 && activeInstrumentSlot !== 11"
@@ -370,7 +400,7 @@
     />
     <!-- Comm panels container: stacks LGA mailbox and UHF uplink vertically beside the CommToolbar -->
     <div
-      v-if="!deploying && !descending && ((!lgaEverToggled || activeInstrumentSlot === 11) || activeInstrumentSlot === 12)"
+      v-if="introComplete && ((!lgaEverToggled || activeInstrumentSlot === 11) || activeInstrumentSlot === 12)"
       style="position: fixed; top: 58px; left: 76px; z-index: 40; display: flex; flex-direction: column; gap: 6px;"
     >
       <LGAMailbox
@@ -406,7 +436,7 @@
       :heading="roverHeading"
       :target-range="mastTargetRange"
     />
-    <div v-if="!deploying && !descending" class="power-hud-stack">
+    <div v-if="introComplete" class="power-hud-stack">
       <div v-if="!isSleeping" class="power-hud-top-controls">
         <button
           type="button"
@@ -479,7 +509,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, shallowRef } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, shallowRef, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   MARS_TIME_OF_DAY_06_00,
@@ -504,7 +534,6 @@ import { buildMarsSiteViewContext } from '@/views/martianSiteViewContext'
 import ChemCamActiveHud from '@/components/ChemCamActiveHud.vue'
 import MastCamActiveHud from '@/components/MastCamActiveHud.vue'
 import RtgStatusBanners from '@/components/RtgStatusBanners.vue'
-import RoverDeployOverlays from '@/components/RoverDeployOverlays.vue'
 import InstrumentToolbar from '@/components/InstrumentToolbar.vue'
 import InstrumentOverlay from '@/components/InstrumentOverlay.vue'
 import ChemCamExperimentPanel from '@/components/ChemCamExperimentPanel.vue'
@@ -576,10 +605,13 @@ import MessageDialog from '@/components/MessageDialog.vue'
 import MissionLogDialog from '@/components/MissionLogDialog.vue'
 import MissionTracker from '@/components/MissionTracker.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import IntroSequence from '@/components/IntroSequence.vue'
+import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
+import { getMissionSolForSite, setMissionSolForSite } from '@/lib/siteMissionSolStorage'
 import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
 
@@ -633,6 +665,12 @@ const roverIsMoving = ref(false)
 /** After first W/S drive while deployed, hide the centered driving tips (per session). */
 const controlsHintDismissed = ref(false)
 const siteLoading = ref(true)
+const skipIntro = isSiteIntroSequenceSkipped()
+const introComplete = ref(skipIntro)
+
+function onIntroComplete() {
+  introComplete.value = true
+}
 const descending = ref(true)
 const deploying = ref(false)
 const deployProgress = ref(0)
@@ -1030,11 +1068,19 @@ const siteCompassPois = computed(() => {
   }))
 })
 
+const marsSol = ref(getMissionSolForSite(siteId))
+watch(marsSol, (sol) => {
+  const id = route.params.siteId as string
+  if (id) setMissionSolForSite(id, sol)
+})
 watch(
   () => route.params.siteId as string,
   (id) => {
     controlsHintDismissed.value = false
-    if (id) void loadPoisForSite(id)
+    if (id) {
+      marsSol.value = getMissionSolForSite(id)
+      void loadPoisForSite(id)
+    }
   },
   { immediate: true },
 )
@@ -1042,7 +1088,6 @@ const mastPan = ref(0)
 const mastTilt = ref(0)
 const mastFov = ref(50)
 const mastTargetRange = ref(-1)
-const marsSol = ref(1)
 const marsTimeOfDay = ref(MARS_TIME_OF_DAY_06_00)
 const currentNightFactor = ref(0)
 const {
@@ -1134,11 +1179,12 @@ const mission = useMissionUI({
 const {
   missionLogOpen, openedMessage,
   activeMissions, completedMissions, trackedMissionId, unlockedInstruments, transmitProgress,
-  trackedMission, trackedMissionDef, activeDwellPoiId, activeDwellProgress, lgaActive, missionAccepted,
+  trackedMission, trackedMissionDef, activeDwellPoiId, activeDwellProgress, lgaActive, missionAccepted, missionCompleted,
   getMissionDef, getObjLabel, isObjectiveEligible,
   handleAcceptMission, handleMissionTransmit, handleOpenMessage, handleCloseMessage,
   handleOpenMissionLog, handleCloseMissionLog, handleTrackMission, handleUntrack,
   newlyUnlockedInstruments, dismissNewlyUnlocked,
+  syncActiveMissionsLayoutFromRover,
 } = mission
 const currentSolPasses = computed(() => orbitalPasses.getPassesForSol(marsSol.value))
 
@@ -1380,17 +1426,18 @@ function handleAPXSAcknowledge(): void {
 const showOverdriveConfirm = ref(false)
 const showHeaterOverdriveConfirm = ref(false)
 const showConservationConfirm = ref(false)
+const showRestartConfirm = ref(false)
 const orbitalDropInteractHint = computed(() => {
-  if (deploying.value || descending.value || isSleeping.value) return ''
+  if (!introComplete.value || isSleeping.value) return ''
   if (!orbitalDrops.nearbyDrop.value) return ''
   return 'PAYLOAD IN RANGE \u00b7 PRESS F TO COLLECT'
 })
 const centerHintText = computed(() => {
-  if (!deploying.value && !descending.value && activeInstrumentSlot.value === null && rtgPhase.value === 'idle' && rtgConservationMode.value !== 'active' && !controlsHintDismissed.value) {
+  if (introComplete.value && activeInstrumentSlot.value === null && rtgPhase.value === 'idle' && rtgConservationMode.value !== 'active' && !controlsHintDismissed.value) {
     return 'WASD drive · drag orbit · 1-9 TOOLS'
   }
   if (orbitalDropInteractHint.value) return orbitalDropInteractHint.value
-  if (!deploying.value && !descending.value && activeInstrumentSlot.value === null && rtgConservationMode.value === 'active') {
+  if (introComplete.value && activeInstrumentSlot.value === null && rtgConservationMode.value === 'active') {
     return 'Power shunt: driving offline · -50% instrument load · Drag to orbit'
   }
   return ''
@@ -1471,6 +1518,24 @@ function confirmConservation() {
 
 function cancelConservation() {
   showConservationConfirm.value = false
+}
+
+/**
+ * Clears localStorage and loads home so singleton state resets (full document navigation).
+ */
+function confirmRestart(): void {
+  showRestartConfirm.value = false
+  try {
+    localStorage.clear()
+  } catch {
+    /* private mode / quota */
+  }
+  const base = import.meta.env.BASE_URL || '/'
+  window.location.href = base
+}
+
+function cancelRestart(): void {
+  showRestartConfirm.value = false
 }
 
 function handleOrbitalDropOpen(): void {
@@ -1679,6 +1744,8 @@ onMounted(async () => {
   themePlayback = audio.play('music.theme' as import('@/audio/audioManifest').AudioSoundId, { loop: true })
   // Kick reactive computeds after upgrade hydration from localStorage (runs on first frame)
   requestAnimationFrame(() => { passiveUiRevision.value++ })
+  await nextTick()
+  syncActiveMissionsLayoutFromRover()
 })
 
 onUnmounted(() => {
