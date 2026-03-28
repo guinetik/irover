@@ -51,6 +51,10 @@ export class RockFactory {
   /** Bottom Y of each normalized GLB geometry (for ground placement). */
   private glbRockBottomY: number[] = []
   private glbRockReady: Promise<void>
+  /** Meteorite mesh templates from meteorites.glb, keyed by variant name (Lp01–Lp10). */
+  private meteoriteGeos = new Map<string, THREE.BufferGeometry>()
+  private meteoriteBottomY = new Map<string, number>()
+  private meteoriteReady: Promise<void>
   private boulderGeos: THREE.BufferGeometry[] = []
   private textures: THREE.Texture[] = []
 
@@ -128,11 +132,41 @@ export class RockFactory {
     }).catch(() => {
       // GLB not found — fall back to procedural rocks only
     })
+
+    // Load meteorites.glb — 10 meteorite variants (Lp01–Lp10).
+    this.meteoriteReady = new GLTFLoader().loadAsync('/meteorites.glb').then((gltf) => {
+      gltf.scene.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return
+        const name = child.name
+        if (!name.startsWith('Lp')) return
+        const geo = child.geometry as THREE.BufferGeometry
+
+        geo.computeBoundingBox()
+        const box = geo.boundingBox!
+        const size = new THREE.Vector3()
+        box.getSize(size)
+        const maxDim = Math.max(size.x, size.y, size.z) || 1
+        const center = new THREE.Vector3()
+        box.getCenter(center)
+        geo.translate(-center.x, -center.y, -center.z)
+        geo.scale(1 / maxDim, 1 / maxDim, 1 / maxDim)
+
+        if (!geo.attributes.normal) {
+          geo.computeVertexNormals()
+        }
+
+        geo.computeBoundingBox()
+        this.meteoriteBottomY.set(name, geo.boundingBox!.min.y)
+        this.meteoriteGeos.set(name, geo)
+      })
+    }).catch(() => {
+      // meteorites.glb not found — meteor showers won't spawn visual meshes
+    })
   }
 
   /** Must be awaited before calling {@link spawn}. */
   async ready(): Promise<void> {
-    await this.glbRockReady
+    await Promise.all([this.glbRockReady, this.meteoriteReady])
   }
 
   /**
@@ -309,6 +343,57 @@ export class RockFactory {
   /** Returns only small rocks (excludes boulders with scale >= 2.0) */
   getSmallRocks(): THREE.Mesh[] {
     return this.rocks.filter(r => r.scale.x < 2.0)
+  }
+
+  /**
+   * Creates an iron-meteorite rock mesh using a specific variant from meteorites.glb.
+   * The returned mesh has standard rock userData but is flagged as fromShower: true.
+   * Caller is responsible for positioning and adding to scene/group.
+   */
+  createMeteoriteRock(variant: string, showerId: string): THREE.Mesh | null {
+    const geo = this.meteoriteGeos.get(variant)
+    if (!geo) return null
+
+    const mat = this.glbMatMap.get('iron-meteorite' as RockTypeId)
+    if (!mat) return null
+
+    const rock = new THREE.Mesh(geo, mat)
+    rock.userData.rockType = 'iron-meteorite'
+    rock.userData.fromShower = true
+    rock.userData.showerId = showerId
+    rock.userData.meteoriteVariant = variant
+    rock.castShadow = true
+
+    const sc = 0.5 + Math.random() * 1.0
+    rock.scale.set(sc, sc * 0.75, sc)
+
+    return rock
+  }
+
+  /**
+   * Registers a meteorite rock in the collision and interaction systems.
+   * Call after positioning the rock at its final ground location.
+   */
+  registerMeteoriteRock(rock: THREE.Mesh, group: THREE.Group): void {
+    group.add(rock)
+    this.rocks.push(rock)
+    const sc = rock.scale.x
+    this.colliders.push({
+      x: rock.position.x,
+      z: rock.position.z,
+      radius: sc * 0.5,
+      height: sc * rock.scale.y,
+    })
+    this.gridInsert(this.colliders.length - 1)
+  }
+
+  /**
+   * Removes a meteorite rock from the collision and interaction systems.
+   */
+  unregisterMeteoriteRock(rock: THREE.Mesh, group: THREE.Group): void {
+    group.remove(rock)
+    const idx = this.rocks.indexOf(rock)
+    if (idx !== -1) this.rocks.splice(idx, 1)
   }
 
   /** Removes all spawned rocks from the group and resets state. */
