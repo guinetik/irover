@@ -14,6 +14,7 @@
     />
     <LandmarkInfoCard
       :landmark="selectedLandmark"
+      :legacy-level="legacyLevel"
       @close="selectedLandmark = null"
       @select-site="onSelectSite"
     />
@@ -32,10 +33,12 @@ import MarsCanvas from '@/components/MarsCanvas.vue'
 import LandmarkTooltip from '@/components/LandmarkTooltip.vue'
 import LandmarkInfoCard from '@/components/LandmarkInfoCard.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import { useLegacy } from '@/composables/useLegacy'
 import type { Landmark, LandmarkHoverEvent } from '@/types/landmark'
 
 const router = useRouter()
 const isMobile = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+const { legacyLevel } = useLegacy()
 
 const isLoading = ref(true)
 const tilesLoaded = ref(0)

@@ -92,25 +92,45 @@
 
       <button
         class="select-site-btn"
-        @click="$emit('select-site', landmark)"
+        :class="{ locked: !siteUnlocked }"
+        :disabled="!siteUnlocked"
+        :title="lockTooltip"
+        @click="$emit('select-site', landmark!)"
       >
-        SELECT SITE
+        {{ siteUnlocked ? 'SELECT SITE' : 'LOCKED' }}
       </button>
     </div>
   </Transition>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Landmark } from '@/types/landmark'
 
-defineProps<{
+const props = defineProps<{
   landmark: Landmark | null
+  legacyLevel?: number
 }>()
 
 defineEmits<{
   close: []
   'select-site': [landmark: Landmark]
 }>()
+
+const siteUnlocked = computed(() => {
+  if (!props.landmark) return false
+  const tier = props.landmark.tier
+  const legacy = props.legacyLevel ?? 0
+  if (tier <= 1) return true
+  return legacy >= tier - 1
+})
+
+const lockTooltip = computed(() => {
+  if (siteUnlocked.value) return ''
+  const tier = props.landmark?.tier ?? 2
+  const requiredTier = tier - 1
+  return `Complete the Deep Signal mission on a Tier ${requiredTier} site to unlock`
+})
 </script>
 
 <style scoped>
@@ -209,6 +229,17 @@ defineEmits<{
 
 .select-site-btn:active {
   transform: scale(0.98);
+}
+
+.select-site-btn.locked {
+  background: rgba(120, 120, 120, 0.3);
+  color: rgba(200, 200, 200, 0.5);
+  cursor: not-allowed;
+  border: 1px solid rgba(120, 120, 120, 0.3);
+}
+
+.select-site-btn.locked:hover {
+  background: rgba(120, 120, 120, 0.3);
 }
 
 .stat-bars {

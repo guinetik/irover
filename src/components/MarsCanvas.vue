@@ -62,6 +62,10 @@ onMounted(async () => {
   })
 
   emit('ready')
+
+  // Default camera to Acidalia Planitia
+  const acidalia = marsScene.landmarks.getLandmarkTarget('acidalia-planitia')
+  if (acidalia) flyTo(acidalia.position, acidalia.distance)
 })
 
 onUnmounted(() => {
