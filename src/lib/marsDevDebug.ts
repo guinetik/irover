@@ -19,6 +19,10 @@ export interface InstallMarsDevDebugApiOptions {
   showRadSafeZones: () => number
   /** Remove all safe-zone waypoint markers. */
   hideRadSafeZones: () => void
+  /** Apply flat durability hit to an instrument by id. */
+  damageInstrument: (id: string, amount: number) => void
+  /** List all instruments with durability. */
+  listInstruments: () => Array<{ id: string; name: string; durability: number; operational: boolean }>
   /** Enable free-fly debug camera. */
   enableFlyCamera: () => void
   /** Disable free-fly debug camera, return to rover. */
@@ -75,6 +79,14 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
       },
       hideSafeZones() {
         options.hideRadSafeZones()
+      },
+    },
+    instruments: {
+      damage(id: string, amount = 10) {
+        options.damageInstrument(id, amount)
+      },
+      list() {
+        return options.listInstruments()
       },
     },
   }

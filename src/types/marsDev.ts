@@ -89,4 +89,18 @@ export interface MarsDevDebugApi {
      */
     hideSafeZones(): void
   }
+
+  instruments: {
+    /**
+     * Apply a flat durability hit to a specific instrument.
+     * @param id - Instrument id (e.g. 'rtg', 'mastcam', 'chemcam', 'drill', 'apxs', 'dan', 'rems', 'rad', 'wheels').
+     * @param amount - Durability percentage to remove (0-100). Default 10.
+     */
+    damage(id: string, amount?: number): void
+
+    /**
+     * List all instruments with their current durability.
+     */
+    list(): Array<{ id: string; name: string; durability: number; operational: boolean }>
+  }
 }

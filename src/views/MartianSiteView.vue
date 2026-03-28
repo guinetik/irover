@@ -562,7 +562,8 @@
     </div>
     <MeteorShockOverlay :active="meteorShockWhiteout" />
     <MeteorDeathOverlay
-      :active="meteorGameOver"
+      :active="gameOverActive"
+      :cause="gameOverCause"
       @restart="restartSite"
       @site-select="goToSiteSelect"
     />
@@ -696,12 +697,20 @@ const audio = useAudio()
 const { playUiCue } = useUiSound()
 const { incrementLegacy } = useLegacy()
 
-// --- Meteor overlay refs ---
+// --- Game over + meteor overlay refs ---
 const meteorShockWhiteout = ref(false)
-const meteorGameOver = ref(false)
+const gameOverActive = ref(false)
+const gameOverCause = ref<'meteor' | 'rtg'>('meteor')
 
 function onMeteorGameOver(): void {
-  meteorGameOver.value = true
+  gameOverCause.value = 'meteor'
+  gameOverActive.value = true
+  useMarsGameClock().setClockPaused(true)
+}
+
+function onRtgGameOver(): void {
+  gameOverCause.value = 'rtg'
+  gameOverActive.value = true
   useMarsGameClock().setClockPaused(true)
 }
 
@@ -797,7 +806,7 @@ const mapMarkers = computed((): import('@/components/MapOverlay.vue').MapMarker[
   const out: import('@/components/MapOverlay.vue').MapMarker[] = []
   // Mission POIs / waypoints
   for (const p of missionPois.value) {
-    out.push({ id: `poi-${p.id}`, x: p.x, z: p.z, color: p.color ?? '#ffd27a', label: p.label, pulse: p.id === focusPoiId.value })
+    out.push({ id: `poi-${p.id}`, x: p.x, z: p.z, color: p.color ?? '#c8644a', label: p.label, pulse: p.id === focusPoiId.value })
   }
   // DAN water drill sites
   for (const p of danArchivedProspects.value) {
@@ -2029,6 +2038,7 @@ function createSiteControllerContext() {
     apxsState,
     onInstrumentActivateRequest: handleActivate,
     onMeteorGameOver,
+    onRtgGameOver,
     onGlobalKeyDown,
     playAmbientLoop: (soundId) => audio.play(soundId, { loop: true }),
     playSoundWithHandle: (soundId) => audio.play(soundId),

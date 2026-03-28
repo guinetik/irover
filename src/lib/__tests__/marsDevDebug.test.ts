@@ -27,6 +27,8 @@ describe('installMarsDevDebugApi', () => {
       triggerStorm,
       triggerMeteorShower,
       setMissionForDev,
+      damageInstrument: vi.fn(),
+      listInstruments: vi.fn(() => [{ id: 'rtg', name: 'RTG', durability: 60, operational: true }]),
     })
 
     const api = (globalThis as { MarsDev?: MarsDevDebugApi }).MarsDev

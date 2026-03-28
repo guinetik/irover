@@ -19,7 +19,7 @@
             <ScrambleText text="ROVER TELEMETRY: NO RESPONSE" :play="phase === 'terminal'" :delay="800" :speed="20" />
           </p>
           <p class="detail">
-            <ScrambleText text="LAST KNOWN STATUS: CATASTROPHIC IMPACT" :play="phase === 'terminal'" :delay="1600" :speed="20" />
+            <ScrambleText :text="DEATH_MESSAGES[cause ?? 'meteor'].status" :play="phase === 'terminal'" :delay="1600" :speed="20" />
           </p>
           <button class="restart-btn" :class="{ visible: showRestart }" @click="$emit('restart')">
             <ScrambleText text="[ RESTART MISSION ]" :play="showRestart" :delay="200" />
@@ -37,7 +37,14 @@
 import { ref, watch, onUnmounted } from 'vue'
 import ScrambleText from '@/components/ScrambleText.vue'
 
-const props = defineProps<{ active: boolean }>()
+export type DeathCause = 'meteor' | 'rtg'
+
+const DEATH_MESSAGES: Record<DeathCause, { status: string }> = {
+  meteor: { status: 'LAST KNOWN STATUS: CATASTROPHIC IMPACT' },
+  rtg: { status: 'LAST KNOWN STATUS: RTG FAILURE — TOTAL POWER LOSS' },
+}
+
+const props = defineProps<{ active: boolean; cause?: DeathCause }>()
 defineEmits<{
   (e: 'restart'): void
   (e: 'siteSelect'): void

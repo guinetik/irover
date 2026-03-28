@@ -390,6 +390,7 @@ export interface MarsSiteViewContext {
   apxsTick: (deltaSec: number) => APXSQueueEntry | null
   totalSP: Ref<number>
   triggerDanAchievement: (event: string) => void
+  notifyDanScanCompleted: () => void
   awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
   onAPXSLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onAPXSBlockedByCold: () => void
@@ -401,6 +402,8 @@ export interface MarsSiteViewContext {
   onInstrumentActivateRequest: () => void
   /** Called when a direct meteor impact kills the rover — triggers death overlay. */
   onMeteorGameOver: () => void
+  /** Called when RTG durability hits break threshold — triggers death overlay. */
+  onRtgGameOver: () => void
   onDSNTransmissionsReceived?: (transmissions: import('@/types/dsnArchive').DSNTransmission[]) => void
   onGlobalKeyDown: (e: KeyboardEvent) => void
   playAmbientLoop: (soundId: import('@/audio/audioManifest').AudioSoundId) => import('@/audio/audioTypes').AudioPlaybackHandle
@@ -780,6 +783,18 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           const severity = severities[Math.max(0, Math.min(2, Math.round(level) - 1))]
           meteorHandler.triggerShower(severity)
         },
+        damageInstrument: (id: string, amount: number) => {
+          const inst = controller?.instruments.find(i => i.id === id)
+          if (inst) inst.applyHazardDamage(amount)
+        },
+        listInstruments: () => {
+          return (controller?.instruments ?? []).map(i => ({
+            id: i.id,
+            name: i.name,
+            durability: Math.round(i.durabilityPct),
+            operational: i.operational,
+          }))
+        },
         enableFlyCamera: () => {
           if (!camera || !canvas) return
           if (!debugFlyCamera) debugFlyCamera = new DebugFlyCamera(camera, canvas)
@@ -897,6 +912,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const nightPenaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
         const nightPenalty = 1.0 - nightFactor * nightPenaltyFactor
         const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
+        // RTG failure = game over
+        if (rtg && !rtg.operational) {
+          ctx.onRtgGameOver()
+        }
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
         const speedMult = playerMod('movementSpeed')
         const wheelsCtrl = controller.instruments.find(i => i.id === 'wheels')
