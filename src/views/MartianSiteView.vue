@@ -284,6 +284,17 @@
       @decode="onRadDecode"
       @dismiss="onRadDismiss"
     />
+    <RADDecodeOverlay
+      :active="radDecoding"
+      :event-id="(radActiveEventId as import('@/lib/radiation').RadEventId) ?? 'gcr-fluctuation'"
+      @complete="onRadDecodeComplete"
+    />
+    <RADResultDisplay
+      v-if="radResultVisible"
+      :visible="radResultVisible"
+      v-bind="radResultData"
+      @close="radResultVisible = false"
+    />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
     <MissionCompleteBanner ref="missionCompleteRef" />
@@ -574,6 +585,8 @@ import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import RADHud from '@/components/RADHud.vue'
 import RADEventAlert from '@/components/RADEventAlert.vue'
+import RADDecodeOverlay from '@/components/RADDecodeOverlay.vue'
+import RADResultDisplay from '@/components/RADResultDisplay.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'
@@ -863,6 +876,28 @@ const radEnabled = ref(false)
 const radEventAlertPending = ref(false)
 const radActiveEventId = ref<string | null>(null)
 const radDecoding = ref(false)
+const radResultVisible = ref(false)
+const radResultData = ref<{
+  eventId: import('@/lib/radiation').RadEventId
+  classifiedAs: import('@/lib/radiation').RadEventId
+  resolved: boolean
+  caught: number
+  total: number
+  grade: string
+  sp: number
+  confidence: number
+  sideProducts: Array<{ itemId: string; quantity: number }>
+}>({
+  eventId: 'gcr-fluctuation',
+  classifiedAs: 'gcr-fluctuation',
+  resolved: false,
+  caught: 0,
+  total: 0,
+  grade: 'D',
+  sp: 0,
+  confidence: 0,
+  sideProducts: [],
+})
 
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
@@ -1695,6 +1730,46 @@ function onRadDecode(): void {
 
 function onRadDismiss(): void {
   siteHandle.value?.handleRadDismiss()
+}
+
+function onRadDecodeComplete(result: {
+  eventId: import('@/lib/radiation').RadEventId
+  classifiedAs: import('@/lib/radiation').RadEventId
+  confidence: number
+  resolved: boolean
+  caught: number
+  total: number
+  grade: string
+  sp: number
+  sideProducts: Array<{ itemId: string; quantity: number }>
+}): void {
+  // End decode in the tick handler
+  siteHandle.value?.handleRadDismiss()
+
+  // Award SP
+  if (result.sp > 0) {
+    const gain = awardSurvival(`RAD: ${result.classifiedAs}`, result.sp)
+    if (gain) sampleToastRef.value?.showSP(gain.amount, 'RAD', gain.bonus)
+  }
+
+  // Add side products to inventory
+  if (result.sideProducts.length > 0) {
+    addComponentsBatch(result.sideProducts.map(sp => ({ itemId: sp.itemId, quantity: sp.quantity })))
+  }
+
+  // Show result screen
+  radResultData.value = {
+    eventId: result.eventId,
+    classifiedAs: result.classifiedAs,
+    resolved: result.resolved,
+    caught: result.caught,
+    total: result.total,
+    grade: result.grade,
+    sp: result.sp,
+    confidence: result.confidence,
+    sideProducts: result.sideProducts,
+  }
+  radResultVisible.value = true
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {
