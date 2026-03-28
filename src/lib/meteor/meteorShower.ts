@@ -1,9 +1,9 @@
 import type { ShowerSeverity } from './meteorTypes'
 
 const METEOR_COUNTS: Record<ShowerSeverity, [number, number]> = {
-  light:    [3, 5],
-  moderate: [8, 12],
-  heavy:    [15, 25],
+  light:    [6, 10],
+  moderate: [16, 24],
+  heavy:    [30, 50],
 }
 
 export function getShowerChancePerSol(meteorRisk: number): number {
