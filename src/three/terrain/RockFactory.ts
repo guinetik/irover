@@ -134,11 +134,13 @@ export class RockFactory {
     })
 
     // Load meteorites.glb — 10 meteorite variants (Lp01–Lp10).
+    // The GLB has Lp## as parent groups with the actual mesh as a child.
     this.meteoriteReady = new GLTFLoader().loadAsync('/meteorites.glb').then((gltf) => {
       gltf.scene.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
-        const name = child.name
-        if (!name.startsWith('Lp')) return
+        // The mesh's parent (or an ancestor) carries the Lp## name
+        const lpName = this.findLpAncestorName(child)
+        if (!lpName) return
         const geo = child.geometry as THREE.BufferGeometry
 
         geo.computeBoundingBox()
@@ -156,8 +158,8 @@ export class RockFactory {
         }
 
         geo.computeBoundingBox()
-        this.meteoriteBottomY.set(name, geo.boundingBox!.min.y)
-        this.meteoriteGeos.set(name, geo)
+        this.meteoriteBottomY.set(lpName, geo.boundingBox!.min.y)
+        this.meteoriteGeos.set(lpName, geo)
       })
       console.log(`[RockFactory] meteorites.glb loaded: ${this.meteoriteGeos.size} variants (${[...this.meteoriteGeos.keys()].join(', ')})`)
     }).catch(() => {
@@ -431,6 +433,16 @@ export class RockFactory {
     geos.push(lump)
 
     return geos
+  }
+
+  /** Walk up the parent chain to find an ancestor named Lp01–Lp10. */
+  private findLpAncestorName(obj: THREE.Object3D): string | null {
+    let cur: THREE.Object3D | null = obj.parent
+    while (cur) {
+      if (cur.name.startsWith('Lp')) return cur.name
+      cur = cur.parent
+    }
+    return null
   }
 
   private displaceVertices(geo: THREE.BufferGeometry, amount: number) {
