@@ -17,6 +17,10 @@ export interface InstallMarsDevDebugApiOptions {
   showRadSafeZones: () => number
   /** Remove all safe-zone waypoint markers. */
   hideRadSafeZones: () => void
+  /** Enable free-fly debug camera. */
+  enableFlyCamera: () => void
+  /** Disable free-fly debug camera, return to rover. */
+  disableFlyCamera: () => void
 }
 
 declare global {
@@ -50,6 +54,14 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
     weather: {
       triggerStorm(level = 3) {
         options.triggerStorm(level)
+      },
+    },
+    camera: {
+      fly() {
+        options.enableFlyCamera()
+      },
+      stop() {
+        options.disableFlyCamera()
       },
     },
     radiation: {

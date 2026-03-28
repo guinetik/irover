@@ -56,6 +56,20 @@ export interface MarsDevDebugApi {
     triggerStorm(level?: number): void
   }
 
+  camera: {
+    /**
+     * Detach camera from the rover and enter free-fly mode.
+     * WASD to move, mouse to look (click to lock pointer), Shift for speed boost,
+     * Space/C for up/down.
+     */
+    fly(): void
+
+    /**
+     * Return camera control to the rover.
+     */
+    stop(): void
+  }
+
   radiation: {
     /**
      * Places waypoint markers at the centroids of all safe radiation zones.

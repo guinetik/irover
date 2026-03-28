@@ -16,6 +16,7 @@ import { generateRadiationField } from '@/lib/radiation'
 import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
+import { DebugFlyCamera } from '@/lib/debugFlyCamera'
 import { listOrbitalDropItemIds } from '@/types/orbitalDrop'
 import type { Landmark } from '@/types/landmark'
 import type { TerrainParams } from '@/types/terrain'
@@ -513,6 +514,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let cameraFillLight: THREE.DirectionalLight | null = null
   let disposeOrbitalDropDebugApi: (() => void) | null = null
   let disposeMarsDevDebugApi: (() => void) | null = null
+  let debugFlyCamera: DebugFlyCamera | null = null
 
   let lastSkyTimeOfDay = -1
   let lastActiveInstrumentAudioState: ActiveInstrumentAudioState = { mode: null, instrumentId: null }
@@ -727,6 +729,14 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           }
         },
         triggerStorm: (level: number) => ctx.triggerStorm(level),
+        enableFlyCamera: () => {
+          if (!camera || !canvas) return
+          if (!debugFlyCamera) debugFlyCamera = new DebugFlyCamera(camera, canvas)
+          debugFlyCamera.enable()
+        },
+        disableFlyCamera: () => {
+          debugFlyCamera?.disable()
+        },
         showRadSafeZones: () => {
           const handler = tickHandlers.radHandler
           // Access the field data through a dev helper on RadTickHandler
@@ -851,6 +861,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         controller.criticalPowerMobilitySuspended = isSleeping.value
       }
       controller?.update(effSceneDelta)
+      // Debug fly camera overrides rover camera when active
+      if (debugFlyCamera?.isEnabled && camera) {
+        debugFlyCamera.update(effSceneDelta)
+      }
       if (controller) {
         const sw = siteWeather.value
         const dustStormEvent: HazardEvent = {
@@ -1271,6 +1285,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     disposeOrbitalDropDebugApi = null
     disposeMarsDevDebugApi?.()
     disposeMarsDevDebugApi = null
+    debugFlyCamera?.dispose()
+    debugFlyCamera = null
     if (animationId) cancelAnimationFrame(animationId)
     window.removeEventListener('keydown', onGlobalKeyDown)
 
