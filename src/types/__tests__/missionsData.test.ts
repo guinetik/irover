@@ -7,6 +7,7 @@ const VALID_OBJECTIVE_TYPES: ObjectiveType[] = [
   'mastcam-tag', 'chemcam', 'dan-prospect', 'transmit', 'rtg-overdrive', 'rtg-shunt', 'rems-activate',
   'use-repair-kit',
   'install-upgrade',
+  'power-boot', 'ui-inspect', 'avionics-test',
 ]
 
 describe('missions.json', () => {
