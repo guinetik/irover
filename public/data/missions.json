@@ -65,7 +65,7 @@
       "name": "Power Systems — Shakedown",
       "patron": null,
       "description": "Verify the MMRTG and the emergency thermal dump. Paperwork calls it \"standard\"; the bus calls it a bad idea executed correctly.",
-      "briefing": "Your steady-state budget is roughly a hundred watts of decay heat turned into electricity — the whole mission in one hot brick. Collect the calibration hardware from the cache, then run the overdrive test: thermal reserve to bus, instruments offline for the burst, cooldown logged. It's on the checklist because someone once didn't do it and we spent six months in review. When the graph flatlines, proceed to the marked outcrop. Spoiler: the landing also scratched the RTG. We'll pretend that's a separate ticket.",
+      "briefing": "Your steady-state budget is roughly a hundred watts of decay heat turned into electricity — the whole mission in one hot brick. Collect the calibration hardware from the cache, then run the overdrive test: thermal reserve to bus, cooldown logged. It's on the checklist because someone once didn't do it and we spent six months in review.\n\nFair warning: while overdrive is dumping thermal reserve to the bus, every instrument goes offline — including comms. No transmitting, no science, no nothing until the cycle completes. Drive around unsupervised for a bit. Enjoy it. Nobody's billing you.\n\nWhen the graph flatlines, proceed to the marked outcrop. Spoiler: the landing also scratched the RTG. We'll pretend that's a separate ticket.",
       "reward": { "sp": 30, "items": [{ "id": "mechatronics-components", "quantity": 2 }] },
       "unlocks": [],
       "chain": "m02-repair",
