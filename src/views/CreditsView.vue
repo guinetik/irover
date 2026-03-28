@@ -123,7 +123,7 @@ onMounted(async () => {
   height: 100%;
   min-height: 0;
   width: 100%;
-  max-width: 640px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 48px 24px 80px;
   box-sizing: border-box;
