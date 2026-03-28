@@ -670,6 +670,9 @@ const introComplete = ref(skipIntro)
 
 function onIntroComplete() {
   introComplete.value = true
+  if (!themePlayback) {
+    themePlayback = audio.play('music.theme' as import('@/audio/audioManifest').AudioSoundId, { loop: true })
+  }
 }
 const descending = ref(true)
 const deploying = ref(false)
@@ -1741,7 +1744,11 @@ onMounted(async () => {
   siteHandle.value = handle
   siteLoading.value = false
   audio.unlock()
-  themePlayback = audio.play('music.theme' as import('@/audio/audioManifest').AudioSoundId, { loop: true })
+  // Theme music starts after intro sequence completes (video + descent + deploy).
+  // For skip-intro players, introComplete is already true so this fires immediately.
+  if (introComplete.value) {
+    themePlayback = audio.play('music.theme' as import('@/audio/audioManifest').AudioSoundId, { loop: true })
+  }
   // Kick reactive computeds after upgrade hydration from localStorage (runs on first frame)
   requestAnimationFrame(() => { passiveUiRevision.value++ })
   await nextTick()
