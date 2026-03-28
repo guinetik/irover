@@ -425,7 +425,7 @@ const manifestById: ManifestById = {
   },
   'ambient.geiger': {
     id: 'ambient.geiger',
-    src: '/sound/geiger.mp3',
+    src: '/sound/rad.mp3',
     category: 'ambient',
     load: 'lazy',
     playback: 'single-instance',
