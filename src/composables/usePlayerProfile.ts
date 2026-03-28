@@ -19,6 +19,7 @@ export interface ProfileModifiers {
   danScanRadius: number
   buildSpeed: number
   structureDurability: number
+  radiationTolerance: number
 }
 
 const ZERO_MODIFIERS: ProfileModifiers = {
@@ -36,6 +37,7 @@ const ZERO_MODIFIERS: ProfileModifiers = {
   danScanRadius: 0,
   buildSpeed: 0,
   structureDurability: 0,
+  radiationTolerance: 0,
 }
 
 // --- Archetypes (Step 1) ---

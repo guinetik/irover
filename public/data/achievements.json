@@ -160,7 +160,7 @@
     {
       "id": "apxs-first-contact",
       "event": "first-analysis",
-      "icon": "\u270b",
+      "icon": "✋",
       "title": "FIRST CONTACT",
       "description": "Complete your first APXS surface analysis.",
       "type": "APXS ANALYSIS"
@@ -168,7 +168,7 @@
     {
       "id": "apxs-surface-reader",
       "event": "five-analyses",
-      "icon": "\ud83d\udcca",
+      "icon": "📊",
       "title": "SURFACE READER",
       "description": "Complete 5 APXS analyses.",
       "type": "APXS ANALYSIS"
@@ -176,7 +176,7 @@
     {
       "id": "apxs-anomaly-hunter",
       "event": "five-anomalies",
-      "icon": "\u26a0",
+      "icon": "⚠",
       "title": "ANOMALY HUNTER",
       "description": "Detect trace element anomalies in 5 different analyses.",
       "type": "APXS ANALYSIS"
@@ -184,7 +184,7 @@
     {
       "id": "apxs-precision",
       "event": "five-s-grades",
-      "icon": "\ud83c\udfaf",
+      "icon": "🎯",
       "title": "PRECISION INSTRUMENT",
       "description": "Achieve S grade in 5 APXS analyses.",
       "type": "APXS ANALYSIS"
@@ -326,7 +326,7 @@
     {
       "sp": 25,
       "id": "track-swift-wheels",
-      "icon": "\u26a1",
+      "icon": "⚡",
       "title": "SWIFT WHEELS",
       "description": "Your driving algorithms are optimizing. Paths feel smoother.",
       "type": "REWARD TRACK",
@@ -336,7 +336,7 @@
     {
       "sp": 35,
       "id": "track-tight-stow",
-      "icon": "\ud83d\udce6",
+      "icon": "📦",
       "title": "TIGHT STOW",
       "description": "Cargo bay reorganized. Sample racks rearranged for denser packing.",
       "type": "REWARD TRACK",
@@ -346,7 +346,7 @@
     {
       "sp": 50,
       "id": "track-keen-eye",
-      "icon": "\ud83d\udc41",
+      "icon": "👁",
       "title": "KEEN EYE",
       "description": "Pattern recognition improving. Instruments read faster.",
       "type": "REWARD TRACK",
@@ -356,9 +356,9 @@
     {
       "sp": 80,
       "id": "track-power-nap",
-      "icon": "\ud83d\udd0b",
+      "icon": "🔋",
       "title": "POWER NAP",
-      "description": "Firmware update \u2014 idle draw reduced across all subsystems.",
+      "description": "Firmware update — idle draw reduced across all subsystems.",
       "type": "REWARD TRACK",
       "modifierKey": "powerConsumption",
       "modifierValue": -0.05
@@ -366,7 +366,7 @@
     {
       "sp": 110,
       "id": "track-second-wind",
-      "icon": "\ud83d\udca8",
+      "icon": "💨",
       "title": "SECOND WIND",
       "description": "When battery drops below 15%, RTG output boosts +20% for 5 minutes. Once per sol.",
       "type": "PERK",
@@ -375,7 +375,7 @@
     {
       "sp": 140,
       "id": "track-thick-skin",
-      "icon": "\ud83d\udee1",
+      "icon": "🛡",
       "title": "THICK SKIN",
       "description": "Thermal insulation settling in. Heat loss reduced.",
       "type": "REWARD TRACK",
@@ -385,7 +385,7 @@
     {
       "sp": 170,
       "id": "track-data-yield",
-      "icon": "\ud83d\udcc8",
+      "icon": "📈",
       "title": "DATA YIELD",
       "description": "Mission Control values your data more. Each discovery pays better.",
       "type": "REWARD TRACK",
@@ -395,7 +395,7 @@
     {
       "sp": 200,
       "id": "track-pack-rat",
-      "icon": "\ud83c\udf92",
+      "icon": "🎒",
       "title": "PACK RAT",
       "description": "You figured out how to wedge samples into that gap behind the RTG.",
       "type": "REWARD TRACK",
@@ -405,7 +405,7 @@
     {
       "sp": 230,
       "id": "track-night-vision",
-      "icon": "\ud83c\udf19",
+      "icon": "🌙",
       "title": "NIGHT VISION",
       "description": "Night movement speed penalty reduced from 50% to 35%. Your nav cameras adapted to low light.",
       "type": "PERK",
@@ -414,7 +414,7 @@
     {
       "sp": 260,
       "id": "track-steady-hand",
-      "icon": "\ud83c\udfaf",
+      "icon": "🎯",
       "title": "STEADY HAND",
       "description": "Calibration drift corrected. Anomaly detection sharpened.",
       "type": "REWARD TRACK",
@@ -424,7 +424,7 @@
     {
       "sp": 290,
       "id": "track-quick-fix",
-      "icon": "\ud83d\udd27",
+      "icon": "🔧",
       "title": "QUICK FIX",
       "description": "You've repaired enough to know the shortcuts.",
       "type": "REWARD TRACK",
@@ -434,7 +434,7 @@
     {
       "sp": 305,
       "id": "track-field-locker",
-      "icon": "\ud83d\udd12",
+      "icon": "🔒",
       "title": "FIELD LOCKER",
       "description": "External cargo mounts secured. Strap samples to the hull.",
       "type": "REWARD TRACK",
@@ -444,7 +444,7 @@
     {
       "sp": 320,
       "id": "track-cruise-control",
-      "icon": "\ud83d\ude97",
+      "icon": "🚗",
       "title": "CRUISE CONTROL",
       "description": "Wheel motor timing optimized. Smoother acceleration curves.",
       "type": "REWARD TRACK",
@@ -454,7 +454,7 @@
     {
       "sp": 350,
       "id": "track-lab-efficiency",
-      "icon": "\ud83d\udd2c",
+      "icon": "🔬",
       "title": "LAB EFFICIENCY",
       "description": "SAM protocols streamlined. Less wasted processing time.",
       "type": "REWARD TRACK",
@@ -464,7 +464,7 @@
     {
       "sp": 380,
       "id": "track-dust-shaker",
-      "icon": "\ud83d\udca8",
+      "icon": "💨",
       "title": "DUST SHAKER",
       "description": "Solar panel dust accumulation rate halved. Automatic vibration cleaning every dawn.",
       "type": "PERK",
@@ -473,7 +473,7 @@
     {
       "sp": 410,
       "id": "track-grid-sense",
-      "icon": "\u26a1",
+      "icon": "⚡",
       "title": "GRID SENSE",
       "description": "You feel the power budget instinctively. Waste eliminated.",
       "type": "REWARD TRACK",
@@ -483,7 +483,7 @@
     {
       "sp": 440,
       "id": "track-echo-scan",
-      "icon": "\ud83d\udce1",
+      "icon": "📡",
       "title": "ECHO SCAN",
       "description": "DAN leaves a faint persistent heatmap trail on the terrain even when deactivated.",
       "type": "PERK",
@@ -492,7 +492,7 @@
     {
       "sp": 455,
       "id": "track-salvage-sense",
-      "icon": "\u267b",
+      "icon": "♻",
       "title": "SALVAGE SENSE",
       "description": "Broken parts yield reusable components. Repair stockpile grows.",
       "type": "REWARD TRACK",
@@ -502,7 +502,7 @@
     {
       "sp": 470,
       "id": "track-warm-blood",
-      "icon": "\ud83d\udd25",
+      "icon": "🔥",
       "title": "WARM BLOOD",
       "description": "Thermal management is second nature. The cold bothers you less.",
       "type": "REWARD TRACK",
@@ -510,9 +510,19 @@
       "modifierValue": -0.025
     },
     {
+      "sp": 485,
+      "id": "track-rad-lining",
+      "icon": "☢",
+      "title": "RAD LINING",
+      "description": "Instrument bays lined with regolith shielding. Radiation tolerance improved.",
+      "type": "REWARD TRACK",
+      "modifierKey": "radiationTolerance",
+      "modifierValue": 0.05
+    },
+    {
       "sp": 500,
       "id": "track-prospect-eye",
-      "icon": "\ud83d\udc8e",
+      "icon": "💎",
       "title": "PROSPECT EYE",
       "description": "You know what Mission Control wants before they ask.",
       "type": "REWARD TRACK",
@@ -522,7 +532,7 @@
     {
       "sp": 530,
       "id": "track-overclock",
-      "icon": "\u23f1",
+      "icon": "⏱",
       "title": "OVERCLOCK",
       "description": "Once per sol, run any instrument at double speed for 60 seconds. Costs 50% extra power during the burst.",
       "type": "PERK",
@@ -531,7 +541,7 @@
     {
       "sp": 560,
       "id": "track-iron-treads",
-      "icon": "\ud83d\udede",
+      "icon": "🛞",
       "title": "IRON TREADS",
       "description": "Wheel wear patterns mapped. Micro-adjustments per revolution.",
       "type": "REWARD TRACK",
@@ -541,7 +551,7 @@
     {
       "sp": 590,
       "id": "track-deep-reader",
-      "icon": "\ud83d\udcd6",
+      "icon": "📖",
       "title": "DEEP READER",
       "description": "You're reading spectrographs before the software finishes rendering.",
       "type": "REWARD TRACK",
@@ -551,7 +561,7 @@
     {
       "sp": 620,
       "id": "track-storm-rider",
-      "icon": "\ud83c\udf2a",
+      "icon": "🌪",
       "title": "STORM RIDER",
       "description": "During dust storms, movement penalty reduced by 50%. You've learned to drive blind.",
       "type": "PERK",
@@ -560,7 +570,7 @@
     {
       "sp": 635,
       "id": "track-signal-clarity",
-      "icon": "\ud83d\udcf6",
+      "icon": "📶",
       "title": "SIGNAL CLARITY",
       "description": "Electromagnetic interference filtered. Cleaner readings across all bands.",
       "type": "REWARD TRACK",
@@ -568,9 +578,19 @@
       "modifierValue": 0.025
     },
     {
+      "sp": 645,
+      "id": "track-hardened-circuits",
+      "icon": "🛡",
+      "title": "HARDENED CIRCUITS",
+      "description": "Radiation-hardened logic boards installed. Instruments tolerate hotter zones.",
+      "type": "REWARD TRACK",
+      "modifierKey": "radiationTolerance",
+      "modifierValue": 0.05
+    },
+    {
       "sp": 650,
       "id": "track-lean-machine",
-      "icon": "\ud83d\udd0c",
+      "icon": "🔌",
       "title": "LEAN MACHINE",
       "description": "Every unnecessary process killed. The rover runs clean.",
       "type": "REWARD TRACK",
@@ -580,7 +600,7 @@
     {
       "sp": 680,
       "id": "track-furnace-heart",
-      "icon": "\u2668",
+      "icon": "♨",
       "title": "FURNACE HEART",
       "description": "RTG waste heat routing optimized. Free warmth.",
       "type": "REWARD TRACK",
@@ -590,7 +610,7 @@
     {
       "sp": 710,
       "id": "track-multi-scan",
-      "icon": "\ud83d\udd0d",
+      "icon": "🔍",
       "title": "MULTI-SCAN",
       "description": "MastCam now tags rocks with predicted best instrument based on visual profile.",
       "type": "PERK",
@@ -599,7 +619,7 @@
     {
       "sp": 740,
       "id": "track-sharp-nose",
-      "icon": "\ud83c\udfaf",
+      "icon": "🎯",
       "title": "SHARP NOSE",
       "description": "Spectrograph noise floor reduced. Faintest signals now detectable.",
       "type": "REWARD TRACK",
@@ -609,7 +629,7 @@
     {
       "sp": 770,
       "id": "track-bulk-analysis",
-      "icon": "\u2697",
+      "icon": "⚗",
       "title": "BULK ANALYSIS",
       "description": "SAM can queue 2 samples back-to-back without exiting the overlay. Second sample runs at 75% power cost.",
       "type": "PERK",
@@ -618,7 +638,7 @@
     {
       "sp": 800,
       "id": "track-marathon-wheels",
-      "icon": "\ud83c\udfc1",
+      "icon": "🏁",
       "title": "MARATHON WHEELS",
       "description": "800 SP worth of terrain under your treads. The rover knows Mars.",
       "type": "REWARD TRACK",
@@ -626,9 +646,19 @@
       "modifierValue": 0.015
     },
     {
+      "sp": 815,
+      "id": "track-deep-shielding",
+      "icon": "⚛",
+      "title": "DEEP SHIELDING",
+      "description": "Multi-layer particle shielding. You can work where others can't.",
+      "type": "REWARD TRACK",
+      "modifierKey": "radiationTolerance",
+      "modifierValue": 0.05
+    },
+    {
       "sp": 830,
       "id": "track-reflex-scan",
-      "icon": "\u26a1",
+      "icon": "⚡",
       "title": "REFLEX SCAN",
       "description": "Instrument warmup eliminated. Point and fire.",
       "type": "REWARD TRACK",
@@ -638,7 +668,7 @@
     {
       "sp": 860,
       "id": "track-solar-surplus",
-      "icon": "\u2600",
+      "icon": "☀",
       "title": "SOLAR SURPLUS",
       "description": "During peak solar, generation +15%. Your panels track the sun with optimized gimbal angles.",
       "type": "PERK",
@@ -647,7 +677,7 @@
     {
       "sp": 890,
       "id": "track-whisper-draw",
-      "icon": "\ud83e\udd2b",
+      "icon": "🤫",
       "title": "WHISPER DRAW",
       "description": "The rover hums. Barely. Every electron accounted for.",
       "type": "REWARD TRACK",
@@ -657,7 +687,7 @@
     {
       "sp": 920,
       "id": "track-polar-blood",
-      "icon": "\u2744",
+      "icon": "❄",
       "title": "POLAR BLOOD",
       "description": "You could overwinter at the pole. The cold is just weather now.",
       "type": "REWARD TRACK",
@@ -667,7 +697,7 @@
     {
       "sp": 950,
       "id": "track-ghost-tracks",
-      "icon": "\ud83d\udc7b",
+      "icon": "👻",
       "title": "GHOST TRACKS",
       "description": "Your wheel tracks glow faintly on the minimap. Complete terrain coverage visualization.",
       "type": "PERK",
@@ -676,7 +706,7 @@
     {
       "sp": 965,
       "id": "track-jury-rig",
-      "icon": "\ud83e\uddf0",
+      "icon": "🧰",
       "title": "JURY RIG",
       "description": "You can fix anything with zip ties and thermal tape. Field repairs cost almost nothing.",
       "type": "REWARD TRACK",
@@ -686,7 +716,7 @@
     {
       "sp": 980,
       "id": "track-legends-yield",
-      "icon": "\u2b50",
+      "icon": "⭐",
       "title": "LEGEND'S YIELD",
       "description": "Your name is on papers. Every data point you send gets cited.",
       "type": "REWARD TRACK",
@@ -696,9 +726,9 @@
     {
       "sp": 1000,
       "id": "track-full-autonomy",
-      "icon": "\ud83d\ude80",
+      "icon": "🚀",
       "title": "FULL AUTONOMY",
-      "description": "Mission Control goes quiet. No more directives \u2014 you choose what to explore, what to analyze, what to build. Mars is yours.",
+      "description": "Mission Control goes quiet. No more directives — you choose what to explore, what to analyze, what to build. Mars is yours.",
       "type": "PERK",
       "perkId": "full-autonomy"
     }

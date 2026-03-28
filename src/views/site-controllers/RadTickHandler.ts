@@ -31,6 +31,7 @@ export interface RadTickCallbacks {
   radiationIndex: number
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playEventSting?: () => void
+  getRadiationTolerance?: () => number
 }
 
 export interface RadTickHandler extends SiteTickHandler {
@@ -147,10 +148,17 @@ export function createRadTickHandler(
     const rawLevel = sampleRadiationAt(field, gridSize, terrainScale, roverPos.x, roverPos.z)
     const level = rawLevel
 
-    // --- Classify zone ---
-    const zone = classifyZone(level, thresholds)
+    // --- Apply player's radiation tolerance — reduces effective level for zone/blocking ---
+    const tolerance = callbacks.getRadiationTolerance?.() ?? 0
+    const effectiveLevel = Math.max(0, level - tolerance)
+    // Hard cap: raw level >= 0.90 ALWAYS counts as hazardous regardless of tolerance
+    const HARD_CAP_LEVEL = 0.90
+    const zoneLevelForClassification = level >= HARD_CAP_LEVEL ? level : effectiveLevel
 
-    // --- Compute dose rate with night modulation ---
+    // --- Classify zone ---
+    const zone = classifyZone(zoneLevelForClassification, thresholds)
+
+    // --- Compute dose rate with night modulation (uses raw level — physical dose unchanged) ---
     const nightMod = nightFactor > 0.5 ? RAD_NIGHT_DOSE_MULTIPLIER : 1.0
     const doseRate = radiationToDoseRate(level) * nightMod
 
@@ -164,7 +172,7 @@ export function createRadTickHandler(
     radInst.particleRate = particleRate
 
     // --- Update radLevel/radZone (drives VFX pass + instrument blocking) ---
-    radLevel.value = level
+    radLevel.value = zoneLevelForClassification
     radZone.value = zone
 
     // ─── RAD-GATED (only when player has activated the instrument) ───

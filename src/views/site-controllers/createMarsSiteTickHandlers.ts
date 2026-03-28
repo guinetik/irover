@@ -306,6 +306,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       radiationIndex: refs.siteTerrainParams.value?.radiationIndex ?? 0.25,
       sampleToastRef: ctx.sampleToastRef,
       playEventSting: () => ctx.playInstrumentActionSound('sfx.radEventSting' as any),
+      getRadiationTolerance: () => ctx.playerMod('radiationTolerance') - 1,
     },
   )
 
