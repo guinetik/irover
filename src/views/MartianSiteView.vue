@@ -294,7 +294,7 @@
       v-if="radResultVisible"
       :visible="radResultVisible"
       v-bind="radResultData"
-      @close="radResultVisible = false"
+      @acknowledge="onRadAcknowledge"
     />
     <SampleToast ref="sampleToastRef" />
     <AchievementBanner ref="achievementRef" />
@@ -1754,6 +1754,25 @@ function onRadDecodeComplete(result: {
   // End decode in the tick handler
   siteHandle.value?.handleRadDismiss()
 
+  // Store result and show processing → result screen (SP/archive on acknowledge)
+  radResultData.value = {
+    eventId: result.eventId,
+    classifiedAs: result.classifiedAs,
+    resolved: result.resolved,
+    caught: result.caught,
+    total: result.total,
+    grade: result.grade,
+    sp: result.sp,
+    confidence: result.confidence,
+    sideProducts: result.sideProducts,
+  }
+  radResultVisible.value = true
+}
+
+function onRadAcknowledge(): void {
+  const result = radResultData.value
+  radResultVisible.value = false
+
   // Award SP
   if (result.sp > 0) {
     const gain = awardSurvival(`RAD: ${result.classifiedAs}`, result.sp)
@@ -1800,20 +1819,6 @@ function onRadDecodeComplete(result: {
   if (result.grade === 'S') {
     triggerRadAchievement('s-grade')
   }
-
-  // Show result screen
-  radResultData.value = {
-    eventId: result.eventId,
-    classifiedAs: result.classifiedAs,
-    resolved: result.resolved,
-    caught: result.caught,
-    total: result.total,
-    grade: result.grade,
-    sp: result.sp,
-    confidence: result.confidence,
-    sideProducts: result.sideProducts,
-  }
-  radResultVisible.value = true
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {

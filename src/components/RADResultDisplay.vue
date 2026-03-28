@@ -3,27 +3,41 @@
     <Transition name="rad-result-fade">
       <div v-if="visible" class="rad-result-overlay">
         <div class="rad-result-content">
-          <div class="rad-result-subtitle">Analysis Complete</div>
-          <div class="rad-result-grade" :style="gradeStyle">{{ grade }}</div>
-          <div class="rad-result-details">
-            <span class="result-event-name">&#x2622; {{ displayName }}</span>
-            <template v-if="resolved">
-              &mdash; <span :style="{ color: rarityColor }">{{ rarityLabel }}</span>
-            </template>
-            <br>
-            Catch: {{ caught }} / {{ total }} ({{ catchPct }}%)
-            <br>
-            Classification confidence: {{ confidencePct }}%
-            <template v-if="!resolved">
-              <span class="result-miss"> (below 70% threshold)</span>
-            </template>
-            <br>
-            <span class="result-sp">+{{ sp }} SP</span>
-            <template v-if="sideProducts.length > 0">
-              <br><br>
-              <span style="color:rgba(100,200,120,0.4)">Side products earned</span>
-            </template>
-          </div>
+          <!-- Processing phase -->
+          <template v-if="processing">
+            <div class="rad-result-subtitle">PROCESSING PARTICLE DATA</div>
+            <div class="rad-processing-bar">
+              <div class="rad-processing-fill" :style="{ width: processingPct + '%' }" />
+            </div>
+            <div class="rad-processing-label font-instrument">{{ processingPct }}%</div>
+          </template>
+
+          <!-- Results phase -->
+          <template v-else>
+            <div class="rad-result-subtitle">Analysis Complete</div>
+            <div class="rad-result-grade" :style="gradeStyle">{{ grade }}</div>
+            <div class="rad-result-details">
+              <span class="result-event-name">&#x2622; {{ displayName }}</span>
+              <template v-if="resolved">
+                &mdash; <span :style="{ color: rarityColor }">{{ rarityLabel }}</span>
+              </template>
+              <br>
+              Catch: {{ caught }} / {{ total }} ({{ catchPct }}%)
+              <br>
+              Classification confidence: {{ confidencePct }}%
+              <template v-if="!resolved">
+                <span class="result-miss"> (below 70% threshold)</span>
+              </template>
+              <br>
+              <span class="result-sp">+{{ sp }} SP</span>
+              <template v-if="sideProducts.length > 0">
+                <br>
+                <span style="color:rgba(100,200,120,0.4)">Side products: {{ sideProducts.map(p => p.itemId).join(', ') }}</span>
+              </template>
+            </div>
+            <button class="rad-ack-btn" @click="emit('acknowledge')">ACKNOWLEDGE</button>
+            <div class="rad-ack-hint">[ENTER] or click to dismiss</div>
+          </template>
         </div>
       </div>
     </Transition>
@@ -31,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { RadEventId } from '@/lib/radiation'
 import { RAD_EVENT_DEFS } from '@/lib/radiation'
 
@@ -49,7 +63,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  close: []
+  acknowledge: []
 }>()
 
 const RARITY_COLORS: Record<string, string> = {
@@ -59,42 +73,61 @@ const RARITY_COLORS: Record<string, string> = {
   legendary: '#cc55ff',
 }
 
-const eventDef = computed(() => RAD_EVENT_DEFS[props.classifiedAs])
+const PROCESSING_DURATION_MS = 2500
 
-const displayName = computed(() => {
-  if (!props.resolved) return 'UNRESOLVED'
-  return eventDef.value?.name ?? 'Unknown'
+const processing = ref(true)
+const processingPct = ref(0)
+let processingStart = 0
+let processingRaf = 0
+
+function tickProcessing(): void {
+  const elapsed = Date.now() - processingStart
+  const pct = Math.min(100, Math.round((elapsed / PROCESSING_DURATION_MS) * 100))
+  processingPct.value = pct
+  if (pct >= 100) {
+    processing.value = false
+    return
+  }
+  processingRaf = requestAnimationFrame(tickProcessing)
+}
+
+watch(() => props.visible, (v) => {
+  if (v) {
+    processing.value = true
+    processingPct.value = 0
+    processingStart = Date.now()
+    processingRaf = requestAnimationFrame(tickProcessing)
+  } else {
+    cancelAnimationFrame(processingRaf)
+  }
 })
 
+// Enter key to acknowledge
+function onKeyDown(e: KeyboardEvent): void {
+  if (!props.visible || processing.value) return
+  if (e.code === 'Enter' || e.code === 'Space') {
+    e.preventDefault()
+    emit('acknowledge')
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeyDown))
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeyDown)
+  cancelAnimationFrame(processingRaf)
+})
+
+const eventDef = computed(() => RAD_EVENT_DEFS[props.classifiedAs])
+const displayName = computed(() => props.resolved ? (eventDef.value?.name ?? 'Unknown') : 'UNRESOLVED')
 const rarityLabel = computed(() => eventDef.value?.rarity?.toUpperCase() ?? '')
 const rarityColor = computed(() => RARITY_COLORS[eventDef.value?.rarity ?? 'common'] ?? '#55dd88')
-
-const catchPct = computed(() => {
-  if (props.total === 0) return 0
-  return Math.round((props.caught / props.total) * 100)
-})
-
+const catchPct = computed(() => props.total === 0 ? 0 : Math.round((props.caught / props.total) * 100))
 const confidencePct = computed(() => Math.round(props.confidence * 100))
-
 const gradeStyle = computed(() => {
   const g = props.grade
   const color = g === 'S' ? '#ffdd33' : g === 'A' ? '#55dd88' : '#e8a54b'
   const shadow = g === 'S' ? 'rgba(255,221,51,0.4)' : 'rgba(100,220,130,0.3)'
   return { color, textShadow: `0 0 30px ${shadow}` }
-})
-
-// Auto-close after 3 seconds
-let closeTimer: ReturnType<typeof setTimeout> | null = null
-watch(() => props.visible, (v) => {
-  if (closeTimer) {
-    clearTimeout(closeTimer)
-    closeTimer = null
-  }
-  if (v) {
-    closeTimer = setTimeout(() => {
-      emit('close')
-    }, 3000)
-  }
 })
 </script>
 
@@ -129,6 +162,28 @@ watch(() => props.visible, (v) => {
   margin-bottom: 6px;
 }
 
+.rad-processing-bar {
+  width: 280px;
+  height: 4px;
+  background: rgba(100, 220, 130, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 16px 0 8px;
+}
+
+.rad-processing-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(100, 220, 130, 0.4), rgba(100, 220, 130, 0.8));
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.rad-processing-label {
+  font-size: 12px;
+  color: rgba(100, 200, 120, 0.5);
+  letter-spacing: 2px;
+}
+
 .rad-result-grade {
   font-size: 48px;
   font-weight: 700;
@@ -157,6 +212,34 @@ watch(() => props.visible, (v) => {
 .result-sp {
   color: #e8a54b;
   font-weight: 700;
+}
+
+.rad-ack-btn {
+  font-family: 'Oxanium', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 10px 36px;
+  background: transparent;
+  color: #55dd88;
+  border: 1px solid rgba(100, 220, 130, 0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rad-ack-btn:hover {
+  background: rgba(100, 220, 130, 0.12);
+  box-shadow: 0 0 20px rgba(100, 220, 130, 0.15);
+}
+
+.rad-ack-hint {
+  font-size: 10px;
+  color: rgba(100, 200, 120, 0.25);
+  letter-spacing: 1px;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .rad-result-fade-enter-active,
