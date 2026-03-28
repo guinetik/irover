@@ -262,6 +262,7 @@
       :rover-x="roverWorldX"
       :rover-z="roverWorldZ"
       :terrain-scale="terrainScale"
+      :markers="mapMarkers"
       @close="mapOpen = false"
     />
     <SAMDialog
@@ -704,11 +705,41 @@ function onMeteorGameOver(): void {
   useMarsGameClock().setClockPaused(true)
 }
 
+/** Clear all progression localStorage keys, keeping only the player profile. */
+function clearProgressionStorage(): void {
+  const PROGRESSION_KEYS = [
+    'mars-active-site-v1',
+    'mars-apxs-archive-v1',
+    'mars-chemcam-archive-v1',
+    'mars-dan-archive-v1',
+    'mars-dsn-archive-v1',
+    'mars-instrument-upgrades-v1',
+    'mars-instrument-durability-v1',
+    'mars-inventory-v1',
+    'mars-legacy',
+    'mars-lga-mailbox-v1',
+    'mars-achievements-unlocked-v1',
+    'mars-meteor-archive-v1',
+    'mars-missions-v1',
+    'mars-rad-archive-v1',
+    'mars-reward-track-v1',
+    'mars-sam-archive-v1',
+    'mars-lifetime-sp',
+    'mars-site-mission-sol-v1',
+    'mars-power-booted',
+  ]
+  for (const key of PROGRESSION_KEYS) {
+    try { localStorage.removeItem(key) } catch { /* ignore */ }
+  }
+}
+
 function restartSite(): void {
+  clearProgressionStorage()
   window.location.reload()
 }
 
 function goToSiteSelect(): void {
+  clearProgressionStorage()
   void router.push('/')
 }
 
@@ -762,6 +793,20 @@ const rewardTrackOpen = ref(false)
 const showArchive = ref(false)
 const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
+const mapMarkers = computed((): import('@/components/MapOverlay.vue').MapMarker[] => {
+  const out: import('@/components/MapOverlay.vue').MapMarker[] = []
+  // Mission POIs / waypoints
+  for (const p of missionPois.value) {
+    out.push({ id: `poi-${p.id}`, x: p.x, z: p.z, color: p.color ?? '#ffd27a', label: p.label, pulse: p.id === focusPoiId.value })
+  }
+  // DAN water drill sites
+  for (const p of danArchivedProspects.value) {
+    if (p.siteId === siteId && p.waterConfirmed && typeof p.drillSiteX === 'number' && typeof p.drillSiteZ === 'number') {
+      out.push({ id: `dan-${p.archiveId}`, x: p.drillSiteX, z: p.drillSiteZ, color: '#44aaff', label: 'Water drill site' })
+    }
+  }
+  return out
+})
 
 // --- Theme music: loops for the duration of the site view ---
 let themePlayback: AudioPlaybackHandle | null = null
@@ -1725,6 +1770,10 @@ function handleActivate() {
     if (inst?.id === 'rems' && inst.passiveSubsystemEnabled) {
       useMissions().notifyRemsActivated()
     }
+    // Notify mission system when DAN is activated
+    if (inst?.id === 'dan' && inst.passiveSubsystemEnabled) {
+      useMissions().notifyDanActivated()
+    }
   }
 }
 
@@ -1957,6 +2006,7 @@ function createSiteControllerContext() {
     apxsTick,
     totalSP,
     triggerDanAchievement,
+    notifyDanScanCompleted: () => useMissions().notifyDanScanCompleted(),
     awardTransmission,
     playInstrumentActionSound: (soundId) => {
       audio.unlock()
