@@ -11,6 +11,7 @@ import type { ITerrainGenerator } from './TerrainGenerator'
 import type { TerrainParams } from '@/types/terrain'
 import { SimplexNoise } from '@/lib/math/simplexNoise'
 import { pickDetailTextures } from '@/lib/terrain/detailTextures'
+import { generateMapCanvas, MARS_COLOR_RAMP, HYPSOMETRIC_RAMP } from '@/lib/terrain/mapColors'
 
 /** Sites that have a dedicated GLB terrain file in public/terrain/{siteId}.glb */
 export const GLB_TERRAIN_SITES = new Set([
@@ -62,6 +63,9 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
   readonly group = new THREE.Group()
   readonly rockSpawner = new RockFactory()
   terrainMaterial: THREE.ShaderMaterial | null = null
+
+  mapCanvasMars: HTMLCanvasElement | null = null
+  mapCanvasHypso: HTMLCanvasElement | null = null
 
   private terrainMeshes: THREE.Mesh[] = []
   private mountains: THREE.Mesh[] = []
@@ -255,6 +259,10 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
 
     this.heightmap = hm
     this.coverage = cov
+
+    // Generate 2D map images from the heightmap
+    this.mapCanvasMars = generateMapCanvas(hm, GRID_SIZE, this.heightMin, this.heightMax, MARS_COLOR_RAMP)
+    this.mapCanvasHypso = generateMapCanvas(hm, GRID_SIZE, this.heightMin, this.heightMax, HYPSOMETRIC_RAMP)
   }
 
 

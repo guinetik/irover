@@ -26,6 +26,9 @@ export class ElevationTerrainGenerator implements ITerrainGenerator {
   readonly rockSpawner = new RockFactory()
   terrainMaterial: THREE.ShaderMaterial | null = null
 
+  mapCanvasMars: HTMLCanvasElement | null = null
+  mapCanvasHypso: HTMLCanvasElement | null = null
+
   private terrainMesh: THREE.Mesh | null = null
   private mountains: THREE.Mesh[] = []
   private textures: THREE.Texture[] = []

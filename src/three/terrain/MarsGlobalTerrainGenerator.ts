@@ -28,6 +28,9 @@ export class MarsGlobalTerrainGenerator implements ITerrainGenerator {
   readonly rockSpawner = new RockFactory()
   terrainMaterial: THREE.ShaderMaterial | null = null
 
+  mapCanvasMars: HTMLCanvasElement | null = null
+  mapCanvasHypso: HTMLCanvasElement | null = null
+
   private disposed = false
   private fallback: DefaultTerrainGenerator | null = null
   private terrainMesh: THREE.Mesh | null = null

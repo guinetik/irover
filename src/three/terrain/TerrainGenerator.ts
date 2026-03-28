@@ -35,6 +35,10 @@ export interface ITerrainGenerator {
   slopeAt(x: number, z: number): number
   getSmallRocks(): THREE.Mesh[]
   dispose(): void
+  /** 2D color map canvas (Mars terracotta ramp), available after generate(). */
+  readonly mapCanvasMars: HTMLCanvasElement | null
+  /** 2D color map canvas (hypsometric blue-red ramp), available after generate(). */
+  readonly mapCanvasHypso: HTMLCanvasElement | null
 }
 
 export type TerrainGeneratorType = 'default' | 'glb' | 'mars-global' | 'elevation'
@@ -54,6 +58,8 @@ export class DefaultTerrainGenerator implements ITerrainGenerator {
   private terrainMesh: THREE.Mesh | null = null;
   /** Exposed for dynamic sun direction updates */
   terrainMaterial: THREE.ShaderMaterial | null = null;
+  mapCanvasMars: HTMLCanvasElement | null = null
+  mapCanvasHypso: HTMLCanvasElement | null = null
   private mountains: THREE.Mesh[] = [];
   private textures: THREE.Texture[] = [];
 
