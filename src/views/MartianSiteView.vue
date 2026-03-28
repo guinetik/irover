@@ -546,6 +546,17 @@
           <span class="wheels-hud-icon wheels-hud-mic-icon" aria-hidden="true">&#x1F399;</span>
           <span class="wheels-hud-name">MIC</span>
         </button>
+        <button
+          type="button"
+          class="wheels-hud-btn"
+          :class="{ active: mapOpen }"
+          title="Terrain Map [M]"
+          @click="toggleMapOverlay"
+        >
+          <span class="wheels-hud-key font-instrument">M</span>
+          <span class="wheels-hud-icon" aria-hidden="true">&#x1F5FA;</span>
+          <span class="wheels-hud-name">MAP</span>
+        </button>
       </div>
     </div>
   </div>
