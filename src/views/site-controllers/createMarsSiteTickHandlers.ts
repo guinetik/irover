@@ -13,6 +13,7 @@ import { createAPXSTickHandler } from './APXSTickHandler'
 import { createMicTickHandler } from './MicTickHandler'
 import { createPassiveSystemsAudioTickHandler } from './PassiveSystemsAudioTickHandler'
 import { createRoverMovementSoundHandler } from './RoverMovementSoundHandler'
+import { createRadTickHandler } from './RadTickHandler'
 
 /**
  * All per-frame subsystems created for the Mars site view, plus a single {@link disposeAll} for teardown.
@@ -30,6 +31,7 @@ export interface MarsSiteTickHandlers {
   micHandler: ReturnType<typeof createMicTickHandler>
   passiveSystemsAudioHandler: ReturnType<typeof createPassiveSystemsAudioTickHandler>
   roverMovementSoundHandler: ReturnType<typeof createRoverMovementSoundHandler>
+  radHandler: ReturnType<typeof createRadTickHandler>
   /** Disposes handlers in a stable order (matches previous inline disposal). */
   disposeAll: () => void
 }
@@ -287,6 +289,24 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     playTurnOut: () => ctx.playInstrumentActionSound('sfx.roverTurnOut'),
   })
 
+  const radHandler = createRadTickHandler(
+    {
+      radZone: refs.radZone,
+      radLevel: refs.radLevel,
+      radDoseRate: refs.radDoseRate,
+      radCumulativeDose: refs.radCumulativeDose,
+      radParticleRate: refs.radParticleRate,
+      radEnabled: refs.radEnabled,
+      radEventAlertPending: refs.radEventAlertPending,
+      radActiveEventId: refs.radActiveEventId,
+      radDecoding: refs.radDecoding,
+    },
+    {
+      radiationIndex: refs.siteTerrainParams.value?.radiationIndex ?? 0.25,
+      sampleToastRef: ctx.sampleToastRef,
+    },
+  )
+
   function disposeAll(): void {
     roverVfxHandler.dispose()
     danHandler.dispose()
@@ -299,6 +319,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     micHandler.dispose()
     passiveSystemsAudioHandler.dispose()
     roverMovementSoundHandler.dispose()
+    radHandler.dispose()
   }
 
   return {
@@ -313,6 +334,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     micHandler,
     passiveSystemsAudioHandler,
     roverMovementSoundHandler,
+    radHandler,
     disposeAll,
   }
 }

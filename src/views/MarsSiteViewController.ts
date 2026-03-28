@@ -8,9 +8,11 @@ import { RoverController } from '@/three/RoverController'
 import { createCameraFillLight, syncCameraFillLight } from '@/three/cameraFillLight'
 import { createMarsEnvironment } from '@/three/MarsEnvironment'
 import { createDustAtmospherePass } from '@/three/DustAtmospherePass'
+import { createRadiationAtmospherePass, type RadiationAtmospherePass } from '@/three/RadiationAtmospherePass'
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { computeDecayMultiplier } from '@/lib/hazards'
 import type { HazardEvent } from '@/lib/hazards'
+import { generateRadiationField } from '@/lib/radiation'
 import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
@@ -313,6 +315,16 @@ export interface MarsSiteViewRefs {
   chemCamSpeedBreakdown: Ref<SpeedBreakdown | null>
   mastCamSpeedBreakdown: Ref<SpeedBreakdown | null>
   apxsSpeedBreakdown: Ref<SpeedBreakdown | null>
+  // RAD instrument refs
+  radZone: Ref<import('@/lib/radiation').RadiationZone>
+  radLevel: Ref<number>
+  radDoseRate: Ref<number>
+  radCumulativeDose: Ref<number>
+  radParticleRate: Ref<number>
+  radEnabled: Ref<boolean>
+  radEventAlertPending: Ref<boolean>
+  radActiveEventId: Ref<string | null>
+  radDecoding: Ref<boolean>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -476,6 +488,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     remsSurveying,
     siteWeather,
     micEnabled,
+    radLevel,
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
@@ -493,6 +506,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let controller: RoverController | null = null
   let clock: THREE.Clock | null = null
   let dustPass: ReturnType<typeof createDustAtmospherePass> | null = null
+  let radPass: RadiationAtmospherePass | null = null
   let animationId = 0
   let cameraFillLight: THREE.DirectionalLight | null = null
   let disposeOrbitalDropDebugApi: (() => void) | null = null
@@ -537,6 +551,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     if (dustPass) {
       dustPass.uniforms.uResolution.value.set(canvas.clientWidth, canvas.clientHeight)
     }
+    if (radPass) {
+      radPass.uniforms.uResolution.value.set(canvas.clientWidth, canvas.clientHeight)
+    }
   }
 
   // --- Mount ---
@@ -576,6 +593,35 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     // Adjust camera far plane to match terrain scale (default 800 → 1200, GLB 2000 → 3000)
     camera.far = siteScene.terrain.scale * 1.5
     camera.updateProjectionMatrix()
+
+    // --- Generate radiation scalar field from terrain elevation ---
+    {
+      const radGridSize = 128
+      const tScale = siteScene.terrain.scale
+      const elevationMap = new Float32Array(radGridSize * radGridSize)
+      for (let z = 0; z < radGridSize; z++) {
+        for (let x = 0; x < radGridSize; x++) {
+          const wx = (x / (radGridSize - 1) - 0.5) * tScale
+          const wz = (z / (radGridSize - 1) - 0.5) * tScale
+          elevationMap[z * radGridSize + x] = siteScene.terrain.heightAt(wx, wz)
+        }
+      }
+      let minH = Infinity, maxH = -Infinity
+      for (let i = 0; i < elevationMap.length; i++) {
+        if (elevationMap[i] < minH) minH = elevationMap[i]
+        if (elevationMap[i] > maxH) maxH = elevationMap[i]
+      }
+      const range = maxH - minH || 1
+      for (let i = 0; i < elevationMap.length; i++) {
+        elevationMap[i] = (elevationMap[i] - minH) / range
+      }
+      const radField = generateRadiationField(
+        elevationMap, radGridSize,
+        terrainParams.radiationIndex ?? 0.25,
+        terrainParams.seed,
+      )
+      tickHandlers.radHandler.setField(radField, radGridSize, tScale)
+    }
 
     // Procedural Mars environment map — gives PBR metals something to reflect
     siteScene.scene.environment = createMarsEnvironment(renderer)
@@ -687,6 +733,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       composer.addPass(new RenderPass(siteScene.scene, camera))
       dustPass = createDustAtmospherePass(terrainParams.dustCover)
       composer.addPass(dustPass)
+      radPass = createRadiationAtmospherePass()
+      composer.addPass(radPass)
     }
 
     clock = new THREE.Clock()
@@ -742,6 +790,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         windMs: siteWeather.value.windMs,
         dustStormPhase: siteWeather.value.dustStormPhase,
         dustStormLevel: siteWeather.value.dustStormLevel,
+        radiationLevel: radLevel.value,
       }
 
       const nextActiveInstrumentAudioState: ActiveInstrumentAudioState = {
@@ -788,7 +837,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           active: sw.dustStormPhase === 'active',
           level: sw.dustStormLevel ?? 0,
         }
-        const hazardEvents = [dustStormEvent]
+        const radiationEvent: HazardEvent = {
+          source: 'radiation',
+          active: radLevel.value > 0.25,
+          level: Math.ceil(radLevel.value * 5),
+        }
+        const hazardEvents = [dustStormEvent, radiationEvent]
         for (const inst of controller.instruments) {
           inst.hazardDecayMultiplier = computeDecayMultiplier(hazardEvents, inst.tier)
           inst.applyPassiveDecay(solDelta)
@@ -954,6 +1008,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       }
 
       danHandler.tick(fctx)
+      tickHandlers.radHandler.tick(fctx)
 
       // --- Power tick ---
       {
@@ -1133,6 +1188,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         dustPass.setStormGlitch(glitchIntensity, incomingFactor)
       }
 
+      if (radPass) {
+        radPass.uniforms.uTime.value = simulationTime
+        radPass.setRadiation(radLevel.value)
+      }
+
       if (composer) {
         composer.render()
       } else {
@@ -1169,6 +1229,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       windMs: 0,
       dustStormPhase: 'none' as const,
       dustStormLevel: null,
+      radiationLevel: radLevel.value,
     }
   }
 

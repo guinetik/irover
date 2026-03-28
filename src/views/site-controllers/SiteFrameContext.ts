@@ -29,6 +29,8 @@ export interface SiteFrameContext {
   dustStormPhase: 'none' | 'incoming' | 'active'
   /** Storm intensity 1–5, or null when no storm. */
   dustStormLevel: number | null
+  /** Radiation scalar at rover position (0.0–1.2), 0 when RAD not yet initialized. */
+  radiationLevel: number
 }
 
 /**

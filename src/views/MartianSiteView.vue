@@ -835,6 +835,17 @@ const danSignalStrength = ref(0)
 const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
 
+// --- RAD state ---
+const radZone = ref<import('@/lib/radiation').RadiationZone>('safe')
+const radLevel = ref(0)
+const radDoseRate = ref(0)
+const radCumulativeDose = ref(0)
+const radParticleRate = ref(0)
+const radEnabled = ref(false)
+const radEventAlertPending = ref(false)
+const radActiveEventId = ref<string | null>(null)
+const radDecoding = ref(false)
+
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const rtgConservationMode = ref<RTGConservationState>('off')
@@ -1841,6 +1852,16 @@ function createSiteControllerContext() {
       chemCamSpeedBreakdown,
       mastCamSpeedBreakdown,
       apxsSpeedBreakdown,
+      // RAD
+      radZone,
+      radLevel,
+      radDoseRate,
+      radCumulativeDose,
+      radParticleRate,
+      radEnabled,
+      radEventAlertPending,
+      radActiveEventId,
+      radDecoding,
     },
   })
 }
