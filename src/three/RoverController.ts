@@ -51,6 +51,16 @@ const INSTRUMENT_CAMERA_DISTANCE_DEFAULT = 1.5
 const INSTRUMENT_CAMERA_LERP = 0.06
 const INSTRUMENT_SHAKE_FACTOR = 0.25
 
+// Deploy camera orbit — auto-rotates around the rover during deployment
+/** Radians per second the camera orbits during deploy (0→70% progress). */
+const DEPLOY_ORBIT_SPEED = 0.35
+/** Deploy progress (0–1) at which the orbit stops and camera settles to default angle. */
+const DEPLOY_ORBIT_SETTLE_AT = 0.7
+/** Camera distance during deploy orbit (wider than chase, tighter than max). */
+const DEPLOY_ORBIT_DISTANCE = 10
+/** Pitch during deploy orbit — slightly elevated to show the rover from above. */
+const DEPLOY_ORBIT_PITCH = 0.45
+
 /** Default seconds to keep chase cam after selecting an instrument before orbiting to it (0 = immediate). */
 export const DEFAULT_INSTRUMENT_ZOOM_DELAY_SECONDS = 2
 
@@ -196,6 +206,7 @@ export class RoverController {
 
   private onWheel(e: WheelEvent) {
     e.preventDefault()
+    if (this.siteScene.roverState !== 'ready') return
     if (this.mode === 'active' && this.activeInstrument instanceof MastCamController) {
       this.activeInstrument.handleWheel(e.deltaY)
     } else if (this.mode === 'active' && this.activeInstrument instanceof ChemCamController) {
@@ -224,6 +235,7 @@ export class RoverController {
   }
 
   private onMouseDown(e: MouseEvent) {
+    if (this.siteScene.roverState !== 'ready') return
     this.isDragging = true
     this.lastMouseX = e.clientX
     this.lastMouseY = e.clientY
@@ -672,6 +684,26 @@ export class RoverController {
   }
 
   private updateCamera(_delta: number) {
+    // --- Deploy orbit: auto-rotate camera during deployment, settle at 70% ---
+    if (this.siteScene.roverState === 'deploying') {
+      const progress = this.siteScene.deployProgress
+      if (progress < DEPLOY_ORBIT_SETTLE_AT) {
+        // Orbit around the rover
+        this.orbitAngle += DEPLOY_ORBIT_SPEED * _delta
+        this.orbitPitch += (DEPLOY_ORBIT_PITCH - this.orbitPitch) * 0.04
+        this.cameraDistance += (DEPLOY_ORBIT_DISTANCE - this.cameraDistance) * 0.03
+      } else {
+        // Settle toward default behind-rover angle (Math.PI)
+        // Normalize orbitAngle to find shortest path to Math.PI
+        let diff = Math.PI - this.orbitAngle
+        // Wrap to [-PI, PI]
+        diff = ((diff + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI
+        this.orbitAngle += diff * 0.04
+        this.orbitPitch += (0.3 - this.orbitPitch) * 0.04
+        this.cameraDistance += (CAMERA_DISTANCE_DEFAULT - this.cameraDistance) * 0.03
+      }
+    }
+
     // Ease chase cam to default distance after touchdown — disabled after player wheel zoom
     if (
       !this.chaseZoomUserOverride
