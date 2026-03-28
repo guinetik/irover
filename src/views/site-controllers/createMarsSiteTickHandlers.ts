@@ -16,6 +16,8 @@ import { createRoverMovementSoundHandler } from './RoverMovementSoundHandler'
 import { createRadTickHandler } from './RadTickHandler'
 import { createMeteorController } from './MeteorController'
 import { useAudio } from '@/audio/useAudio'
+import { useMeteorArchive } from '@/composables/useMeteorArchive'
+import * as THREE from 'three'
 
 /**
  * All per-frame subsystems created for the Mars site view, plus a single {@link disposeAll} for teardown.
@@ -164,6 +166,19 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.mastcamTag'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
       getSpeedBreakdownBase,
+      onMeteoriteTagged: (rock: THREE.Mesh, _rockType: string) => {
+        const { archiveObservation } = useMeteorArchive()
+        archiveObservation({
+          siteId: ctx.siteId,
+          capturedSol: refs.marsSol.value,
+          roverWorldX: roverWorldX.value,
+          roverWorldZ: roverWorldZ.value,
+          showerId: (rock.userData.showerId as string) ?? '',
+          meteoriteVariant: (rock.userData.meteoriteVariant as string) ?? '',
+          distanceM: 0,
+          sp: 20,
+        })
+      },
     },
   )
 

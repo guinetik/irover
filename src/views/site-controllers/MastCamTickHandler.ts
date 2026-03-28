@@ -36,6 +36,7 @@ export interface MastCamTickCallbacks {
   startHeldActionSound: (soundId: 'sfx.mastcamTag') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
   getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
+  onMeteoriteTagged?: (rock: THREE.Mesh, rockType: string) => void
 }
 
 /**
@@ -87,6 +88,10 @@ export function createMastCamTickHandler(
         const gain = awardSP('mastcam', rock.uuid, label)
         if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
         recordMastCamTag(rockType)
+        // Meteor observation: if this rock came from a shower, fire the callback
+        if (rock.userData.fromShower && callbacks.onMeteoriteTagged) {
+          callbacks.onMeteoriteTagged(rock, rockType)
+        }
       }
       surveyInitialised = true
     }
