@@ -127,7 +127,7 @@ const tipGeneration = computed(() => {
 
 const tipConsumption = computed(() => {
   const lines = powerConsumptionLines.value
-  const body = lines.map((l) => `${l.label}: ${l.w.toFixed(1)} W`).join('\n')
+  const body = lines.map((l) => `${l.label}: ${Number.isFinite(l.w) ? l.w.toFixed(1) : '???'} W`).join('\n')
   const lf = powerBusLoadFactor.value
   const note =
     Math.abs(lf - 1) > 1e-6

@@ -173,11 +173,13 @@ export class ChemCamController extends InstrumentController {
     this.rocks = rocks
   }
 
-  /** Power draw depends on phase */
+  /** Power draw depends on phase — durability penalty is softened (25% nerf). */
   get powerDrawW(): number {
+    const acc = Math.max(0.01, this.accuracyMod)
+    const softAcc = 0.25 + 0.75 * acc
     switch (this.phase) {
-      case 'PULSE_TRAIN': return PULSE_POWER_W / this.accuracyMod
-      case 'INTEGRATING': return INTEGRATE_POWER_W / this.accuracyMod
+      case 'PULSE_TRAIN': return PULSE_POWER_W / softAcc
+      case 'INTEGRATING': return INTEGRATE_POWER_W / softAcc
       case 'ARMED': return IDLE_POWER_W
       default: return 0
     }
