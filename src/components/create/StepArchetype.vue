@@ -1,13 +1,16 @@
 <template>
   <div class="step">
-    <p class="prompt">Which best describes your approach to problem-solving?</p>
+    <p class="prompt">
+      <ScrambleText text="Which best describes your approach to problem-solving?" :play-sound="true" />
+    </p>
     <div class="options">
       <CreateOptionCard
-        v-for="a in archetypes"
+        v-for="(a, index) in archetypes"
         :key="a.id"
         :name="a.name"
         :description="a.description"
         :selected="modelValue === a.id"
+        :delay="300 + index * 150"
         @select="$emit('update:modelValue', a.id)"
       />
     </div>
@@ -16,6 +19,7 @@
 
 <script setup lang="ts">
 import CreateOptionCard from './CreateOptionCard.vue'
+import ScrambleText from '@/components/ScrambleText.vue'
 import { ARCHETYPES, type ArchetypeId } from '@/composables/usePlayerProfile'
 
 defineProps<{ modelValue: ArchetypeId | null }>()

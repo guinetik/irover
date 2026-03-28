@@ -3,30 +3,52 @@
     <Transition name="science-fade">
       <div v-if="message" class="msg-overlay" @click.self="emitClose">
         <div class="msg-dialog" role="dialog" aria-modal="true">
+          
           <div class="msg-head">
-            <div class="msg-from" v-if="message.from">FROM: {{ message.from }}</div>
-            <h2 class="msg-subject">{{ message.subject }}</h2>
-            <button type="button" class="msg-close" aria-label="Close" @click="emitClose">&times;</button>
+            <div class="msg-head-content">
+              <div class="msg-from" v-if="message.from">
+                <span class="from-label">FROM:</span> <span class="from-value"><ScrambleText :text="message.from" :play-sound="true" :speed="20" :scramble-frames="4" :stagger="1" /></span>
+              </div>
+              <h2 class="msg-subject"><ScrambleText :text="message.subject" :play-sound="true" :speed="25" :scramble-frames="5" :stagger="1.5" /></h2>
+            </div>
+            <button type="button" class="msg-close" aria-label="Close" @click="emitClose">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L13 13M1 13L13 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
           </div>
           <div class="msg-body">
-            <p>{{ message.body }}</p>
+            <div class="msg-body-content">
+              <p><ScrambleText :text="message.body" :play-sound="true" :speed="15" :scramble-frames="3" :stagger="0.3" /></p>
+            </div>
           </div>
           <div class="msg-footer">
-            <template v-if="message.type === 'mission' && !missionAccepted">
-              <button type="button" class="msg-btn msg-btn-accept" @click="emitAcceptMission(message.missionId ?? '')">
-                ACCEPT MISSION
-              </button>
-              <button type="button" class="msg-btn msg-btn-later" @click="emitClose">
-                MAYBE LATER
-              </button>
-            </template>
-            <template v-else-if="message.type === 'mission' && missionAccepted">
-              <span class="msg-accepted-label">MISSION ACCEPTED</span>
-              <button type="button" class="msg-btn msg-btn-later" @click="emitClose">CLOSE</button>
-            </template>
-            <template v-else>
-              <button type="button" class="msg-btn msg-btn-later" @click="emitClose">CLOSE</button>
-            </template>
+            <div class="footer-actions">
+              <template v-if="message.type === 'mission' && !missionAccepted">
+                <button type="button" class="msg-btn msg-btn-later" @click="emitClose">
+                  <span class="btn-text">DECLINE</span>
+                </button>
+                <button type="button" class="msg-btn msg-btn-accept" @click="emitAcceptMission(message.missionId ?? '')">
+                  <span class="btn-text">ACCEPT MISSION</span>
+                  <div class="btn-glow"></div>
+                </button>
+              </template>
+              <template v-else-if="message.type === 'mission' && missionAccepted">
+                <div class="status-badge" :class="{ 'status-completed': missionCompleted }">
+                  <span class="status-dot"></span>
+                  <span class="msg-accepted-label">{{ missionCompleted ? 'MISSION COMPLETED' : 'MISSION ACTIVE' }}</span>
+                </div>
+                <button type="button" class="msg-btn msg-btn-later" @click="emitClose">
+                  <span class="btn-text">CLOSE</span>
+                </button>
+              </template>
+              <template v-else>
+                <button type="button" class="msg-btn msg-btn-primary" @click="emitClose">
+                  <span class="btn-text">ACKNOWLEDGE</span>
+                  <div class="btn-glow"></div>
+                </button>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -37,10 +59,12 @@
 <script setup lang="ts">
 import { useUiSound } from '@/composables/useUiSound'
 import type { LGAMessage } from '@/types/lgaMailbox'
+import ScrambleText from '@/components/ScrambleText.vue'
 
 defineProps<{
   message: LGAMessage | null
   missionAccepted: boolean
+  missionCompleted?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -74,122 +98,252 @@ function emitAcceptMission(missionId: string): void {
   inset: 0;
   z-index: 55;
   background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 20px;
 }
 
 .msg-dialog {
-  width: 500px;
-  max-width: 90vw;
-  max-height: 80vh;
-  background: rgba(10, 5, 2, 0.92);
+  position: relative;
+  width: 540px;
+  max-width: 100%;
+  max-height: 85vh;
+  background: rgba(15, 10, 8, 0.95);
   border: 1px solid rgba(196, 149, 106, 0.25);
   border-radius: 12px;
-  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .msg-head {
-  padding: 16px 20px 12px;
+  padding: 20px 24px 16px;
   border-bottom: 1px solid rgba(196, 149, 106, 0.15);
-  position: relative;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.msg-head-content {
+  flex: 1;
+  padding-right: 20px;
 }
 
 .msg-from {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: rgba(196, 149, 106, 0.6);
-  margin-bottom: 4px;
-  text-transform: uppercase;
+  font-family: 'Rajdhani', 'Courier New', monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.from-label {
+  color: rgba(196, 149, 106, 0.8);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.from-value {
+  color: rgba(220, 210, 200, 0.9);
 }
 
 .msg-subject {
-  font-size: 16px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
   font-weight: 600;
-  color: rgba(220, 210, 200, 0.95);
+  letter-spacing: 0.02em;
+  color: #fff;
   margin: 0;
-  padding-right: 30px;
 }
 
 .msg-close {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  background: none;
-  border: none;
-  color: rgba(200, 200, 220, 0.5);
-  font-size: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: rgba(200, 200, 220, 0.6);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 4px 8px;
-  line-height: 1;
+  transition: all 0.2s ease;
 }
-.msg-close:hover { color: rgba(200, 200, 220, 0.9); }
+.msg-close:hover { 
+  background: rgba(196, 149, 106, 0.15);
+  border-color: rgba(196, 149, 106, 0.4);
+  color: #fff;
+}
 
 .msg-body {
-  padding: 16px 20px;
+  padding: 24px;
   flex: 1;
   overflow-y: auto;
-  color: rgba(200, 200, 220, 0.8);
-  font-size: 14px;
-  line-height: 1.6;
+  position: relative;
 }
-.msg-body p { margin: 0; }
+
+/* Custom scrollbar for body */
+.msg-body::-webkit-scrollbar {
+  width: 6px;
+}
+.msg-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+.msg-body::-webkit-scrollbar-thumb {
+  background: rgba(196, 149, 106, 0.3);
+  border-radius: 3px;
+}
+.msg-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 149, 106, 0.5);
+}
+
+.msg-body-content {
+  color: rgba(220, 210, 200, 0.85);
+  font-size: 15px;
+  line-height: 1.7;
+  font-family: 'Inter', sans-serif;
+}
+.msg-body-content p { 
+  margin: 0 0 16px 0; 
+}
+.msg-body-content p:last-child {
+  margin-bottom: 0;
+}
 
 .msg-footer {
-  padding: 12px 20px 16px;
-  border-top: 1px solid rgba(196, 149, 106, 0.15);
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(196, 149, 106, 0.1);
   display: flex;
-  gap: 10px;
   justify-content: flex-end;
   align-items: center;
 }
 
+.footer-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  justify-content: flex-end;
+}
+
 .msg-btn {
-  padding: 8px 18px;
-  border-radius: 6px;
-  font-size: 12px;
+  position: relative;
+  padding: 10px 20px;
+  font-family: 'Rajdhani', 'Courier New', monospace;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.05em;
   cursor: pointer;
   text-transform: uppercase;
-  border: 1px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.msg-btn-accept {
-  background: rgba(102, 255, 238, 0.15);
-  border-color: rgba(102, 255, 238, 0.4);
+.btn-text {
+  position: relative;
+  z-index: 2;
+}
+
+.btn-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+  z-index: 1;
+}
+
+.msg-btn:hover .btn-glow {
+  transform: translateX(100%);
+}
+
+.msg-btn-accept, .msg-btn-primary {
+  background: rgba(102, 255, 238, 0.1);
+  border: 1px solid rgba(102, 255, 238, 0.4);
   color: #66ffee;
 }
-.msg-btn-accept:hover {
-  background: rgba(102, 255, 238, 0.25);
+.msg-btn-accept:hover, .msg-btn-primary:hover {
+  background: rgba(102, 255, 238, 0.2);
+  box-shadow: 0 0 12px rgba(102, 255, 238, 0.15);
 }
 
 .msg-btn-later {
-  background: rgba(200, 200, 220, 0.08);
-  border-color: rgba(200, 200, 220, 0.2);
-  color: rgba(200, 200, 220, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(220, 210, 200, 0.8);
 }
 .msg-btn-later:hover {
-  background: rgba(200, 200, 220, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(102, 255, 238, 0.08);
+  border: 1px solid rgba(102, 255, 238, 0.25);
+  border-radius: 6px;
+  margin-right: auto; /* Pushes the close button to the right */
+}
+
+.status-badge.status-completed {
+  background: rgba(150, 255, 100, 0.08);
+  border-color: rgba(150, 255, 100, 0.25);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #66ffee;
+  box-shadow: 0 0 8px #66ffee;
+  animation: pulse 2s infinite;
+}
+
+.status-completed .status-dot {
+  background: #96ff64;
+  box-shadow: 0 0 8px #96ff64;
+  animation: none; /* No pulse for completed */
+}
+
+@keyframes pulse {
+  0% { opacity: 1; box-shadow: 0 0 8px #66ffee; }
+  50% { opacity: 0.5; box-shadow: 0 0 2px #66ffee; }
+  100% { opacity: 1; box-shadow: 0 0 8px #66ffee; }
 }
 
 .msg-accepted-label {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  color: rgba(102, 255, 238, 0.7);
+  font-family: 'Rajdhani', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #66ffee;
   text-transform: uppercase;
+}
+
+.status-completed .msg-accepted-label {
+  color: #96ff64;
 }
 
 .science-fade-enter-active,
 .science-fade-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .science-fade-enter-from,
 .science-fade-leave-to {
   opacity: 0;
-  transform: scale(0.96);
+  transform: scale(0.95) translateY(10px);
 }
 </style>

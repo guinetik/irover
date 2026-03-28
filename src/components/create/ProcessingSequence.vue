@@ -1,23 +1,31 @@
 <template>
   <div class="processing">
-    <p v-for="(line, i) in visibleLines" :key="i" class="line" :class="{ dim: line.dim }">
-      {{ line.text }}
+    <p v-for="(line, i) in allLines" :key="i" class="line" :class="{ dim: line.dim }">
+      <ScrambleText v-if="line.text" :text="line.text" :delay="i * 300" :play-sound="true" />
+      <span v-else>&nbsp;</span>
     </p>
-    <p v-if="showSnark" class="snark">{{ snarkText }}</p>
-    <button v-if="showContinue" class="btn" @click="handleContinue">[ CONTINUE ]</button>
+    <p v-if="showSnark" class="snark">
+      <ScrambleText :text="snarkText" :delay="allLines.length * 300 + 400" :play-sound="true" />
+    </p>
+    <button v-if="showContinue" class="btn" @click="handleContinue">
+      <ScrambleText text="[ CONTINUE ]" :delay="allLines.length * 300 + 1200" :play-sound="true" />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import type { PositionId } from './StepPosition.vue'
+import ScrambleText from '@/components/ScrambleText.vue'
 import { useAudio } from '@/audio/useAudio'
 import type { AudioSoundId } from '@/audio/audioManifest'
+import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 
 const props = defineProps<{ positionChoice: PositionId }>()
 const emit = defineEmits<{ continue: [] }>()
 
 const audio = useAudio()
+let processingAudio: AudioPlaybackHandle | null = null
 function handleContinue(): void {
   audio.play('ui.confirm' as AudioSoundId)
   emit('continue')
@@ -45,37 +53,27 @@ const finalLines: Line[] = [
   { text: 'All positions matching your qualifications are currently filled.', dim: false },
 ]
 
+const allLines = [...lines, ...finalLines]
+
 const snarkMap: Record<PositionId, string> = {
   ceo: 'We noticed you applied for CEO. That position requires 200 years of experience and a net worth exceeding the GDP of Mars. You currently have neither. May we suggest an alternative?',
   personality: "The Personality Hire position has been permanently filled by a chatbot. It has better metrics than any human candidate. We're sure you understand.",
   operator: 'Well. At least one of you reads the job listing.',
 }
 
-const visibleLines = ref<Line[]>([])
-const showSnark = ref(false)
-const showContinue = ref(false)
+const showSnark = ref(true)
+const showContinue = ref(true)
 
 const snarkText = snarkMap[props.positionChoice] ?? snarkMap.operator
 
-onMounted(async () => {
-  for (const line of lines) {
-    visibleLines.value.push(line)
-    await delay(200)
-  }
-  await delay(800)
-  for (const line of finalLines) {
-    visibleLines.value.push(line)
-    await delay(150)
-  }
-  await delay(400)
-  showSnark.value = true
-  await delay(1000)
-  showContinue.value = true
+onMounted(() => {
+  processingAudio = audio.play('ui.processing', { loop: true })
 })
 
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms))
-}
+onUnmounted(() => {
+  processingAudio?.stop()
+  processingAudio = null
+})
 </script>
 
 <style scoped>

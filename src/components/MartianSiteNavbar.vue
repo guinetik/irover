@@ -1,7 +1,7 @@
 <template>
   <div class="site-hud">
     <div class="site-hud-left">
-      <button type="button" class="back-btn" @click="handleBackClick">BACK</button>
+      <button type="button" class="restart-btn" @click="handleRestartClick">RESTART</button>
       <SolClock
         v-if="showSolClock"
         :sol="marsSol"
@@ -66,7 +66,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { Howler } from 'howler'
-import { useRouter } from 'vue-router'
 import { useAudio } from '@/audio/useAudio'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { SiteCompassPoi } from '@/components/SiteCompass.vue'
@@ -96,7 +95,6 @@ withDefaults(
   { compassPois: () => [], currentNightFactor: 0, activeMissionCount: 0, showArchiveButton: false, archiveUnreadCount: 0 },
 )
 
-const router = useRouter()
 const audio = useAudio()
 const muted = ref(Boolean((Howler as unknown as { _muted?: boolean })._muted))
 
@@ -110,6 +108,8 @@ const emit = defineEmits<{
   'open-science-log': []
   'open-mission-log': []
   'open-archive': []
+  /** User chose RESTART — parent should confirm, clear storage, and leave the site. */
+  'request-restart': []
 }>()
 
 /**
@@ -120,9 +120,9 @@ function playConfirmCue(): void {
   audio.play('ui.confirm')
 }
 
-function handleBackClick(): void {
+function handleRestartClick(): void {
   playConfirmCue()
-  goBack()
+  emit('request-restart')
 }
 
 function handleMissionLogClick(): void {
@@ -155,10 +155,6 @@ function handleScienceLogClick(): void {
   emit('open-science-log')
 }
 
-/** Returns to the global Mars globe view. */
-function goBack(): void {
-  void router.push('/globe')
-}
 </script>
 
 <style scoped>
@@ -382,7 +378,7 @@ function goBack(): void {
   letter-spacing: 0.12em;
 }
 
-.back-btn {
+.restart-btn {
   padding: 5px 14px;
   font-size: 12px;
   font-weight: 600;
@@ -396,7 +392,7 @@ function goBack(): void {
   transition: background 0.2s ease;
 }
 
-.back-btn:hover {
+.restart-btn:hover {
   background: rgba(255, 255, 255, 0.12);
 }
 

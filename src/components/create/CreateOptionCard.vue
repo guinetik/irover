@@ -7,8 +7,12 @@
   >
     <span class="radio">{{ selected ? '\u25CF' : '\u25CB' }}</span>
     <span class="label">
-      <span class="name">{{ name }}</span>
-      <span class="desc">"{{ description }}"</span>
+      <span class="name">
+        <ScrambleText :text="name" :delay="delay" />
+      </span>
+      <span class="desc">
+        "<ScrambleText :text="description" :delay="delay" :speed="5" :scramble-frames="2" :stagger="1" />"
+      </span>
     </span>
   </button>
 </template>
@@ -16,12 +20,16 @@
 <script setup lang="ts">
 import { useAudio } from '@/audio/useAudio'
 import type { AudioSoundId } from '@/audio/audioManifest'
+import ScrambleText from '@/components/ScrambleText.vue'
 
-defineProps<{
+withDefaults(defineProps<{
   name: string
   description: string
   selected: boolean
-}>()
+  delay?: number
+}>(), {
+  delay: 0
+})
 
 const emit = defineEmits<{
   select: []

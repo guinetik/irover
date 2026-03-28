@@ -1,13 +1,16 @@
 <template>
   <div class="step">
-    <p class="prompt">What drives your interest in Mars exploration?</p>
+    <p class="prompt">
+      <ScrambleText text="What drives your interest in Mars exploration?" :play-sound="true" />
+    </p>
     <div class="options">
       <CreateOptionCard
-        v-for="m in motivations"
+        v-for="(m, index) in motivations"
         :key="m.id"
         :name="m.name"
         :description="m.description"
         :selected="modelValue === m.id"
+        :delay="300 + index * 150"
         @select="$emit('update:modelValue', m.id)"
       />
     </div>
@@ -16,6 +19,7 @@
 
 <script setup lang="ts">
 import CreateOptionCard from './CreateOptionCard.vue'
+import ScrambleText from '@/components/ScrambleText.vue'
 import { MOTIVATIONS, type MotivationId } from '@/composables/usePlayerProfile'
 
 defineProps<{ modelValue: MotivationId | null }>()

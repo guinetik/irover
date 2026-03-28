@@ -1,25 +1,44 @@
 <template>
   <div class="acceptance">
-    <p class="line dim">> Application #MEC-2187-{{ appNumber }} APPROVED.</p>
+    <p class="line dim">
+      <ScrambleText :text="`> Application #MEC-2187-${appNumber} APPROVED.`" :play-sound="true" :delay="0" />
+    </p>
     <p class="line">&nbsp;</p>
-    <p class="line bright">Congratulations, Operator.</p>
+    <p class="line bright">
+      <ScrambleText text="Congratulations, Operator." :play-sound="true" :delay="600" />
+    </p>
     <p class="line">&nbsp;</p>
-    <p class="line">You have been assigned to ROVER UNIT {{ roverId }}.</p>
-    <p class="line dim">Vehicle: MSL-class Curiosity (refurbished)</p>
+    <p class="line">
+      <ScrambleText :text="`You have been assigned to ROVER UNIT ${roverId}.`" :play-sound="true" :delay="1200" />
+    </p>
+    <p class="line dim">
+      <ScrambleText text="Vehicle: MSL-class Curiosity (refurbished)" :play-sound="true" :delay="1800" />
+    </p>
     <p class="line">&nbsp;</p>
-    <p class="line dim">Please report to your local Spaceport</p>
-    <p class="line dim">on Monday at 0600 for credential processing</p>
-    <p class="line dim">and neural uplink calibration.</p>
+    <p class="line dim">
+      <ScrambleText text="Please report to your local Spaceport" :play-sound="true" :delay="2400" />
+    </p>
+    <p class="line dim">
+      <ScrambleText text="on Monday at 0600 for credential processing" :play-sound="true" :delay="2800" />
+    </p>
+    <p class="line dim">
+      <ScrambleText text="and neural uplink calibration." :play-sound="true" :delay="3200" />
+    </p>
     <p class="line">&nbsp;</p>
-    <p class="line dim">Pack light. Mars provides the rest.</p>
+    <p class="line dim">
+      <ScrambleText text="Pack light. Mars provides the rest." :play-sound="true" :delay="4000" />
+    </p>
 
-    <button class="btn" @click="handleAccept">[ ACCEPT APPLICATION ]</button>
+    <button class="btn" @click="handleAccept">
+      <ScrambleText text="[ ACCEPT APPLICATION ]" :play-sound="true" :delay="4800" />
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAudio } from '@/audio/useAudio'
 import type { AudioSoundId } from '@/audio/audioManifest'
+import ScrambleText from '@/components/ScrambleText.vue'
 
 const emit = defineEmits<{ accept: [] }>()
 

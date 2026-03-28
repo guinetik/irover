@@ -1,13 +1,16 @@
 <template>
   <div class="step">
-    <p class="prompt">Where did you grow up?</p>
+    <p class="prompt">
+      <ScrambleText text="Where did you grow up?" :play-sound="true" />
+    </p>
     <div class="options">
       <CreateOptionCard
-        v-for="o in origins"
+        v-for="(o, index) in origins"
         :key="o.id"
         :name="o.name"
         :description="o.description"
         :selected="modelValue === o.id"
+        :delay="300 + index * 150"
         @select="$emit('update:modelValue', o.id)"
       />
     </div>
@@ -16,6 +19,7 @@
 
 <script setup lang="ts">
 import CreateOptionCard from './CreateOptionCard.vue'
+import ScrambleText from '@/components/ScrambleText.vue'
 import { ORIGINS, type OriginId } from '@/composables/usePlayerProfile'
 
 defineProps<{ modelValue: OriginId | null }>()

@@ -154,7 +154,7 @@ const DAN_LOCKED: Record<string, string> = {
 }
 
 /**
- * Whether the given achievement id has been unlocked this session.
+ * Whether the given achievement id has been unlocked (persisted in localStorage on the Mars site).
  */
 function isUnlocked(id: string): boolean {
   return props.unlockedIds.includes(id)
