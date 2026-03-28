@@ -560,7 +560,7 @@ const manifestById: ManifestById = {
     category: 'sfx',
     load: 'lazy',
     playback: 'overlap',
-    volume: 0.6,
+    volume: 1.0,
     effect: 'none',
   },
   'sfx.meteorImpact': {
@@ -569,7 +569,7 @@ const manifestById: ManifestById = {
     category: 'sfx',
     load: 'lazy',
     playback: 'overlap',
-    volume: 0.75,
+    volume: 1.0,
     effect: 'none',
   },
 }
