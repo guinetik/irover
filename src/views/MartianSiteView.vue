@@ -165,6 +165,9 @@
       :lga-upgraded="lgaUpgraded"
       :has-upgrade="activeInstrumentHasUpgrade"
       :is-upgraded="activeInstrumentIsUpgraded"
+      :rad-zone="radZone"
+      :rad-dose-rate="radDoseRate"
+      :rad-enabled="radEnabled"
       @toggle-dsn-archaeology="handleToggleDsnArchaeology"
     />
     <ChemCamExperimentPanel
@@ -565,6 +568,7 @@ import DANDialog from '@/components/DANDialog.vue'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import RADHud from '@/components/RADHud.vue'
+import RADEventAlert from '@/components/RADEventAlert.vue'
 import ProfilePanel from '@/components/ProfilePanel.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useSamExperiments } from '@/composables/useSamExperiments'

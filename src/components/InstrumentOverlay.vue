@@ -326,6 +326,20 @@
         </div>
 
         <div class="ov-esc">{{ isActiveMode ? '[ESC] BACK TO OVERVIEW' : '[ESC] BACK TO DRIVING' }}</div>
+
+        <!-- Radiation lockout overlay -->
+        <div v-if="isRadiationBlocked" class="ov-rad-lockout">
+          <div class="ov-rad-icon">&#x2622;</div>
+          <div class="ov-rad-title">RADIATION ENVIRONMENT UNSAFE</div>
+          <div class="ov-rad-body">
+            Ambient dose rate: {{ radDoseRate.toFixed(2) }} mGy/day<br>
+            Instrument readings unreliable at this level.<br>
+            Relocate to safe zone to resume operations.
+          </div>
+          <div v-if="!radEnabled" class="ov-rad-safe" style="opacity: 0.5">
+            Enable RAD to locate safe zones.
+          </div>
+        </div>
       </div>
     </Transition>
   </Teleport>
@@ -568,6 +582,12 @@ const props = withDefaults(
     instrumentSpeedHud?: SpeedBreakdown | null
     /** Accuracy breakdown for instruments that use instrumentAccuracy. */
     instrumentAccuracyHud?: SpeedBreakdown | null
+    /** Radiation zone: 'safe' | 'intermediate' | 'hazardous' */
+    radZone?: string
+    /** Current RAD dose rate in mGy/day */
+    radDoseRate?: number
+    /** Whether RAD instrument is enabled (for safe-zone hint) */
+    radEnabled?: boolean
   }>(),
   {
     canActivate: true,
@@ -605,6 +625,9 @@ const props = withDefaults(
     repairCostComponentId: '',
     repairCostComponentQty: 0,
     lgaUpgraded: false,
+    radZone: 'safe',
+    radDoseRate: 0,
+    radEnabled: false,
   },
 )
 
@@ -817,6 +840,14 @@ const durabilityColor = computed(() => {
   if (pct > 25) return '#f0a030'    // orange
   return '#804020'                   // dim brown
 })
+
+/** Slots for science instruments blocked by radiation hazard */
+const RADIATION_BLOCKED_SLOTS = new Set([1, 2, 3, 4, 5, 6, 8]) // mastcam, chemcam, drill, apxs, dan, sam, rems
+
+const isRadiationBlocked = computed(() => {
+  if (props.radZone !== 'hazardous') return false
+  return props.activeSlot != null && RADIATION_BLOCKED_SLOTS.has(props.activeSlot)
+})
 </script>
 
 <style scoped>
@@ -833,6 +864,7 @@ const durabilityColor = computed(() => {
   padding: 16px;
   z-index: 50;
   font-family: var(--font-ui);
+  overflow: hidden;
 }
 
 /* Header */
@@ -1357,4 +1389,29 @@ const durabilityColor = computed(() => {
   color: rgba(196, 117, 58, 0.5);
   margin-left: 4px;
 }
+
+/* Radiation lockout overlay */
+.ov-rad-lockout {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 10;
+}
+.ov-rad-icon {
+  font-size: 48px;
+  color: #44dd88;
+  text-shadow: 0 0 20px rgba(68, 221, 136, 0.5);
+  animation: rad-pulse 2s ease-in-out infinite;
+}
+@keyframes rad-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+.ov-rad-title { color: #ff6644; font-size: 14px; letter-spacing: 0.15em; margin-top: 8px; }
+.ov-rad-body { color: #b8a888; font-size: 11px; text-align: center; margin-top: 8px; line-height: 1.6; }
+.ov-rad-safe { color: #44dd88; font-size: 11px; margin-top: 12px; }
 </style>
