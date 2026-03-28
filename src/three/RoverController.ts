@@ -98,6 +98,9 @@ export class RoverController {
   // Rover heading (Y rotation) — model rotated PI so "forward" = +Z in model space
   heading = 0
 
+  /** When true, all keyboard/mouse input is ignored (debug fly camera active). */
+  inputSuspended = false
+
   /**
    * Camera look heading — the direction the camera faces, in the same convention as `heading`.
    * Use this for the compass so POI dots align with what the player sees on screen.
@@ -206,6 +209,7 @@ export class RoverController {
 
   private onWheel(e: WheelEvent) {
     e.preventDefault()
+    if (this.inputSuspended) return
     if (this.siteScene.roverState !== 'ready') return
     if (this.mode === 'active' && this.activeInstrument instanceof MastCamController) {
       this.activeInstrument.handleWheel(e.deltaY)
@@ -235,6 +239,7 @@ export class RoverController {
   }
 
   private onMouseDown(e: MouseEvent) {
+    if (this.inputSuspended) return
     if (this.siteScene.roverState !== 'ready') return
     this.isDragging = true
     this.lastMouseX = e.clientX
@@ -303,6 +308,7 @@ export class RoverController {
   }
 
   private onKeyDown(e: KeyboardEvent) {
+    if (this.inputSuspended) return
     this.keys.add(e.code)
 
     // Instrument hotkeys (only when rover is ready)
@@ -488,6 +494,12 @@ export class RoverController {
   }
 
   update(delta: number) {
+    // Debug fly camera active — freeze rover, skip camera
+    if (this.inputSuspended) {
+      this.keys.clear()
+      return
+    }
+
     // During descent/deployment, only update camera — no movement or wheel control
     if (this.siteScene.roverState !== 'ready') {
       this.updateCamera(delta)

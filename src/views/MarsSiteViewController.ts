@@ -732,10 +732,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         enableFlyCamera: () => {
           if (!camera || !canvas) return
           if (!debugFlyCamera) debugFlyCamera = new DebugFlyCamera(camera, canvas)
+          if (controller) controller.inputSuspended = true
           debugFlyCamera.enable()
         },
         disableFlyCamera: () => {
           debugFlyCamera?.disable()
+          if (controller) controller.inputSuspended = false
         },
         showRadSafeZones: () => {
           const handler = tickHandlers.radHandler
