@@ -51,6 +51,7 @@ export class DANController extends InstrumentController {
   // --- Site priors (set by view each frame) ---
   waterIceIndex = 0.1
   featureType = 'plain'
+  siteTier = 2
 
   // --- Hit state ---
   pendingHit: DANHit | null = null
@@ -106,7 +107,7 @@ export class DANController extends InstrumentController {
 
     this.totalSamples++
 
-    const p = danPassiveHitProbability(this.waterIceIndex, this.featureType)
+    const p = danPassiveHitProbability(this.waterIceIndex, this.featureType, this.siteTier)
 
     if (Math.random() < p) {
       const strength = Math.min(1.0, Math.max(0.3,
@@ -132,7 +133,7 @@ export class DANController extends InstrumentController {
 
   rollWater(): boolean {
     const chance = Math.min(
-      danWaterConfirmChance(this.prospectStrength, this.waterIceIndex) * this.accuracyMod,
+      danWaterConfirmChance(this.prospectStrength, this.waterIceIndex, this.siteTier) * this.accuracyMod,
       1.0,
     )
     return Math.random() < chance

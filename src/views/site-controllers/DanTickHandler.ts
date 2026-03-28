@@ -116,6 +116,7 @@ export interface DanTickRefs {
 
 export interface DanTickCallbacks {
   siteId: string
+  siteTier: number
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
@@ -165,6 +166,7 @@ export function createDanTickHandler(
   } = refs
   const {
     siteId,
+    siteTier,
     sampleToastRef,
     playerMod,
     awardDAN,
@@ -359,6 +361,7 @@ export function createDanTickHandler(
     if (siteTerrainParams.value) {
       danInst.waterIceIndex = siteTerrainParams.value.waterIceIndex ?? 0.1
       danInst.featureType = siteTerrainParams.value.featureType ?? 'plain'
+      danInst.siteTier = siteTier
     }
     const danStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, danInst.tier) : 1
     danInst.accuracyMod = playerMod('instrumentAccuracy') / danStormPenalty

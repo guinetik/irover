@@ -1,4 +1,5 @@
 import type { MarsSiteViewContext } from '@/views/MarsSiteViewController'
+import { useMarsData } from '@/composables/useMarsData'
 import type { SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
 import { createDanTickHandler } from './DanTickHandler'
@@ -100,6 +101,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
     {
       siteId: ctx.siteId,
+      siteTier: useMarsData().landmarks.value.find(l => l.id === ctx.siteId)?.tier ?? 2,
       sampleToastRef: ctx.sampleToastRef,
       playerMod: ctx.playerMod,
       awardDAN: ctx.awardDAN,

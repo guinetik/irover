@@ -29,15 +29,26 @@ export function danSiteIceMultiplier(waterIceIndex: number): number {
 }
 
 /**
+ * Tier-based DAN bonus: lower-tier sites give a detection/confirmation boost
+ * so new players find water more easily during the tutorial phase.
+ */
+export function danTierBonus(tier: number): number {
+  if (tier <= 1) return 1.5
+  if (tier <= 2) return 1.0
+  return 1.0
+}
+
+/**
  * Clamped passive hit probability for one DAN sample tick.
  */
 export function danPassiveHitProbability(
   waterIceIndex: number,
   featureType: TerrainFeatureType | string,
+  tier: number = 2,
 ): number {
   const siteMult = danSiteIceMultiplier(waterIceIndex)
   const featMult = DAN_FEATURE_ICE_MULT[featureType as TerrainFeatureType] ?? 1.0
-  return Math.min(DAN_BASE_PASSIVE_HIT_RATE * siteMult * featMult, 0.95)
+  return Math.min(DAN_BASE_PASSIVE_HIT_RATE * siteMult * featMult * danTierBonus(tier), 0.95)
 }
 
 /** HUD copy for hit / prospect signal strength. */
@@ -50,7 +61,7 @@ export function danSignalQualityLabel(strength: number): 'Strong' | 'Moderate' |
 /**
  * Base probability of confirming subsurface water after prospect (before accuracy mod).
  */
-export function danWaterConfirmChance(strength: number, waterIceIndex: number): number {
+export function danWaterConfirmChance(strength: number, waterIceIndex: number, tier: number = 2): number {
   const base = strength >= 0.7 ? 0.70 : strength >= 0.5 ? 0.40 : 0.15
-  return Math.min(base * (0.5 + waterIceIndex), 1.0)
+  return Math.min(base * (0.5 + waterIceIndex) * danTierBonus(tier), 1.0)
 }
