@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 
 const DEG_PER_METER = 1 / 59200
 
@@ -51,7 +51,6 @@ const props = defineProps<{
   roverX: number
   roverZ: number
   terrainScale: number
-  gridSize: number
 }>()
 
 defineEmits<{ close: [] }>()
@@ -61,18 +60,12 @@ const wrapRef = ref<HTMLElement | null>(null)
 const mode = ref<'mars' | 'hypso'>('mars')
 const cursorLatLon = ref<{ latStr: string; lonStr: string } | null>(null)
 const cursorScreenPos = ref({ x: 0, y: 0 })
+/** Reactive canvas display size (updated by ResizeObserver). */
+const canvasDisplaySize = ref({ w: 0, h: 0 })
+let resizeObs: ResizeObserver | null = null
 
 function toggleMode() {
   mode.value = mode.value === 'mars' ? 'hypso' : 'mars'
-}
-
-/** Convert world X/Z to pixel coordinates on the displayed canvas. */
-function worldToPixel(wx: number, wz: number) {
-  const canvas = displayCanvas.value
-  if (!canvas) return null
-  const px = ((wx / props.terrainScale + 0.5) * canvas.width)
-  const py = ((wz / props.terrainScale + 0.5) * canvas.height)
-  return { x: px, y: py }
 }
 
 /** Convert pixel to lat/lon strings. */
@@ -92,14 +85,11 @@ function pixelToLatLon(px: number, py: number, canvasW: number, canvasH: number)
 }
 
 const roverPixel = computed(() => {
-  const dc = displayCanvas.value
-  if (!dc) return null
-  // Normalized [0,1] position
+  const { w, h } = canvasDisplaySize.value
+  if (w === 0 || h === 0) return null
   const nx = props.roverX / props.terrainScale + 0.5
   const ny = props.roverZ / props.terrainScale + 0.5
-  // Map to CSS displayed size
-  const rect = dc.getBoundingClientRect()
-  return { x: nx * rect.width, y: ny * rect.height }
+  return { x: nx * w, y: ny * h }
 })
 
 function onMouseMove(e: MouseEvent) {
@@ -190,11 +180,23 @@ function pickGridSpacing(totalDegrees: number): number {
   return totalDegrees / 6
 }
 
+// Track canvas display size reactively for rover dot positioning
+function observeCanvas() {
+  resizeObs?.disconnect()
+  const dc = displayCanvas.value
+  if (!dc) return
+  resizeObs = new ResizeObserver(([entry]) => {
+    canvasDisplaySize.value = { w: entry.contentRect.width, h: entry.contentRect.height }
+  })
+  resizeObs.observe(dc)
+}
+
 // Redraw when mode changes or overlay opens
 watch([mode, () => props.open], async () => {
   if (props.open) {
     await nextTick()
     redraw()
+    observeCanvas()
   }
 })
 
@@ -202,6 +204,8 @@ watch([mode, () => props.open], async () => {
 watch([() => props.mapCanvasMars, () => props.mapCanvasHypso], () => {
   if (props.open) redraw()
 })
+
+onBeforeUnmount(() => resizeObs?.disconnect())
 </script>
 
 <style scoped>

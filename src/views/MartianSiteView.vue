@@ -262,7 +262,6 @@
       :rover-x="roverWorldX"
       :rover-z="roverWorldZ"
       :terrain-scale="terrainScale"
-      :grid-size="terrainGridSize"
       @close="mapOpen = false"
     />
     <SAMDialog
@@ -698,7 +697,6 @@ const siteRover = computed(() => siteHandle.value?.rover ?? null)
 const mapCanvasMars = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasMars ?? null)
 const mapCanvasHypso = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasHypso ?? null)
 const terrainScale = computed(() => siteHandle.value?.siteScene?.terrain.scale ?? 1000)
-const terrainGridSize = computed(() => 512)
 const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra, queueForTransmission: queueChemCamTx, dequeueFromTransmission: dequeueChemCamTx } = useChemCamArchive()
 const {
   archiveProspect: archiveDanProspect,
