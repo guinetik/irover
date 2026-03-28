@@ -198,6 +198,8 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* Warm Mars color grade — matches dust-atmosphere shader's warm push + shadow lift */
+  filter: sepia(0.15) saturate(1.2) brightness(0.92) contrast(1.08);
 }
 
 .telemetry-hud {
@@ -254,7 +256,24 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* Subtle scanline effect */
+/* ── Post-processing layers (CSS equivalent of dust-atmosphere shader) ── */
+
+/* Vignette — dark edges, matching shader's smoothstep falloff */
+.intro-video-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgba(0, 0, 0, 0.3) 75%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* Scanlines — matches shader's sin-based scan line banding */
 .telemetry-hud::after {
   content: '';
   position: absolute;
@@ -263,9 +282,55 @@ onUnmounted(() => {
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
   );
+  pointer-events: none;
+}
+
+/* Film grain — animated noise texture via SVG filter */
+.intro-video-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  opacity: 0.12;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  mix-blend-mode: overlay;
+  animation: grain 0.3s steps(4) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-5%, -5%); }
+  50% { transform: translate(5%, 2%); }
+  75% { transform: translate(-2%, 5%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Chromatic aberration — offset red/cyan shadows on the video element */
+.intro-video {
+  text-shadow: none;
+  /* The CA is achieved by layered box-shadows on the overlay container instead */
+}
+
+.intro-video-overlay .intro-video {
+  /* Subtle barrel distortion feel via slight scale */
+  transform: scale(1.02);
+}
+
+/* CA layer — two offset color channels via box-shadow on the overlay */
+.telemetry-hud::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* Subtle red/cyan fringe at edges — simulates chromatic aberration */
+  box-shadow:
+    inset 2px 0 8px -2px rgba(255, 60, 30, 0.08),
+    inset -2px 0 8px -2px rgba(30, 180, 255, 0.08);
   pointer-events: none;
 }
 </style>
