@@ -770,7 +770,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           }
         },
         triggerStorm: (level: number) => ctx.triggerStorm(level),
-        triggerMeteorShower: (severity: 'light' | 'moderate' | 'heavy') => meteorHandler.triggerShower(severity),
+        triggerMeteorShower: (level: number) => {
+          const severities = ['light', 'moderate', 'heavy'] as const
+          const severity = severities[Math.max(0, Math.min(2, Math.round(level) - 1))]
+          meteorHandler.triggerShower(severity)
+        },
         enableFlyCamera: () => {
           if (!camera || !canvas) return
           if (!debugFlyCamera) debugFlyCamera = new DebugFlyCamera(camera, canvas)

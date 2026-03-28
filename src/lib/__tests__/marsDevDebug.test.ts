@@ -52,8 +52,8 @@ describe('installMarsDevDebugApi', () => {
     api?.weather.triggerStorm(4)
     expect(triggerStorm).toHaveBeenCalledWith(4)
 
-    api?.weather.triggerMeteorShower('heavy')
-    expect(triggerMeteorShower).toHaveBeenCalledWith('heavy')
+    api?.weather.triggerMeteorShower(3)
+    expect(triggerMeteorShower).toHaveBeenCalledWith(3)
 
     dispose()
     expect((globalThis as { MarsDev?: unknown }).MarsDev).toBeUndefined()

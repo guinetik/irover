@@ -13,8 +13,8 @@ export interface InstallMarsDevDebugApiOptions {
   setMissionForDev: (index: number) => DevMissionSetResult
   /** Force-trigger a dust storm at level 1-5. */
   triggerStorm: (level: number) => void
-  /** Force-trigger a meteor shower at the given severity. */
-  triggerMeteorShower: (severity: 'light' | 'moderate' | 'heavy') => void
+  /** Force-trigger a meteor shower at level 1-3. */
+  triggerMeteorShower: (level: number) => void
   /** Place waypoint markers at safe radiation zone centroids. Returns count placed. */
   showRadSafeZones: () => number
   /** Remove all safe-zone waypoint markers. */
@@ -57,8 +57,8 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
       triggerStorm(level = 3) {
         options.triggerStorm(level)
       },
-      triggerMeteorShower(severity = 'moderate') {
-        options.triggerMeteorShower(severity)
+      triggerMeteorShower(level = 2) {
+        options.triggerMeteorShower(level)
       },
     },
     camera: {
