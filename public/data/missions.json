@@ -170,7 +170,7 @@
     },
     {
       "id": "m13-deep-signal",
-      "name": "LGA — Nonstandard Receive",
+      "name": "LGA — Deep Signal",
       "patron": null,
       "description": "Routine diagnostic (official). Expanded spectrum capability (actual). Funding source: \"historical outreach\" (nobody asked follow-ups).",
       "briefing": "There's a module at the far cache — DSN archaeology firmware for the low-gain path. Install per attached instructions. Most of what you'll hear is garbage: calibration ghosts, deprecated handshakes, beeps from programs defunded before your grandparents were born. Archives thinks there might be recoverable mission tape in the noise. Science Directorate marks it zero priority. You are therefore cleared to waste time on it. Bolt it on. Log the install. If you hear singing, that's not in the scope.",

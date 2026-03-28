@@ -40,7 +40,6 @@ export const GLB_TERRAIN_SITES = new Set([
   'pathfinder',
   'perseverance',
   'phoenix',
-  'schiaparelli',
   'spirit',
   'viking-1',
   'viking-2',

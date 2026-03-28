@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { MARS_SOL_CLOCK_MINUTES, SOL_DURATION } from '@/lib/marsTimeConstants'
 import { DANController } from '@/three/instruments'
 import type { TerrainParams } from '@/types/terrain'
@@ -11,6 +12,73 @@ import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
+
+/** Public URL for the DAN drill-site marker (replaces procedural cone). */
+const DAN_DRILL_MARKER_GLB = '/dan.glb'
+/** Target largest axis length in scene units (~meters); matches prior cone height 0.5. */
+const DAN_DRILL_MARKER_TARGET_SIZE = 0.5
+
+let danDrillMarkerTemplate: THREE.Group | null = null
+let danDrillMarkerLoadPromise: Promise<THREE.Group> | null = null
+
+/**
+ * Loads and caches `dan.glb` as a template; each confirmed-water site gets a deep `clone()`.
+ */
+function loadDanDrillMarkerTemplate(): Promise<THREE.Group> {
+  if (danDrillMarkerTemplate) return Promise.resolve(danDrillMarkerTemplate)
+  if (!danDrillMarkerLoadPromise) {
+    danDrillMarkerLoadPromise = new GLTFLoader()
+      .loadAsync(DAN_DRILL_MARKER_GLB)
+      .then((gltf) => {
+        danDrillMarkerTemplate = gltf.scene
+        return gltf.scene
+      })
+  }
+  return danDrillMarkerLoadPromise
+}
+
+/**
+ * Disposes geometries and materials under a cloned GLB root (meshes only).
+ */
+function disposeDrillMarkerRoot(root: THREE.Object3D): void {
+  root.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      const mesh = child as THREE.Mesh
+      mesh.geometry.dispose()
+      const mat = mesh.material
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
+      else mat.dispose()
+    }
+  })
+}
+
+/**
+ * Scales a cloned marker so its axis-aligned bounds match {@link DAN_DRILL_MARKER_TARGET_SIZE},
+ * then places its bottom on the terrain at (x, z) with a small lift like the old disc plane.
+ */
+function placeDanDrillMarkerInstance(
+  marker: THREE.Object3D,
+  x: number,
+  z: number,
+  groundY: number,
+): void {
+  marker.position.set(0, 0, 0)
+  marker.scale.set(1, 1, 1)
+  marker.rotation.set(0, 0, 0)
+  marker.updateMatrixWorld(true)
+
+  const box = new THREE.Box3().setFromObject(marker)
+  const size = new THREE.Vector3()
+  box.getSize(size)
+  const maxDim = Math.max(size.x, size.y, size.z, 1e-6)
+  const s = DAN_DRILL_MARKER_TARGET_SIZE / maxDim
+  marker.scale.setScalar(s)
+  marker.updateMatrixWorld(true)
+
+  const boxWorld = new THREE.Box3().setFromObject(marker)
+  const lift = 0.05
+  marker.position.set(x, groundY + lift - boxWorld.min.y, z)
+}
 
 export interface DanTickRefs {
   siteTerrainParams: Ref<TerrainParams | null>
@@ -65,7 +133,7 @@ export interface DanTickHandler extends SiteTickHandler {
  * Creates a tick handler for the DAN (Dynamic Albedo of Neutrons) instrument:
  * - Passive scanning, VFX dots, and hit detection
  * - Full prospect state machine (drive-to-zone -> initiating -> prospecting -> complete)
- * - Disc/cone marker placement and archiving
+ * - Disc + `/dan.glb` drill-site marker placement and archiving
  */
 export function createDanTickHandler(
   refs: DanTickRefs,
@@ -88,11 +156,13 @@ export function createDanTickHandler(
   } = callbacks
 
   let danDiscMesh: THREE.Mesh | null = null
-  let danConeMesh: THREE.Mesh | null = null
+  let danDrillMarker: THREE.Object3D | null = null
   const danCompletedDiscs: THREE.Mesh[] = []
   let vfxInitialised = false
   let heldDanPlayback: AudioPlaybackHandle | null = null
   let heldDanProspectingPlayback: AudioPlaybackHandle | null = null
+  /** False after `dispose` — suppresses late GLB load callbacks. */
+  let tickHandlerActive = true
 
   /**
    * Keeps the DAN scan loop owned by this handler and tied to the passive subsystem state.
@@ -124,6 +194,9 @@ export function createDanTickHandler(
     if (danInit && fctx.siteScene) {
       danInit.initVFX(fctx.siteScene.scene)
       vfxInitialised = true
+      void loadDanDrillMarkerTemplate().catch(() => {
+        /* non-fatal — marker loads again on confirm if needed */
+      })
     }
   }
 
@@ -281,14 +354,28 @@ export function createDanTickHandler(
             })
 
             if (hasWater) {
-              // Place cone marker only for confirmed water
               const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
-              const coneGeo = new THREE.ConeGeometry(0.2, 0.5, 8)
-              const coneMat = new THREE.MeshBasicMaterial({ color: 0x44aaff })
-              danConeMesh = new THREE.Mesh(coneGeo, coneMat)
-              danConeMesh.position.copy(conePos)
-              danConeMesh.position.y += 0.25
-              siteScene?.scene.add(danConeMesh)
+              const gx = conePos.x
+              const gz = conePos.z
+              const groundY = siteScene?.terrain
+                ? siteScene.terrain.heightAt(gx, gz)
+                : conePos.y - 0.05
+
+              const sceneRef = siteScene?.scene
+              if (danDrillMarker && sceneRef) {
+                sceneRef.remove(danDrillMarker)
+                disposeDrillMarkerRoot(danDrillMarker)
+                danDrillMarker = null
+              }
+
+              void loadDanDrillMarkerTemplate().then((template) => {
+                if (!tickHandlerActive || !sceneRef) return
+                const marker = template.clone(true)
+                placeDanDrillMarkerInstance(marker, gx, gz, groundY)
+                sceneRef.add(marker)
+                danDrillMarker = marker
+              })
+
               danInst.drillSitePosition = conePos.clone()
               danInst.reservoirQuality = danInst.prospectStrength
 
@@ -332,6 +419,7 @@ export function createDanTickHandler(
   }
 
   function dispose(): void {
+    tickHandlerActive = false
     syncDanScanPlayback(false)
     syncDanProspectingPlayback(false)
     if (danDiscMesh) {
@@ -339,10 +427,10 @@ export function createDanTickHandler(
       ;(danDiscMesh.material as THREE.Material).dispose()
       danDiscMesh = null
     }
-    if (danConeMesh) {
-      danConeMesh.geometry.dispose()
-      ;(danConeMesh.material as THREE.Material).dispose()
-      danConeMesh = null
+    if (danDrillMarker) {
+      danDrillMarker.parent?.remove(danDrillMarker)
+      disposeDrillMarkerRoot(danDrillMarker)
+      danDrillMarker = null
     }
     for (const disc of danCompletedDiscs) {
       disc.geometry.dispose()
