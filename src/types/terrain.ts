@@ -30,4 +30,6 @@ export interface TerrainParams {
   latDeg?: number
   /** Landmark longitude in degrees (-180..180, east-positive) */
   lonDeg?: number
+  /** Site radiation intensity (0–1) from landmarks.json. */
+  radiationIndex?: number
 }

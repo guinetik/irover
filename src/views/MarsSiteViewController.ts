@@ -163,6 +163,7 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
       siteId, featureType: 'plain' as const,
       waterIceIndex: 0.1, silicateIndex: 0.3,
       temperatureMaxK: 280, temperatureMinK: 160,
+      radiationIndex: 0.25,
     }
   }
 
@@ -183,6 +184,7 @@ export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly 
     temperatureMinK: site.temperatureMinK,
     latDeg: site.lat,
     lonDeg: site.lon,
+    radiationIndex: site.radiationIndex ?? 0.25,
   }
 }
 
