@@ -605,7 +605,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         for (let x = 0; x < radGridSize; x++) {
           const wx = (x / (radGridSize - 1) - 0.5) * tScale
           const wz = (z / (radGridSize - 1) - 0.5) * tScale
-          elevationMap[z * radGridSize + x] = siteScene.terrain.heightAt(wx, wz)
+          elevationMap[z * radGridSize + x] = siteScene.terrain.terrainHeightAt(wx, wz)
         }
       }
       let minH = Infinity, maxH = -Infinity

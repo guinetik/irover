@@ -70,22 +70,16 @@ void main() {
   }
 
   // ── 5. Reversed chromatic aberration (radStrength > 0.4) ────────────────
-  // Standard CA pushes red/blue outward; here green displaces OUTWARD while
-  // red/blue stay put — reversed polarity is the visual tell for radiation.
+  // Green channel displaces OUTWARD while red/blue stay put.
+  // We only offset green — don't re-read red/blue from tDiffuse, which
+  // would undo tint/scanlines/hot-pixels already baked into `color`.
   if (radStrength > 0.4) {
     float caStrength = smoothstep(0.4, 1.0, radStrength) * 0.006;
     vec2  centered   = vUv - 0.5;
     float r2         = dot(centered, centered);
     vec2  caDir      = centered * (caStrength + r2 * 0.004);
-    // Green displaced outward; red and blue unchanged
     float gDisplaced = texture2D(tDiffuse, vUv + caDir).g;
-    color.r = texture2D(tDiffuse, vUv).r;
-    color.g = mix(color.g, gDisplaced, smoothstep(0.4, 1.0, radStrength));
-    color.b = texture2D(tDiffuse, vUv).b;
-    // Re-apply shadow tint after channel replacement
-    float lumPost = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    float shadowPost = 1.0 - smoothstep(0.4, 0.85, lumPost);
-    color.rgb = mix(color.rgb, radTint, shadowPost * radStrength * 0.20);
+    color.g = mix(color.g, gDisplaced, smoothstep(0.4, 1.0, radStrength) * 0.5);
   }
 
   // ── 6. Full-frame green flash (uRadiationLevel > 0.85) ──────────────────
