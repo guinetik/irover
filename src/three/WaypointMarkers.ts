@@ -18,13 +18,13 @@ interface WaypointMarker {
 
 const markers: WaypointMarker[] = []
 
-function createMarkerMesh(): THREE.Group {
+function createMarkerMesh(color: number = MARKER_COLOR): THREE.Group {
   const group = new THREE.Group()
 
   // Vertical beam
   const beamGeo = new THREE.CylinderGeometry(BEAM_RADIUS, BEAM_RADIUS, BEAM_HEIGHT, 8)
   const beamMat = new THREE.MeshBasicMaterial({
-    color: MARKER_COLOR,
+    color,
     transparent: true,
     opacity: 0.4,
     depthWrite: false,
@@ -36,7 +36,7 @@ function createMarkerMesh(): THREE.Group {
   // Base ring
   const ringGeo = new THREE.TorusGeometry(RING_RADIUS, RING_TUBE, 8, 32)
   const ringMat = new THREE.MeshBasicMaterial({
-    color: MARKER_COLOR,
+    color,
     transparent: true,
     opacity: 0.7,
   })
@@ -48,7 +48,7 @@ function createMarkerMesh(): THREE.Group {
   // Top diamond
   const diamondGeo = new THREE.OctahedronGeometry(0.4, 0)
   const diamondMat = new THREE.MeshBasicMaterial({
-    color: MARKER_COLOR,
+    color,
     transparent: true,
     opacity: 0.9,
   })
@@ -68,11 +68,12 @@ export function addWaypointMarker(
   z: number,
   groundY: number,
   scene: THREE.Scene,
+  color?: number,
 ): void {
   // Don't duplicate
   if (markers.find((m) => m.id === id)) return
 
-  const group = createMarkerMesh()
+  const group = createMarkerMesh(color)
   group.position.set(x, groundY, z)
   scene.add(group)
   markers.push({ id, group })
