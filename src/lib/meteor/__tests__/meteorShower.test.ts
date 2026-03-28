@@ -43,19 +43,19 @@ describe('rollMeteorCount', () => {
     }
   })
 
-  it('returns 16-24 for moderate', () => {
+  it('returns 12-20 for moderate', () => {
     for (let i = 0; i < 50; i++) {
       const n = rollMeteorCount('moderate')
-      expect(n).toBeGreaterThanOrEqual(16)
-      expect(n).toBeLessThanOrEqual(24)
+      expect(n).toBeGreaterThanOrEqual(12)
+      expect(n).toBeLessThanOrEqual(20)
     }
   })
 
-  it('returns 30-50 for heavy', () => {
+  it('returns 20-30 for heavy', () => {
     for (let i = 0; i < 50; i++) {
       const n = rollMeteorCount('heavy')
-      expect(n).toBeGreaterThanOrEqual(30)
-      expect(n).toBeLessThanOrEqual(50)
+      expect(n).toBeGreaterThanOrEqual(20)
+      expect(n).toBeLessThanOrEqual(30)
     }
   })
 })

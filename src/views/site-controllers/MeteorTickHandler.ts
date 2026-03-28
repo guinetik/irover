@@ -16,9 +16,9 @@ import {
 import { TERRAIN_SCALE } from '@/three/terrain/terrainConstants'
 
 /** Markers appear within this window so the player sees the full shower scope at once. */
-const MARKER_STAGGER_SEC = 1
+const MARKER_STAGGER_SEC = 2
 /** Falls are spread over this window so they rain down in a wave, not all at once. */
-const FALL_STAGGER_SEC = 4
+const FALL_STAGGER_SEC = 12
 
 export interface MeteorTickCallbacks {
   meteorRisk: number
