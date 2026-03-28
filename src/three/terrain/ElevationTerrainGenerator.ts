@@ -10,6 +10,7 @@ import { SimplexNoise } from '@/lib/math/simplexNoise'
 import { pickDetailTextures } from '@/lib/terrain/detailTextures'
 import { fetchElevationTile } from './marsElevationTiles'
 import { TERRAIN_SCALE } from './terrainConstants'
+import { computeCraterDepth } from '@/lib/meteor'
 import type { ITerrainGenerator } from './TerrainGenerator'
 import type { TerrainParams } from '@/types/terrain'
 
@@ -238,6 +239,48 @@ export class ElevationTerrainGenerator implements ITerrainGenerator {
 
   getSmallRocks(): THREE.Mesh[] {
     return this.rockSpawner.getSmallRocks()
+  }
+
+  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): void {
+    if (!this.heightmap || !this.terrainMesh) return
+    const hm = this.heightmap
+    const influenceRadius = radius * 1.3
+    const cellSize = SCALE / (GRID_SIZE - 1)
+    const gxCenter = Math.round((x / SCALE + 0.5) * (GRID_SIZE - 1))
+    const gzCenter = Math.round((z / SCALE + 0.5) * (GRID_SIZE - 1))
+    const cellSpan = Math.ceil(influenceRadius / cellSize) + 1
+
+    const gxMin = Math.max(0, gxCenter - cellSpan)
+    const gxMax = Math.min(GRID_SIZE - 1, gxCenter + cellSpan)
+    const gzMin = Math.max(0, gzCenter - cellSpan)
+    const gzMax = Math.min(GRID_SIZE - 1, gzCenter + cellSpan)
+
+    for (let gz = gzMin; gz <= gzMax; gz++) {
+      for (let gx = gxMin; gx <= gxMax; gx++) {
+        const wx = (gx / (GRID_SIZE - 1) - 0.5) * SCALE
+        const wz = (gz / (GRID_SIZE - 1) - 0.5) * SCALE
+        const dx = wx - x
+        const dz = wz - z
+        const dist = Math.sqrt(dx * dx + dz * dz)
+        if (dist > influenceRadius) continue
+        const offset = computeCraterDepth(dist, radius, depth, rimHeight)
+        hm[gz * GRID_SIZE + gx] += offset
+      }
+    }
+
+    const pos = this.terrainMesh.geometry.attributes.position
+    for (let i = 0; i < pos.count; i++) {
+      const vx = pos.getX(i)
+      const vz = pos.getZ(i)
+      const dx = vx - x
+      const dz = vz - z
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      if (dist > influenceRadius) continue
+      const offset = computeCraterDepth(dist, radius, depth, rimHeight)
+      pos.setY(i, pos.getY(i) + offset)
+    }
+    this.terrainMesh.geometry.attributes.position.needsUpdate = true
+    this.terrainMesh.geometry.computeVertexNormals()
   }
 
   private createTerrainMaterial(p: TerrainParams): THREE.ShaderMaterial {
