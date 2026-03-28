@@ -1,0 +1,501 @@
+{
+  "version": 5,
+  "instrument": "RAD",
+  "fullName": "Radiation Assessment Detector",
+  "type": "passive",
+  "description": "Toaster-sized particle telescope flush with the rover deck. 65° field of view pointing skyward. Six stacked detectors (A–F) identify particle species by energy deposition profile. Always on. Serves dual role: environmental radiation monitoring (zone detection, instrument gating) and passive science event detection.",
+  "powerW": {
+    "idle": 4,
+    "active": 4,
+    "decoding": 8
+  },
+  "icon": "☢",
+
+  "environment": {
+    "description": "Every map has a continuous radiation scalar field. The field value at the rover's position determines zone tier, instrument availability, comms status, and camera VFX.",
+
+    "zones": {
+      "safe": {
+        "label": "SAFE",
+        "color": "#44dd88",
+        "doseRange": { "min": 0.10, "max": 0.25, "unit": "mGy/day" },
+        "instrumentStatus": "full",
+        "commsStatus": "full",
+        "description": "Normal operations. All instruments at full capacity. Clean comms."
+      },
+      "intermediate": {
+        "label": "INTERMEDIATE",
+        "color": "#e8a54b",
+        "doseRange": { "min": 0.25, "max": 0.60, "unit": "mGy/day" },
+        "instrumentStatus": "degraded",
+        "commsStatus": "marginal",
+        "commsIntegrityRisk": 0.15,
+        "description": "Elevated radiation. Instruments operational but degraded. Comms possible with 15% data integrity risk."
+      },
+      "hazardous": {
+        "label": "HAZARDOUS",
+        "color": "#ff4444",
+        "doseRange": { "min": 0.60, "max": 1.20, "unit": "mGy/day" },
+        "instrumentStatus": "blocked",
+        "commsStatus": "blocked",
+        "description": "High radiation. All science instruments blocked. Comms blocked. RAD and driving still functional."
+      }
+    },
+
+    "instrumentDegradation": {
+      "description": "Plugs into existing hazard pipeline in lib/hazards/hazardDecay.ts. Radiation is a new HazardEvent source alongside dust-storm. Uses same computeDecayMultiplier() and applyHazardToCategory() code paths.",
+      "hazardIntegration": {
+        "tierCoefficients": { "rugged": 0.15, "standard": 0.35, "sensitive": 0.60 },
+        "performanceCoefficients": { "rugged": 0.01, "standard": 0.04, "sensitive": 0.08 },
+        "note": "Add 'radiation' key to TIER_COEFFICIENTS in hazardDecay.ts. Add computeRadiationPerformancePenalty() parallel to computeStormPerformancePenalty()."
+      },
+      "perInstrument": {
+        "mastcam":  { "tier": "sensitive", "effect": "Scan duration +40%, survey range -25%", "mechanism": "durationMultiplier from performance penalty" },
+        "chemcam":  { "tier": "sensitive", "effect": "Spectrum noise +30%, calibration drift", "mechanism": "accuracyPenalty on spectrum generation" },
+        "apxs":     { "tier": "standard",  "effect": "Quality ceiling capped at 80%", "mechanism": "Max decode quality in minigame reduced" },
+        "sam":      { "tier": "standard",  "effect": "Rarity shifts 1 tier common, quality -20%", "mechanism": "Electronic noise in mass spectrometer" },
+        "dan":      { "tier": "standard",  "effect": "Detection range -30%", "mechanism": "Ambient neutrons mask subsurface returns" },
+        "dril":     { "tier": "rugged",    "effect": "Unaffected", "mechanism": "Mechanical system" },
+        "rems":     { "tier": "standard",  "effect": "Error margins +20%", "mechanism": "Radiation interference with sensors" },
+        "rad":      { "tier": "sensitive",  "effect": "Exempt — RAD IS the radiation detector", "mechanism": "Performance penalty bypassed" }
+      },
+      "hazardousZone": "All science instruments blocked (except RAD, RTG). Instruments still take passive durability damage from being in the zone."
+    },
+
+    "blockedInstruments": {
+      "description": "In hazardous zones, all science instruments are blocked. RAD, RTG, and driving are exempt.",
+      "blocked": ["chemcam", "apxs", "sam", "dan", "dril", "mcam", "rems"],
+      "exempt": ["rad", "rtg"],
+      "lockoutMessage": "RADIATION ENVIRONMENT UNSAFE — Ambient dose rate: {currentDose} mGy/day. Instrument readings unreliable at this level. Relocate to safe zone to resume operations.",
+      "showNearestSafe": true,
+      "nearestSafeUnknownMessage": "Enable RAD to locate safe zones."
+    },
+
+    "vfxLayers": {
+      "description": "Three distinct VFX layers for radiation. GREEN color identity (not yellow — dust owns yellow).",
+
+      "layer1_thirdPerson": {
+        "description": "NEW separate RadiationAtmospherePass ShaderPass in EffectComposer, AFTER DustAtmospherePass. Does NOT share uniforms with dust/storm shader. Driven by uRadiationLevel (0–1).",
+        "shaderFile": "radiation-atmosphere.frag.glsl",
+        "passFile": "RadiationAtmospherePass.ts",
+        "uniform": "uRadiationLevel",
+        "colorIdentity": "green-cyan — shadows/midtones shift toward toxic green (vec3(0.1, 0.6, 0.3))",
+        "effects": {
+          "safe": { "greenPush": 0, "scanlines": 0, "hotPixels": 0, "staticBands": 0, "chromaticAberration": 0, "flash": 0 },
+          "intermediate": {
+            "greenPush": "subtle shadow tint",
+            "scanlines": "thin, fast, 10% opacity, scrolling up",
+            "hotPixels": "rare single-frame green dot clusters (2-3 dots)",
+            "staticBands": 0,
+            "chromaticAberration": 0,
+            "flash": 0
+          },
+          "hazardous": {
+            "greenPush": "strong shadow/midtone shift",
+            "scanlines": "bright, fast scroll",
+            "hotPixels": "frequent, larger clusters, some persist 2-3 frames",
+            "staticBands": "green-tinted noise band drifting upward",
+            "chromaticAberration": "green channel displaces outward (reversed CA)",
+            "flash": "brief full-frame green flash at >0.85 (1-2 frames)"
+          }
+        },
+        "compositesWithDust": true,
+        "note": "Dust storm in radiation zone = amber haze + green artifacts layered together"
+      },
+
+      "layer2_instrumentCamera": {
+        "description": "VFX applied during first-person MastCam (slot 1) and ChemCam (slot 2) active mode. These are tier:sensitive CCD scientific sensors — radiation effects are amplified.",
+        "affectedInstruments": ["mastcam", "chemcam"],
+        "amplificationFactor": 1.8,
+        "formula": "instrumentRadLevel = min(1.0, baseRadLevel * 1.8)",
+        "additionalEffects": {
+          "intermediate": [
+            "Larger/more frequent green hot pixel clusters than third-person",
+            "CCD charge bleed streaks — horizontal green lines (particle hit bleeds charge along sensor row)",
+            "Faint vertical banding — columns of elevated green signal"
+          ],
+          "hazardous": [
+            "Dense green hot pixel field across image",
+            "Frequent charge bleed streaks",
+            "Periodic full-sensor saturation flashes (region goes green-white)",
+            "Severe chromatic aberration from optics hits"
+          ]
+        },
+        "purpose": "Visual explanation for why instrument results are degraded. Player sees the artifacts → understands the penalty."
+      },
+
+      "layer3_resultDegradation": {
+        "description": "Gameplay penalties via existing hazard system. Radiation is a new source in lib/hazards/hazardDecay.ts alongside dust-storm.",
+        "hazardSource": "radiation",
+        "tierCoefficients": { "rugged": 0.15, "standard": 0.35, "sensitive": 0.60 },
+        "performanceCoefficients": { "rugged": 0.01, "standard": 0.04, "sensitive": 0.08 },
+        "hazardEventMapping": {
+          "source": "radiation",
+          "active": "radiationLevel > 0.25",
+          "level": "ceil(radiationLevel * 5)"
+        }
+      }
+    },
+
+    "terrainShielding": {
+      "description": "Terrain features modify radiation at specific locations. Applied during field generation and real-time calculations.",
+      "factors": {
+        "craterFloor": { "multiplier": 0.6, "description": "Low elevation = thick atmosphere above." },
+        "craterWallShadow": { "multiplier": 0.4, "description": "Blocks large fraction of sky hemisphere." },
+        "lavaTubeEntrance": { "multiplier": 0.3, "description": "Nearly full overhead shielding." },
+        "boulderCluster": { "multiplier": 0.8, "description": "Partial blockage, small safe pocket." },
+        "openPlain": { "multiplier": 1.0, "description": "Full sky exposure, baseline." },
+        "gentleSlope": { "multiplier": 0.95, "description": "Slight horizon blockage." },
+        "ridgeline": { "multiplier": 1.2, "description": "High elevation, full exposure." },
+        "mesaTop": { "multiplier": 1.3, "description": "Highest elevation, worst exposure." }
+      }
+    },
+
+    "mapProfiles": {
+      "description": "Radiation zone distribution is derived from each landmark's existing radiationIndex field (0.0–1.0) in landmarks.json. No new data field needed. The radiationIndex maps to safe/intermediate/hazardous percentages via a curve.",
+      "radiationIndexToZones": {
+        "description": "Approximate zone distribution as a function of radiationIndex. Thresholds are adjusted post-generation to hit these targets.",
+        "curve": [
+          { "radiationIndex": [0.10, 0.15], "safePct": [55, 60], "intermediatePct": [30, 35], "hazardousPct": [5, 10], "feel": "Easy. Radiation is background detail." },
+          { "radiationIndex": [0.20, 0.25], "safePct": [40, 50], "intermediatePct": [30, 35], "hazardousPct": [15, 25], "feel": "Medium. Amber zones encountered regularly." },
+          { "radiationIndex": [0.30, 0.50], "safePct": [25, 35], "intermediatePct": [35, 40], "hazardousPct": [25, 35], "feel": "Hard. Must plan traversals around safe zones." },
+          { "radiationIndex": [0.60, 0.80], "safePct": [10, 20], "intermediatePct": [30, 35], "hazardousPct": [45, 55], "feel": "Very hard. Safe zones are isolated pockets." },
+          { "radiationIndex": [0.85, 0.90], "safePct": [5, 10], "intermediatePct": [20, 25], "hazardousPct": [65, 75], "feel": "Extreme. Every safe pocket is precious." }
+        ]
+      },
+      "exampleSites": [
+        { "name": "Hellas Planitia",  "radiationIndex": 0.10, "tier": 1, "safePct": 60, "note": "Deepest basin on Mars. Thick atmosphere." },
+        { "name": "Curiosity (Gale)", "radiationIndex": 0.25, "tier": 2, "safePct": 45, "note": "Deep crater basin with sheltered floor." },
+        { "name": "Olympus Mons",     "radiationIndex": 0.80, "tier": 3, "safePct": 15, "note": "21.9 km elevation. Nearly no atmosphere." },
+        { "name": "South Polar Cap",  "radiationIndex": 0.90, "tier": 3, "safePct": 8,  "note": "Extreme. Barely survivable." }
+      ]
+    },
+
+    "fieldGeneration": {
+      "description": "Radiation field generated as a scalar over the heightmap during site generation. Three layers combined.",
+      "layers": {
+        "elevationBaseline": {
+          "description": "Lower elevation = more atmosphere = lower radiation. Dominant factor.",
+          "formula": "lerp(0.10, 0.90, elevationNormalized)"
+        },
+        "terrainShielding": {
+          "description": "Sky visibility factor per point. More terrain blockage = lower radiation.",
+          "formula": "baseRadiation * (1.0 - skyBlockedFraction * 0.5)"
+        },
+        "noisePockets": {
+          "description": "Perlin noise for localized hot/cold spots. Prevents radiation being a simple heightmap copy.",
+          "noiseScale": 0.02,
+          "noiseAmplitude": 0.15,
+          "formula": "radiationWithShielding + perlin(x * scale, z * scale) * amplitude"
+        }
+      },
+      "clamp": { "min": 0.05, "max": 1.20 },
+      "thresholdAdjustment": "Post-generation, safe and hazardous thresholds are adjusted to match the map profile's target percentages."
+    }
+  },
+
+  "baseline": {
+    "description": "Normal Martian surface radiation within safe zones. RAD displays a Geiger-counter overlay while active.",
+    "doseRateRange": { "min": 0.15, "max": 0.30, "unit": "mGy/day" },
+    "diurnalModulation": {
+      "description": "Atmospheric pressure drops at night → higher GCR flux. Dose rate ~10-15% higher at night.",
+      "nightMultiplier": 1.12
+    },
+    "displayElements": [
+      { "id": "zone-indicator", "description": "Colored dot (green/amber/red) with zone label. Primary HUD element." },
+      { "id": "geiger-counter", "description": "Audible click rate proportional to current dose." },
+      { "id": "dose-rate-bar", "description": "Horizontal bar showing dose rate relative to zone thresholds." },
+      { "id": "cumulative-dose", "description": "Running total dose this sol. Resets each sol." },
+      { "id": "particle-ticker", "description": "Scrolling feed of detected particle types: p+, n, γ, HZE." }
+    ]
+  },
+
+  "eventDetection": {
+    "description": "Passive science detection operates on top of the environmental system. Events trigger in any zone. Baseline average adjusts to current zone's expected dose rate.",
+    "detectionThreshold": {
+      "sigmaThreshold": 2.5,
+      "rollingWindowSec": 60
+    },
+    "eventWindow": {
+      "windowSec": 30,
+      "partialPenalty": 0.5,
+      "description": "Player must hit DECODE before window expires or event is logged as partial with 50% SP penalty."
+    },
+    "allZonesNote": "RAD is exempt from instrument blocking. Decode QTE works in any zone including hazardous. However, resulting science logs cannot be transmitted until player reaches a safe zone. In hazardous zones, camera VFX (glitch, noise) make ghost particles harder to spot — environment becomes part of difficulty."
+  },
+
+  "events": [
+    {
+      "id": "gcr-fluctuation",
+      "name": "GCR Fluctuation",
+      "rarity": "common",
+      "sp": 15,
+      "description": "Atmospheric pressure dipped briefly, thinning the CO₂ column. More galactic cosmic rays reached the surface.",
+      "physics": {
+        "source": "galactic",
+        "direction": "above",
+        "primaryParticles": ["proton", "neutron", "gamma"],
+        "doseMultiplier": { "min": 1.3, "max": 1.8 },
+        "durationSec": { "min": 15, "max": 45 },
+        "signature": "gradual-rise-gradual-fall"
+      },
+      "decodeHint": "Gentle curve. All channels rise together.",
+      "commsImpact": "none",
+      "spawnWeight": 50,
+      "sideProducts": []
+    },
+    {
+      "id": "soft-sep",
+      "name": "Soft Spectrum SEP",
+      "rarity": "uncommon",
+      "sp": 55,
+      "description": "Solar protons hit the upper atmosphere but couldn't reach the surface. RAD caught the secondary neutron rain.",
+      "physics": {
+        "source": "solar",
+        "direction": "above",
+        "primaryParticles": ["neutron"],
+        "secondaryOnly": true,
+        "doseMultiplier": { "min": 1.5, "max": 2.2 },
+        "durationSec": { "min": 30, "max": 90 },
+        "signature": "neutron-spike-no-charged"
+      },
+      "decodeHint": "Neutron channel surges, charged channels stay flat.",
+      "commsImpact": "minor",
+      "spawnWeight": 25,
+      "sideProducts": [{ "itemId": "rad-neutron-profile", "quantity": 1 }]
+    },
+    {
+      "id": "hard-sep",
+      "name": "Hard Spectrum SEP",
+      "rarity": "rare",
+      "sp": 140,
+      "description": "High-energy solar protons tore through the atmosphere to the surface. Every detector channel lit up.",
+      "physics": {
+        "source": "solar",
+        "direction": "above",
+        "primaryParticles": ["proton", "neutron", "gamma", "heavy-ion"],
+        "secondaryOnly": false,
+        "doseMultiplier": { "min": 2.0, "max": 4.0 },
+        "durationSec": { "min": 60, "max": 180 },
+        "signature": "all-channels-simultaneous-spike"
+      },
+      "decodeHint": "Everything fires at once. The Sun came all the way down.",
+      "commsImpact": "severe",
+      "transmitBlocked": true,
+      "spawnWeight": 8,
+      "sideProducts": [
+        { "itemId": "rad-sep-profile", "quantity": 1 },
+        { "itemId": "rad-dose-record", "quantity": 1 }
+      ]
+    },
+    {
+      "id": "forbush-decrease",
+      "name": "Forbush Decrease",
+      "rarity": "legendary",
+      "sp": 350,
+      "description": "A CME's magnetic field swept past Mars and pushed cosmic rays away. The absence is the signal.",
+      "physics": {
+        "source": "solar-indirect",
+        "direction": "all",
+        "primaryParticles": ["proton", "neutron"],
+        "isDecrease": true,
+        "doseMultiplier": { "min": 0.4, "max": 0.7 },
+        "onsetSec": { "min": 10, "max": 30 },
+        "durationSec": { "min": 60, "max": 120 },
+        "recoverySec": { "min": 30, "max": 90 },
+        "signature": "gradual-dip-sustained-minimum-slow-recovery"
+      },
+      "decodeHint": "The signal went quiet. The absence IS the event.",
+      "commsImpact": "none",
+      "transmitBonus": 1.3,
+      "spawnWeight": 3,
+      "sideProducts": [
+        { "itemId": "rad-forbush-profile", "quantity": 1 },
+        { "itemId": "rad-cme-data", "quantity": 1 }
+      ]
+    }
+  ],
+
+  "decodeMinigame": {
+    "type": "particle-interception",
+    "description": "QTE-style overlay on the driving/idle view. Camera locks to a fixed upward angle showing the Martian sky. Transparent canvas overlay. Particles rain from the sky (top/center) toward the ground (bottom/edges). Player clicks particles with mouse to intercept them — on click, the particle pivots trajectory and angles toward the rover's RAD detector (bottom-left corner). Caught particles register in the detector. Missed particles hit the ground and are lost. The composition of caught particles auto-classifies the event.",
+
+    "flow": {
+      "trigger": "☢ RADIATION EVENT DETECTED alert with audio sting (Geiger counter burst)",
+      "prompt": "Two buttons: [DECODE] [DISMISS]",
+      "dismiss": "Event gone. No SP, no penalty. Player was busy.",
+      "decode": "cmb.mp3 begins playing. Camera locks. Overlay drops in. Particle stream starts with the audio.",
+      "completion": "CMB audio ends. Particle stream stops. Result overlay shows for 3 seconds. Camera eases back 0.5s.",
+      "totalInterruptionSec": "~24 seconds (20s CMB audio + prompt + result fade). Consistent every time."
+    },
+
+    "audio": {
+      "file": "cmb.mp3",
+      "durationSec": 20,
+      "description": "Cosmic Microwave Background radiation — the oldest detectable radiation in the universe, the afterglow of the Big Bang, redshifted over 13.8 billion years and converted to audible sound. The CMB audio IS the game timer. No progress bar, no countdown. The sound starts, particles rain, the sound fades, the game ends. The player learns the rhythm intuitively.",
+      "playback": "Starts on DECODE press. Plays once, no loop. Last 2–3 seconds have natural fade-out signaling the window is closing.",
+      "narrativeNote": "The player doesn't need to know what they're hearing. But if they ever look it up, they'll discover they were listening to the birth of the universe while catching particles on Mars."
+    },
+
+    "camera": {
+      "description": "Camera locks to a fixed position looking slightly upward from the rover deck — the player sees the butterscotch Martian sky. The rover and RAD instrument are visible at the bottom-left. This is the POV of the detector looking at the sky it monitors.",
+      "lockDuration": "20 seconds (CMB audio duration) + 3 second result display",
+      "transition": "Quick 0.5s ease to locked position, 0.5s ease back on completion"
+    },
+
+    "particles": {
+      "description": "Particles spawn at the top/center of screen and travel on trajectories toward the ground (bottom/edges). Each particle type has distinct visual identity. Particles are on screen for 1.5–2.5 seconds before they exit the bottom and are lost.",
+      "types": {
+        "proton": {
+          "key": "visual-only",
+          "color": "#ff7733",
+          "label": "p+",
+          "size": "small",
+          "speed": "fast",
+          "visual": "Orange streak with bright core. Quick, darting trajectory. The bread and butter particle.",
+          "onScreenSec": 1.5
+        },
+        "neutron": {
+          "key": "visual-only",
+          "color": "#6699cc",
+          "label": "n",
+          "size": "medium",
+          "speed": "moderate",
+          "visual": "Blue-gray, no glow (neutral — no charge to radiate). Drifts more than streaks. Slightly translucent.",
+          "onScreenSec": 2.0
+        },
+        "gamma": {
+          "key": "visual-only",
+          "color": "#ffffff",
+          "label": "γ",
+          "size": "tiny",
+          "speed": "very fast",
+          "visual": "White flash with sharp line trail. Blink and it's gone. The hardest to catch.",
+          "onScreenSec": 1.0
+        },
+        "hze": {
+          "key": "visual-only",
+          "color": "#cc55ff",
+          "label": "HZE",
+          "size": "large",
+          "speed": "slow",
+          "visual": "Purple with heavy afterglow trail. Lumbering, impossible to miss visually. Easy to catch. Rare.",
+          "onScreenSec": 2.5
+        }
+      },
+      "spawnOrigin": "Top half of screen, biased toward center. Slight random horizontal spread.",
+      "trajectory": "Downward arcs toward bottom edge. Some drift left/right. Gravity-like curves, not straight lines.",
+      "onInterception": {
+        "description": "When player clicks a particle, it pivots from its downward trajectory and angles toward the rover/RAD detector at bottom-left. Brief flash of particle color at click point. Particle follows a smooth arc to the detector and is absorbed with a small pulse.",
+        "pivotAnimation": "Bezier curve from click point to detector position. Duration ~0.4 seconds.",
+        "detectorPulse": "RAD icon/area at bottom-left pulses with particle color on absorption."
+      },
+      "onMiss": {
+        "description": "Particle continues to bottom edge and fades out. A faint impact mark on the 'ground' (bottom of overlay). No penalty — just lost data."
+      }
+    },
+
+    "eventStreams": {
+      "description": "All events are exactly 20 seconds — the CMB audio clip length. What varies is particle count, rate curve, and distribution within that window.",
+      "gcr-fluctuation": {
+        "durationSec": 20,
+        "totalParticles": 18,
+        "rateCurve": "steady ~0.9/sec throughout",
+        "composition": { "proton": 0.30, "neutron": 0.30, "gamma": 0.25, "hze": 0.15 },
+        "difficulty": "Easy. Consistent gentle rain. Plenty of time between particles.",
+        "signature": "Roughly equal distribution across all types."
+      },
+      "soft-sep": {
+        "durationSec": 20,
+        "totalParticles": 28,
+        "rateCurve": "ramps from ~0.8/sec to ~2.0/sec (solar event builds)",
+        "composition": { "proton": 0.05, "neutron": 0.60, "gamma": 0.30, "hze": 0.05 },
+        "difficulty": "Moderate. Starts slow, accelerates. Neutron-heavy. Discrimination challenge intensifies as rate climbs.",
+        "signature": "Neutron-dominated. Near-absence of charged particles."
+      },
+      "hard-sep": {
+        "durationSec": 20,
+        "totalParticles": 45,
+        "rateCurve": "starts ~2.0/sec, peaks ~3.0/sec mid-event, tapers",
+        "composition": { "proton": 0.30, "neutron": 0.25, "gamma": 0.25, "hze": 0.20 },
+        "difficulty": "Hard. High volume from start. Peak mid-event is a wall of particles. CMB audio intensity syncs with peak rate.",
+        "signature": "All types present at high volume simultaneously."
+      },
+      "forbush-decrease": {
+        "durationSec": 20,
+        "totalParticles": 8,
+        "rateCurve": "~1.0/sec for first 5 seconds, then drops to near-zero for remaining 15 seconds",
+        "composition": { "proton": 0.35, "neutron": 0.35, "gamma": 0.20, "hze": 0.10 },
+        "difficulty": "Deceptive. Normal start, then stream dies. Last 2-3 particles are ghost particles. The CMB audio plays over an empty sky. The silence within the sound is the event.",
+        "ghostParticles": {
+          "enabled": true,
+          "count": 2,
+          "opacity": 0.25,
+          "description": "Ultra-faint particles representing suppressed GCR leaking through CME magnetic shield. Nearly invisible. Catching them is bonus quality."
+        },
+        "signature": "Near-empty stream. The absence is the signal."
+      }
+    },
+
+    "autoClassification": {
+      "description": "After the stream ends, the system classifies the event based on the composition of caught particles. No manual classification needed — the player's catch pattern IS the answer.",
+      "method": "Cosine similarity between caught composition vector and each event's expected composition vector. Highest similarity wins.",
+      "confidenceThreshold": 0.70,
+      "belowThreshold": "Event classified as 'UNRESOLVED' — 50% SP. Logged but not fully characterized.",
+      "correctClassification": "Full SP + quality bonus.",
+      "qualityBonuses": {
+        "description": "Based on catch rate (caught / total spawned).",
+        "95": 1.4,
+        "80": 1.1,
+        "70": 1.0,
+        "50": 0.8,
+        "0": 0.5
+      }
+    },
+
+    "resultDisplay": {
+      "description": "Brief result overlay after stream ends. Shows for 3 seconds then fades.",
+      "elements": [
+        "Event name and rarity badge",
+        "Catch rate: {caught}/{total} ({percent}%)",
+        "Quality grade (S/A/B/C/D)",
+        "SP earned",
+        "Side products earned (if any)"
+      ],
+      "example": "☢ HARD SPECTRUM SEP — RARE\nCatch: 31/45 (68%) — Grade B\n+140 SP · +1 SEP Profile · +1 Dose Record"
+    }
+  },
+
+  "commsRules": {
+    "description": "Comms restrictions combine zone-based and event-based. Most restrictive rule wins, except Forbush bonus overrides zone penalty.",
+    "zoneImpact": {
+      "safe": { "integrityRisk": 0 },
+      "intermediate": { "integrityRisk": 0.15 },
+      "hazardous": { "blocked": true }
+    },
+    "forbushOverride": {
+      "description": "Forbush bonus applies even in intermediate zones.",
+      "transmitMultiplier": 1.3
+    }
+  },
+
+  "spawnTable": {
+    "baseIntervalSec": { "min": 120, "max": 300 },
+    "weights": {
+      "gcr-fluctuation": 50,
+      "soft-sep": 25,
+      "hard-sep": 8,
+      "forbush-decrease": 3
+    },
+    "maxActiveEvents": 1,
+    "cooldownAfterEventSec": 60
+  },
+
+  "sideProductCatalog": {
+    "rad-neutron-profile": { "name": "Neutron Flux Profile", "category": "rad-data" },
+    "rad-sep-profile": { "name": "SEP Event Profile", "category": "rad-data" },
+    "rad-dose-record": { "name": "Peak Dose Record", "category": "rad-data" },
+    "rad-forbush-profile": { "name": "Forbush Decrease Profile", "category": "rad-data" },
+    "rad-cme-data": { "name": "CME Transit Data", "category": "rad-data" }
+  }
+}
