@@ -429,7 +429,7 @@ const manifestById: ManifestById = {
     category: 'ambient',
     load: 'lazy',
     playback: 'single-instance',
-    volume: 0.25,
+    volume: 0.6,
     effect: 'none',
   },
   'sfx.radEventSting': {

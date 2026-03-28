@@ -149,10 +149,10 @@ export function createPassiveSystemsAudioTickHandler(
     syncLayer(heaterLayer, true, heaterTargetVolume, fctx.sceneDelta)
     syncLayer(remsLayer, remsSurveying.value, REMS_VOLUME, fctx.sceneDelta)
 
-    const GEIGER_BASE_VOL = 0.15
-    const GEIGER_MAX_VOL = 0.5
+    const GEIGER_BASE_VOL = 0.3
+    const GEIGER_MAX_VOL = 0.8
     const geigerVol = radSurveying.value
-      ? GEIGER_BASE_VOL + Math.min(GEIGER_MAX_VOL - GEIGER_BASE_VOL, fctx.radiationLevel * 0.4)
+      ? GEIGER_BASE_VOL + Math.min(GEIGER_MAX_VOL - GEIGER_BASE_VOL, fctx.radiationLevel * 0.6)
       : 0
     syncLayer(geigerLayer, radSurveying.value, geigerVol, fctx.sceneDelta)
   }
