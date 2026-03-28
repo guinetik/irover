@@ -5,9 +5,30 @@ export interface LandmarkBase {
   lon: number
   description: string
   accent: string
+  tier: 1 | 2 | 3
+  radiationIndex: number
+  meteorRisk: number
 }
 
-export interface LandingSite extends LandmarkBase {
+/** Geological fields shared by both landmark types. */
+export interface GeologicalData {
+  featureType: 'volcano' | 'canyon' | 'basin' | 'plain' | 'polar-cap'
+  diameterKm: number
+  elevationKm: number
+  surfacePressureMbar: number
+  temperatureMinK: number
+  temperatureMaxK: number
+  waterIceIndex: number
+  ironOxideIndex: number
+  silicateIndex: number
+  basaltIndex: number
+  roughness: number
+  dustCover: number
+  craterDensity: number
+  geologicalAge: 'noachian' | 'hesperian' | 'amazonian'
+}
+
+export interface LandingSite extends LandmarkBase, GeologicalData {
   type: 'landing-site'
   mission: string
   agency: string
@@ -15,32 +36,8 @@ export interface LandingSite extends LandmarkBase {
   status: 'operational' | 'completed' | 'failed' | 'lost'
 }
 
-export interface GeologicalFeature extends LandmarkBase {
+export interface GeologicalFeature extends LandmarkBase, GeologicalData {
   type: 'geological'
-  featureType: 'volcano' | 'canyon' | 'basin' | 'plain' | 'polar-cap'
-
-  // Dimensions
-  diameterKm: number
-  elevationKm: number
-
-  // Atmosphere at surface level
-  surfacePressureMbar: number
-  temperatureMinK: number
-  temperatureMaxK: number
-
-  // Resource indicators (0.0 - 1.0 normalized)
-  waterIceIndex: number
-  ironOxideIndex: number
-  silicateIndex: number
-  basaltIndex: number
-
-  // Terrain characteristics (0.0 - 1.0 normalized)
-  roughness: number
-  dustCover: number
-  craterDensity: number
-
-  // Classification
-  geologicalAge: 'noachian' | 'hesperian' | 'amazonian'
 }
 
 export type Landmark = LandingSite | GeologicalFeature
