@@ -13,6 +13,10 @@ export interface InstallMarsDevDebugApiOptions {
   setMissionForDev: (index: number) => DevMissionSetResult
   /** Force-trigger a dust storm at level 1-5. */
   triggerStorm: (level: number) => void
+  /** Place waypoint markers at safe radiation zone centroids. Returns count placed. */
+  showRadSafeZones: () => number
+  /** Remove all safe-zone waypoint markers. */
+  hideRadSafeZones: () => void
 }
 
 declare global {
@@ -46,6 +50,14 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
     weather: {
       triggerStorm(level = 3) {
         options.triggerStorm(level)
+      },
+    },
+    radiation: {
+      showSafeZones() {
+        return options.showRadSafeZones()
+      },
+      hideSafeZones() {
+        options.hideRadSafeZones()
       },
     },
   }

@@ -69,7 +69,7 @@ import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { secondsPerSol } from '@/lib/missionTime'
-import { updateWaypointMarkers, setWaypointMarkerProgress, clearWaypointMarkers } from '@/three/WaypointMarkers'
+import { addWaypointMarker, removeWaypointMarker, updateWaypointMarkers, setWaypointMarkerProgress, clearWaypointMarkers } from '@/three/WaypointMarkers'
 import { tickPoiArrivals, getPoiDwellProgress } from '@/composables/usePoiArrival'
 
 /** Seconds to hold position before DAN prospecting begins. */
@@ -727,6 +727,25 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           }
         },
         triggerStorm: (level: number) => ctx.triggerStorm(level),
+        showRadSafeZones: () => {
+          const handler = tickHandlers.radHandler
+          // Access the field data through a dev helper on RadTickHandler
+          const centroids = handler.getDevSafeZoneCentroids?.() ?? []
+          let placed = 0
+          for (let i = 0; i < centroids.length; i++) {
+            const c = centroids[i]
+            const groundY = siteScene.terrain.heightAt(c.x, c.z)
+            addWaypointMarker(`rad-safe-${i}`, c.x, c.z, groundY, siteScene.scene)
+            placed++
+          }
+          return placed
+        },
+        hideRadSafeZones: () => {
+          // Remove all markers with the rad-safe- prefix
+          for (let i = 0; i < 200; i++) {
+            removeWaypointMarker(`rad-safe-${i}`, siteScene.scene)
+          }
+        },
       })
     }
 

@@ -218,3 +218,64 @@ export function findNearestSafeZone(
 export function radiationToDoseRate(fieldValue: number): number {
   return 0.05 + fieldValue * 0.95
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Safe Zone Cluster Detection (flood-fill)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Find connected clusters of safe cells and return their centroids in world space.
+ * Uses simple flood-fill on the grid. Each cluster produces one centroid.
+ */
+export function findSafeZoneCentroids(
+  field: Float32Array,
+  gridSize: number,
+  terrainScale: number,
+  thresholds: RadiationThresholds,
+): Array<{ x: number; z: number }> {
+  const visited = new Uint8Array(gridSize * gridSize)
+  const centroids: Array<{ x: number; z: number }> = []
+  const gMax = gridSize - 1
+
+  for (let startIdx = 0; startIdx < field.length; startIdx++) {
+    if (visited[startIdx] || field[startIdx] >= thresholds.safeMax) continue
+
+    // Flood-fill this cluster
+    const stack = [startIdx]
+    visited[startIdx] = 1
+    let sumGx = 0, sumGz = 0, count = 0
+
+    while (stack.length > 0) {
+      const idx = stack.pop()!
+      const gz = Math.floor(idx / gridSize)
+      const gx = idx % gridSize
+      sumGx += gx
+      sumGz += gz
+      count++
+
+      // 4-connected neighbors
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = gx + dx
+        const nz = gz + dz
+        if (nx < 0 || nx >= gridSize || nz < 0 || nz >= gridSize) continue
+        const nIdx = nz * gridSize + nx
+        if (visited[nIdx] || field[nIdx] >= thresholds.safeMax) continue
+        visited[nIdx] = 1
+        stack.push(nIdx)
+      }
+    }
+
+    // Skip tiny clusters (< 4 cells = noise)
+    if (count < 4) continue
+
+    // Centroid in grid space → world space
+    const cx = sumGx / count
+    const cz = sumGz / count
+    centroids.push({
+      x: (cx / gMax - 0.5) * terrainScale,
+      z: (cz / gMax - 0.5) * terrainScale,
+    })
+  }
+
+  return centroids
+}

@@ -7,6 +7,7 @@ import {
   computeZoneThresholds,
   radiationToDoseRate,
   findNearestSafeZone,
+  findSafeZoneCentroids,
   RAD_NIGHT_DOSE_MULTIPLIER,
   RAD_SPAWN_CONFIG,
   pickWeightedEvent,
@@ -56,6 +57,8 @@ export interface RadTickHandler extends SiteTickHandler {
   getSafePan(): number | null
   /** Distance to nearest safe zone in world units. Null when safe or no field. */
   getSafeDist(): number | null
+  /** Dev-only: compute safe zone cluster centroids from the field. */
+  getDevSafeZoneCentroids?(): Array<{ x: number; z: number }>
 }
 
 /**
@@ -279,5 +282,10 @@ export function createRadTickHandler(
     return cachedSafeDist
   }
 
-  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan, getSafeDist }
+  function getDevSafeZoneCentroids(): Array<{ x: number; z: number }> {
+    if (!field) return []
+    return findSafeZoneCentroids(field, gridSize, terrainScale, thresholds)
+  }
+
+  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan, getSafeDist, getDevSafeZoneCentroids }
 }

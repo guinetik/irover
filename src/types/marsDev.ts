@@ -55,4 +55,17 @@ export interface MarsDevDebugApi {
      */
     triggerStorm(level?: number): void
   }
+
+  radiation: {
+    /**
+     * Places waypoint markers at the centroids of all safe radiation zones.
+     * Useful for visualising the radiation field layout during development.
+     */
+    showSafeZones(): number
+
+    /**
+     * Removes all safe-zone waypoint markers placed by `showSafeZones()`.
+     */
+    hideSafeZones(): void
+  }
 }
