@@ -14,6 +14,7 @@ import { pickDetailTextures } from '@/lib/terrain/detailTextures'
 
 /** Sites that have a dedicated GLB terrain file in public/terrain/{siteId}.glb */
 export const GLB_TERRAIN_SITES = new Set([
+  // Geological features
   'acidalia-planitia',
   'argyre-basin',
   'arsia-mons',
@@ -27,6 +28,23 @@ export const GLB_TERRAIN_SITES = new Set([
   'syrtis-major',
   'utopia-planitia',
   'valles-marineris',
+  // Landing sites
+  'beagle-2',
+  'curiosity',
+  'insight',
+  'mars-2',
+  'mars-3',
+  'mars-6',
+  'mars-polar-lander',
+  'opportunity',
+  'pathfinder',
+  'perseverance',
+  'phoenix',
+  'schiaparelli',
+  'spirit',
+  'viking-1',
+  'viking-2',
+  'zhurong',
 ])
 
 /** GLB maps are 400x400 grids scaled up to 1000 world units (-500 to +500). */

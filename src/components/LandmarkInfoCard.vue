@@ -91,7 +91,6 @@
       </div>
 
       <button
-        v-if="landmark.type === 'geological'"
         class="select-site-btn"
         @click="$emit('select-site', landmark)"
       >
