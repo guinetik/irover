@@ -9,6 +9,11 @@ export interface RadiationAtmospherePass extends ShaderPass {
    * @param level  0.0 = safe (pass-through), 1.0 = maximum hazardous.
    */
   setRadiation(level: number): void
+  /**
+   * Set instrument camera mode (0.0 = third-person, 1.0 = MastCam/ChemCam CCD).
+   * Enables amplified radiation effects + CCD-specific artifacts.
+   */
+  setInstrumentCamera(factor: number): void
 }
 
 /**
@@ -24,10 +29,11 @@ export interface RadiationAtmospherePass extends ShaderPass {
 export function createRadiationAtmospherePass(): RadiationAtmospherePass {
   const shader = {
     uniforms: {
-      tDiffuse:        { value: null },
-      uRadiationLevel: { value: 0.0 },
-      uTime:           { value: 0.0 },
-      uResolution:     { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      tDiffuse:          { value: null },
+      uRadiationLevel:   { value: 0.0 },
+      uTime:             { value: 0.0 },
+      uResolution:       { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      uInstrumentCamera: { value: 0.0 },
     },
     vertexShader:   fullscreenPassVert,
     fragmentShader: radiationAtmosphereFrag,
@@ -37,6 +43,10 @@ export function createRadiationAtmospherePass(): RadiationAtmospherePass {
 
   pass.setRadiation = (level: number) => {
     pass.uniforms.uRadiationLevel.value = level
+  }
+
+  pass.setInstrumentCamera = (factor: number) => {
+    pass.uniforms.uInstrumentCamera.value = factor
   }
 
   return pass
