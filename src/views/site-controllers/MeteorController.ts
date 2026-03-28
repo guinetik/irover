@@ -15,37 +15,39 @@ const SEVERITY_LABELS: Record<ShowerSeverity, string> = {
 
 export interface MeteorControllerOptions {
   meteorRisk: number
-  scene: THREE.Scene
-  camera: THREE.PerspectiveCamera
-  rockFactory: RockFactory
-  terrainGroup: THREE.Group
-  heightAt: (x: number, z: number) => number
   audioManager: AudioManager | null
   remsMeteorIncomingText: Ref<string | null>
   remsMeteorActiveText: Ref<string | null>
 }
 
+export interface MeteorSceneComponents {
+  scene: THREE.Scene
+  camera: THREE.PerspectiveCamera
+  rockFactory: RockFactory
+  terrainGroup: THREE.Group
+  heightAt: (x: number, z: number) => number
+}
+
 export function createMeteorController(
   options: MeteorControllerOptions,
 ): SiteTickHandler & {
+  /** Wire Three.js scene components after the site scene has been created. */
+  setSceneComponents: (components: MeteorSceneComponents) => void
   onStormActive: () => void
   getActiveMeteoriteRocks: () => THREE.Mesh[]
 } {
   const {
     meteorRisk,
-    scene,
-    camera,
-    rockFactory,
-    terrainGroup,
-    heightAt,
     audioManager,
     remsMeteorIncomingText,
     remsMeteorActiveText,
   } = options
 
-  const renderer = new MeteorFallRenderer(scene)
-  renderer.setCamera(camera)
-  if (audioManager) renderer.setAudioManager(audioManager)
+  let renderer: MeteorFallRenderer | null = null
+  let scene: THREE.Scene | null = null
+  let rockFactory: RockFactory | null = null
+  let terrainGroup: THREE.Group | null = null
+  let heightAt: ((x: number, z: number) => number) | null = null
 
   const meteoriteRocks: THREE.Mesh[] = []
   const fallingMeshes = new Map<string, THREE.Mesh>()
@@ -53,7 +55,7 @@ export function createMeteorController(
 
   const tickHandler = createMeteorTickHandler({
     meteorRisk,
-    heightAt,
+    heightAt: (x, z) => heightAt?.(x, z) ?? 0,
 
     onShowerScheduled(shower: MeteorShower) {
       const label = SEVERITY_LABELS[shower.severity]
@@ -62,6 +64,7 @@ export function createMeteorController(
     },
 
     onFallMarkerShow(fall: MeteorFall) {
+      if (!renderer) return
       renderer.showMarker(fall)
       if (!remsMeteorActiveText.value) {
         remsMeteorActiveText.value = `REMS: Meteor shower active.`
@@ -70,6 +73,7 @@ export function createMeteorController(
     },
 
     onFallStart(fall: MeteorFall) {
+      if (!renderer || !rockFactory) return
       const mesh = rockFactory.createMeteoriteRock(fall.variant, fall.showerId)
       if (!mesh) return
       fallingMeshes.set(fall.id, mesh)
@@ -77,11 +81,12 @@ export function createMeteorController(
     },
 
     onFallImpact(fall: MeteorFall) {
+      if (!renderer || !rockFactory || !terrainGroup) return
       const mesh = fallingMeshes.get(fall.id)
       if (!mesh) return
       fallingMeshes.delete(fall.id)
 
-      const roverPos = scene.getObjectByName('RoverGroup')?.position ?? new THREE.Vector3()
+      const roverPos = scene?.getObjectByName('RoverGroup')?.position ?? new THREE.Vector3()
       renderer.onImpact(fall, roverPos)
 
       rockFactory.registerMeteoriteRock(mesh, terrainGroup)
@@ -96,7 +101,19 @@ export function createMeteorController(
     },
   })
 
+  function setSceneComponents(components: MeteorSceneComponents): void {
+    const { scene: sc, camera, rockFactory: rf, terrainGroup: tg, heightAt: ha } = components
+    scene = sc
+    renderer = new MeteorFallRenderer(sc)
+    renderer.setCamera(camera)
+    if (audioManager) renderer.setAudioManager(audioManager)
+    rockFactory = rf
+    terrainGroup = tg
+    heightAt = ha
+  }
+
   function onStormActive(): void {
+    if (!rockFactory || !terrainGroup) return
     for (const rock of meteoriteRocks) {
       rockFactory.unregisterMeteoriteRock(rock, terrainGroup)
     }
@@ -108,6 +125,9 @@ export function createMeteorController(
   }
 
   function tick(fctx: SiteFrameContext): void {
+    // Not yet initialized — skip until setSceneComponents is called
+    if (!renderer) return
+
     // Storm cleanup: when dust storm transitions to 'active', remove meteorite rocks
     if (fctx.dustStormPhase === 'active' && lastStormPhase !== 'active') {
       onStormActive()
@@ -122,9 +142,9 @@ export function createMeteorController(
 
   function dispose(): void {
     tickHandler.dispose()
-    renderer.dispose()
+    renderer?.dispose()
     onStormActive()
   }
 
-  return { tick, dispose, onStormActive, getActiveMeteoriteRocks }
+  return { tick, dispose, setSceneComponents, onStormActive, getActiveMeteoriteRocks }
 }

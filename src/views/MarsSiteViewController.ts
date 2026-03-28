@@ -312,6 +312,10 @@ export interface MarsSiteViewRefs {
   remsSurveying: Ref<boolean>
   /** Mic passive subsystem enabled state — drives ambient audio layers. */
   micEnabled: Ref<boolean>
+  /** REMS meteor shower incoming alert text — null when no shower predicted. */
+  remsMeteorIncomingText: Ref<string | null>
+  /** REMS meteor shower active alert text — null when no shower in progress. */
+  remsMeteorActiveText: Ref<string | null>
   drillSpeedBreakdown: Ref<SpeedBreakdown | null>
   chemCamSpeedBreakdown: Ref<SpeedBreakdown | null>
   mastCamSpeedBreakdown: Ref<SpeedBreakdown | null>
@@ -541,6 +545,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     apxsHandler,
     orbitalDropHandler,
     antennaHandler,
+    meteorHandler,
   } = tickHandlers
 
   // --- Resize ---
@@ -653,6 +658,15 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         }
       }
     }
+
+    // Wire meteor controller with scene-dependent components now that terrain is ready
+    meteorHandler.setSceneComponents({
+      scene: siteScene.scene,
+      camera,
+      rockFactory: siteScene.terrain.rockSpawner,
+      terrainGroup: siteScene.terrain.group,
+      heightAt: (x, z) => siteScene!.terrain.heightAt(x, z),
+    })
 
     // Procedural Mars environment map — gives PBR metals something to reflect
     siteScene.scene.environment = createMarsEnvironment(renderer)
@@ -1075,6 +1089,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       danHandler.tick(fctx)
       tickHandlers.radHandler.tick(fctx)
+      meteorHandler.tick(fctx)
 
       // --- Power tick ---
       {

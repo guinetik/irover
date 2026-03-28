@@ -14,6 +14,8 @@ import { createMicTickHandler } from './MicTickHandler'
 import { createPassiveSystemsAudioTickHandler } from './PassiveSystemsAudioTickHandler'
 import { createRoverMovementSoundHandler } from './RoverMovementSoundHandler'
 import { createRadTickHandler } from './RadTickHandler'
+import { createMeteorController } from './MeteorController'
+import { useAudio } from '@/audio/useAudio'
 
 /**
  * All per-frame subsystems created for the Mars site view, plus a single {@link disposeAll} for teardown.
@@ -32,6 +34,7 @@ export interface MarsSiteTickHandlers {
   passiveSystemsAudioHandler: ReturnType<typeof createPassiveSystemsAudioTickHandler>
   roverMovementSoundHandler: ReturnType<typeof createRoverMovementSoundHandler>
   radHandler: ReturnType<typeof createRadTickHandler>
+  meteorHandler: ReturnType<typeof createMeteorController>
   /** Disposes handlers in a stable order (matches previous inline disposal). */
   disposeAll: () => void
 }
@@ -288,6 +291,13 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
+  const meteorHandler = createMeteorController({
+    meteorRisk: useMarsData().landmarks.value.find(l => l.id === ctx.siteId)?.meteorRisk ?? 0.25,
+    audioManager: useAudio(),
+    remsMeteorIncomingText: refs.remsMeteorIncomingText,
+    remsMeteorActiveText: refs.remsMeteorActiveText,
+  })
+
   const passiveSystemsAudioHandler = createPassiveSystemsAudioTickHandler(
     {
       descending: refs.descending,
@@ -328,6 +338,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     passiveSystemsAudioHandler.dispose()
     roverMovementSoundHandler.dispose()
     radHandler.dispose()
+    meteorHandler.dispose()
   }
 
   return {
@@ -343,6 +354,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     passiveSystemsAudioHandler,
     roverMovementSoundHandler,
     radHandler,
+    meteorHandler,
     disposeAll,
   }
 }
