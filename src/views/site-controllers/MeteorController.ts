@@ -64,8 +64,9 @@ export function createMeteorController(
   let targetSkyIntensity = 0
   let currentSkyIntensity = 0
 
-  // Last rover controller reference — updated each tick
+  // Last rover reference — updated each tick
   let lastRoverController: RoverController | null = null
+  let lastRoverPosition: THREE.Vector3 | null = null
 
   const meteoriteRocks: THREE.Mesh[] = []
   const fallingMeshes = new Map<string, THREE.Mesh>()
@@ -108,7 +109,7 @@ export function createMeteorController(
       renderer.removeMarker(fall)
 
       const impactPos = new THREE.Vector3(fall.targetX, fall.groundY, fall.targetZ)
-      const roverPos = scene?.getObjectByName('RoverGroup')?.position
+      const roverPos = lastRoverPosition
       const dist = roverPos ? roverPos.distanceTo(impactPos) : Infinity
 
       // Kill zone — direct hit = game over
@@ -203,8 +204,9 @@ export function createMeteorController(
     // Not yet initialized — skip until setSceneComponents is called
     if (!renderer) return
 
-    // Track rover controller for shockwave damage
+    // Track rover controller and position for shockwave/kill detection
     if (fctx.rover) lastRoverController = fctx.rover
+    lastRoverPosition = fctx.siteScene.rover?.position ?? null
 
     // Sync terrain reference from siteScene
     if (!terrain && fctx.siteScene.terrain) {
