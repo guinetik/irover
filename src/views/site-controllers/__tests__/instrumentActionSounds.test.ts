@@ -679,6 +679,8 @@ describe('instrument action sounds', () => {
       },
       {
         siteId: 'test-site',
+        siteTier: 2,
+        getInconclusiveCount: () => 0,
         sampleToastRef: ref(null),
         playerMod: () => 1,
         awardDAN: () => null,
@@ -740,6 +742,8 @@ describe('instrument action sounds', () => {
       },
       {
         siteId: 'test-site',
+        siteTier: 2,
+        getInconclusiveCount: () => 0,
         sampleToastRef: ref(null),
         playerMod: () => 1,
         awardDAN: () => null,

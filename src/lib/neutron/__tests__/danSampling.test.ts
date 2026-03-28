@@ -4,6 +4,8 @@ import {
   danSignalQualityLabel,
   danSiteIceMultiplier,
   danTierBonus,
+  danSPBonus,
+  danInconclusiveBonus,
   danWaterConfirmChance,
 } from '../danSampling'
 
@@ -44,5 +46,33 @@ describe('danSampling', () => {
     const tier1 = danWaterConfirmChance(0.6, 0.3, 1)
     const tier2 = danWaterConfirmChance(0.6, 0.3, 2)
     expect(tier1).toBeGreaterThan(tier2)
+  })
+
+  it('danSPBonus is flat below 50 SP and scales at high SP', () => {
+    expect(danSPBonus(0)).toBe(1.0)
+    expect(danSPBonus(50)).toBe(1.0)
+    expect(danSPBonus(100)).toBeCloseTo(1.0, 0) // barely above 1.0
+    expect(danSPBonus(500)).toBeGreaterThan(1.1)
+    expect(danSPBonus(1000)).toBeGreaterThan(1.2)
+    expect(danSPBonus(2000)).toBeGreaterThan(1.3)
+  })
+
+  it('danInconclusiveBonus scales with sqrt of failed prospects', () => {
+    expect(danInconclusiveBonus(0)).toBe(1.0)
+    expect(danInconclusiveBonus(1)).toBeCloseTo(1.1)
+    expect(danInconclusiveBonus(4)).toBeCloseTo(1.2)
+    expect(danInconclusiveBonus(9)).toBeCloseTo(1.3)
+  })
+
+  it('high SP boosts hit probability', () => {
+    const base = danPassiveHitProbability(0.3, 'plain', 2, 0, 0)
+    const highSP = danPassiveHitProbability(0.3, 'plain', 2, 1000, 0)
+    expect(highSP).toBeGreaterThan(base)
+  })
+
+  it('inconclusive prospects boost hit probability', () => {
+    const base = danPassiveHitProbability(0.3, 'plain', 2, 0, 0)
+    const withFails = danPassiveHitProbability(0.3, 'plain', 2, 0, 4)
+    expect(withFails).toBeGreaterThan(base)
   })
 })

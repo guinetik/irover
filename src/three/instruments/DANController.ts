@@ -52,6 +52,8 @@ export class DANController extends InstrumentController {
   waterIceIndex = 0.1
   featureType = 'plain'
   siteTier = 2
+  totalSP = 0
+  inconclusiveCount = 0
 
   // --- Hit state ---
   pendingHit: DANHit | null = null
@@ -107,7 +109,7 @@ export class DANController extends InstrumentController {
 
     this.totalSamples++
 
-    const p = danPassiveHitProbability(this.waterIceIndex, this.featureType, this.siteTier)
+    const p = danPassiveHitProbability(this.waterIceIndex, this.featureType, this.siteTier, this.totalSP, this.inconclusiveCount)
 
     if (Math.random() < p) {
       const strength = Math.min(1.0, Math.max(0.3,

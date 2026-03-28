@@ -117,6 +117,8 @@ export interface DanTickRefs {
 export interface DanTickCallbacks {
   siteId: string
   siteTier: number
+  /** Count of inconclusive (waterConfirmed: false) prospects in the archive — boosts detection */
+  getInconclusiveCount: () => number
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
@@ -167,6 +169,7 @@ export function createDanTickHandler(
   const {
     siteId,
     siteTier,
+    getInconclusiveCount,
     sampleToastRef,
     playerMod,
     awardDAN,
@@ -176,6 +179,9 @@ export function createDanTickHandler(
     archiveDanProspect,
     getLatestPersistedDanDrillSite,
   } = callbacks
+
+  // Cache inconclusive count — refreshed each prospect completion, cheap to read each frame
+  let inconclusiveCount = getInconclusiveCount()
 
   let danDiscMesh: THREE.Mesh | null = null
   let danDrillMarker: THREE.Object3D | null = null
@@ -362,6 +368,8 @@ export function createDanTickHandler(
       danInst.waterIceIndex = siteTerrainParams.value.waterIceIndex ?? 0.1
       danInst.featureType = siteTerrainParams.value.featureType ?? 'plain'
       danInst.siteTier = siteTier
+      danInst.totalSP = fctx.totalSP
+      danInst.inconclusiveCount = inconclusiveCount
     }
     const danStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, danInst.tier) : 1
     danInst.accuracyMod = playerMod('instrumentAccuracy') / danStormPenalty
@@ -477,6 +485,9 @@ export function createDanTickHandler(
                 ? { x: hitCenter.x, y: hitCenter.y, z: hitCenter.z }
                 : undefined,
             })
+
+            // Refresh inconclusive count — each failed prospect makes the next detection easier
+            inconclusiveCount = getInconclusiveCount()
 
             if (hasWater) {
               const gx = hitCenter.x

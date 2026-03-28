@@ -39,16 +39,41 @@ export function danTierBonus(tier: number): number {
 }
 
 /**
+ * Accumulated SP makes the rover's neutron detector slightly better calibrated.
+ * Nearly flat below 200 SP, ramps slowly after. Legacy players with high SP
+ * get a meaningful edge on harder maps: 500 SP ~1.12x, 1000 SP ~1.25x, 2000 SP ~1.38x.
+ */
+export function danSPBonus(totalSP: number): number {
+  if (totalSP <= 50) return 1.0
+  const effective = Math.max(0, totalSP - 50)
+  return 1.0 + Math.log10(1 + effective / 100) * 0.25
+}
+
+/**
+ * Each inconclusive prospect teaches DAN where hydrogen anomalies cluster,
+ * making subsequent spot detection faster. Diminishing returns via sqrt.
+ * 1 inconclusive = 1.1x, 4 = 1.2x, 9 = 1.3x.
+ */
+export function danInconclusiveBonus(inconclusiveCount: number): number {
+  if (inconclusiveCount <= 0) return 1.0
+  return 1.0 + Math.sqrt(inconclusiveCount) * 0.1
+}
+
+/**
  * Clamped passive hit probability for one DAN sample tick.
  */
 export function danPassiveHitProbability(
   waterIceIndex: number,
   featureType: TerrainFeatureType | string,
   tier: number = 2,
+  totalSP: number = 0,
+  inconclusiveCount: number = 0,
 ): number {
   const siteMult = danSiteIceMultiplier(waterIceIndex)
   const featMult = DAN_FEATURE_ICE_MULT[featureType as TerrainFeatureType] ?? 1.0
-  return Math.min(DAN_BASE_PASSIVE_HIT_RATE * siteMult * featMult * danTierBonus(tier), 0.95)
+  const spMult = danSPBonus(totalSP)
+  const incMult = danInconclusiveBonus(inconclusiveCount)
+  return Math.min(DAN_BASE_PASSIVE_HIT_RATE * siteMult * featMult * danTierBonus(tier) * spMult * incMult, 0.95)
 }
 
 /** HUD copy for hit / prospect signal strength. */
