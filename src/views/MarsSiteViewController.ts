@@ -1192,7 +1192,15 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       if (radPass) {
         radPass.uniforms.uTime.value = simulationTime
-        radPass.setRadiation(radLevel.value)
+        // Instrument cameras (MastCam/ChemCam) are sensitive CCDs —
+        // radiation effects are amplified 1.8× when looking through them.
+        const INSTRUMENT_CAMERA_RAD_AMPLIFICATION = 1.8
+        const isInstrumentCamera = controller?.mode === 'active'
+          && (controller.activeInstrument?.id === 'mastcam' || controller.activeInstrument?.id === 'chemcam')
+        const effectiveRad = isInstrumentCamera
+          ? Math.min(1.2, radLevel.value * INSTRUMENT_CAMERA_RAD_AMPLIFICATION)
+          : radLevel.value
+        radPass.setRadiation(effectiveRad)
       }
 
       if (composer) {
