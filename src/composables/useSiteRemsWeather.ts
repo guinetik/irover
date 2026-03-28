@@ -76,6 +76,8 @@ export function useSiteRemsWeather() {
   const remsHud = ref<RemsHudSnapshot>(emptyHud())
   const remsStormIncomingText = ref<string | null>(null)
   const remsStormActiveText = ref<string | null>(null)
+  const remsMeteorIncomingText = ref<string | null>(null)
+  const remsMeteorActiveText = ref<string | null>(null)
   /** Always-live weather state — updates regardless of REMS instrument toggle. */
   const siteWeather = ref<SiteWeatherSnapshot>({
     windMs: 5,
@@ -174,6 +176,8 @@ export function useSiteRemsWeather() {
     remsHud,
     remsStormIncomingText,
     remsStormActiveText,
+    remsMeteorIncomingText,
+    remsMeteorActiveText,
     /** Always-live weather — updates even when REMS display is off. */
     siteWeather,
     tickRemsWeather,
