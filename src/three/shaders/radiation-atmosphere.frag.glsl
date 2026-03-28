@@ -78,8 +78,8 @@ void main() {
   }
 
   // ── 6. Full-frame green flash (extreme levels) ──────────────────────────
-  if (ampLevel > 0.85) {
-    float flashStrength = smoothstep(0.85, 1.0, ampLevel);
+  if (uRadiationLevel > 0.85) {
+    float flashStrength = smoothstep(0.85, 1.0, uRadiationLevel);
     float flashFrame    = floor(uTime * 60.0);
     float flashRoll     = hash1(flashFrame);
     float flashThresh   = mix(0.996, 0.990, flashStrength);
