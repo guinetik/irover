@@ -43,6 +43,7 @@ export class MarsSky {
         uWaterIceIndex: { value: 0 },
         uWindDirection: { value: new THREE.Vector3(0.6, 0, 0.4).normalize() },
         uTime: { value: 0 },
+        uMeteorShowerIntensity: { value: 0.0 },
       },
       vertexShader: skyVert,
       fragmentShader: skyFrag,
@@ -168,6 +169,11 @@ export class MarsSky {
     const rad = (windDirDeg * Math.PI) / 180
     const windDir = this.material.uniforms.uWindDirection.value as THREE.Vector3
     windDir.set(-Math.sin(rad), 0, -Math.cos(rad))
+  }
+
+  /** Set meteor shower intensity (0 = none, 1 = peak). */
+  setMeteorShowerIntensity(intensity: number): void {
+    this.material.uniforms.uMeteorShowerIntensity.value = intensity
   }
 
   /** Set terrain-driven sky params (called once at scene init). */

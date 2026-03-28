@@ -5,6 +5,7 @@ uniform float uDustStormLevel;
 uniform float uWaterIceIndex;
 uniform vec3 uWindDirection;
 uniform float uTime;
+uniform float uMeteorShowerIntensity;
 
 varying vec3 vWorldPos;
 
@@ -200,6 +201,14 @@ void main() {
     cloudColor *= sunlit;
 
     skyColor = mix(skyColor, cloudColor, cloud * cloudDensity * 0.6);
+  }
+
+  // --- Meteor shower — blood-red atmospheric glow from ablation ---
+  if (uMeteorShowerIntensity > 0.0) {
+    vec3 meteorRed = vec3(0.6, 0.08, 0.05);
+    float tint = uMeteorShowerIntensity * 0.5;
+    skyColor = mix(skyColor, meteorRed, tint);
+    skyColor *= 1.0 - uMeteorShowerIntensity * 0.4;
   }
 
   // --- Stars at night (round points, hash-based placement) ---
