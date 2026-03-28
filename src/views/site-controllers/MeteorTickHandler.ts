@@ -15,7 +15,10 @@ import {
 } from '@/lib/meteor'
 import { TERRAIN_SCALE } from '@/three/terrain/terrainConstants'
 
-const STAGGER_SPREAD_SEC = 6
+/** Markers appear within this window so the player sees the full shower scope at once. */
+const MARKER_STAGGER_SEC = 1
+/** Falls are spread over this window so they rain down in a wave, not all at once. */
+const FALL_STAGGER_SEC = 4
 
 export interface MeteorTickCallbacks {
   meteorRisk: number
@@ -27,9 +30,42 @@ export interface MeteorTickCallbacks {
   onShowerComplete: () => void
 }
 
+function generateFalls(
+  shower: MeteorShower,
+  heightAt: (x: number, z: number) => number,
+): MeteorFall[] {
+  const half = TERRAIN_SCALE / 2
+  const falls: MeteorFall[] = []
+  for (let i = 0; i < shower.meteorCount; i++) {
+    const targetX = (Math.random() - 0.5) * half * 1.6
+    const targetZ = (Math.random() - 0.5) * half * 1.6
+    const groundY = heightAt(targetX, targetZ)
+    if (Number.isNaN(groundY)) continue
+
+    const t = i / Math.max(1, shower.meteorCount - 1)
+    // Markers appear near-simultaneously; falls stagger so they rain down in a wave.
+    const fallStagger = t * FALL_STAGGER_SEC
+    falls.push({
+      id: `${shower.id}-fall-${i}`,
+      showerId: shower.id,
+      variant: pickMeteoriteVariant(),
+      targetX,
+      targetZ,
+      groundY,
+      markerDuration: rollMarkerDuration() + fallStagger,
+      entryAngle: rollEntryAngle(),
+      azimuth: rollAzimuth(),
+      phase: 'marker',
+      elapsed: 0,
+      staggerOffset: t * MARKER_STAGGER_SEC,
+    })
+  }
+  return falls
+}
+
 export function createMeteorTickHandler(
   callbacks: MeteorTickCallbacks,
-): SiteTickHandler {
+): SiteTickHandler & { forceShower: (severity: MeteorShower['severity']) => void } {
   const { meteorRisk, heightAt } = callbacks
 
   let lastSol = -1
@@ -45,7 +81,6 @@ export function createMeteorTickHandler(
     const severity = rollShowerSeverity(meteorRisk)
     const meteorCount = rollMeteorCount(severity)
     const triggerFraction = rollTriggerFraction()
-    const half = TERRAIN_SCALE / 2
 
     const shower: MeteorShower = {
       id: `shower-${sol}-${Date.now()}`,
@@ -55,30 +90,7 @@ export function createMeteorTickHandler(
       triggerAtSolFraction: triggerFraction,
     }
 
-    const falls: MeteorFall[] = []
-    for (let i = 0; i < meteorCount; i++) {
-      const targetX = (Math.random() - 0.5) * half * 1.6
-      const targetZ = (Math.random() - 0.5) * half * 1.6
-      const groundY = heightAt(targetX, targetZ)
-      if (Number.isNaN(groundY)) continue
-
-      falls.push({
-        id: `${shower.id}-fall-${i}`,
-        showerId: shower.id,
-        variant: pickMeteoriteVariant(),
-        targetX,
-        targetZ,
-        groundY,
-        markerDuration: rollMarkerDuration(),
-        entryAngle: rollEntryAngle(),
-        azimuth: rollAzimuth(),
-        phase: 'marker',
-        elapsed: 0,
-        staggerOffset: (i / Math.max(1, meteorCount - 1)) * STAGGER_SPREAD_SEC,
-      })
-    }
-
-    pendingFalls = falls
+    pendingFalls = generateFalls(shower, heightAt)
     scheduledShower = { ...shower, triggered: false, warningFired: false }
     callbacks.onShowerScheduled(shower)
   }
@@ -171,7 +183,6 @@ export function createMeteorTickHandler(
    */
   function forceShower(severity: MeteorShower['severity']): void {
     const meteorCount = rollMeteorCount(severity)
-    const half = TERRAIN_SCALE / 2
 
     const shower: MeteorShower = {
       id: `shower-dev-${Date.now()}`,
@@ -181,30 +192,7 @@ export function createMeteorTickHandler(
       triggerAtSolFraction: 0,
     }
 
-    const falls: MeteorFall[] = []
-    for (let i = 0; i < meteorCount; i++) {
-      const targetX = (Math.random() - 0.5) * half * 1.6
-      const targetZ = (Math.random() - 0.5) * half * 1.6
-      const groundY = heightAt(targetX, targetZ)
-      if (Number.isNaN(groundY)) continue
-
-      falls.push({
-        id: `${shower.id}-fall-${i}`,
-        showerId: shower.id,
-        variant: pickMeteoriteVariant(),
-        targetX,
-        targetZ,
-        groundY,
-        markerDuration: rollMarkerDuration(),
-        entryAngle: rollEntryAngle(),
-        azimuth: rollAzimuth(),
-        phase: 'marker',
-        elapsed: 0,
-        staggerOffset: (i / Math.max(1, meteorCount - 1)) * STAGGER_SPREAD_SEC,
-      })
-    }
-
-    pendingFalls = falls
+    pendingFalls = generateFalls(shower, heightAt)
     showerElapsed = 0
     allFallsCompleted = false
     scheduledShower = { ...shower, triggered: true, warningFired: true }
