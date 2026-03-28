@@ -12,7 +12,7 @@ import { createRadiationAtmospherePass, type RadiationAtmospherePass } from '@/t
 import { isSitePostProcessingEnabled } from '@/lib/sitePostProcessing'
 import { computeDecayMultiplier } from '@/lib/hazards'
 import type { HazardEvent } from '@/lib/hazards'
-import { generateRadiationField, computeZoneThresholds, sampleRadiationAt, findNearestSafeZone } from '@/lib/radiation'
+import { generateRadiationField, computeZoneThresholds, sampleRadiationAt, findNearestSafeZone, findSafeZoneCentroids } from '@/lib/radiation'
 import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
@@ -627,15 +627,29 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       tickHandlers.radHandler.setField(radField, radGridSize, tScale)
 
       // On tier 1-2 maps, ensure the rover spawns in a safe zone.
-      // If the current spawn point is in an unsafe zone, relocate to nearest safe cell.
+      // If the current spawn point is not solidly safe, relocate to the
+      // centroid of the nearest safe-zone cluster (not just the nearest
+      // cell, which may be on a boundary and still read as intermediate
+      // due to bilinear interpolation).
       const siteTier = landmarks.value.find(l => l.id === siteId)?.tier ?? 2
       if (siteTier <= 2 && siteScene.rover) {
         const spawnThresholds = computeZoneThresholds(terrainParams.radiationIndex ?? 0.25)
         const spawnRad = sampleRadiationAt(radField, radGridSize, tScale, siteScene.rover.position.x, siteScene.rover.position.z)
-        if (spawnRad >= spawnThresholds.safeMax) {
-          const safe = findNearestSafeZone(radField, radGridSize, tScale, siteScene.rover.position.x, siteScene.rover.position.z, spawnThresholds)
-          const groundY = siteScene.terrain.heightAt(safe.x, safe.z)
-          siteScene.rover.position.set(safe.x, groundY, safe.z)
+        if (spawnRad >= spawnThresholds.safeMax * 0.8) {
+          // Find safe zone centroids and pick the nearest one
+          const centroids = findSafeZoneCentroids(radField, radGridSize, tScale, spawnThresholds)
+          if (centroids.length > 0) {
+            const rx = siteScene.rover.position.x
+            const rz = siteScene.rover.position.z
+            let bestDist2 = Infinity
+            let bestC = centroids[0]
+            for (const c of centroids) {
+              const d2 = (c.x - rx) * (c.x - rx) + (c.z - rz) * (c.z - rz)
+              if (d2 < bestDist2) { bestDist2 = d2; bestC = c }
+            }
+            const groundY = siteScene.terrain.heightAt(bestC.x, bestC.z)
+            siteScene.rover.position.set(bestC.x, groundY, bestC.z)
+          }
         }
       }
     }
