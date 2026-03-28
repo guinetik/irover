@@ -12,6 +12,7 @@ import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
+import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
 
 /** Public URL for the DAN drill-site marker (replaces procedural cone). */
 const DAN_DRILL_MARKER_GLB = '/dan.glb'
@@ -80,6 +81,22 @@ function placeDanDrillMarkerInstance(
   marker.position.set(x, groundY + lift - boxWorld.min.y, z)
 }
 
+/**
+ * Ground ring for a finished water prospect — same style as post-confirmation, hidden until DAN selected.
+ */
+function createCompletedDanDiscMesh(): THREE.Mesh {
+  const geo = new THREE.CircleGeometry(5, 32)
+  geo.rotateX(-Math.PI / 2)
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x44aaff,
+    transparent: true,
+    opacity: 0.15,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  })
+  return new THREE.Mesh(geo, mat)
+}
+
 export interface DanTickRefs {
   siteTerrainParams: Ref<TerrainParams | null>
   danTotalSamples: Ref<number>
@@ -119,7 +136,9 @@ export interface DanTickCallbacks {
     quality: 'Weak' | 'Moderate' | 'Strong'
     waterConfirmed: boolean
     reservoirQuality: number
+    drillSite?: { x: number; y: number; z: number }
   }) => void
+  getLatestPersistedDanDrillSite: (siteId: string) => DanDrillSiteScene | null
 }
 
 export interface DanTickHandler extends SiteTickHandler {
@@ -153,6 +172,7 @@ export function createDanTickHandler(
     startHeldProspectingSound,
     triggerDanAchievement,
     archiveDanProspect,
+    getLatestPersistedDanDrillSite,
   } = callbacks
 
   let danDiscMesh: THREE.Mesh | null = null
@@ -163,6 +183,92 @@ export function createDanTickHandler(
   let heldDanProspectingPlayback: AudioPlaybackHandle | null = null
   /** False after `dispose` — suppresses late GLB load callbacks. */
   let tickHandlerActive = true
+  /** Ensures we only hydrate drill art from localStorage once per handler lifetime. */
+  let drillSiteHydratedFromStorage = false
+
+  /**
+   * Rebuilds completed disc + GLB from the persisted DAN archive after a full reload.
+   */
+  function hydratePersistedDrillSite(fctx: SiteFrameContext, danInst: DANController, snap: DanDrillSiteScene): void {
+    const scene = fctx.siteScene?.scene
+    if (!scene) return
+    const gx = snap.x
+    const gz = snap.z
+    const groundY = fctx.siteScene?.terrain?.heightAt(gx, gz) ?? snap.y - 0.05
+
+    const disc = createCompletedDanDiscMesh()
+    disc.position.set(gx, groundY + 0.05, gz)
+    disc.visible = false
+    scene.add(disc)
+    danCompletedDiscs.push(disc)
+
+    const sceneRef = scene
+    void loadDanDrillMarkerTemplate().then((template) => {
+      if (!tickHandlerActive || !sceneRef) return
+      if (danDrillMarker) {
+        sceneRef.remove(danDrillMarker)
+        disposeDrillMarkerRoot(danDrillMarker)
+        danDrillMarker = null
+      }
+      const marker = template.clone(true)
+      placeDanDrillMarkerInstance(marker, gx, gz, groundY)
+      sceneRef.add(marker)
+      danDrillMarker = marker
+    })
+
+    danInst.drillSitePosition = new THREE.Vector3(snap.x, snap.y, snap.z)
+    danInst.waterConfirmed = true
+    danInst.reservoirQuality = snap.reservoirQuality
+    danInst.prospectStrength = snap.signalStrength
+    danWaterResult.value = true
+  }
+
+  /**
+   * When DAN standby (user toggle or sleep/power), tear down any in-flight hydrogen hit or prospect
+   * disc so the rover cannot finish a prospect while the subsystem is off.
+   */
+  function abandonDanInvestigationOnStandby(
+    danInst: DANController,
+    controller: NonNullable<SiteFrameContext['rover']>,
+    siteScene: SiteFrameContext['siteScene'],
+    isSleeping: boolean,
+  ): void {
+    const hadDisc = danDiscMesh !== null
+    const hadProspectPipeline =
+      danInst.prospectPhase === 'drive-to-zone'
+      || danInst.prospectPhase === 'initiating'
+      || danInst.prospectPhase === 'prospecting'
+    const hadPending = danInst.pendingHit !== null
+
+    if (!hadDisc && !hadProspectPipeline && !hadPending) return
+
+    if (danDiscMesh) {
+      siteScene?.scene.remove(danDiscMesh)
+      danDiscMesh.geometry.dispose()
+      ;(danDiscMesh.material as THREE.Material).dispose()
+      danDiscMesh = null
+    }
+
+    danInst.pendingHit = null
+    danInst.hitConsumed = false
+    danInst.prospectPhase = 'idle'
+    danInst.prospectProgress = 0
+    danInst.prospectComplete = false
+    danProspectPhase.value = 'idle'
+    danProspectProgress.value = 0
+    danDialogVisible.value = false
+    danWaterResult.value = null
+    controller.config.moveSpeed = 5
+
+    syncDanProspectingPlayback(false)
+    passiveUiRevision.value++
+
+    sampleToastRef.value?.showDAN(
+      isSleeping
+        ? 'Prospect interrupted — insufficient power'
+        : 'DAN standby — prospect cancelled',
+    )
+  }
 
   /**
    * Keeps the DAN scan loop owned by this handler and tied to the passive subsystem state.
@@ -197,12 +303,19 @@ export function createDanTickHandler(
       void loadDanDrillMarkerTemplate().catch(() => {
         /* non-fatal — marker loads again on confirm if needed */
       })
+      if (!drillSiteHydratedFromStorage) {
+        const snap = getLatestPersistedDanDrillSite(siteId)
+        if (snap) {
+          drillSiteHydratedFromStorage = true
+          hydratePersistedDrillSite(fctx, danInit, snap)
+        }
+      }
     }
   }
 
   function handleDanProspect(fctx: SiteFrameContext): void {
     const danInst = fctx.rover?.instruments.find(i => i.id === 'dan') as DANController | undefined
-    if (!danInst?.pendingHit) return
+    if (!danInst?.pendingHit || !danInst.passiveSubsystemEnabled) return
 
     const hit = danInst.pendingHit
 
@@ -253,6 +366,15 @@ export function createDanTickHandler(
     danInst.update(sceneDelta)
 
     danTotalSamples.value = danInst.totalSamples
+
+    if (isSleeping && danInst.passiveSubsystemEnabled) {
+      danInst.forceOff()
+    }
+
+    if (!danInst.passiveSubsystemEnabled && controller) {
+      abandonDanInvestigationOnStandby(danInst, controller, siteScene, isSleeping)
+    }
+
     danHitAvailable.value = danInst.pendingHit !== null
 
     // VFX: always tick so dots hide when deselected
@@ -264,8 +386,8 @@ export function createDanTickHandler(
 
     for (const disc of danCompletedDiscs) disc.visible = !!danSelected
 
-    // Hit detection -> toast + SP
-    if (danInst.pendingHit && !danInst.hitConsumed) {
+    // Hit detection -> toast + SP (only while DAN subsystem is powered / active)
+    if (danInst.passiveSubsystemEnabled && danInst.pendingHit && !danInst.hitConsumed) {
       if (danHitAvailable.value) {
         sampleToastRef.value?.showDAN('New hydrogen signal — previous marker updated')
       }
@@ -280,19 +402,14 @@ export function createDanTickHandler(
       triggerDanAchievement('first-hit')
     }
 
-    // Sleep mode safety
-    if (isSleeping && danInst.passiveSubsystemEnabled) {
-      danInst.forceOff()
-      sampleToastRef.value?.showDAN('Prospect interrupted — insufficient power')
-      if (danDiscMesh) danDiscMesh.visible = false
-      danProspectPhase.value = 'idle'
-      danProspectProgress.value = 0
-      passiveUiRevision.value++
-    }
     syncDanScanPlayback(danInst.passiveSubsystemEnabled)
 
-    // --- Prospect phase state machine ---
-    if (danInst.prospectPhase !== 'idle' && danInst.prospectPhase !== 'complete') {
+    // --- Prospect phase state machine (freezes if DAN standby — abandon clears in-flight work above) ---
+    if (
+      danInst.passiveSubsystemEnabled
+      && danInst.prospectPhase !== 'idle'
+      && danInst.prospectPhase !== 'complete'
+    ) {
       const rpPos = siteScene?.rover?.position
       const hitPos = danDiscMesh?.position
       if (rpPos && hitPos) {
@@ -338,6 +455,8 @@ export function createDanTickHandler(
             danInst.waterConfirmed = hasWater
             danWaterResult.value = hasWater
 
+            const hitCenter = danDiscMesh?.position.clone() ?? hitPos.clone()
+
             archiveDanProspect({
               capturedSol: marsSol,
               siteId,
@@ -351,15 +470,17 @@ export function createDanTickHandler(
               quality: danSignalQualityLabel(danInst.prospectStrength),
               waterConfirmed: hasWater,
               reservoirQuality: danInst.prospectStrength,
+              drillSite: hasWater
+                ? { x: hitCenter.x, y: hitCenter.y, z: hitCenter.z }
+                : undefined,
             })
 
             if (hasWater) {
-              const conePos = danDiscMesh?.position.clone() ?? hitPos.clone()
-              const gx = conePos.x
-              const gz = conePos.z
+              const gx = hitCenter.x
+              const gz = hitCenter.z
               const groundY = siteScene?.terrain
                 ? siteScene.terrain.heightAt(gx, gz)
-                : conePos.y - 0.05
+                : hitCenter.y - 0.05
 
               const sceneRef = siteScene?.scene
               if (danDrillMarker && sceneRef) {
@@ -376,7 +497,7 @@ export function createDanTickHandler(
                 danDrillMarker = marker
               })
 
-              danInst.drillSitePosition = conePos.clone()
+              danInst.drillSitePosition = hitCenter.clone()
               danInst.reservoirQuality = danInst.prospectStrength
 
               sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
@@ -415,7 +536,9 @@ export function createDanTickHandler(
         }
       }
     }
-    syncDanProspectingPlayback(danInst.prospectPhase === 'prospecting')
+    syncDanProspectingPlayback(
+      danInst.passiveSubsystemEnabled && danInst.prospectPhase === 'prospecting',
+    )
   }
 
   function dispose(): void {

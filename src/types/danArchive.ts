@@ -22,6 +22,13 @@ export interface ArchivedDANProspect {
   waterConfirmed: boolean
   /** 0–1 reservoir quality (= signal strength) */
   reservoirQuality: number
+  /**
+   * Terrain-frame scene coordinates of the drill marker when {@link waterConfirmed} — used to
+   * restore the disc + model after reload.
+   */
+  drillSiteX?: number
+  drillSiteY?: number
+  drillSiteZ?: number
   /** Player has queued this item for UHF transmission */
   queuedForTransmission: boolean
   /** After UHF transmit — for future funding flow */

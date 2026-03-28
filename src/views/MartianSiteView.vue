@@ -647,7 +647,13 @@ const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
 const siteRover = computed(() => siteHandle.value?.rover ?? null)
 const { archiveAcknowledgedReadout, spectra: chemCamArchivedSpectra, queueForTransmission: queueChemCamTx, dequeueFromTransmission: dequeueChemCamTx } = useChemCamArchive()
-const { archiveProspect: archiveDanProspect, prospects: danArchivedProspects, queueForTransmission: queueDanTx, dequeueFromTransmission: dequeueDanTx } = useDanArchive()
+const {
+  archiveProspect: archiveDanProspect,
+  prospects: danArchivedProspects,
+  queueForTransmission: queueDanTx,
+  dequeueFromTransmission: dequeueDanTx,
+  getLatestPersistedDanDrillSiteForSite,
+} = useDanArchive()
 const scienceLogOpen = ref(false)
 const spLedgerOpen = ref(false)
 const achievementsOpen = ref(false)
@@ -1704,6 +1710,7 @@ function createSiteControllerContext() {
     awardSP,
     awardDAN,
     archiveDanProspect,
+    getLatestPersistedDanDrillSite: getLatestPersistedDanDrillSiteForSite,
     samTick,
     apxsTick,
     totalSP,

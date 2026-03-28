@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import type { ArchivedDANProspect } from '@/types/danArchive'
 import { approximateLatLonFromTangentOffset } from '@/lib/areography'
+import { findLatestPersistedDanDrillSite, type DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
 
 const STORAGE_KEY = 'mars-dan-archive-v1'
 
@@ -57,6 +58,8 @@ export function useDanArchive() {
     quality: 'Weak' | 'Moderate' | 'Strong'
     waterConfirmed: boolean
     reservoirQuality?: number
+    /** Scene drill marker position when `waterConfirmed` */
+    drillSite?: { x: number; y: number; z: number }
     /** @deprecated use reservoirQuality */ waterFraction?: number
     /** @deprecated use siteLatDeg/siteLonDeg */ latitudeDeg?: number
     /** @deprecated use siteLatDeg/siteLonDeg */ longitudeDeg?: number
@@ -75,6 +78,7 @@ export function useDanArchive() {
       params.siteUnitsPerMeter ?? 1,
     )
 
+    const ds = params.drillSite
     const row: ArchivedDANProspect = {
       archiveId: newArchiveId(),
       capturedSol: params.capturedSol,
@@ -90,6 +94,9 @@ export function useDanArchive() {
       reservoirQuality: params.reservoirQuality ?? 0,
       queuedForTransmission: false,
       transmitted: false,
+      ...(params.waterConfirmed && ds
+        ? { drillSiteX: ds.x, drillSiteY: ds.y, drillSiteZ: ds.z }
+        : {}),
     }
 
     const next = [...prospects.value, row]
@@ -122,6 +129,13 @@ export function useDanArchive() {
     saveToStorage(next)
   }
 
+  /**
+   * Latest water-confirmed drill placement for a site (from persisted archive rows with coords).
+   */
+  function getLatestPersistedDanDrillSiteForSite(siteId: string): DanDrillSiteScene | null {
+    return findLatestPersistedDanDrillSite(prospects.value, siteId)
+  }
+
   return {
     prospects,
     pendingTransmission,
@@ -129,5 +143,6 @@ export function useDanArchive() {
     queueForTransmission,
     dequeueFromTransmission,
     markTransmitted,
+    getLatestPersistedDanDrillSiteForSite,
   }
 }

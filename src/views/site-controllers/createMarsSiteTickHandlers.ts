@@ -107,6 +107,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       startHeldProspectingSound: () => ctx.startInstrumentActionLoop('sfx.danProspecting'),
       triggerDanAchievement: ctx.triggerDanAchievement,
       archiveDanProspect: ctx.archiveDanProspect,
+      getLatestPersistedDanDrillSite: ctx.getLatestPersistedDanDrillSite,
     },
   )
 

@@ -359,7 +359,12 @@ export interface MarsSiteViewContext {
     quality: 'Weak' | 'Moderate' | 'Strong'
     waterConfirmed: boolean
     reservoirQuality: number
+    drillSite?: { x: number; y: number; z: number }
   }) => void
+  /** Latest saved water drill placement for reload (see {@link ArchivedDANProspect} drillSite*). */
+  getLatestPersistedDanDrillSite: (
+    siteId: string,
+  ) => import('@/lib/neutron/danDrillSitePersistence').DanDrillSiteScene | null
   samTick: (deltaSec: number) => SamQueueEntry | null
   apxsTick: (deltaSec: number) => APXSQueueEntry | null
   totalSP: Ref<number>

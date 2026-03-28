@@ -685,6 +685,7 @@ describe('instrument action sounds', () => {
         startHeldProspectingSound,
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
+        getLatestPersistedDanDrillSite: () => null,
         startHeldActionSound,
       },
     )
@@ -746,6 +747,7 @@ describe('instrument action sounds', () => {
         startHeldProspectingSound,
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
+        getLatestPersistedDanDrillSite: () => null,
       },
     )
 

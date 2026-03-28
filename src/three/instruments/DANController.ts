@@ -78,13 +78,12 @@ export class DANController extends InstrumentController {
     this.roverMoving = moving
   }
 
-  /** Force off (sleep mode / power loss) */
+  /**
+   * Force off (sleep / bus cut). Prospect cleanup is owned by the site tick handler so UI,
+   * discs, and move speed stay consistent.
+   */
   forceOff(): void {
     this.passiveSubsystemEnabled = false
-    if (this.prospectPhase === 'prospecting' || this.prospectPhase === 'initiating') {
-      this.prospectPhase = 'idle'
-      this.prospectProgress = 0
-    }
   }
 
   override update(delta: number): void {
@@ -93,6 +92,9 @@ export class DANController extends InstrumentController {
   }
 
   private tickSampling(delta: number): void {
+    // One hydrogen target at a time: no new passive hits until this prospect resolves or standby clears it.
+    if (this.pendingHit !== null) return
+
     const dist = this.roverPos.distanceTo(this.lastSamplePos)
     const isMoving = dist > MIN_MOVE_DIST
     const interval = (isMoving ? SAMPLE_INTERVAL_MOVING : SAMPLE_INTERVAL_STATIC) / this.analysisSpeedMod
