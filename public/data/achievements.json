@@ -324,7 +324,7 @@
   ],
   "reward-track": [
     {
-      "sp": 25,
+      "sp": 50,
       "id": "track-swift-wheels",
       "icon": "⚡",
       "title": "SWIFT WHEELS",
@@ -334,7 +334,7 @@
       "modifierValue": 2.05
     },
     {
-      "sp": 35,
+      "sp": 70,
       "id": "track-tight-stow",
       "icon": "📦",
       "title": "TIGHT STOW",
@@ -344,7 +344,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 50,
+      "sp": 100,
       "id": "track-keen-eye",
       "icon": "👁",
       "title": "KEEN EYE",
@@ -354,7 +354,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 80,
+      "sp": 160,
       "id": "track-power-nap",
       "icon": "🔋",
       "title": "POWER NAP",
@@ -364,7 +364,7 @@
       "modifierValue": -0.05
     },
     {
-      "sp": 110,
+      "sp": 220,
       "id": "track-second-wind",
       "icon": "💨",
       "title": "SECOND WIND",
@@ -373,7 +373,16 @@
       "perkId": "second-wind"
     },
     {
-      "sp": 140,
+      "sp": 250,
+      "id": "track-powerpack-alpha",
+      "icon": "🔋",
+      "title": "POWER CELL ALPHA",
+      "description": "Primary battery bank expanded. Twenty additional watt-hours wired in — the rover breathes easier.",
+      "type": "PERK",
+      "perkId": "powerpack-alpha"
+    },
+    {
+      "sp": 280,
       "id": "track-thick-skin",
       "icon": "🛡",
       "title": "THICK SKIN",
@@ -383,7 +392,7 @@
       "modifierValue": -0.05
     },
     {
-      "sp": 170,
+      "sp": 340,
       "id": "track-data-yield",
       "icon": "📈",
       "title": "DATA YIELD",
@@ -393,7 +402,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 200,
+      "sp": 400,
       "id": "track-pack-rat",
       "icon": "🎒",
       "title": "PACK RAT",
@@ -403,7 +412,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 230,
+      "sp": 460,
       "id": "track-night-vision",
       "icon": "🌙",
       "title": "NIGHT VISION",
@@ -412,7 +421,7 @@
       "perkId": "night-vision"
     },
     {
-      "sp": 260,
+      "sp": 520,
       "id": "track-steady-hand",
       "icon": "🎯",
       "title": "STEADY HAND",
@@ -422,7 +431,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 290,
+      "sp": 580,
       "id": "track-quick-fix",
       "icon": "🔧",
       "title": "QUICK FIX",
@@ -432,7 +441,7 @@
       "modifierValue": -0.05
     },
     {
-      "sp": 305,
+      "sp": 610,
       "id": "track-field-locker",
       "icon": "🔒",
       "title": "FIELD LOCKER",
@@ -442,7 +451,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 320,
+      "sp": 640,
       "id": "track-cruise-control",
       "icon": "🚗",
       "title": "CRUISE CONTROL",
@@ -452,7 +461,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 350,
+      "sp": 700,
       "id": "track-lab-efficiency",
       "icon": "🔬",
       "title": "LAB EFFICIENCY",
@@ -462,7 +471,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 380,
+      "sp": 760,
       "id": "track-dust-shaker",
       "icon": "💨",
       "title": "DUST SHAKER",
@@ -471,7 +480,7 @@
       "perkId": "dust-shaker"
     },
     {
-      "sp": 410,
+      "sp": 820,
       "id": "track-grid-sense",
       "icon": "⚡",
       "title": "GRID SENSE",
@@ -481,7 +490,7 @@
       "modifierValue": -0.025
     },
     {
-      "sp": 440,
+      "sp": 880,
       "id": "track-echo-scan",
       "icon": "📡",
       "title": "ECHO SCAN",
@@ -490,7 +499,7 @@
       "perkId": "echo-scan"
     },
     {
-      "sp": 455,
+      "sp": 910,
       "id": "track-salvage-sense",
       "icon": "♻",
       "title": "SALVAGE SENSE",
@@ -500,7 +509,7 @@
       "modifierValue": -0.025
     },
     {
-      "sp": 470,
+      "sp": 940,
       "id": "track-warm-blood",
       "icon": "🔥",
       "title": "WARM BLOOD",
@@ -510,7 +519,7 @@
       "modifierValue": -0.025
     },
     {
-      "sp": 485,
+      "sp": 970,
       "id": "track-rad-lining",
       "icon": "☢",
       "title": "RAD LINING",
@@ -520,7 +529,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 500,
+      "sp": 1000,
       "id": "track-prospect-eye",
       "icon": "💎",
       "title": "PROSPECT EYE",
@@ -530,7 +539,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 530,
+      "sp": 1060,
       "id": "track-overclock",
       "icon": "⏱",
       "title": "OVERCLOCK",
@@ -539,7 +548,7 @@
       "perkId": "overclock"
     },
     {
-      "sp": 545,
+      "sp": 1090,
       "id": "track-lead-lined",
       "icon": "☢",
       "title": "LEAD LINED",
@@ -548,7 +557,7 @@
       "perkId": "lead-lined"
     },
     {
-      "sp": 560,
+      "sp": 1120,
       "id": "track-iron-treads",
       "icon": "🛞",
       "title": "IRON TREADS",
@@ -558,7 +567,16 @@
       "modifierValue": 0.01
     },
     {
-      "sp": 590,
+      "sp": 1150,
+      "id": "track-powerpack-beta",
+      "icon": "⚡",
+      "title": "RESERVE BANK",
+      "description": "Secondary lithium cells salvaged from Ares Station hardware. Fifteen watt-hours added to reserves.",
+      "type": "PERK",
+      "perkId": "powerpack-beta"
+    },
+    {
+      "sp": 1180,
       "id": "track-deep-reader",
       "icon": "📖",
       "title": "DEEP READER",
@@ -568,7 +586,7 @@
       "modifierValue": 0.01
     },
     {
-      "sp": 620,
+      "sp": 1240,
       "id": "track-storm-rider",
       "icon": "🌪",
       "title": "STORM RIDER",
@@ -577,7 +595,7 @@
       "perkId": "storm-rider"
     },
     {
-      "sp": 635,
+      "sp": 1270,
       "id": "track-signal-clarity",
       "icon": "📶",
       "title": "SIGNAL CLARITY",
@@ -587,7 +605,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 645,
+      "sp": 1290,
       "id": "track-hardened-circuits",
       "icon": "🛡",
       "title": "HARDENED CIRCUITS",
@@ -597,7 +615,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 650,
+      "sp": 1300,
       "id": "track-lean-machine",
       "icon": "🔌",
       "title": "LEAN MACHINE",
@@ -607,7 +625,7 @@
       "modifierValue": -0.01
     },
     {
-      "sp": 680,
+      "sp": 1360,
       "id": "track-furnace-heart",
       "icon": "♨",
       "title": "FURNACE HEART",
@@ -617,7 +635,7 @@
       "modifierValue": -0.01
     },
     {
-      "sp": 710,
+      "sp": 1420,
       "id": "track-multi-scan",
       "icon": "🔍",
       "title": "MULTI-SCAN",
@@ -626,7 +644,7 @@
       "perkId": "multi-scan"
     },
     {
-      "sp": 740,
+      "sp": 1480,
       "id": "track-sharp-nose",
       "icon": "🎯",
       "title": "SHARP NOSE",
@@ -636,7 +654,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 770,
+      "sp": 1540,
       "id": "track-bulk-analysis",
       "icon": "⚗",
       "title": "BULK ANALYSIS",
@@ -645,17 +663,17 @@
       "perkId": "bulk-analysis"
     },
     {
-      "sp": 800,
+      "sp": 1600,
       "id": "track-marathon-wheels",
       "icon": "🏁",
       "title": "MARATHON WHEELS",
-      "description": "800 SP worth of terrain under your treads. The rover knows Mars.",
+      "description": "1600 SP worth of terrain under your treads. The rover knows Mars.",
       "type": "REWARD TRACK",
       "modifierKey": "movementSpeed",
       "modifierValue": 0.015
     },
     {
-      "sp": 815,
+      "sp": 1630,
       "id": "track-deep-shielding",
       "icon": "⚛",
       "title": "DEEP SHIELDING",
@@ -665,7 +683,7 @@
       "modifierValue": 0.05
     },
     {
-      "sp": 830,
+      "sp": 1660,
       "id": "track-reflex-scan",
       "icon": "⚡",
       "title": "REFLEX SCAN",
@@ -675,7 +693,16 @@
       "modifierValue": 0.015
     },
     {
-      "sp": 860,
+      "sp": 1700,
+      "id": "track-powerpack-gamma",
+      "icon": "⚛",
+      "title": "FUSION CORE",
+      "description": "Experimental RTG-capacitor hybrid online. Fifteen watt-hours of dense, reliable power. The grid is complete.",
+      "type": "PERK",
+      "perkId": "powerpack-gamma"
+    },
+    {
+      "sp": 1720,
       "id": "track-solar-surplus",
       "icon": "☀",
       "title": "SOLAR SURPLUS",
@@ -684,7 +711,7 @@
       "perkId": "solar-surplus"
     },
     {
-      "sp": 890,
+      "sp": 1780,
       "id": "track-whisper-draw",
       "icon": "🤫",
       "title": "WHISPER DRAW",
@@ -694,7 +721,7 @@
       "modifierValue": -0.015
     },
     {
-      "sp": 905,
+      "sp": 1810,
       "id": "track-storm-chaser",
       "icon": "⚡",
       "title": "STORM CHASER",
@@ -703,7 +730,7 @@
       "perkId": "storm-chaser"
     },
     {
-      "sp": 920,
+      "sp": 1840,
       "id": "track-polar-blood",
       "icon": "❄",
       "title": "POLAR BLOOD",
@@ -713,7 +740,7 @@
       "modifierValue": -0.015
     },
     {
-      "sp": 950,
+      "sp": 1900,
       "id": "track-ghost-tracks",
       "icon": "👻",
       "title": "GHOST TRACKS",
@@ -722,7 +749,7 @@
       "perkId": "ghost-tracks"
     },
     {
-      "sp": 965,
+      "sp": 1930,
       "id": "track-jury-rig",
       "icon": "🧰",
       "title": "JURY RIG",
@@ -732,7 +759,7 @@
       "modifierValue": -0.025
     },
     {
-      "sp": 980,
+      "sp": 1960,
       "id": "track-legends-yield",
       "icon": "⭐",
       "title": "LEGEND'S YIELD",
@@ -742,7 +769,7 @@
       "modifierValue": 0.025
     },
     {
-      "sp": 1000,
+      "sp": 2000,
       "id": "track-full-autonomy",
       "icon": "🚀",
       "title": "FULL AUTONOMY",
