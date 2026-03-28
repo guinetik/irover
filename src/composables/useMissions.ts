@@ -391,6 +391,21 @@ function wireArchiveCheckers(): void {
     return upgradedInstruments.value.size > 0
   })
 
+  // power-boot: flag set externally when rover power system is booted
+  registerChecker('power-boot', () => powerBooted.value)
+
+  // ui-inspect: flag set externally when player inspects a UI target
+  registerChecker('ui-inspect', (p) => {
+    const target = p.target as string
+    return inspectedTargets.value.has(target)
+  })
+
+  // avionics-test: cumulative distance travelled by rover
+  registerChecker('avionics-test', (p) => {
+    const required = (p.distanceM as number) ?? 5
+    return avionicsDistanceM.value >= required
+  })
+
 }
 
 /** Set to true when the player activates RTG overdrive (called from view layer). */
@@ -399,6 +414,9 @@ const rtgShuntTriggered = ref(false)
 const remsActivated = ref(false)
 const repairKitUsed = ref(false)
 const upgradedInstruments = ref<Set<string>>(new Set())
+const powerBooted = ref(false)
+const inspectedTargets = ref<Set<string>>(new Set())
+const avionicsDistanceM = ref(0)
 
 
 function notifyRtgOverdrive(): void {
@@ -423,12 +441,29 @@ function notifyUpgradeInstalled(instrumentId: string): void {
   upgradedInstruments.value = next
 }
 
+function notifyPowerBooted(): void {
+  powerBooted.value = true
+}
+
+function notifyUiInspected(target: string): void {
+  const next = new Set(inspectedTargets.value)
+  next.add(target)
+  inspectedTargets.value = next
+}
+
+function addAvionicsDistance(deltaM: number): void {
+  avionicsDistanceM.value += deltaM
+}
+
 function resetForTests(): void {
   rtgOverdriveTriggered.value = false
   rtgShuntTriggered.value = false
   remsActivated.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
+  powerBooted.value = false
+  inspectedTargets.value = new Set()
+  avionicsDistanceM.value = 0
   catalog.value = []
   missionStates.value = []
   trackedMissionId.value = null
@@ -447,6 +482,9 @@ export function resetMissionProgressForDev(): void {
   remsActivated.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
+  powerBooted.value = false
+  inspectedTargets.value = new Set()
+  avionicsDistanceM.value = 0
   missionStates.value = []
   trackedMissionId.value = null
   try {
@@ -541,6 +579,9 @@ export function useMissions() {
     notifyRemsActivated,
     notifyRepairKitUsed,
     notifyUpgradeInstalled,
+    notifyPowerBooted,
+    notifyUiInspected,
+    addAvionicsDistance,
     getMissionDef,
     resetForTests,
   }
