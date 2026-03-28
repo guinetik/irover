@@ -15,7 +15,7 @@ import { isSiteIntroSequenceSkipped, setSiteIntroSequenceSkipped } from '@/lib/s
 import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
 import { listOrbitalDropItemIds } from '@/types/orbitalDrop'
-import type { GeologicalFeature, Landmark } from '@/types/landmark'
+import type { Landmark } from '@/types/landmark'
 import type { TerrainParams } from '@/types/terrain'
 import type { TerrainGeneratorType } from '@/three/terrain/TerrainGenerator'
 import { GLB_TERRAIN_SITES } from '@/three/terrain/GlbTerrainGenerator'
@@ -155,45 +155,34 @@ export function hashString(s: string): number {
  */
 export function getTerrainParamsForSite(siteId: string, landmarks: Ref<readonly Landmark[]>): TerrainParams {
   const site = landmarks.value.find((l) => l.id === siteId)
-  if (site && site.type === 'geological') {
-    const geo = site as GeologicalFeature
+  if (!site) {
     return {
-      roughness: geo.roughness,
-      craterDensity: geo.craterDensity,
-      dustCover: geo.dustCover,
-      elevation: Math.min(1, Math.max(0, (geo.elevationKm + 8) / 30)),
-      elevationKm: geo.elevationKm,
-      ironOxide: geo.ironOxideIndex,
-      basalt: geo.basaltIndex,
-      seed: hashString(geo.id) + Math.floor(Date.now() / 1000),
-      siteId: geo.id,
-      featureType: geo.featureType,
-      waterIceIndex: geo.waterIceIndex,
-      silicateIndex: geo.silicateIndex,
-      temperatureMaxK: geo.temperatureMaxK,
-      temperatureMinK: geo.temperatureMinK,
-      latDeg: geo.lat,
-      lonDeg: geo.lon,
+      roughness: 0.4, craterDensity: 0.3, dustCover: 0.6,
+      elevation: 0.5, elevationKm: 0, ironOxide: 0.6, basalt: 0.5,
+      seed: hashString(siteId) + Math.floor(Date.now() / 1000),
+      siteId, featureType: 'plain' as const,
+      waterIceIndex: 0.1, silicateIndex: 0.3,
+      temperatureMaxK: 280, temperatureMinK: 160,
     }
   }
-  // Landing sites also have lat/lon
-  const latLon = site ? { latDeg: site.lat, lonDeg: site.lon } : {}
+
   return {
-    roughness: 0.4,
-    craterDensity: 0.3,
-    dustCover: 0.6,
-    elevation: 0.5,
-    elevationKm: 0,
-    ironOxide: 0.6,
-    basalt: 0.5,
-    seed: hashString(siteId) + Math.floor(Date.now() / 1000),
-    siteId: siteId,
-    featureType: 'plain' as const,
-    waterIceIndex: 0.1,
-    silicateIndex: 0.3,
-    temperatureMaxK: 280,
-    temperatureMinK: 160,
-    ...latLon,
+    roughness: site.roughness,
+    craterDensity: site.craterDensity,
+    dustCover: site.dustCover,
+    elevation: Math.min(1, Math.max(0, (site.elevationKm + 8) / 30)),
+    elevationKm: site.elevationKm,
+    ironOxide: site.ironOxideIndex,
+    basalt: site.basaltIndex,
+    seed: hashString(site.id) + Math.floor(Date.now() / 1000),
+    siteId: site.id,
+    featureType: site.featureType,
+    waterIceIndex: site.waterIceIndex,
+    silicateIndex: site.silicateIndex,
+    temperatureMaxK: site.temperatureMaxK,
+    temperatureMinK: site.temperatureMinK,
+    latDeg: site.lat,
+    lonDeg: site.lon,
   }
 }
 
