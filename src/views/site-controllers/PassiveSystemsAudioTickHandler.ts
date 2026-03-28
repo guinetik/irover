@@ -28,6 +28,8 @@ export interface PassiveSystemsAudioCallbacks {
    * Null when no safe zone found or RAD field not initialized.
    */
   getGeigerSafePan?: () => number | null
+  /** Distance to nearest safe zone in world units. Null when safe or no field. */
+  getGeigerSafeDist?: () => number | null
 }
 
 interface PassiveLayer {
@@ -157,12 +159,18 @@ export function createPassiveSystemsAudioTickHandler(
     syncLayer(heaterLayer, true, heaterTargetVolume, fctx.sceneDelta)
     syncLayer(remsLayer, remsSurveying.value, REMS_VOLUME, fctx.sceneDelta)
 
+    // Proximity factor: louder when closer to safe zone (0 = far, 1 = very close)
+    const safeDist = callbacks.getGeigerSafeDist?.() ?? null
+    // Terrain scale ~800 means max realistic distance ~400. Proximity ramps over last 200 units.
+    const MAX_DOWSE_DIST = 200
+    const proximity = safeDist !== null ? Math.max(0, 1 - safeDist / MAX_DOWSE_DIST) : 0
+
     const GEIGER_BASE_VOL = 0.6
     const GEIGER_MAX_VOL = 1.0
-    const geigerVol = radSurveying.value
-      ? GEIGER_BASE_VOL + Math.min(GEIGER_MAX_VOL - GEIGER_BASE_VOL, fctx.radiationLevel * 0.6)
-      : 0
-    syncLayer(geigerLayer, radSurveying.value, geigerVol, fctx.sceneDelta)
+    const radVol = GEIGER_BASE_VOL + Math.min(GEIGER_MAX_VOL - GEIGER_BASE_VOL, fctx.radiationLevel * 0.6)
+    // Boost volume as rover gets closer to safe zone
+    const geigerVol = radSurveying.value ? radVol + proximity * 0.4 : 0
+    syncLayer(geigerLayer, radSurveying.value, Math.min(1.0, geigerVol), fctx.sceneDelta)
 
     // Stereo pan toward nearest safe zone — audio dowsing
     const safePan = callbacks.getGeigerSafePan?.() ?? null
@@ -170,10 +178,11 @@ export function createPassiveSystemsAudioTickHandler(
       setAmbientStereo(geigerLayer.handle, safePan)
     }
 
-    // Rad-hit confirmation loop — plays when heading roughly toward safe zone
+    // Rad-hit confirmation loop — plays when heading toward safe zone, louder when closer
     const onTrack = radSurveying.value && safePan !== null && Math.abs(safePan) < 0.35
-    const radHitVol = onTrack ? 0.6 + (0.35 - Math.abs(safePan)) * 1.0 : 0
-    syncLayer(radHitLayer, onTrack, radHitVol, fctx.sceneDelta)
+    const alignBonus = onTrack ? (0.35 - Math.abs(safePan)) * 1.0 : 0
+    const radHitVol = onTrack ? (0.5 + alignBonus + proximity * 0.5) : 0
+    syncLayer(radHitLayer, onTrack, Math.min(1.0, radHitVol), fctx.sceneDelta)
   }
 
   function dispose(): void {

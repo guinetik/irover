@@ -54,6 +54,8 @@ export interface RadTickHandler extends SiteTickHandler {
    * Returns null when in a safe zone or field not initialized.
    */
   getSafePan(): number | null
+  /** Distance to nearest safe zone in world units. Null when safe or no field. */
+  getSafeDist(): number | null
 }
 
 /**
@@ -91,8 +93,9 @@ export function createRadTickHandler(
   let eventTimer = randomEventInterval()
   let eventCooldown = 0
 
-  // Safe zone dowsing — cached per-frame for stereo pan
+  // Safe zone dowsing — cached per-frame for stereo pan and proximity
   let cachedSafePan: number | null = null
+  let cachedSafeDist: number | null = null
 
   function randomEventInterval(): number {
     const base = RAD_SPAWN_CONFIG.baseIntervalSecMin +
@@ -194,28 +197,27 @@ export function createRadTickHandler(
     // --- Safe-zone dowsing: compute stereo pan toward nearest safe cell ---
     if (zone === 'safe') {
       cachedSafePan = null // already safe — no guidance needed
+      cachedSafeDist = null
     } else {
       const safe = findNearestSafeZone(field, gridSize, terrainScale, roverPos.x, roverPos.z, thresholds)
-      if (safe) {
-        // Bearing from rover to safe zone in world space
-        const dx = safe.x - roverPos.x
-        const dz = safe.z - roverPos.z
-        const bearingToSafe = Math.atan2(dx, -dz) // world-space angle
+      cachedSafeDist = safe.dist
 
-        // Camera heading (RoverController stores cameraHeading on the controller)
-        const camHeading = controller?.cameraHeading ?? 0
+      // Bearing from rover to safe zone in world space
+      const dx = safe.x - roverPos.x
+      const dz = safe.z - roverPos.z
+      const bearingToSafe = Math.atan2(dx, -dz) // world-space angle
 
-        // Relative angle: positive = safe zone is to the right of camera
-        let rel = bearingToSafe - camHeading
-        // Normalize to [-PI, PI]
-        while (rel > Math.PI) rel -= Math.PI * 2
-        while (rel < -Math.PI) rel += Math.PI * 2
+      // Camera heading (RoverController stores cameraHeading on the controller)
+      const camHeading = controller?.cameraHeading ?? 0
 
-        // Map to stereo pan: sin gives smooth L/R, clamped to [-1, 1]
-        cachedSafePan = Math.max(-1, Math.min(1, Math.sin(rel)))
-      } else {
-        cachedSafePan = null
-      }
+      // Relative angle: positive = safe zone is to the right of camera
+      let rel = bearingToSafe - camHeading
+      // Normalize to [-PI, PI]
+      while (rel > Math.PI) rel -= Math.PI * 2
+      while (rel < -Math.PI) rel += Math.PI * 2
+
+      // Map to stereo pan: sin gives smooth L/R, clamped to [-1, 1]
+      cachedSafePan = Math.max(-1, Math.min(1, Math.sin(rel)))
     }
 
     // ─── RAD-GATED (only when player has activated the instrument) ───
@@ -273,5 +275,9 @@ export function createRadTickHandler(
     return cachedSafePan
   }
 
-  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan }
+  function getSafeDist(): number | null {
+    return cachedSafeDist
+  }
+
+  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan, getSafeDist }
 }

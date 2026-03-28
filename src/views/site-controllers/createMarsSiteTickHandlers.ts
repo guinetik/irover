@@ -305,6 +305,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       showToast: (msg) => ctx.sampleToastRef.value?.showComm?.(msg),
       passiveAmbienceAudible: () => ctx.descentSfxAudible(),
       getGeigerSafePan: () => radHandler.getSafePan(),
+      getGeigerSafeDist: () => radHandler.getSafeDist(),
     },
   )
 
