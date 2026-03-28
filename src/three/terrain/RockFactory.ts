@@ -159,8 +159,9 @@ export class RockFactory {
         this.meteoriteBottomY.set(name, geo.boundingBox!.min.y)
         this.meteoriteGeos.set(name, geo)
       })
+      console.log(`[RockFactory] meteorites.glb loaded: ${this.meteoriteGeos.size} variants (${[...this.meteoriteGeos.keys()].join(', ')})`)
     }).catch(() => {
-      // meteorites.glb not found — meteor showers won't spawn visual meshes
+      console.warn('[RockFactory] meteorites.glb not found — meteor showers won\'t spawn visual meshes')
     })
   }
 

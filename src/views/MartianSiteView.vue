@@ -4,11 +4,11 @@
     <canvas ref="canvasRef" class="block w-full h-full" />
     <Transition name="deploy-fade">
       <div
-        v-if="remsStormIncomingText || remsStormActiveText"
+        v-if="remsStormIncomingText || remsStormActiveText || remsMeteorIncomingText || remsMeteorActiveText"
         class="rems-storm-banner font-instrument"
         role="status"
       >
-        {{ remsStormActiveText || remsStormIncomingText }}
+        {{ remsStormActiveText || remsStormIncomingText || remsMeteorActiveText || remsMeteorIncomingText }}
       </div>
     </Transition>
     <MartianSiteNavbar

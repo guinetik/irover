@@ -77,15 +77,24 @@ export function createMeteorController(
     onFallStart(fall: MeteorFall) {
       if (!renderer || !rockFactory) return
       const mesh = rockFactory.createMeteoriteRock(fall.variant, fall.showerId)
-      if (!mesh) return
+      if (!mesh) {
+        console.warn(`[Meteor] createMeteoriteRock returned null for variant ${fall.variant} — GLB may not contain this mesh`)
+        return
+      }
       fallingMeshes.set(fall.id, mesh)
       renderer.startFall(fall, mesh)
     },
 
     onFallImpact(fall: MeteorFall) {
-      if (!renderer || !rockFactory || !terrainGroup) return
+      if (!renderer) return
+      // Always remove the marker, even if the mesh was never created
+      renderer.removeMarker(fall)
+
       const mesh = fallingMeshes.get(fall.id)
-      if (!mesh) return
+      if (!mesh || !rockFactory || !terrainGroup) {
+        renderer.completeFall(fall.id)
+        return
+      }
       fallingMeshes.delete(fall.id)
 
       const roverPos = scene?.getObjectByName('RoverGroup')?.position ?? new THREE.Vector3()
