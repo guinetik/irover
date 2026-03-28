@@ -18,17 +18,20 @@
           "asset": "sci-fi_cargo_crate.glb",
           "title": "Sci-fi cargo crate",
           "author": "andreas9343",
+          "license": "CC BY 4.0 (Sketchfab)",
           "url": "https://sketchfab.com/3d-models/sci-fi-cargo-crate-ac36898521304e51a8e305aa602f1f5b"
         },
         {
           "asset": "rocks.glb",
           "title": "Mars Rocks",
           "author": "Ivan Vakulko",
+          "license": "CC BY 4.0 (Sketchfab)",
           "url": "https://sketchfab.com/3d-models/mars-rocks-9f5c946255a24f1cb630ea95dceea587"
         },
         {
           "asset": "terminal.glb",
           "title": "Terminal prop",
+          "license": "CC BY 4.0 (Sketchfab)",
           "author": "Add author when you confirm download source",
           "url": ""
         },
@@ -36,12 +39,14 @@
           "asset": "phobos.glb",
           "title": "Phobos model",
           "author": "harperanneviolet",
+          "license": "CC BY 4.0 (Sketchfab)",
           "url": "https://sketchfab.com/3d-models/phobos-1-1000-434a2b5523554918a13c1c41e3ee9be6"
         },
         {
           "asset": "deimos.glb",
           "title": "Deimos model",
           "author": "uperesito",
+          "license": "CC BY 4.0 (Sketchfab)",
           "url": "https://sketchfab.com/3d-models/deimos-db9c281d0a7b4452aaac26eb1d3738ad"
         }
       ]
@@ -54,7 +59,31 @@
           "asset": "intro.mp4",
           "title": "Curiosity Rover Mission Animation",
           "author": "NASA Jet Propulsion Laboratory",
+          "license": "Public Domain (NASA)",
           "url": "https://www.youtube.com/watch?v=BudlaGh1A0o"
+        }
+      ]
+    },
+    {
+      "id": "audio",
+      "label": "Audio",
+      "items": [
+        {
+          "title": "Sound effects",
+          "author": "ElevenLabs",
+          "url": "https://elevenlabs.io",
+          "notes": "AI-generated sound effects used throughout the game."
+        },
+        {
+          "title": "We Travel",
+          "author": "Marconi Union",
+          "notes": "Intro music."
+        },
+        {
+          "title": "Theme music",
+          "author": "Suno",
+          "url": "https://suno.com",
+          "notes": "AI-generated ambient theme music."
         }
       ]
     },
@@ -66,12 +95,13 @@
           "title": "Mars orbital imagery (globe & site context)",
           "author": "NASA / JPL / USGS; Esri ArcGIS tile services",
           "url": "https://www.usgs.gov/centers/astrogeo-science-center/science/mars-global-digital-image-mosaic",
-          "license": "See each provider’s terms for MDIM / mission imagery",
+          "license": "Public Domain (USGS)",
           "notes": "Globe uses composited MDIM-style coverage; site views may use mission-specific orbital maps."
         },
         {
           "title": "Mission & landmark reference data",
           "author": "NASA mission pages and public datasets",
+          "license": "Public Domain (NASA)",
           "url": "https://mars.nasa.gov/",
           "notes": "Landing sites and science context informed by NASA/JPL mission materials."
         }
