@@ -282,7 +282,6 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
         if (rockType === 'iron-meteorite') stampMeteoriteWorkup(rockUuid, 'apxs')
       },
       onBlockedByCold: ctx.onAPXSBlockedByCold,
-      playerMod: ctx.playerMod,
       playActionSound: () => ctx.playInstrumentActionSound('sfx.apxsContact'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
     },

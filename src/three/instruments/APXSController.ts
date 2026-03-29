@@ -36,6 +36,13 @@ export class APXSController extends InstrumentController {
   override readonly usageDecayAmount = 1.0
   private static readonly CONTACT_RANGE = 0.6
 
+  /** Composite speed factor from resolveInstrumentPerformance — set each frame by domain tick handler. */
+  perfSpeedFactor = 1.0
+  /** Composite thermal multiplier — set each frame by domain tick handler. */
+  perfThermalMult = 1.0
+  /** Current thermal zone — set each frame by domain tick handler. */
+  perfThermalZone: 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL' = 'OPTIMAL'
+
   targeting: RockTargeting | null = null
   private currentTarget: TargetResult | null = null
   targetWorldPos = new THREE.Vector3()

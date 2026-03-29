@@ -1,10 +1,7 @@
 import type { Ref } from 'vue'
 import { APXSController } from '@/three/instruments'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
-import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
 
@@ -28,7 +25,6 @@ export interface APXSHudRefs {
 export interface APXSHudCallbacks {
   onLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onBlockedByCold: () => void
-  playerMod: (key: keyof ProfileModifiers) => number
   playActionSound: (soundId: 'sfx.apxsContact') => void
   startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
 }
@@ -38,8 +34,7 @@ export function createAPXSHudController(
   callbacks: APXSHudCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
-  const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound } = callbacks
-  const { defBySlot } = useInstrumentProvider()
+  const { onLaunchMinigame, onBlockedByCold, playActionSound, startHeldMovementSound } = callbacks
   let gameplayInitialised = false
   let countdownTimer = 0
   let coldToastCooldown = 0
@@ -86,9 +81,7 @@ export function createAPXSHudController(
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
-      const apxsDef = defBySlot(apxs.slot)
-      const perf = resolveInstrumentPerformance(apxsDef?.tier ?? apxs.tier, apxs.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-      const duration = (APXS_THERMAL_DURATION[perf.thermalZone] ?? 25) / perf.speedFactor * perf.thermalMult
+      const duration = (APXS_THERMAL_DURATION[apxs.perfThermalZone] ?? 25) / apxs.perfSpeedFactor * apxs.perfThermalMult
 
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {
