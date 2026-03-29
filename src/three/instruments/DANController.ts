@@ -38,7 +38,6 @@ export class DANController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.0, 0.3, 0.0)
   readonly viewAngle = Math.PI * 0.5
   readonly viewPitch = 0.15
-  readonly selectionIdlePowerW = 10
 
   // --- Sampling state ---
   private sampleTimer = 0

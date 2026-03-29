@@ -34,8 +34,6 @@ export class DrillController extends InstrumentController {
   override readonly repairComponentId = 'engineering-components'
   override readonly usageDecayChance = 0.25
   override readonly usageDecayAmount = 1.5
-  /** Arm electronics / turret — sustained drilling is billed separately on the power tick. */
-  override readonly selectionIdlePowerW = 6
 
   private shoulder: THREE.Object3D | null = null
   private elbow: THREE.Object3D | null = null

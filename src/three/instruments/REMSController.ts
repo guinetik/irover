@@ -35,7 +35,6 @@ export class REMSController extends InstrumentController {
   readonly viewAngle = 0.12
   /** Side-ish orbit to frame mast booms (not deck-top-down). */
   readonly viewPitch = 0.52
-  override readonly selectionIdlePowerW = 1
 
   /** Air temperature (°C) from site REMS model while surveying. */
   temperature = -23

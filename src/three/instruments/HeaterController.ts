@@ -24,7 +24,6 @@ export class HeaterController extends InstrumentController {
   override readonly repairComponentId = 'mechatronics-components'
   override readonly usageDecayChance = 0.10
   override readonly usageDecayAmount = 0.5
-  override readonly selectionIdlePowerW = 0
 
   // Thermal state — updated from useMarsThermal each frame by the view
   internalTempC = 15

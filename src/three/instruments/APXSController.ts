@@ -34,8 +34,6 @@ export class APXSController extends InstrumentController {
   override readonly repairComponentId = 'science-components'
   override readonly usageDecayChance = 0.20
   override readonly usageDecayAmount = 1.0
-  /** Turret / detector idle while the card is open (orbit). */
-  override readonly selectionIdlePowerW = 5
   /** Contact-science style load stub while active (no sample logic yet). */
   private static readonly ACTIVE_BUS_W = 18
   private static readonly CONTACT_RANGE = 0.6

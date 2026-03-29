@@ -42,12 +42,6 @@ export class RoverWheelsController extends InstrumentController {
   override readonly repairComponentId = 'mechatronics-components'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 0.5
-  /**
-   * No main-bus draw for merely opening the WHLS card — mobility is billed only while translating
-   * via {@link getDrivePowerW} in the site power tick (`driveMotorW`).
-   */
-  override readonly selectionIdlePowerW = 0
-
   /** Movement speed modifier — set each frame by domain tick handler. */
   movementSpeedMod = 1.0
 

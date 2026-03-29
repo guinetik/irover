@@ -51,7 +51,7 @@ export abstract class InstrumentController {
    * Baseline main-bus draw (W) while this instrument's slot is open — used by the default
    * {@link getInstrumentBusPowerW} implementation. Override the getter when draw is dynamic.
    */
-  readonly selectionIdlePowerW: number = 0
+  selectionIdlePowerW: number = 0
 
   /**
    * When true, this payload draws {@link selectionIdlePowerW} on the main bus whenever the rover

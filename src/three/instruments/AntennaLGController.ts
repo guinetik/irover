@@ -24,7 +24,6 @@ export class AntennaLGController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.0, 0.2, -0.2)
   readonly viewAngle = Math.PI * 0.85    // from behind, slightly right
   readonly viewPitch = 0.25
-  override readonly selectionIdlePowerW = 2
 
   /** Set by tick handler to scale power draw down as accuracy improves (1.0 = no bonus) */
   accuracyMod = 1.0

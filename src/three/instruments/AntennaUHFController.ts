@@ -23,7 +23,6 @@ export class AntennaUHFController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.0, 0.15, -0.1)
   readonly viewAngle = Math.PI * 1.15    // from behind, slightly left
   readonly viewPitch = 0.2
-  override readonly selectionIdlePowerW = 6
   /** Extra power draw during active transmission (on top of idle) */
   static readonly TRANSMIT_POWER_W = 12
 

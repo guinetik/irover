@@ -85,6 +85,8 @@ export interface InstrumentDef {
   power: string
   /** Hazard vulnerability tier — determines storm/radiation penalty severity. */
   tier: InstrumentTier
+  /** Base idle power draw in watts when instrument is selected/active. */
+  idlePowerW: number
   /** Key into CONTROLLER_REGISTRY */
   controllerType: string
   /** Key into TICK_HANDLER_REGISTRY (populated in Plan B) */

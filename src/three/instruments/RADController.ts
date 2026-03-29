@@ -19,7 +19,6 @@ export class RADController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.2, 0.15, 0.2)
   readonly viewAngle = 0.45
   readonly viewPitch = 1.0
-  override readonly selectionIdlePowerW = 2
 
   // --- Live radiation state (synced by RadHudController each frame) ---
 

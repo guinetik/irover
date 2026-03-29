@@ -25,8 +25,6 @@ export class RTGController extends InstrumentController {
   override readonly usageDecayAmount = 1.0
   /** RTG took damage during landing — starts at 60% durability. */
   override durabilityPct = 60
-  /** RTG management UI / telemetry — not the RTG thermal output (that is generation). */
-  override readonly selectionIdlePowerW = 2
 
   // Fake power stats
   totalPowerW = 110

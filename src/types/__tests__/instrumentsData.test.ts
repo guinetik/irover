@@ -131,6 +131,13 @@ describe('instruments.json', () => {
     }
   })
 
+  it('every instrument has a non-negative idlePowerW number', () => {
+    for (const inst of instruments) {
+      expect(typeof inst.idlePowerW, `${inst.id} idlePowerW must be a number`).toBe('number')
+      expect(inst.idlePowerW, `${inst.id} idlePowerW must be >= 0`).toBeGreaterThanOrEqual(0)
+    }
+  })
+
   it('chainBonuses entries have valid key, numeric baseValue, label, and description', () => {
     for (const inst of instruments) {
       if (!inst.chainBonuses) continue

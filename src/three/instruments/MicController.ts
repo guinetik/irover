@@ -29,5 +29,4 @@ export class MicController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0, 0.1, 0)
   readonly viewAngle = 0.0
   readonly viewPitch = 0.6
-  override readonly selectionIdlePowerW = 1
 }
