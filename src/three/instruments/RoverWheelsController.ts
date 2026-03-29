@@ -48,6 +48,9 @@ export class RoverWheelsController extends InstrumentController {
    */
   override readonly selectionIdlePowerW = 0
 
+  /** Movement speed modifier — set each frame by domain tick handler. */
+  movementSpeedMod = 1.0
+
   /**
    * Nominal motor draw (W) while moving — mirror `RoverPowerProfile.baseDriveW`;
    * MartianSiteView copies from the live profile each frame.

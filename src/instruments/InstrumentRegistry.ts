@@ -21,6 +21,14 @@ import { createChemCamTickHandler } from './tickHandlers/chemCamTickHandler'
 import { createDanTickHandler } from './tickHandlers/danTickHandler'
 import { createAntennaLGTickHandler } from './tickHandlers/antennaLGTickHandler'
 import { createAntennaUHFTickHandler } from './tickHandlers/antennaUHFTickHandler'
+import { createAPXSTickHandler } from './tickHandlers/apxsTickHandler'
+import { createSAMTickHandler } from './tickHandlers/samTickHandler'
+import { createRTGTickHandler } from './tickHandlers/rtgTickHandler'
+import { createREMSTickHandler } from './tickHandlers/remsTickHandler'
+import { createRadTickHandler } from './tickHandlers/radTickHandler'
+import { createHeaterTickHandler } from './tickHandlers/heaterTickHandler'
+import { createRoverWheelsTickHandler } from './tickHandlers/roverWheelsTickHandler'
+import { createMicTickHandler } from './tickHandlers/micTickHandler'
 
 export type ControllerConstructor = new () => InstrumentController
 export type TickHandlerFactory = (controller: InstrumentController) => TickHandler
@@ -53,4 +61,12 @@ export const TICK_HANDLER_REGISTRY: Record<string, TickHandlerFactory> = {
   DANTickHandler: createDanTickHandler,
   AntennaLGTickHandler: createAntennaLGTickHandler,
   AntennaUHFTickHandler: createAntennaUHFTickHandler,
+  APXSTickHandler: createAPXSTickHandler,
+  SAMTickHandler: createSAMTickHandler,
+  RoverVfxTickHandler: createRTGTickHandler,
+  REMSTickHandler: createREMSTickHandler,
+  RadTickHandler: createRadTickHandler,
+  HeaterTickHandler: createHeaterTickHandler,
+  RoverMovementTickHandler: createRoverWheelsTickHandler,
+  MicTickHandler: createMicTickHandler,
 }
