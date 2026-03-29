@@ -393,6 +393,7 @@ export interface MarsSiteViewContext {
   apxsTick: (deltaSec: number) => APXSQueueEntry | null
   totalSP: Ref<number>
   triggerDanAchievement: (event: string) => void
+  triggerMeteorAchievement: (event: string) => void
   notifyDanScanCompleted: () => void
   awardTransmission: (archiveId: string, baseSP: number, label: string) => import('@/composables/useSciencePoints').SPGain | null
   onAPXSLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void

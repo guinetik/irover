@@ -23,6 +23,7 @@ const FALL_STAGGER_SEC = 12
 export interface MeteorTickCallbacks {
   meteorRisk: number
   heightAt: (x: number, z: number) => number
+  meteorSenseBonus: number
   onShowerScheduled: (shower: MeteorShower) => void
   onFallMarkerShow: (fall: MeteorFall) => void
   onFallStart: (fall: MeteorFall) => void
@@ -33,6 +34,7 @@ export interface MeteorTickCallbacks {
 function generateFalls(
   shower: MeteorShower,
   heightAt: (x: number, z: number) => number,
+  meteorSenseBonus: number,
 ): MeteorFall[] {
   const half = TERRAIN_SCALE / 2
   const falls: MeteorFall[] = []
@@ -52,7 +54,7 @@ function generateFalls(
       targetX,
       targetZ,
       groundY,
-      markerDuration: rollMarkerDuration() + fallStagger,
+      markerDuration: rollMarkerDuration() + meteorSenseBonus + fallStagger,
       entryAngle: rollEntryAngle(),
       azimuth: rollAzimuth(),
       phase: 'marker',
@@ -90,7 +92,7 @@ export function createMeteorTickHandler(
       triggerAtSolFraction: triggerFraction,
     }
 
-    pendingFalls = generateFalls(shower, heightAt)
+    pendingFalls = generateFalls(shower, heightAt, callbacks.meteorSenseBonus)
     scheduledShower = { ...shower, triggered: false, warningFired: false }
     callbacks.onShowerScheduled(shower)
   }
@@ -192,7 +194,7 @@ export function createMeteorTickHandler(
       triggerAtSolFraction: 0,
     }
 
-    pendingFalls = generateFalls(shower, heightAt)
+    pendingFalls = generateFalls(shower, heightAt, callbacks.meteorSenseBonus)
     showerElapsed = 0
     allFallsCompleted = false
     scheduledShower = { ...shower, triggered: true, warningFired: true }

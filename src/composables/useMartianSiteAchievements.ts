@@ -107,6 +107,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
   const apxsAchievementsData = ref<EventAchievement[]>([])
   const radAchievementsData = ref<EventAchievement[]>([])
   const dsnAchievementsData = ref<EventAchievement[]>([])
+  const meteorAchievementsData = ref<EventAchievement[]>([])
 
   const unlockedAchievementIds = ref<string[]>(loadPersistedAchievementIds())
 
@@ -125,6 +126,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
       apxsAchievementsData.value.length +
       radAchievementsData.value.length +
       dsnAchievementsData.value.length +
+      meteorAchievementsData.value.length +
       rewardTrackMilestones.value.length,
   )
   const unlockedAchievementCount = computed(() => unlockedAchievementIds.value.length)
@@ -140,6 +142,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
         'apxs-analysis'?: EventAchievement[]
         'rad-dosimetry'?: EventAchievement[]
         'dsn-archaeology'?: EventAchievement[]
+        'meteor-science'?: EventAchievement[]
         'reward-track'?: RewardTrackMilestone[]
       }) => {
         libsAchievements.value = data['libs-calibration'] ?? []
@@ -149,6 +152,7 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
         apxsAchievementsData.value = data['apxs-analysis'] ?? []
         radAchievementsData.value = data['rad-dosimetry'] ?? []
         dsnAchievementsData.value = data['dsn-archaeology'] ?? []
+        meteorAchievementsData.value = data['meteor-science'] ?? []
         if (data['reward-track']) void loadRewardTrack(data['reward-track'])
       },
     )
@@ -192,6 +196,15 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
 
   function triggerDSNAchievement(event: string): void {
     for (const ach of dsnAchievementsData.value) {
+      if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
+        unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
+        achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
+      }
+    }
+  }
+
+  function triggerMeteorAchievement(event: string): void {
+    for (const ach of meteorAchievementsData.value) {
       if (ach.event === event && !unlockedAchievementIds.value.includes(ach.id)) {
         unlockedAchievementIds.value = [...unlockedAchievementIds.value, ach.id]
         achievementRef.value?.show(ach.icon, ach.title, ach.description, ach.type)
@@ -317,6 +330,8 @@ export function useMartianSiteAchievements(opts: MartianSiteAchievementsOptions)
     triggerRadAchievement,
     dsnAchievementsData,
     triggerDSNAchievement,
+    meteorAchievementsData,
+    triggerMeteorAchievement,
   }
 }
 

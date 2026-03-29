@@ -1445,6 +1445,7 @@ const {
   triggerSamAchievement,
   triggerAPXSAchievement,
   triggerRadAchievement,
+  triggerMeteorAchievement,
 } = useMartianSiteAchievements({
   achievementRef,
   sampleToastRef,
@@ -1922,7 +1923,13 @@ function handleCraterAcknowledge(): void {
     }
   }
 
-  // 3. Archive to crater science log
+  // 3. Fire meteor science achievements
+  triggerMeteorAchievement('first-crater-mode')
+  if (ventPlaced) triggerMeteorAchievement('first-vent-placed')
+  if (discovery.ventType === 'methane') triggerMeteorAchievement('methane-detected')
+  // TODO: 'full-meteorite-workup' requires cross-instrument meteorite tracking
+
+  // 4. Archive to crater science log
   useCraterArchive().archiveDiscovery({
     capturedSol: marsSol.value,
     siteId,
@@ -1939,7 +1946,7 @@ function handleCraterAcknowledge(): void {
     sideProducts: discovery.sideProducts,
   })
 
-  // 4. Handle vent placement if applicable
+  // 5. Handle vent placement if applicable
   if (ventPlaced && discovery.ventType) {
     // Revert crater terrain (fracking flattens ground)
     if (crater.deformData && siteHandle.value?.siteScene?.terrain) {
@@ -2130,6 +2137,7 @@ function createSiteControllerContext() {
     apxsTick,
     totalSP,
     triggerDanAchievement,
+    triggerMeteorAchievement,
     notifyDanScanCompleted: () => useMissions().notifyDanScanCompleted(),
     awardTransmission,
     playInstrumentActionSound: (soundId) => {

@@ -5,6 +5,7 @@ import { MeteorFallRenderer } from '@/three/MeteorFallRenderer'
 import type { RockFactory } from '@/three/terrain/RockFactory'
 import type { MeteorFall, MeteorShower, ShowerSeverity } from '@/lib/meteor'
 import { computeShockwaveDamage, KILL_RADIUS, SHOCKWAVE_RADIUS_MULTIPLIER, rollCraterParams } from '@/lib/meteor'
+import { useRewardTrack } from '@/composables/useRewardTrack'
 import type { AudioManager } from '@/audio/AudioManager'
 import type { Ref } from 'vue'
 import type { MarsSky } from '@/three/MarsSky'
@@ -33,6 +34,8 @@ export interface MeteorControllerOptions {
   remsMeteorActiveText: Ref<string | null>
   onGameOver?: () => void
   shockWhiteoutActive: Ref<boolean>
+  triggerMeteorAchievement?: (event: string) => void
+  meteorSenseBonus?: number
 }
 
 export interface MeteorSceneComponents {
@@ -62,6 +65,7 @@ export function createMeteorController(
     audioManager,
     remsMeteorIncomingText,
     remsMeteorActiveText,
+    triggerMeteorAchievement,
   } = options
 
   let renderer: MeteorFallRenderer | null = null
@@ -84,16 +88,20 @@ export function createMeteorController(
   const craters: MeteorCrater[] = []
   const fallingMeshes = new Map<string, THREE.Mesh>()
   let lastStormPhase: string = 'none'
+  let lastShowerSeverity: ShowerSeverity | null = null
 
   const tickHandler = createMeteorTickHandler({
     meteorRisk,
     heightAt: (x, z) => heightAt?.(x, z) ?? 0,
+    meteorSenseBonus: options.meteorSenseBonus ?? 0,
 
     onShowerScheduled(shower: MeteorShower) {
       const label = SEVERITY_LABELS[shower.severity]
       remsMeteorIncomingText.value =
         `REMS: Meteor shower incoming — elevated bolide activity detected. Expect ${label}.`
       targetSkyIntensity = 1
+      lastShowerSeverity = shower.severity
+      triggerMeteorAchievement?.('first-shower')
     },
 
     onFallMarkerShow(fall: MeteorFall) {
@@ -137,10 +145,12 @@ export function createMeteorController(
       if (dist < shockwaveRadius && roverPos) {
         // Apply damage to each instrument
         if (lastRoverController) {
+          const brace = useRewardTrack().hasPerk('impact-brace') ? 0.7 : 1.0
           for (const inst of lastRoverController.instruments) {
             const dmg = computeShockwaveDamage(dist, shockwaveRadius, inst.tier)
-            if (dmg > 0) inst.applyHazardDamage(dmg * 100) // durabilityPct is 0-100
+            if (dmg > 0) inst.applyHazardDamage(dmg * brace * 100) // durabilityPct is 0-100
           }
+          triggerMeteorAchievement?.('survived-shockwave')
         }
 
         // Knockback — push rover away from blast (within shockwave radius)
@@ -192,6 +202,8 @@ export function createMeteorController(
       remsMeteorIncomingText.value = null
       remsMeteorActiveText.value = null
       targetSkyIntensity = 0
+      if (lastShowerSeverity === 'heavy') triggerMeteorAchievement?.('survived-heavy-shower')
+      lastShowerSeverity = null
     },
   })
 

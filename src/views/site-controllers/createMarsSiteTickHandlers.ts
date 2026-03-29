@@ -102,6 +102,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     remsMeteorActiveText: refs.remsMeteorActiveText,
     shockWhiteoutActive: refs.meteorShockWhiteout,
     onGameOver: ctx.onMeteorGameOver,
+    triggerMeteorAchievement: ctx.triggerMeteorAchievement,
+    meteorSenseBonus: ctx.hasPerk('meteor-sense') ? 5 : 0,
   })
 
   const danHandler = createDanTickHandler(
@@ -208,6 +210,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
       getSpeedBreakdownBase,
       onMeteoriteTagged: (rock: THREE.Mesh, _rockType: string) => {
+        ctx.triggerMeteorAchievement('first-meteorite-scan')
         const { archiveObservation } = useMeteorArchive()
         // Weight from iron-meteorite range (0.5–1.5 kg) scaled by mesh size
         const baseWeight = 0.5 + Math.random() * 1.0
