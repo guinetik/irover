@@ -4,11 +4,66 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 const CAPSULE_GLB = '/dan.glb'
 const TARGET_SIZE = 0.5
 
-type FluidType = 'water' | 'co2' | 'methane'
+/**
+ * Material role mapping — each GLB material name maps to a visual role
+ * that we rebuild with proper PBR properties.
+ */
+const MATERIAL_ROLES: Record<string, (accent: THREE.Color) => THREE.MeshStandardMaterial> = {
+  Metal: () => new THREE.MeshStandardMaterial({
+    color: 0x3a3a3e,
+    roughness: 0.55,
+    metalness: 0.85,
+    envMapIntensity: 0.6,
+  }),
+  Chrome: () => new THREE.MeshStandardMaterial({
+    color: 0x888890,
+    roughness: 0.15,
+    metalness: 0.95,
+    envMapIntensity: 1.0,
+  }),
+  Glass: (accent) => new THREE.MeshStandardMaterial({
+    color: accent.clone().lerp(new THREE.Color(0xffffff), 0.7),
+    roughness: 0.05,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.3,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  }),
+  BlackGloss: () => new THREE.MeshStandardMaterial({
+    color: 0x111115,
+    roughness: 0.1,
+    metalness: 0.4,
+  }),
+  MonitorScreen: (accent) => new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    emissive: accent,
+    emissiveIntensity: 0.5,
+    roughness: 0.2,
+    metalness: 0.0,
+  }),
+  ChemGlow: (accent) => new THREE.MeshStandardMaterial({
+    color: accent,
+    emissive: accent,
+    emissiveIntensity: 1.2,
+    roughness: 0.3,
+    metalness: 0.0,
+    transparent: true,
+    opacity: 0.85,
+  }),
+  lambert2: () => new THREE.MeshStandardMaterial({
+    color: 0x2a2a2e,
+    roughness: 0.7,
+    metalness: 0.3,
+  }),
+}
 
-// ---------------------------------------------------------------------------
-// Template loading (singleton)
-// ---------------------------------------------------------------------------
+/** Accent colors per vent/fluid type. */
+const FLUID_COLORS: Record<string, THREE.Color> = {
+  water:   new THREE.Color(0x2288ff),
+  co2:     new THREE.Color(0x999999),
+  methane: new THREE.Color(0x33cc66),
+}
 
 let template: THREE.Group | null = null
 let loadPromise: Promise<THREE.Group> | null = null
@@ -32,9 +87,36 @@ function loadTemplate(): Promise<THREE.Group> {
   return loadPromise
 }
 
-// ---------------------------------------------------------------------------
-// Placement
-// ---------------------------------------------------------------------------
+/**
+ * Determines the material role for a mesh by checking its name against known suffixes.
+ * Mesh names follow the pattern: `pCylinder1_Glass_0` → role = "Glass"
+ */
+function detectRole(meshName: string): string | null {
+  for (const role of Object.keys(MATERIAL_ROLES)) {
+    if (meshName.includes(`_${role}_`) || meshName.endsWith(`_${role}`)) return role
+  }
+  return null
+}
+
+/**
+ * Applies proper PBR materials to a cloned capsule instance.
+ * Each mesh gets a fresh material based on its detected role and the accent color.
+ */
+function applyMaterials(root: THREE.Object3D, accent: THREE.Color): void {
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    child.castShadow = true
+    child.receiveShadow = true
+
+    const role = detectRole(child.name)
+    if (role && MATERIAL_ROLES[role]) {
+      const old = child.material
+      if (Array.isArray(old)) old.forEach((m) => m.dispose())
+      else if (old?.dispose) old.dispose()
+      child.material = MATERIAL_ROLES[role](accent)
+    }
+  })
+}
 
 function placeInstance(instance: THREE.Object3D, x: number, z: number, groundY: number): void {
   instance.position.set(0, 0, 0)
@@ -53,10 +135,6 @@ function placeInstance(instance: THREE.Object3D, x: number, z: number, groundY: 
   instance.position.set(x, groundY + 0.05 - boxWorld.min.y, z)
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
 /**
  * Disposes all geometries and materials under a capsule instance.
  */
@@ -72,17 +150,16 @@ export function disposeBioCapsule(root: THREE.Object3D): void {
 
 /**
  * Creates and places a DAN capsule buildable in the scene.
- * Uses the GLB's baked materials as-is.
  *
- * @param fluidType - Stored for future per-type material customization
- * @param x - World X
- * @param z - World Z
+ * @param fluidType - 'water' | 'co2' | 'methane' — determines accent color
+ * @param x - World X position
+ * @param z - World Z position
  * @param groundY - Terrain height at placement point
  * @param scene - Scene to add the instance to
- * @returns The placed Object3D, or null if loading failed
+ * @returns Promise resolving to the placed Object3D, or null if loading fails
  */
 export async function createBioCapsule(
-  fluidType: FluidType,
+  fluidType: 'water' | 'co2' | 'methane',
   x: number,
   z: number,
   groundY: number,
@@ -91,7 +168,9 @@ export async function createBioCapsule(
   try {
     const tmpl = await loadTemplate()
     const instance = tmpl.clone(true)
+    const accent = FLUID_COLORS[fluidType] ?? FLUID_COLORS.water
     instance.userData.fluidType = fluidType
+    applyMaterials(instance, accent)
     placeInstance(instance, x, z, groundY)
     scene.add(instance)
     return instance
