@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { InstrumentController, INSTRUMENT_SELECTION_GLOW_HEX } from './InstrumentController'
+import { InstrumentController } from './InstrumentController'
 import { getRtgPhaseSceneSeconds } from '@/lib/missionTime'
 import { MISSION_COOLDOWN_ID, missionCooldowns } from '@/lib/missionCooldowns'
 import type { InstrumentTier } from '@/lib/hazards'
@@ -27,8 +27,6 @@ export class RTGController extends InstrumentController {
   override readonly usageDecayAmount = 1.0
   /** RTG took damage during landing — starts at 60% durability. */
   override durabilityPct = 60
-  /** Cyan selection glow; site render loop skips it during `phase === 'overdrive'` so orange burst VFX wins. */
-  override get selectionHighlightColor(): number | null { return INSTRUMENT_SELECTION_GLOW_HEX }
   /** RTG management UI / telemetry — not the RTG thermal output (that is generation). */
   override readonly selectionIdlePowerW = 2
 
