@@ -12,6 +12,8 @@ export type ObjectiveType =
   | 'rtg-overdrive'
   | 'rtg-shunt'
   | 'rems-activate'
+  | 'rad-activate'
+  | 'rad-decode'
   | 'use-repair-kit'
   | 'install-upgrade'
   | 'power-boot'
