@@ -81,6 +81,9 @@ const MOD_LABELS: Record<keyof ProfileModifiers, string> = {
   danScanRadius: 'DAN RADIUS',
   buildSpeed: 'BUILD SPD',
   structureDurability: 'STRUCT HP',
+  radiationTolerance: 'RADIATION TOLERANCE',
+  chainDrillBonus: 'CHAIN DRILL BONUS',
+  chainLootBonus: 'CHAIN LOOT BONUS',
 }
 
 // For "cost" and "draw" modifiers, lower is better (invert the color logic)
