@@ -160,8 +160,7 @@ export interface DanTickCallbacks {
   onCraterDiscovery: (params: {
     discovery: { id: string; name: string; sp: number; ventType: VentType | null }
     ventPlaced: boolean
-    craterX: number
-    craterZ: number
+    crater: MeteorCrater
   }) => void
   getVentsForSite: (siteId: string) => ArchivedVent[]
 }
@@ -468,7 +467,10 @@ export function createDanTickHandler(
     const danStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, danInst.tier) : 1
     danInst.accuracyMod = playerMod('instrumentAccuracy') / danStormPenalty
     danInst.analysisSpeedMod = playerMod('analysisSpeed') / danStormPenalty
-    danInst.update(sceneDelta)
+    // Suppress passive sampling during crater mode — rover is stationary, scan is fixed-duration
+    if (danInst.prospectPhase !== 'crater-confirm' && danInst.prospectPhase !== 'crater-scanning') {
+      danInst.update(sceneDelta)
+    }
 
     danTotalSamples.value = danInst.totalSamples
 
@@ -560,8 +562,7 @@ export function createDanTickHandler(
           onCraterDiscovery({
             discovery: { id: discovery.id, name: discovery.name, sp: discovery.sp, ventType: discovery.ventType },
             ventPlaced: true,
-            craterX: activeCrater.x,
-            craterZ: activeCrater.z,
+            crater: activeCrater,
           })
 
           // Place vent buildable (dan.glb) at crater center on now-flat terrain
@@ -587,6 +588,7 @@ export function createDanTickHandler(
         }
 
         // Cleanup — deactivate DAN, unlock rover, return to idle
+        danInst.forceOff()
         danInst.prospectPhase = 'idle'
         danInst.prospectComplete = false
         danProspectPhase.value = 'idle'

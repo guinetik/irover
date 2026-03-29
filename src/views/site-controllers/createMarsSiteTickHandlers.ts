@@ -143,22 +143,19 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
         )
       },
       hasActiveVent: (ventType: VentType) => useVentArchive().hasActiveVent(ctx.siteId, ventType),
-      onCraterDiscovery: ({ discovery, ventPlaced, craterX, craterZ }) => {
-        const crater = meteorHandler.getCraterAtPosition(craterX, craterZ)
-        if (crater) {
-          if (ventPlaced) {
-            meteorHandler.unregisterMeteoriteRockFromCrater(crater)
-            meteorHandler.removeCrater(crater.id)
-          }
-          if (ventPlaced && discovery.ventType) {
-            useVentArchive().archiveVent({
-              siteId: ctx.siteId,
-              ventType: discovery.ventType,
-              placedSol: refs.marsSol.value,
-              x: craterX,
-              z: craterZ,
-            })
-          }
+      onCraterDiscovery: ({ discovery, ventPlaced, crater }) => {
+        if (ventPlaced) {
+          meteorHandler.unregisterMeteoriteRockFromCrater(crater)
+          meteorHandler.removeCrater(crater.id)
+        }
+        if (ventPlaced && discovery.ventType) {
+          useVentArchive().archiveVent({
+            siteId: ctx.siteId,
+            ventType: discovery.ventType,
+            placedSol: refs.marsSol.value,
+            x: crater.x,
+            z: crater.z,
+          })
         }
       },
       getVentsForSite: (siteId) => useVentArchive().getVentsForSite(siteId),
