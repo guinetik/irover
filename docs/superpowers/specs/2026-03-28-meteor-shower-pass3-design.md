@@ -77,9 +77,10 @@ If the player already has an active vent of the discovered type (e.g., already h
 When a placeable vent is discovered AND no active vent of that type exists:
 
 1. **Meteorite consumed** — rock mesh removed from crater via `unregisterMeteoriteRock`
-2. **Vent placed** — DAN water drill GLB model placed at crater center (same pattern as existing `dan.glb` drill marker). Reuse the existing drill marker template/loading.
-3. **Crater flagged** — `crater.hasVent = true`, `crater.ventType = 'co2' | 'methane'`
-4. **Vent craters survive storms** — Pass 1's storm cleanup checks `hasVent` and skips flagged craters
+2. **Crater reverted** — terrain deformation reverted to flat ground (same as storm cleanup). The fracking process pounds the ground flat to expose the vent.
+3. **Vent placed** — DAN water drill GLB model placed at the original crater center on flat terrain (same pattern as existing `dan.glb` drill marker). Reuse the existing drill marker template/loading.
+4. **Toast** — "PNEUMATIC FRACTURING COMPLETE — [vent type] VENT EXPOSED"
+5. **Crater removed from tracking** — no longer a crater, just a vent site. Storms have nothing to clean up (crater is gone, vent is permanent).
 
 ### Vent Types
 
@@ -99,13 +100,13 @@ interface ArchivedVent {
   siteId: string
   ventType: 'co2' | 'methane'
   placedSol: number
-  craterX: number
-  craterZ: number
-  craterRadius: number
+  /** World position where the vent GLB should be placed on restore. */
+  x: number
+  z: number
 }
 ```
 
-On site load, persisted vents are restored: crater deformation re-applied, vent GLB placed, crater flagged as `hasVent`.
+On site load, persisted vents are restored: vent GLB placed at stored coordinates on flat terrain. No crater re-deformation needed — the fracking process already flattened the ground before the vent was placed.
 
 ---
 
@@ -114,11 +115,11 @@ On site load, persisted vents are restored: crater deformation re-applied, vent 
 Pass 1 storms clear all meteorite rocks. Pass 2 added crater deformation. Now with vents:
 
 - **No vent:** Storm clears meteorite rock + reverts crater heightmap deformation
-- **Has vent:** Storm skips this crater entirely — vent stays, crater stays, deformation stays
+- **Vent site:** Not a crater anymore (fracking flattened it). Storm has nothing to clean up. Vent persists permanently.
 
 ### Crater Deformation Revert
 
-`deformCrater` from Pass 2 currently doesn't store revert data. Extend to return/store the original heightmap values so `revertCrater` can restore them. Add `revertCrater(craterData)` to `ITerrainGenerator`.
+`deformCrater` from Pass 2 currently doesn't store revert data. Extend to return/store the original heightmap values so `revertCrater` can restore them. Add `revertCrater(craterData)` to `ITerrainGenerator`. Used by both storm cleanup (non-vent craters) and vent placement (fracking flattens the crater before placing the buildable).
 
 ---
 
