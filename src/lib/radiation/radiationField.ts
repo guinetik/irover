@@ -288,7 +288,9 @@ export function findSafeZoneCentroids(
  * Find the highest-radiation cell in the field that is at least `minDist`
  * world units from the given position and meets the `hazardousThreshold`.
  *
- * Returns world coordinates + field value, or null if no hazardous cell exists.
+ * Two-pass: first pass respects `minDist`; if nothing qualifies, second pass
+ * picks the highest hazardous cell regardless of distance. Returns null only
+ * when no cell in the entire field meets the threshold.
  */
 export function findHazardousCell(
   field: Float32Array,
@@ -307,11 +309,22 @@ export function findHazardousCell(
   let bestValue = -1
   let bestGx = -1
   let bestGz = -1
+  // Fallback: highest hazardous cell ignoring distance
+  let fallbackValue = -1
+  let fallbackGx = -1
+  let fallbackGz = -1
 
   for (let gz = 0; gz < gridSize; gz++) {
     for (let gx = 0; gx < gridSize; gx++) {
       const v = field[gz * gridSize + gx]
       if (v < hazardousThreshold) continue
+
+      // Track fallback (any hazardous cell, no distance constraint)
+      if (v > fallbackValue) {
+        fallbackValue = v
+        fallbackGx = gx
+        fallbackGz = gz
+      }
 
       const dx = gx - roverGx
       const dz = gz - roverGz
@@ -326,11 +339,16 @@ export function findHazardousCell(
     }
   }
 
-  if (bestGx < 0) return null
+  // Use distance-respecting result; fall back to any hazardous cell
+  const finalGx = bestGx >= 0 ? bestGx : fallbackGx
+  const finalGz = bestGx >= 0 ? bestGz : fallbackGz
+  const finalValue = bestGx >= 0 ? bestValue : fallbackValue
+
+  if (finalGx < 0) return null
 
   return {
-    x: (bestGx / gMax - 0.5) * terrainScale,
-    z: (bestGz / gMax - 0.5) * terrainScale,
-    value: bestValue,
+    x: (finalGx / gMax - 0.5) * terrainScale,
+    z: (finalGz / gMax - 0.5) * terrainScale,
+    value: finalValue,
   }
 }

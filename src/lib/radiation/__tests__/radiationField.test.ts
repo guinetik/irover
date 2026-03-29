@@ -240,20 +240,25 @@ describe('findHazardousCell', () => {
     expect(result).toBeNull()
   })
 
-  it('skips cells closer than minDist', () => {
+  it('falls back to closest hazardous cell when all are within minDist', () => {
+    // Only hazardous cell is near the rover — minDist would exclude it,
+    // but the two-pass fallback should still return it.
     const field = new Float32Array(GRID * GRID).fill(0.10)
     const centerIdx = 4 * GRID + 4
     field[centerIdx] = 0.95
     const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 80, 0.60)
-    expect(result).toBeNull()
-  })
-
-  it('falls back to highest hazardous cell if none meet minDist', () => {
-    const field = new Float32Array(GRID * GRID).fill(0.10)
-    const centerIdx = 4 * GRID + 4
-    field[centerIdx] = 0.95
-    const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 0, 0.60)
     expect(result).not.toBeNull()
     expect(result!.value).toBeCloseTo(0.95, 2)
+  })
+
+  it('prefers distant cell over closer one when both are hazardous', () => {
+    // Close cell and far cell both hazardous; distant one is lower but meets minDist
+    const field = new Float32Array(GRID * GRID).fill(0.10)
+    field[4 * GRID + 4] = 0.95  // near rover (grid center)
+    field[7 * GRID + 7] = 0.70  // far from rover
+    // minDist=60 excludes center cell; should pick the far one
+    const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 60, 0.60)
+    expect(result).not.toBeNull()
+    expect(result!.value).toBeCloseTo(0.70, 2)
   })
 })

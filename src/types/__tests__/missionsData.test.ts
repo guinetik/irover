@@ -5,6 +5,7 @@ import catalogJson from '../../../public/data/missions.json'
 const VALID_OBJECTIVE_TYPES: ObjectiveType[] = [
   'go-to', 'gather', 'sam-experiment', 'apxs',
   'mastcam-tag', 'chemcam', 'dan-activate', 'dan-scan', 'dan-prospect', 'transmit', 'rtg-overdrive', 'rtg-shunt', 'rems-activate',
+  'rad-activate', 'rad-decode',
   'use-repair-kit',
   'install-upgrade',
   'power-boot', 'ui-inspect', 'avionics-test',
