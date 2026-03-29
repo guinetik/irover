@@ -1,21 +1,24 @@
 // src/instruments/InstrumentFactory.ts
 import type { InstrumentDef } from '@/types/instruments'
 import type { InstrumentController } from '@/three/instruments/InstrumentController'
-import { CONTROLLER_REGISTRY } from './InstrumentRegistry'
+import { CONTROLLER_REGISTRY, TICK_HANDLER_REGISTRY } from './InstrumentRegistry'
+
+export interface TickHandler {
+  tick(delta: number): void
+  dispose(): void
+}
 
 export interface InstrumentTuple {
   def: InstrumentDef
   controller: InstrumentController
-  /** Null in Plan A — populated by Plan B when the live system is wired. */
-  tickHandler: null
+  tickHandler: TickHandler | null
 }
 
 /**
  * Creates an InstrumentTuple from a definition.
- * Throws if the controllerType is not registered — fail fast during development.
- *
- * Plan A: tickHandler is always null.
- * Plan B: this function will accept a context arg and resolve tickHandler from TICK_HANDLER_REGISTRY.
+ * Resolves controllerType from CONTROLLER_REGISTRY (required — throws if missing).
+ * Resolves tickHandlerType from TICK_HANDLER_REGISTRY (optional — null if missing).
+ * Sets controller.tier from def.tier (single source of truth).
  */
 export function createInstrumentTuple(def: InstrumentDef): InstrumentTuple {
   const Ctor = CONTROLLER_REGISTRY[def.controllerType]
@@ -27,5 +30,9 @@ export function createInstrumentTuple(def: InstrumentDef): InstrumentTuple {
   }
   const controller = new Ctor()
   controller.tier = def.tier
-  return { def, controller, tickHandler: null }
+
+  const handlerFactory = TICK_HANDLER_REGISTRY[def.tickHandlerType]
+  const tickHandler = handlerFactory ? handlerFactory(controller) : null
+
+  return { def, controller, tickHandler }
 }
