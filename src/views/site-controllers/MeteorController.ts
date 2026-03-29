@@ -166,9 +166,10 @@ export function createMeteorController(
 
       renderer.onImpact(fall, roverPos ?? new THREE.Vector3())
 
-      // Terrain crater deformation
+      // Terrain crater deformation — nuke any rocks in the blast zone first
       if (terrain) {
         const craterParams = rollCraterParams()
+        rockFactory.removeRocksInRadius(fall.targetX, fall.targetZ, craterParams.radius * 1.3, terrainGroup)
         const deformData = terrain.deformCrater(fall.targetX, fall.targetZ, craterParams.radius, craterParams.depth, craterParams.rimHeight)
         mesh.position.y = terrain.terrainHeightAt(fall.targetX, fall.targetZ)
         craters.push({

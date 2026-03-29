@@ -419,6 +419,36 @@ export class RockFactory {
     this.refreshSmallRocks()
   }
 
+  /**
+   * Removes all rocks whose center falls within `radius` of (x, z).
+   * Cleans up meshes, colliders, and spatial grid. Used by meteor impacts
+   * to nuke terrain rocks in the blast zone.
+   */
+  removeRocksInRadius(x: number, z: number, radius: number, group: THREE.Group): void {
+    const r2 = radius * radius
+    // Walk backwards so splice indices stay valid
+    for (let i = this.rocks.length - 1; i >= 0; i--) {
+      const rock = this.rocks[i]
+      const dx = rock.position.x - x
+      const dz = rock.position.z - z
+      if (dx * dx + dz * dz > r2) continue
+      // Remove from scene
+      group.remove(rock)
+      if (rock.userData._depletedMat) {
+        ;(rock.material as THREE.Material).dispose()
+      }
+      // Remove from rocks + colliders (parallel arrays)
+      this.rocks.splice(i, 1)
+      this.colliders.splice(i, 1)
+    }
+    // Rebuild spatial grid from scratch (simpler than incremental removal)
+    this.grid.clear()
+    for (let i = 0; i < this.colliders.length; i++) {
+      this.gridInsert(i)
+    }
+    this.refreshSmallRocks()
+  }
+
   /** Removes all spawned rocks from the group and resets state. */
   clear(group: THREE.Group): void {
     for (const r of this.rocks) {
