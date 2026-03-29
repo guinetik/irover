@@ -5,6 +5,7 @@ import {
   generateRadiationField,
   sampleRadiationAt,
   radiationToDoseRate,
+  findHazardousCell,
 } from '../radiationField'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -206,5 +207,53 @@ describe('radiationToDoseRate', () => {
 
   it('is linear (monotonically increasing)', () => {
     expect(radiationToDoseRate(0.25)).toBeLessThan(radiationToDoseRate(0.75))
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// findHazardousCell
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('findHazardousCell', () => {
+  const GRID = 8
+  const TERRAIN_SCALE = 100
+
+  function makeFieldWithHotspot(): Float32Array {
+    // Mostly safe (0.10), one hazardous cluster at grid [6,6] and [7,7]
+    const f = new Float32Array(GRID * GRID).fill(0.10)
+    f[6 * GRID + 6] = 0.90
+    f[7 * GRID + 7] = 0.85
+    f[6 * GRID + 7] = 0.80
+    return f
+  }
+
+  it('returns the highest hazardous cell beyond minDist', () => {
+    const field = makeFieldWithHotspot()
+    const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 10, 0.60)
+    expect(result).not.toBeNull()
+    expect(result!.value).toBeCloseTo(0.90, 2)
+  })
+
+  it('returns null when no cell meets the hazardous threshold', () => {
+    const field = new Float32Array(GRID * GRID).fill(0.10)
+    const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 10, 0.60)
+    expect(result).toBeNull()
+  })
+
+  it('skips cells closer than minDist', () => {
+    const field = new Float32Array(GRID * GRID).fill(0.10)
+    const centerIdx = 4 * GRID + 4
+    field[centerIdx] = 0.95
+    const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 80, 0.60)
+    expect(result).toBeNull()
+  })
+
+  it('falls back to highest hazardous cell if none meet minDist', () => {
+    const field = new Float32Array(GRID * GRID).fill(0.10)
+    const centerIdx = 4 * GRID + 4
+    field[centerIdx] = 0.95
+    const result = findHazardousCell(field, GRID, TERRAIN_SCALE, 0, 0, 0, 0.60)
+    expect(result).not.toBeNull()
+    expect(result!.value).toBeCloseTo(0.95, 2)
   })
 })

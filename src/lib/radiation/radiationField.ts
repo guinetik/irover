@@ -279,3 +279,58 @@ export function findSafeZoneCentroids(
 
   return centroids
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hazardous Cell Finder (for mission POI placement)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Find the highest-radiation cell in the field that is at least `minDist`
+ * world units from the given position and meets the `hazardousThreshold`.
+ *
+ * Returns world coordinates + field value, or null if no hazardous cell exists.
+ */
+export function findHazardousCell(
+  field: Float32Array,
+  gridSize: number,
+  terrainScale: number,
+  roverX: number,
+  roverZ: number,
+  minDist: number,
+  hazardousThreshold: number,
+): { x: number; z: number; value: number } | null {
+  const gMax = gridSize - 1
+  const roverGx = (roverX / terrainScale + 0.5) * gMax
+  const roverGz = (roverZ / terrainScale + 0.5) * gMax
+  const minDistGrid = (minDist / terrainScale) * gMax
+
+  let bestValue = -1
+  let bestGx = -1
+  let bestGz = -1
+
+  for (let gz = 0; gz < gridSize; gz++) {
+    for (let gx = 0; gx < gridSize; gx++) {
+      const v = field[gz * gridSize + gx]
+      if (v < hazardousThreshold) continue
+
+      const dx = gx - roverGx
+      const dz = gz - roverGz
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      if (dist < minDistGrid) continue
+
+      if (v > bestValue) {
+        bestValue = v
+        bestGx = gx
+        bestGz = gz
+      }
+    }
+  }
+
+  if (bestGx < 0) return null
+
+  return {
+    x: (bestGx / gMax - 0.5) * terrainScale,
+    z: (bestGz / gMax - 0.5) * terrainScale,
+    value: bestValue,
+  }
+}
