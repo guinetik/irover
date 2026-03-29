@@ -5,6 +5,25 @@ import type { InstrumentDef } from '../instruments'
 
 const instruments = instrumentsRaw.instruments as InstrumentDef[]
 
+// All valid ProfileModifiers keys — must stay in sync with usePlayerProfile.ts
+const VALID_MODIFIER_KEYS = [
+  'movementSpeed',
+  'analysisSpeed',
+  'powerConsumption',
+  'heaterDraw',
+  'spYield',
+  'inventorySpace',
+  'instrumentAccuracy',
+  'repairCost',
+  'upgradeCost',
+  'weatherWarning',
+  'batteryCapacity',
+  'danScanRadius',
+  'buildSpeed',
+  'structureDurability',
+  'radiationTolerance',
+]
+
 describe('instruments.json', () => {
   it('has at least one instrument', () => {
     expect(instruments.length).toBeGreaterThan(0)
@@ -57,6 +76,40 @@ describe('instruments.json', () => {
       for (const img of inst.help.images) {
         expect(img.src, `${inst.id} image missing src`).toBeTruthy()
         expect(img.alt, `${inst.id} image missing alt`).toBeTruthy()
+      }
+    }
+  })
+
+  it('every instrument has a stats array', () => {
+    for (const inst of instruments) {
+      expect(Array.isArray(inst.stats), `${inst.id} missing stats array`).toBe(true)
+    }
+  })
+
+  it('every stat has a valid key and non-empty label', () => {
+    for (const inst of instruments) {
+      for (const stat of inst.stats) {
+        expect(stat.key, `${inst.id} stat missing key`).toBeTruthy()
+        expect(stat.label, `${inst.id} stat missing label`).toBeTruthy()
+        expect(
+          VALID_MODIFIER_KEYS,
+          `${inst.id} stat.key "${stat.key}" is not a valid ProfileModifiers key`,
+        ).toContain(stat.key)
+      }
+    }
+  })
+
+  it('provides entries have valid key, numeric value, and non-empty label', () => {
+    for (const inst of instruments) {
+      if (!inst.provides) continue
+      for (const bonus of inst.provides) {
+        expect(bonus.key, `${inst.id} provides entry missing key`).toBeTruthy()
+        expect(
+          VALID_MODIFIER_KEYS,
+          `${inst.id} provides key "${bonus.key}" is not a valid ProfileModifiers key`,
+        ).toContain(bonus.key)
+        expect(typeof bonus.value, `${inst.id} provides entry value must be number`).toBe('number')
+        expect(bonus.label, `${inst.id} provides entry missing label`).toBeTruthy()
       }
     }
   })
