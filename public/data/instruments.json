@@ -34,7 +34,11 @@
             "alt": "MastCam view showing a rock target with scan progress bar and the floating tag label after completion"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "analysisSpeed", "label": "SCAN SPEED" },
+        { "key": "instrumentAccuracy", "label": "ACCURACY" }
+      ]
     },
     {
       "id": "chemcam",
@@ -69,7 +73,12 @@
             "alt": "ChemCam spectrum readout panel showing elemental peaks and the acknowledge button"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "analysisSpeed", "label": "ANALYSIS SPEED" },
+        { "key": "instrumentAccuracy", "label": "ACCURACY" },
+        { "key": "powerConsumption", "label": "POWER DRAW" }
+      ]
     },
     {
       "id": "drill",
@@ -104,7 +113,12 @@
             "alt": "Drill arm extended toward a rock target with the drill progress indicator active"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "analysisSpeed", "label": "DRILL SPEED" },
+        { "key": "instrumentAccuracy", "label": "ACCURACY" },
+        { "key": "powerConsumption", "label": "POWER DRAW" }
+      ]
     },
     {
       "id": "apxs",
@@ -139,7 +153,11 @@
             "alt": "APXS instrument panel showing the contact calibration prompt and integration progress bar"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "analysisSpeed", "label": "ANALYSIS SPEED" },
+        { "key": "instrumentAccuracy", "label": "ACCURACY" }
+      ]
     },
     {
       "id": "dan",
@@ -178,7 +196,13 @@
             "alt": "DAN prospecting phase active — rover stationary, integration timer running"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "analysisSpeed", "label": "SCAN SPEED" },
+        { "key": "instrumentAccuracy", "label": "ACCURACY" },
+        { "key": "danScanRadius", "label": "SCAN RADIUS" },
+        { "key": "powerConsumption", "label": "POWER DRAW" }
+      ]
     },
     {
       "id": "sam",
@@ -213,7 +237,12 @@
             "alt": "SAM instrument panel showing experiment mode selection and the active experiment progress bar"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "analysisSpeed", "label": "ANALYSIS SPEED" },
+        { "key": "instrumentAccuracy", "label": "ACCURACY" },
+        { "key": "powerConsumption", "label": "POWER DRAW" }
+      ]
     },
     {
       "id": "rtg",
@@ -248,7 +277,10 @@
             "alt": "RTG instrument panel showing durability bar, OVERDRIVE and POWER SHUNT buttons"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "powerConsumption", "label": "POWER OUTPUT" }
+      ]
     },
     {
       "id": "rems",
@@ -283,7 +315,13 @@
             "alt": "REMS panel showing live pressure, temperature, wind, and UV readouts with surveying status active"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "spYield", "label": "SP YIELD" }
+      ],
+      "provides": [
+        { "key": "spYield", "value": 0.05, "label": "REMS ACTIVE" }
+      ]
     },
     {
       "id": "rad",
@@ -318,7 +356,10 @@
             "alt": "RAD panel showing current radiation level, cumulative dose, and zone indicator"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "radiationTolerance", "label": "TOLERANCE" }
+      ]
     },
     {
       "id": "heater",
@@ -353,7 +394,10 @@
             "alt": "Heater panel showing internal temperature, ambient temperature, heater draw, and thermal zone status"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "heaterDraw", "label": "HEAT DRAW" }
+      ]
     },
     {
       "id": "lga",
@@ -388,7 +432,8 @@
             "alt": "LGA panel showing the message inbox with an unread mission assignment"
           }
         ]
-      }
+      },
+      "stats": []
     },
     {
       "id": "uhf",
@@ -423,7 +468,8 @@
             "alt": "UHF panel showing orbital pass schedule, transmission queue length, and active uplink progress"
           }
         ]
-      }
+      },
+      "stats": []
     },
     {
       "id": "wheels",
@@ -458,7 +504,10 @@
             "alt": "Wheels panel showing drive speed, wheel condition, and active speed modifiers"
           }
         ]
-      }
+      },
+      "stats": [
+        { "key": "movementSpeed", "label": "DRIVE SPEED" }
+      ]
     },
     {
       "id": "mic",
@@ -488,7 +537,8 @@
           }
         ],
         "images": []
-      }
+      },
+      "stats": []
     }
   ]
 }
