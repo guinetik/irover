@@ -11,12 +11,48 @@
       "unlocks": ["mic"],
       "chain": "m01-triangulate",
       "objectives": [
-        { "id": "chk-1", "type": "power-boot", "label": "Boot power systems", "params": {}, "sequential": true },
-        { "id": "chk-2", "type": "ui-inspect", "label": "Inspect rover profile [0]", "params": { "target": "profile" }, "sequential": true },
-        { "id": "chk-3", "type": "ui-inspect", "label": "Inspect wheels [B]", "params": { "target": "wheels" }, "sequential": true },
-        { "id": "chk-4", "type": "avionics-test", "label": "Test avionics — move 5 m", "params": { "distanceM": 5 }, "sequential": true },
-        { "id": "chk-5", "type": "ui-inspect", "label": "Inspect heater [H]", "params": { "target": "heater" }, "sequential": true },
-        { "id": "chk-6", "type": "ui-inspect", "label": "Inspect LGA [R] — review transmit", "params": { "target": "lga" }, "sequential": true }
+        {
+          "id": "chk-1",
+          "type": "power-boot",
+          "label": "Boot power systems",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "chk-2",
+          "type": "ui-inspect",
+          "label": "Inspect rover profile [0]",
+          "params": { "target": "profile" },
+          "sequential": true
+        },
+        {
+          "id": "chk-3",
+          "type": "ui-inspect",
+          "label": "Inspect wheels [B]",
+          "params": { "target": "wheels" },
+          "sequential": true
+        },
+        {
+          "id": "chk-4",
+          "type": "avionics-test",
+          "label": "Test avionics — move 5 m",
+          "params": { "distanceM": 5 },
+          "sequential": true
+        },
+        {
+          "id": "chk-5",
+          "type": "ui-inspect",
+          "label": "Inspect heater [H]",
+          "params": { "target": "heater" },
+          "sequential": true
+        },
+        {
+          "id": "chk-6",
+          "type": "ui-inspect",
+          "label": "Inspect LGA [R] — review transmit",
+          "params": { "target": "lga" },
+          "sequential": true
+        }
       ]
     },
     {
@@ -29,9 +65,27 @@
       "unlocks": ["rems"],
       "chain": "m03-rems",
       "objectives": [
-        { "id": "tri-1", "type": "go-to", "label": "Stake Alpha — confirm ping", "params": { "poiId": "tri-alpha" }, "sequential": false },
-        { "id": "tri-2", "type": "go-to", "label": "Stake Beta — confirm ping", "params": { "poiId": "tri-beta" }, "sequential": false },
-        { "id": "tri-3", "type": "go-to", "label": "Stake Gamma — confirm ping", "params": { "poiId": "tri-gamma" }, "sequential": false }
+        {
+          "id": "tri-1",
+          "type": "go-to",
+          "label": "Stake Alpha — confirm ping",
+          "params": { "poiId": "tri-alpha" },
+          "sequential": false
+        },
+        {
+          "id": "tri-2",
+          "type": "go-to",
+          "label": "Stake Beta — confirm ping",
+          "params": { "poiId": "tri-beta" },
+          "sequential": false
+        },
+        {
+          "id": "tri-3",
+          "type": "go-to",
+          "label": "Stake Gamma — confirm ping",
+          "params": { "poiId": "tri-gamma" },
+          "sequential": false
+        }
       ]
     },
     {
@@ -44,7 +98,13 @@
       "unlocks": ["mastcam"],
       "chain": "m05-mastcam",
       "objectives": [
-        { "id": "repair-1", "type": "use-repair-kit", "label": "RTG integrity within spec (field repair)", "params": { }, "sequential": false }
+        {
+          "id": "repair-1",
+          "type": "use-repair-kit",
+          "label": "RTG integrity within spec (field repair)",
+          "params": {},
+          "sequential": false
+        }
       ]
     },
     {
@@ -57,7 +117,13 @@
       "unlocks": ["rtg"],
       "chain": "m04-rtg",
       "objectives": [
-        { "id": "rems-1", "type": "rems-activate", "label": "REMS online — continuous telemetry", "params": {}, "sequential": false }
+        {
+          "id": "rems-1",
+          "type": "rems-activate",
+          "label": "REMS online — continuous telemetry",
+          "params": {},
+          "sequential": false
+        }
       ]
     },
     {
@@ -70,121 +136,341 @@
       "unlocks": [],
       "chain": "m02-repair",
       "objectives": [
-        { "id": "rtg-1", "type": "go-to", "label": "Supply cache — retrieve DAN extractor", "params": { "poiId": "supply-cache-01", "dist": 380 }, "sequential": true },
-        { "id": "rtg-2", "type": "gather", "label": "Collect DAN extractor unit (inventory)", "params": { "itemId": "dan-extractor", "quantity": 1 }, "sequential": true },
-        { "id": "rtg-3", "type": "rtg-overdrive", "label": "Overdrive test — log complete", "params": {}, "sequential": true },
-        { "id": "rtg-4", "type": "go-to", "label": "Outcrop rendezvous (return to rocks)", "params": { "poiId": "rock-outcrop-01", "nearRocks": true }, "sequential": true }
+        {
+          "id": "rtg-1",
+          "type": "go-to",
+          "label": "Supply cache — retrieve DAN extractor",
+          "params": { "poiId": "supply-cache-01", "dist": 380 },
+          "sequential": true
+        },
+        {
+          "id": "rtg-2",
+          "type": "gather",
+          "label": "Collect DAN extractor unit (inventory)",
+          "params": { "itemId": "dan-extractor", "quantity": 1 },
+          "sequential": true
+        },
+        {
+          "id": "rtg-3",
+          "type": "rtg-overdrive",
+          "label": "Overdrive test — log complete",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "rtg-4",
+          "type": "go-to",
+          "label": "Outcrop rendezvous (return to rocks)",
+          "params": { "poiId": "rock-outcrop-01", "nearRocks": true },
+          "sequential": true
+        }
       ]
     },
     {
       "id": "m05-mastcam",
       "name": "MastCam: Survey Baseline",
       "patron": null,
-      "description": "Your cameras can do more than follow you around. Time to look through the rover's own eyes.",
+      "description": "The rover has a camera system on the mast. It sees more than rock and sky. Activate it.",
       "briefing": "<p>Until now, you've been watching the rover from the outside. Your view comes from a companion micro-drone: a small autonomous camera that follows the vehicle and transmits a third-person feed. It's efficient, saves RTG power, and gives you good situational awareness. But it can't do science.</p><p>MastCam can. When you activate MastCam, your feed switches to the rover's onboard camera system, mounted on the instrument mast. You'll see the world through the rover's own eyes: a processed survey overlay that strips the terrain to wireframe and highlights rocks in color by mineral type. Basalt, hematite, olivine, sulfate, mudstone: each one lights up differently. This is how you find targets worth investigating.</p><p>Use <b>A/D</b> to pan the mast, <b>W/S</b> to tilt, <b>scroll</b> to zoom. Press <b>Q</b> to cycle the rock filter: isolate a single mineral type or show everything at once. The HUD bar above shows your heading, elevation angle, and field of view.</p><p>When you see a rock worth tagging, aim at it and hold <b>E</b>. The scan takes a few seconds. When it completes, a marker appears above the rock confirming it's in your survey registry. Tagged rocks produce better science and better yields from every instrument that touches them. You can work with untagged rocks, but you'll get less from them.</p><p>MastCam has a survey range. Rocks outside it won't appear in the overlay. If you're not seeing anything, drive closer or zoom in. Tag at least three rocks to complete this baseline.</p>",
       "reward": { "sp": 35 },
       "unlocks": ["chemcam"],
       "chain": "m06-chemcam",
       "objectives": [
-        { "id": "mc-1", "type": "mastcam-tag", "label": "Three rock tags — classifier verification", "params": { "rockType": "any", "count": 3 }, "sequential": false }
+        {
+          "id": "mc-1",
+          "type": "mastcam-tag",
+          "label": "Three rock tags — classifier verification",
+          "params": { "rockType": "any", "count": 3 },
+          "sequential": false
+        }
       ]
     },
     {
       "id": "m06-chemcam",
       "name": "ChemCam — LIBS Verification",
       "patron": null,
-      "description": "Laser spectroscopy checkout. The laser is real; the permission model is mostly lawyers.",
+      "description": "There's a laser on the mast that vaporizes rock and reads the plasma. Point it at something. For Science.",
       "briefing": "<p>ChemCam is a laser spectrometer mounted on the same mast as MastCam. It fires a focused infrared pulse at a rock target, vaporizes a pinpoint of surface material, and reads the plasma emission to identify elemental composition. No contact required. Same controls as MastCam: <b>A/D</b> pan, <b>W/S</b> tilt, <b>scroll</b> to zoom.</p><p>ChemCam only fires on rocks you've already tagged with MastCam. Aim at a tagged target and <b>hold E</b> to begin the LIBS pulse train. Keep holding. The laser fires for several seconds, then the spectrometer integrates the signal. If you release E during the pulse, the shot aborts and your round is refunded. Once integration completes, a spectrum readout appears. Press <b>SEE RESULTS</b> to review it.</p><p>You have <b>10 shots</b> before the laser needs to cool down. Each shot also draws heavy power. Pick your targets: not every rock is worth a shot. The rarer the mineral, the more valuable the spectrum.</p><p>One more thing. ChemCam's spectral accuracy improves as you accumulate science points. Early spectra will show fewer labeled peaks. As your SP grows, the calibration curve fills in and your readings get sharper. The instrument gets better the more science you do. Log one spectrum to complete this verification.</p>",
-      "reward": { "sp": 40 },
-      "unlocks": ["drill"],
-      "chain": "m07-drill",
-      "objectives": [
-        { "id": "cc-1", "type": "chemcam", "label": "LIBS analysis — one logged spectrum", "params": { "rockType": "any" }, "sequential": false }
-      ]
-    },
-    {
-      "id": "m07-drill",
-      "name": "Drill — Sample + Power Recovery",
-      "patron": null,
-      "description": "Extract a core, then demonstrate bus recovery. Two line items, one form — efficiency.",
-      "briefing": "<p>Drill certification requires one core sample extracted, followed by a successful power shunt logged. Drilling is the highest power draw operation on this vehicle — a full drill cycle will leave the battery significantly depleted.</p><p>Position the rover near a rock target and engage the drill. The sample is collected and added to your inventory automatically when drilling completes — you do not need to pick anything up manually.</p><p>After drilling, open the RTG panel and activate the <b>power shunt</b>. The shunt immediately refills the battery. However, while the shunt cycle is active, <b>the drive system disengages — you cannot move the rover.</b> Hold position and wait for the cycle to finish. This is the trade: full battery recovery in exchange for a period of immobility. Log it when complete.</p><p>Use the shunt whenever power is critically low and you can afford to stop moving. Do not use it mid-transit.</p>",
       "reward": { "sp": 40 },
       "unlocks": ["apxs"],
       "chain": "m08-apxs",
       "objectives": [
-        { "id": "dr-1", "type": "gather", "label": "Drilled sample — bag and tag", "params": { "itemId": "rock-sample", "quantity": 1 }, "sequential": true },
-        { "id": "dr-2", "type": "rtg-shunt", "label": "Power shunt — recovery logged", "params": {}, "sequential": true }
+        {
+          "id": "cc-1",
+          "type": "chemcam",
+          "label": "LIBS analysis — one logged spectrum",
+          "params": { "rockType": "any" },
+          "sequential": false
+        }
       ]
     },
     {
       "id": "m08-apxs",
       "name": "APXS — Contact Science",
       "patron": null,
-      "description": "Elemental composition via contact pass. Slower than LIBS. More paperwork per joule.",
-      "briefing": "<p>APXS performs contact elemental analysis — the sensor head is placed against the rock surface and counts alpha particle and X-ray returns over an integration period. Unlike ChemCam, it requires close physical proximity to the target, not standoff distance. One complete pass satisfies certification.</p><p>Drive close to a rock target and deploy APXS from the instrument panel. Once contact is initiated, a brief calibration sequence begins — follow the on-screen prompts. The integration runs automatically after calibration and completes on its own. Do not move the rover while APXS is integrating. Results are queued for transmission automatically when the pass finishes.</p><p>APXS is slower than LIBS but more accurate for light-element composition. The two instruments are complementary — a rock analyzed by both yields significantly more science value than one analyzed by only one of them.</p>",
+      "description": "Alpha particles in, X-rays out. Press the sensor against a rock and read what fluoresces.",
+      "briefing": "<p>APXS is an Alpha Particle X-Ray Spectrometer. It bombards a rock surface with alpha particles. When those particles hit atoms in the rock, the atoms fluoresce: they emit X-ray photons at energies unique to each element. Iron fluoresces differently from silicon, calcium differently from sulfur. Catch those photons with a detector and you get a full elemental composition by percentage.</p><p>The physics hasn't changed in 175 years. Alpha decay is alpha decay. A sensor head pressed against Martian rock in 2187 reads the same fluorescence it would have in 2012. That's why this instrument survived the refurbishment: it doesn't need firmware updates. It needs contact.</p><p>APXS is mounted on the rover's robotic arm. This is your first time using the arm: <b>A/D</b> to swing, <b>W/S</b> to extend. Position the sensor head against a rock and press <b>E</b> to begin the contact pass. The turret rotates automatically to bring APXS forward. Do not move the rover while the analysis is running.</p><p>When the pass begins, your display shows the analysis in real time. Photons scatter outward from the rock surface, each one color-coded by element. Move your detector to intercept them. The spectrum panel at the bottom tracks your measured composition against the true values. The closer the match, the better your accuracy. The source has limited power: catch what matters before it runs out.</p><p>Pay attention to what APXS tells you about a rock's makeup. Carbonate and sulfate enrichment on the surface can indicate what's happening beneath it. Rock composition is not just science for the archive. It's information about the ground you're standing on.</p>",
       "reward": { "sp": 45 },
+      "unlocks": ["drill"],
+      "chain": "m07-drill",
+      "objectives": [
+        {
+          "id": "apxs-1",
+          "type": "apxs",
+          "label": "APXS contact analysis — complete",
+          "params": { "rockType": "any" },
+          "sequential": false
+        }
+      ]
+    },
+    {
+      "id": "m07-drill",
+      "name": "Drill — Sample + Power Recovery",
+      "patron": null,
+      "description": "Full science pipeline complete on target rock. Laser drill armed. Extract the core.",
+      "briefing": "<p>You've tagged this rock with MastCam, analyzed its spectrum with ChemCam, and read its surface composition with APXS. You know what it's made of. Now extract the core.</p><p>The drill is mounted on the rover's robotic arm. Use <b>A/D</b> to swing the arm and <b>W/S</b> to extend it. A target dot appears on any rock in range: green means you can collect, red means your inventory is full. Aim the drill head at a rock and <b>hold E</b> to fire. It's a laser drill: sustained thermal ablation, not mechanical boring. Keep holding until the progress bar completes. Release early and the cycle cancels. When the sample is collected, the rock is consumed.</p><p>You can drill any rock, tagged or not. But the science you've already done on it matters. MastCam-tagged rocks drill faster. ChemCam and APXS analysis increase the sample weight and drop bonus trace elements. A rock that's been through the full pipeline: tag, spectrum, contact scan, then drill, gives you dramatically more than one you just walked up to and cut open. That's the workflow.</p><p>Drilling is the heaviest power draw on the vehicle. After your first core, your battery will be low. Open the RTG panel and activate the <b>power shunt</b>. The shunt dumps reserve energy directly into the battery, refilling it. The tradeoff: while the shunt runs, your drive system disengages. You cannot move. Wait for the cycle to complete, then carry on.</p><p>Use the shunt whenever power is critical and you can afford to sit still.</p>",
+      "reward": { "sp": 40 },
       "unlocks": ["dan"],
       "chain": "m09-dan",
       "objectives": [
-        { "id": "apxs-1", "type": "apxs", "label": "APXS contact analysis — complete", "params": { "rockType": "any" }, "sequential": false }
+        {
+          "id": "dr-1",
+          "type": "gather",
+          "label": "Drilled sample — bag and tag",
+          "params": { "itemId": "rock-sample", "quantity": 1 },
+          "sequential": true
+        },
+        {
+          "id": "dr-2",
+          "type": "rtg-shunt",
+          "label": "Power shunt — recovery logged",
+          "params": {},
+          "sequential": true
+        }
       ]
     },
+
     {
       "id": "m09-dan",
       "name": "DAN — Subsurface Baseline",
       "patron": null,
-      "description": "Neutron survey checkout. The detector doesn't care what it finds — it just counts what bounces back.",
-      "briefing": "<p>DAN fires neutrons into the subsurface and measures the return signal. Hydrogen — in ice or hydrated minerals — thermalises neutrons on contact, producing a spike in the return count. This is how you locate subsurface water on Mars.</p><p>Open the DAN instrument panel with <b>[5]</b> and activate it. The passive scan runs automatically while you drive — keep moving and watch the signal readout. When the return count spikes, <b>stop moving immediately.</b> Driving away from a signal resets the integration and you will need to relocate it.</p><p>With the rover stationary over the signal, hold the prospect action for four seconds to initiate. Once initiated, <b>the rover cannot move for the full duration of the prospecting cycle</b> — approximately two Mars hours. This is not optional. Attempting to drive cancels the prospect. Stay still and let the cycle complete.</p><p>When prospecting finishes, the result is logged to the science archive. Open the archive to review it and complete the mission.</p>",
+      "description": "Neutrons go down. Hydrogen slows them. Count what bounces back. Find the water.",
+      "briefing": "<p>DAN is a Dynamic Albedo of Neutrons detector. It fires high-energy neutrons straight down through the rover chassis into the ground. When those neutrons hit hydrogen atoms in the subsurface, they slow down: hydrogen thermalizes neutrons in a way nothing else does. DAN measures the return signal and counts what bounced back. A spike in thermalized neutron return means hydrogen. On Mars, hydrogen means water ice.</p><p>The original Curiosity carried this detector to measure hydrogen in the top meter of soil. The physics hasn't changed in 175 years and neither has the instrument. DAN finds the water. What you deploy at the site afterward is what's new: the extraction hardware from your orbital drop uses nanobot extractors to mine subsurface ice in small quantities. The rover detects. The buildable extracts.</p><p>Open the DAN panel with <b>[5]</b> and activate it. DAN runs passively in the background at 10 watts while you drive. Watch the signal readout. When the return count spikes, <b>stop immediately</b>. Driving away from a hydrogen signal resets the integration and you'll lose it.</p><p>When DAN detects a hit, you'll receive a notification. Press <b>[5]</b> to open the DAN panel and click the <b>PROSPECT</b> button while still inside the detection area. Once prospecting begins, the rover cannot move for approximately two Mars hours. The detector needs stability to resolve the signal at depth. Stay still and let it work.</p><p>If water is confirmed, the system will ask if you want to deploy your DAN extractor at the site. Deploying consumes the unit from your inventory. Check the reservoir quality reading before you commit. Not every water source is worth the hardware. A weak reservoir might not justify spending an extractor you could use on a richer site later. If the signal is inconclusive, the data still matters: each inconclusive reading refines DAN's calibration, making the next detection more likely.</p>",
       "reward": { "sp": 45 },
       "unlocks": ["sam"],
       "chain": "m10-sam",
       "objectives": [
-        { "id": "dan-1", "type": "ui-inspect", "label": "Inspect DAN instrument [5]", "params": { "target": "dan" }, "sequential": true },
-        { "id": "dan-2", "type": "dan-activate", "label": "Activate DAN — passive scan online", "params": {}, "sequential": true },
-        { "id": "dan-3", "type": "dan-scan", "label": "Drive until DAN registers a signal", "params": {}, "sequential": true },
-        { "id": "dan-4", "type": "dan-prospect", "label": "Prospect signal to completion", "params": { "count": 1 }, "sequential": true },
-        { "id": "dan-5", "type": "ui-inspect", "label": "Review results in science archive", "params": { "target": "dan-science" }, "sequential": true }
+        {
+          "id": "dan-1",
+          "type": "ui-inspect",
+          "label": "Inspect DAN instrument [5]",
+          "params": { "target": "dan" },
+          "sequential": true
+        },
+        {
+          "id": "dan-2",
+          "type": "dan-activate",
+          "label": "Activate DAN — passive scan online",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "dan-3",
+          "type": "dan-scan",
+          "label": "Drive until DAN registers a signal",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "dan-4",
+          "type": "dan-prospect",
+          "label": "Prospect signal to completion",
+          "params": { "count": 1 },
+          "sequential": true
+        },
+        {
+          "id": "dan-5",
+          "type": "ui-inspect",
+          "label": "Review results in science archive",
+          "params": { "target": "dan-science" },
+          "sequential": true
+        }
       ]
     },
     {
       "id": "m10-sam",
       "name": "SAM — Lab Checkout",
       "patron": null,
-      "description": "Onboard analytical lab: one full experiment cycle. After this, the oven stops being decorative.",
-      "briefing": "<p>SAM is the onboard analytical lab — gas chromatograph, mass spectrometer, tunable laser. It identifies organic compounds, measures isotope ratios, and characterizes sample composition at the molecular level. One complete experiment cycle is required for lab certification.</p><p>Open the SAM instrument panel. If you have a drill sample in inventory, it will be available to load — SAM pulls from inventory automatically. Select an experiment mode and confirm: pyrolysis targets organics and volatiles, wet chemistry targets soluble minerals, isotope analysis targets elemental ratios. Each mode answers a different question and has different rarity outcomes.</p><p><b>SAM draws approximately 25 watts while an experiment is running.</b> This is significant — monitor your power budget. The experiment runs in the background and completes on its own. Acknowledge the readout when it finishes to archive the result. One experiment runs at a time.</p>",
+      "description": "The onboard lab can heat a rock sample until it talks. Load one and run the oven.",
+      "briefing": "<p>SAM is the Sample Analysis at Mars instrument suite: gas chromatograph, mass spectrometer, and tunable laser spectrometer, all packed into the rover's belly. It is the most complex analytical tool on the vehicle. Everything else tells you what a rock looks like or what it's made of. SAM tells you what happened to it, what lived in it, and what it's hiding.</p><p>SAM consumes drill samples from your inventory. Open the SAM panel, load a sample, and select an experiment mode. Right now you have access to <b>pyrolysis</b>: the oven heats your sample in stages, and volatiles evaporate at different temperature thresholds. Higher temperatures release more tightly bound molecules. As you accumulate science points, additional modes will unlock: wet chemistry and isotope analysis. Each mode asks a different question and produces different results. For now, pyrolysis is your lab.</p><p>When the experiment begins, you're operating the oven directly. Your mouse controls the temperature. Four phases run in sequence, each with a target band that climbs higher. Keep the temperature trace inside the green zone. Quality drains when you drift outside it. If quality hits zero, the experiment fails and the sample is lost. Precision matters.</p><p>When the experiment completes, SAM reports a discovery and may produce byproducts: refined materials, trace elements, compounds. These are not waste. Collect everything. What SAM produces will matter more than you think.</p><p>Different rocks yield different results. Pay attention to which samples give you the best discoveries. Not every rock is worth an experiment. Run one full cycle to complete this checkout.</p>",
       "reward": { "sp": 50 },
+      "unlocks": ["rad"],
+      "chain": "m12-rad",
+      "objectives": [
+        {
+          "id": "sam-1",
+          "type": "sam-experiment",
+          "label": "SAM experiment — full cycle logged",
+          "params": { "mode": "any" },
+          "sequential": false
+        }
+      ]
+    },
+    {
+      "id": "m12-rad",
+      "name": "RAD: Ground-Level Survey",
+      "patron": null,
+      "description": "The Consortium needs radiation readings at ground level. There's a known hotspot in your area. Drive to it.",
+      "briefing": "<p>RAD is a particle telescope flush with the rover deck, pointing skyward. It counts incoming radiation by species: protons, neutrons, gamma rays, heavy ions. Mars has no magnetosphere: no global magnetic field, no shielding. Everything the sun throws at this planet reaches the surface. The Consortium has orbital radiation surveys of your area, but orbital data doesn't tell them what it's like on the ground. They're planning crewed surface operations and they need ground-truth dosimetry from an actual vehicle at actual elevation. That's you.</p><p>Open the RAD panel and activate it. It runs passively at 2 watts. The HUD shows your current zone classification, dose rate, cumulative sol dose, and particle count rate.</p><p>A known radiation hotspot in your area has been flagged from orbital survey data. A waypoint marker is active on your map. Drive to it. As you enter higher-radiation terrain, your camera feed will start to glitch and your instruments will degrade. In hazardous zones, all science instruments go offline entirely. Only RAD and the RTG keep working. RAD shows you the direction and distance to the nearest safe zone so you always know which way is out.</p><p>While inside the radiation zone, RAD will detect a radiation event: a transient spike from solar activity or cosmic ray interaction. When the alert fires, choose <b>DECODE</b>. The decode minigame captures incoming particles by species. Catch rate and composition determine the event classification and quality of your data. When decoding completes, review the results in the <b>science archive</b> to log the experiment.</p><p>Once the data is logged, get out. A return waypoint will mark safe ground. Drive to it. When you arrive, check your instruments: radiation degrades durability. Open any damaged instrument panel and run a <b>REPAIR</b>. The Consortium gets their ground-level survey. You get science points, repair practice under real conditions, and a better understanding of where on this map you can work and where you can't.</p>",
+      "reward": {
+        "sp": 50
+      },
       "unlocks": ["antenna-uhf"],
       "chain": "m11-transmit",
       "objectives": [
-        { "id": "sam-1", "type": "sam-experiment", "label": "SAM experiment — full cycle logged", "params": { "mode": "any" }, "sequential": false }
+        {
+          "id": "rad-1",
+          "type": "rad-activate",
+          "label": "Activate RAD",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "rad-2",
+          "type": "go-to",
+          "label": "Drive to radiation hotspot",
+          "params": { "poiId": "rad-hotspot-01" },
+          "sequential": true
+        },
+        {
+          "id": "rad-3",
+          "type": "rad-decode",
+          "label": "Decode radiation event",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "rad-4",
+          "type": "ui-inspect",
+          "label": "Review results in science archive",
+          "params": { "target": "rad-science" },
+          "sequential": true
+        },
+        {
+          "id": "rad-5",
+          "type": "go-to",
+          "label": "Return to safe zone",
+          "params": { "poiId": "rad-safe-return" },
+          "sequential": true
+        },
+        {
+          "id": "rad-6",
+          "type": "use-repair-kit",
+          "label": "Repair radiation-damaged instrument",
+          "params": {},
+          "sequential": true
+        }
       ]
     },
     {
       "id": "m11-transmit",
       "name": "UHF — First Uplink",
       "patron": null,
-      "description": "Data on-vehicle does not exist for grant accounting until Earth acknowledges receipt. Welcome to orbital windows.",
-      "briefing": "<p>All science collected on-vehicle is held in a transmission queue. It does not count toward the mission record until Earth acknowledges receipt. This mission requires one confirmed uplink.</p><p>Open the UHF antenna panel with <b>[T]</b> and activate it. The transmission queue is managed automatically — every science result you have collected is already in it, sorted by capture time. You do not select individual items to send. When an orbital relay window opens, the antenna begins transmitting from the top of the queue on its own.</p><p>Orbital windows are on a fixed schedule. If the panel shows time remaining until the next pass, wait for it. Missing a window means waiting for the following orbit. Once a transmission is acknowledged, the mission closes.</p>",
+      "description": "Science on the rover is meaningless until Earth acknowledges receipt. Queue it. Send it. Wait for the window.",
+      "briefing": "<p>Every experiment you've run, every spectrum, every prospect, every contact analysis: it's all sitting on the rover. Locally stored. Locally meaningless. Science does not exist in the Consortium's ledger until Earth acknowledges receipt. Until then, it's unverified data on a 175-year-old hard drive 225 million kilometers from anyone who can read it.</p><p>The UHF antenna is your uplink. It transmits queued science data to orbital relay satellites during scheduled pass windows. No relay overhead means no transmission. You wait for the window, you send what you have, and you hope the acknowledgment comes back clean.</p><p>Before you transmit, you need to queue your data. Open the <b>science log</b> and review what you've collected. You have results from five instruments. Visit each section: <b>ChemCam</b>, <b>APXS</b>, <b>SAM</b>, <b>DAN</b>, and <b>RAD</b>. Queue at least one result from each for transmission.</p><p>Once your queue is loaded, open the UHF panel with <b>[T]</b> and make sure the antenna is enabled. When the next orbital pass begins, transmission starts automatically from the top of the queue. Each item takes bandwidth. Rarer discoveries take longer to transmit. If the pass window closes before the queue is empty, the remaining items wait for the next orbit.</p><p>When Earth acknowledges receipt, the science points become official. That number in your profile stops being a local estimate and starts being your record. This is how you earn your keep.</p>",
       "reward": { "sp": 50 },
       "unlocks": [],
       "chain": "m13-deep-signal",
       "objectives": [
-        { "id": "tx-1", "type": "transmit", "label": "UHF uplink — one package acknowledged", "params": { "count": 1 }, "sequential": false }
+        {
+          "id": "tx-1",
+          "type": "queue-transmission",
+          "label": "Queue ChemCam spectrum for uplink",
+          "params": { "source": "chemcam" },
+          "sequential": true
+        },
+        {
+          "id": "tx-2",
+          "type": "queue-transmission",
+          "label": "Queue APXS analysis for uplink",
+          "params": { "source": "apxs" },
+          "sequential": true
+        },
+        {
+          "id": "tx-3",
+          "type": "queue-transmission",
+          "label": "Queue SAM experiment for uplink",
+          "params": { "source": "sam" },
+          "sequential": true
+        },
+        {
+          "id": "tx-4",
+          "type": "queue-transmission",
+          "label": "Queue DAN prospect for uplink",
+          "params": { "source": "dan" },
+          "sequential": true
+        },
+        {
+          "id": "tx-5",
+          "type": "queue-transmission",
+          "label": "Queue RAD event for uplink",
+          "params": { "source": "rad" },
+          "sequential": true
+        },
+        {
+          "id": "tx-6",
+          "type": "transmit",
+          "label": "UHF uplink acknowledged",
+          "params": { "count": 5 },
+          "sequential": true
+        }
       ]
     },
     {
       "id": "m13-deep-signal",
       "name": "LGA — Deep Signal",
       "patron": null,
-      "description": "Routine diagnostic (official). Expanded spectrum capability (actual). Funding source: \"historical outreach\" (nobody asked follow-ups).",
-      "briefing": "<p>A DSN archaeology firmware module is waiting at the far supply cache. It extends the low-gain antenna receiver into deprecated frequency bands — legacy mission telemetry bands, unused since the last century of Mars operations. Science Directorate rates the probability of useful signal recovery at low. The Consortium has cleared the time regardless.</p><p>Drive to the far cache marked on your map and retrieve the module. Then open the LGA panel with <b>[R]</b>, select the install option, and attach the module to the antenna. The install logs automatically when complete.</p><p>What the antenna picks up after that is outside the scope of this mission.</p>",
+      "description": "Your patron thinks you've earned something. A firmware upgrade just dropped from orbit. What it picks up is not in any briefing.",
+      "briefing": "<p>Your patron has authorized a firmware upgrade for the Low-Gain Antenna. An orbital drop containing a DSN Archaeology Module is inbound to a cache site on your map. This is not standard Consortium equipment. Your patron pulled strings and spent political capital to get this approved. Whatever you've been doing out here, someone noticed.</p><p>The module extends your LGA receiver into deprecated frequency bands: legacy Deep Space Network channels that haven't been officially active since the last century of Mars operations. But not active doesn't mean silent. The Deep Space Network is a mesh of relay stations across the inner solar system. Transmissions that entered the network decades or centuries ago are still bouncing between nodes, reflecting off relay mirrors, cycling through the system in degraded loops. They never stop. They just get quieter.</p><p>With this module installed and enough processing power, your rover's onboard ML can isolate those remnant waveforms and reconstruct the original transmissions. Voice logs. Station reports. Personal messages. Signals from people who were here before you, preserved in the noise of a network that never forgets.</p><p>Drive to the cache marked on your map and retrieve the module. Then open the LGA panel with <b>[R]</b> and install it. This is your first instrument <b>upgrade</b>: a permanent enhancement that improves what the hardware can do. Future upgrades for other instruments will work the same way.</p><p>Once installed, make sure both <b>LGA</b> and <b>UHF</b> are active. LGA listens for the signal. UHF provides the relay bandwidth for reconstruction. Both antennas need to be on. When a transmission is successfully reconstructed, it will appear in the <b>DSN Archive</b>. Open it. Read what came through. Some of them have audio.</p>",
       "reward": { "sp": 100 },
       "unlocks": ["dsn-archaeology"],
       "chain": null,
       "objectives": [
-        { "id": "dsn-1", "type": "go-to", "label": "Far supply drop — module location", "params": { "poiId": "supply-cache-02" }, "sequential": true },
-        { "id": "dsn-2", "type": "gather", "label": "DSN archaeology module — retrieve", "params": { "itemId": "dsn-archaeology-module", "quantity": 1 }, "sequential": true },
-        { "id": "dsn-3", "type": "install-upgrade", "label": "LGA — install archaeology module", "params": { "instrumentId": "antenna-lg" }, "sequential": true }
+        {
+          "id": "dsn-1",
+          "type": "go-to",
+          "label": "Supply cache: retrieve DSN module",
+          "params": { "poiId": "supply-cache-02" },
+          "sequential": true
+        },
+        {
+          "id": "dsn-2",
+          "type": "gather",
+          "label": "DSN archaeology module: collected",
+          "params": { "itemId": "dsn-archaeology-module", "quantity": 1 },
+          "sequential": true
+        },
+        {
+          "id": "dsn-3",
+          "type": "install-upgrade",
+          "label": "LGA: install archaeology module",
+          "params": { "instrumentId": "antenna-lg" },
+          "sequential": true
+        },
+        {
+          "id": "dsn-4",
+          "type": "dsn-receive",
+          "label": "DSN transmission reconstructed",
+          "params": {},
+          "sequential": true
+        },
+        {
+          "id": "dsn-5",
+          "type": "ui-inspect",
+          "label": "Open DSN Archive: read transmission",
+          "params": { "target": "dsn-archive" },
+          "sequential": true
+        }
       ]
     }
   ]
