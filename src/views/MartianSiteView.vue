@@ -1071,6 +1071,10 @@ watch(radEnabled, (enabled) => {
   }
 })
 
+watch(radEnabled, (enabled) => {
+  if (enabled) useMissions().notifyRadActivated()
+})
+
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const rtgConservationMode = ref<RTGConservationState>('off')
@@ -1845,6 +1849,10 @@ function handleActivate() {
     if (inst?.id === 'dan' && inst.passiveSubsystemEnabled) {
       useMissions().notifyDanActivated()
     }
+    // Notify mission system when RAD is activated
+    if (inst?.id === 'rad' && inst.passiveSubsystemEnabled) {
+      useMissions().notifyRadActivated()
+    }
   }
 }
 
@@ -2072,6 +2080,10 @@ function onRadAcknowledge(): void {
   const radDecodeCount = radArchivedEvents.value.length
   if (radDecodeCount === 1) triggerRadAchievement('first-decode')
   if (radDecodeCount === 5) triggerRadAchievement('five-decodes')
+
+  // Notify mission system
+  useMissions().notifyRadDecodeCompleted()
+  useMissions().notifyUiInspected('rad-science')
 
   const classifiedId = result.classifiedAs
   if (classifiedId === 'soft-sep' || classifiedId === 'hard-sep') {
