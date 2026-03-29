@@ -32,6 +32,7 @@ export function createInstrumentTuple(def: InstrumentDef): InstrumentTuple {
   const controller = new Ctor()
   controller.tier = def.tier
   controller.selectionIdlePowerW = def.idlePowerW
+  controller.activePowerW = def.activePowerW
 
   const handlerFactory = TICK_HANDLER_REGISTRY[def.tickHandlerType]
   const tickHandler = handlerFactory ? handlerFactory(controller) : null

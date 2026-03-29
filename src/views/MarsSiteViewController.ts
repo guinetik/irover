@@ -523,7 +523,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
   const { pushMessage } = useLGAMailbox()
-  const { profile: playerProfile } = usePlayerProfile()
+  const { profile: playerProfile, setInstrumentProvides } = usePlayerProfile()
   const { tickController } = useInstrumentProvider()
 
   // --- Three.js core ---
@@ -1061,6 +1061,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Domain instrument tick handlers (performance resolution) ---
       tickController.tick(fctx.sceneDelta, fctx.env)
+      setInstrumentProvides(tickController.getActiveProvides())
 
       // --- Delegated ticks ---
       orbitalDropHandler.tick(fctx)
@@ -1180,6 +1181,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const rtgForPower = controller?.instruments.find(i => i.id === 'rtg')
         const powerLoadFactor = rtgForPower instanceof RTGController ? rtgForPower.powerLoadFactor : 1
         const wheelsForPower = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+        const drillForPower = controller?.instruments.find(i => i.id === 'drill')
         const awakeForPower = !isSleeping.value
         const driveMotorW =
           awakeForPower && wheelsForPower && (controller?.isMoving ?? false)
@@ -1190,6 +1192,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           roverInSunlight: siteScene.roverInSunlight,
           moving: awakeForPower && (controller?.isMoving ?? false),
           rockDrilling: awakeForPower && drillHandler.lastResult.rockDrilling,
+          rockDrillActivePowerW: drillForPower?.activePowerW,
           driveMotorW,
           driveMotorHudLabel: 'Rover wheels',
           instrumentLines,
@@ -1419,6 +1422,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     window.removeEventListener('keydown', onGlobalKeyDown)
 
     tickHandlers.disposeAll()
+    setInstrumentProvides({})
 
     controller?.dispose()
     if (siteScene) {

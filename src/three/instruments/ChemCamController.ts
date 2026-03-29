@@ -29,9 +29,9 @@ const ZOOM_STEP = 3
 const FULL_CALIBRATION_SP = 250
 
 // --- Power (LIBS + mast chain — heavy while E holds pulse; hurts on 50 Wh + weak gen) ---
-const PULSE_POWER_W = 102
-const INTEGRATE_POWER_W = 28
-const IDLE_POWER_W = 6
+// PULSE_POWER_W and IDLE_POWER_W now come from instruments.json via activePowerW / selectionIdlePowerW.
+// Integration draw is a fixed ratio of peak (28 / 102 ≈ 0.275).
+const INTEGRATE_POWER_RATIO = 28 / 102
 
 // --- Beam VFX ---
 const CORE_RADIUS = 0.003
@@ -71,8 +71,11 @@ export interface ChemCamReadout {
 }
 
 export class ChemCamController extends InstrumentController {
-  /** Minimum bus draw while ChemCam hardware is engaged (orbit, armed, or background sequence). */
-  static readonly BUS_IDLE_W = IDLE_POWER_W
+  /**
+   * @deprecated Use instance `selectionIdlePowerW` instead. Kept for back-compat if any
+   * external code reads the static; value is the original 6W default.
+   */
+  static readonly BUS_IDLE_W = 6
 
   readonly id = 'chemcam'
   readonly name = 'ChemCam'
@@ -176,15 +179,15 @@ export class ChemCamController extends InstrumentController {
     const acc = Math.max(0.01, this.accuracyMod)
     const softAcc = 0.25 + 0.75 * acc
     switch (this.phase) {
-      case 'PULSE_TRAIN': return PULSE_POWER_W / softAcc
-      case 'INTEGRATING': return INTEGRATE_POWER_W / softAcc
-      case 'ARMED': return IDLE_POWER_W
+      case 'PULSE_TRAIN': return this.activePowerW / softAcc
+      case 'INTEGRATING': return (this.activePowerW * INTEGRATE_POWER_RATIO) / softAcc
+      case 'ARMED': return this.selectionIdlePowerW
       default: return 0
     }
   }
 
   override getInstrumentBusPowerW(phase: 'instrument' | 'active'): number {
-    return phase === 'active' ? Math.max(ChemCamController.BUS_IDLE_W, this.powerDrawW) : 0
+    return phase === 'active' ? Math.max(this.selectionIdlePowerW, this.powerDrawW) : 0
   }
 
   /**

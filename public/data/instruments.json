@@ -11,6 +11,7 @@
       "power": "4–31W",
       "tier": "sensitive",
       "idlePowerW": 0,
+      "activePowerW": 0,
       "controllerType": "MastCamController",
       "tickHandlerType": "MastCamTickHandler",
       "upgrade": {
@@ -61,6 +62,7 @@
       "power": "6–111W",
       "tier": "sensitive",
       "idlePowerW": 0,
+      "activePowerW": 102,
       "controllerType": "ChemCamController",
       "tickHandlerType": "ChemCamTickHandler",
       "upgrade": {
@@ -113,6 +115,7 @@
       "power": "6W / 100W drilling",
       "tier": "standard",
       "idlePowerW": 6,
+      "activePowerW": 100,
       "controllerType": "DrillController",
       "tickHandlerType": "DrillTickHandler",
       "upgrade": {
@@ -156,6 +159,7 @@
       "power": "5W idle / 18W active",
       "tier": "sensitive",
       "idlePowerW": 5,
+      "activePowerW": 0,
       "controllerType": "APXSController",
       "tickHandlerType": "APXSTickHandler",
       "upgrade": {
@@ -206,6 +210,7 @@
       "power": "10W",
       "tier": "sensitive",
       "idlePowerW": 10,
+      "activePowerW": 0,
       "controllerType": "DANController",
       "tickHandlerType": "DANTickHandler",
       "upgrade": {
@@ -254,6 +259,7 @@
       "power": "25W active",
       "tier": "sensitive",
       "idlePowerW": 0,
+      "activePowerW": 0,
       "controllerType": "SAMController",
       "tickHandlerType": "SAMTickHandler",
       "upgrade": {
@@ -298,6 +304,7 @@
       "power": "110W baseline",
       "tier": "rugged",
       "idlePowerW": 2,
+      "activePowerW": 0,
       "controllerType": "RTGController",
       "tickHandlerType": "RoverVfxTickHandler",
       "upgrade": {
@@ -339,6 +346,7 @@
       "power": "1W",
       "tier": "sensitive",
       "idlePowerW": 1,
+      "activePowerW": 0,
       "controllerType": "REMSController",
       "tickHandlerType": "REMSTickHandler",
       "upgrade": {
@@ -383,6 +391,7 @@
       "power": "2W",
       "tier": "sensitive",
       "idlePowerW": 2,
+      "activePowerW": 0,
       "controllerType": "RADController",
       "tickHandlerType": "RadTickHandler",
       "upgrade": {
@@ -424,6 +433,7 @@
       "power": "0–12W",
       "tier": "rugged",
       "idlePowerW": 0,
+      "activePowerW": 0,
       "controllerType": "HeaterController",
       "tickHandlerType": "HeaterTickHandler",
       "upgrade": {
@@ -465,6 +475,7 @@
       "power": "5W",
       "tier": "standard",
       "idlePowerW": 2,
+      "activePowerW": 0,
       "controllerType": "AntennaLGController",
       "tickHandlerType": "AntennaLGTickHandler",
       "upgrade": {
@@ -504,6 +515,7 @@
       "power": "8W",
       "tier": "standard",
       "idlePowerW": 6,
+      "activePowerW": 0,
       "controllerType": "AntennaUHFController",
       "tickHandlerType": "AntennaUHFTickHandler",
       "upgrade": {
@@ -543,6 +555,7 @@
       "power": "0–5W",
       "tier": "rugged",
       "idlePowerW": 0,
+      "activePowerW": 0,
       "controllerType": "RoverWheelsController",
       "tickHandlerType": "RoverMovementTickHandler",
       "upgrade": {
@@ -584,6 +597,7 @@
       "power": "1W",
       "tier": "standard",
       "idlePowerW": 1,
+      "activePowerW": 0,
       "controllerType": "MicController",
       "tickHandlerType": "MicTickHandler",
       "upgrade": {

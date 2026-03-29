@@ -52,8 +52,11 @@ export const CURIOSITY_PROFILE: RoverPowerProfile = {
   capacityMult: 1.0,
 }
 
-/** Arm drill (powder sample) sustained draw (W) while E held. Base value before profile mult. */
-export const ROCK_DRILL_BASE_W = 100
+/**
+ * @deprecated Drill active power now comes from instruments.json (`activePowerW`).
+ * Kept as a fallback default for callers that haven't migrated to `PowerTickInput.rockDrillActivePowerW`.
+ */
+const ROCK_DRILL_BASE_W_FALLBACK = 100
 
 /**
  * Scales Wh integration so battery changes are visible with an accelerated sol.
@@ -148,6 +151,11 @@ export interface PowerTickInput {
   /** True while arm drill (slot 3) is firing. */
   rockDrilling: boolean
   /**
+   * Drill active power draw (W) from instruments.json `activePowerW`.
+   * When omitted, falls back to 100W for backwards compatibility.
+   */
+  rockDrillActivePowerW?: number
+  /**
    * Wheel motor draw (W) while translating — from {@link RoverWheelsController};
    * replaces adding `baseDriveW` inside the composable when non-zero.
    */
@@ -221,6 +229,7 @@ export function useMarsPower() {
     const heaterRaw = (input.heaterW ?? 0) * mod('heaterDraw')
     let baseUse: number
     let heaterBusW: number
+    const drillActiveW = input.rockDrillActivePowerW ?? ROCK_DRILL_BASE_W_FALLBACK
 
     if (isSleeping.value) {
       baseUse = SLEEP_HIBERNATION_CORE_W
@@ -228,7 +237,7 @@ export function useMarsPower() {
     } else {
       baseUse = profile.baseCoreW
       baseUse += input.driveMotorW ?? 0
-      if (input.rockDrilling) baseUse += ROCK_DRILL_BASE_W
+      if (input.rockDrilling) baseUse += drillActiveW
       const instrumentLines = input.instrumentLines
       const instrumentSum =
         instrumentLines && instrumentLines.length > 0
@@ -277,7 +286,7 @@ export function useMarsPower() {
         lines.push({
           id: 'drill',
           label: 'Rock drill',
-          w: ROCK_DRILL_BASE_W * consMod * loadFactor,
+          w: drillActiveW * consMod * loadFactor,
         })
       }
       const il = input.instrumentLines
@@ -345,6 +354,5 @@ export function useMarsPower() {
     setProfile,
     fillBatteryFull,
     drainBatteryFraction,
-    ROCK_DRILL_BASE_W,
   }
 }

@@ -53,6 +53,9 @@ export abstract class InstrumentController {
    */
   selectionIdlePowerW: number = 0
 
+  /** Base active power draw in watts. Set by factory from instruments.json. */
+  activePowerW: number = 0
+
   /**
    * When true, this payload draws {@link selectionIdlePowerW} on the main bus whenever the rover
    * is deployed and {@link passiveSubsystemEnabled} is true — including while driving (no card open).

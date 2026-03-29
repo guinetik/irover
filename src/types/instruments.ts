@@ -87,6 +87,8 @@ export interface InstrumentDef {
   tier: InstrumentTier
   /** Base idle power draw in watts when instrument is selected/active. */
   idlePowerW: number
+  /** Base active power draw in watts during active instrument use (drilling, laser pulse, etc.). 0 = no active draw. */
+  activePowerW: number
   /** Key into CONTROLLER_REGISTRY */
   controllerType: string
   /** Key into TICK_HANDLER_REGISTRY (populated in Plan B) */
