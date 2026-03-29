@@ -51,6 +51,24 @@ export interface InstrumentPassiveBonus {
   label: string
 }
 
+export interface InstrumentChainBonus {
+  /**
+   * ProfileModifiers key that buffs this chain effect via reward track / archetypes.
+   * e.g. "chainDrillBonus" for MastCam → drill speed, "chainLootBonus" for ChemCam → sample weight.
+   * APXS trace elements use "instrumentAccuracy" — already wired in DrillController.
+   */
+  key: keyof ProfileModifiers
+  /**
+   * Base effect magnitude expressed as a positive benefit.
+   * 0.4 = "40% faster", 0.3 = "+30% weight", 2 = "up to 2 drops".
+   */
+  baseValue: number
+  /** Display label shown in instrument panel, e.g. "DRILL BONUS", "LOOT YIELD" */
+  label: string
+  /** One-line description, e.g. "Tagged rocks drill 40% faster" */
+  description: string
+}
+
 export interface InstrumentDef {
   /** Stable lowercase identifier, e.g. "dan", "chemcam" */
   id: string
@@ -83,4 +101,10 @@ export interface InstrumentDef {
    * Most instruments omit this field.
    */
   provides?: InstrumentPassiveBonus[]
+  /**
+   * Effects granted to a rock target when this instrument has been used on it,
+   * realized when that target is subsequently drilled. Buffable via ProfileModifiers.
+   * Plan B wires these into DrillController and LaserDrill.
+   */
+  chainBonuses?: InstrumentChainBonus[]
 }
