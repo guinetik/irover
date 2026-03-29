@@ -23,6 +23,11 @@ import { TERRAIN_SCALE } from './terrainConstants'
 export { TERRAIN_SCALE } from './terrainConstants'
 const SCALE = TERRAIN_SCALE;
 
+export interface CraterDeformData {
+  cells: Array<{ gx: number; gz: number; originalY: number }>
+  meshVertices: Array<{ meshIndex: number; vertexIndex: number; originalY: number }>
+}
+
 /** Common interface for all terrain generators. */
 export interface ITerrainGenerator {
   readonly group: THREE.Group
@@ -42,7 +47,9 @@ export interface ITerrainGenerator {
   /** 2D color map canvas (hypsometric blue-red ramp), available after generate(). */
   readonly mapCanvasHypso: HTMLCanvasElement | null
   /** Deform terrain at (x, z) to create a crater of the given radius/depth/rimHeight. */
-  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): void
+  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): CraterDeformData | null
+  /** Revert a previously deformed crater using the data returned by deformCrater. */
+  revertCrater(data: CraterDeformData): void
 }
 
 export type TerrainGeneratorType = 'default' | 'glb' | 'mars-global' | 'elevation'
