@@ -404,6 +404,21 @@
           </div>
         </div>
       </Transition>
+      <Transition name="deploy-fade">
+        <div v-if="danCraterModeAvailable" key="crater-confirm" class="overdrive-confirm-overlay">
+          <div class="overdrive-confirm conservation-dialog">
+            <div class="overdrive-icon conservation-icon">&#x2604;</div>
+            <div class="overdrive-title">CRATER DETECTED</div>
+            <div class="overdrive-desc">
+              Initiate DAN Crater Mode? The rover will be immobilized during the 30-second scan.
+            </div>
+            <div class="overdrive-buttons">
+              <button class="overdrive-btn confirm conservation-confirm" @click="confirmCraterMode()">INITIATE SCAN</button>
+              <button class="overdrive-btn cancel" @click="cancelCraterMode()">CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </Teleport>
     <Transition name="deploy-fade">
       <div v-if="isSleeping && introComplete" class="sleep-overlay">
@@ -638,6 +653,7 @@ import { useRewardTrack } from '@/composables/useRewardTrack'
 import { useMartianSiteAchievements } from '@/composables/useMartianSiteAchievements'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
+import { useVentArchive } from '@/composables/useVentArchive'
 import { getInventoryItemDef, INVENTORY_CATALOG } from '@/types/inventory'
 import {
   MastCamController,
@@ -816,6 +832,18 @@ const mapMarkers = computed((): import('@/components/MapOverlay.vue').MapMarker[
       out.push({ id: `dan-${p.archiveId}`, x: p.drillSiteX, z: p.drillSiteZ, color: '#44aaff', label: 'Water drill site' })
     }
   }
+  // Vent sites
+  const siteVents = useVentArchive().getVentsForSite(siteId)
+  for (const v of siteVents) {
+    out.push({
+      id: `vent-${v.archiveId}`,
+      x: v.x,
+      z: v.z,
+      color: v.ventType === 'co2' ? '#ff8844' : '#44ff88',
+      label: v.ventType === 'co2' ? 'CO\u2082 VENT' : 'CH\u2084 VENT',
+      pulse: true,
+    })
+  }
   return out
 })
 
@@ -976,6 +1004,7 @@ const danHitAvailable = ref(false)
 const danProspectPhase = ref<string>('idle')
 const danProspectProgress = ref(0)
 const danDialogVisible = ref(false)
+const danCraterModeAvailable = ref(false)
 const danSignalStrength = ref(0)
 const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
@@ -1841,6 +1870,13 @@ function cancelConservation() {
   showConservationConfirm.value = false
 }
 
+function confirmCraterMode(): void {
+  siteHandle.value?.confirmCraterMode()
+}
+function cancelCraterMode(): void {
+  siteHandle.value?.cancelCraterMode()
+}
+
 /**
  * Clears localStorage and loads home so singleton state resets (full document navigation).
  */
@@ -2118,6 +2154,7 @@ function createSiteControllerContext() {
       danSignalStrength,
       danWaterResult,
       danDialogVisible,
+      danCraterModeAvailable,
       internalTempC,
       ambientEffectiveC,
       heaterW,
