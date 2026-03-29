@@ -159,7 +159,7 @@
       "power": "5W idle / 18W active",
       "tier": "sensitive",
       "idlePowerW": 5,
-      "activePowerW": 0,
+      "activePowerW": 18,
       "controllerType": "APXSController",
       "tickHandlerType": "APXSTickHandler",
       "upgrade": {
