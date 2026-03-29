@@ -10,8 +10,8 @@
       "desc": "Twin mast cameras for wide-area survey. Filter by rock type — matches show as highlights. Tag a target before spending laser or drill time on it.",
       "power": "4–31W",
       "tier": "sensitive",
-      "idlePowerW": 0,
-      "activePowerW": 0,
+      "idlePowerW": 4,
+      "activePowerW": 31,
       "controllerType": "MastCamController",
       "tickHandlerType": "MastCamTickHandler",
       "upgrade": {

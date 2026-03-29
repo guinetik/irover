@@ -12,9 +12,6 @@ const FOV_MAX = 65
 const FOV_DEFAULT = 50
 const ZOOM_STEP = 3        // FOV degrees per wheel tick
 const SCAN_DURATION = 2.0   // seconds to complete a scan
-const IDLE_POWER_W = 4      // base draw while MastCam is active
-/** Extra draw while E-held scan / tagging (imager + processing — tuned vs small battery) */
-const SCAN_POWER_W = 18
 
 export class MastCamController extends InstrumentController {
   readonly id = 'mastcam'
@@ -74,10 +71,11 @@ export class MastCamController extends InstrumentController {
   get scanProgressValue(): number { return this.scanProgress }
   /** Power draw: idle mast + gimbal slew + scan (hold E on rock to tag) */
   get powerDrawW(): number {
+    const scanPowerW = this.activePowerW - this.selectionIdlePowerW - MAST_ACTUATOR_HOLD_POWER_W
     return (
-      IDLE_POWER_W
+      this.selectionIdlePowerW
       + (mastState.actuatorKeysHeld ? MAST_ACTUATOR_HOLD_POWER_W : 0)
-      + (this.isScanning ? SCAN_POWER_W : 0)
+      + (this.isScanning ? scanPowerW : 0)
     )
   }
 
