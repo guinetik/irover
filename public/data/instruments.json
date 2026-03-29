@@ -1,0 +1,494 @@
+{
+  "version": 1,
+  "instruments": [
+    {
+      "id": "mastcam",
+      "slot": 1,
+      "icon": "CAM",
+      "name": "MASTCAM",
+      "type": "SURVEY CAMERA",
+      "desc": "Twin mast cameras for wide-area survey. Filter by rock type — matches show as highlights. Tag a target before spending laser or drill time on it.",
+      "power": "4–31W",
+      "controllerType": "MastCamController",
+      "tickHandlerType": "MastCamTickHandler",
+      "upgrade": {
+        "name": "INFRARED / MULTISPECTRAL",
+        "desc": "Stronger mineral contrast in the passive survey view.",
+        "req": "Requires: Science Pack Alpha drop"
+      },
+      "help": {
+        "summary": "Visual classifier. Tags rocks for ChemCam and drill targeting.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [1] to select MastCam. Aim at a rock and hold [E] to scan. The scan takes approximately 2 seconds. A floating label confirms the tag. Repeat for at least 3 rocks before using ChemCam or the drill."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "ChemCam and the drill require a MastCam tag — untagged rocks cannot be analyzed or cored. This interlock is enforced by the instrument. Hematite and sulfate are rarer than basalt and worth prioritizing for downstream analysis."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/mastcam-tag.jpg",
+            "alt": "MastCam view showing a rock target with scan progress bar and the floating tag label after completion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "chemcam",
+      "slot": 2,
+      "icon": "LZR",
+      "name": "CHEMCAM",
+      "type": "LASER SPECTROGRAPH",
+      "desc": "Standoff laser spectroscopy: vaporizes a pin spot and reads elemental composition. Use after MastCam to judge if a rock is worth drilling.",
+      "power": "6–111W",
+      "controllerType": "ChemCamController",
+      "tickHandlerType": "ChemCamTickHandler",
+      "upgrade": {
+        "name": "MULTI-SHOT BURST",
+        "desc": "3 shots on different spots for averaged reading. Better accuracy.",
+        "req": "Requires: Science Pack Alpha drop"
+      },
+      "help": {
+        "summary": "Laser spectrometer. Identifies rock composition at standoff distance.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "MastCam tag required first. Press [2] to select ChemCam. Aim at a tagged rock and hold [E] to fire. Keep aim steady — the sequence fires multiple pulses over several seconds. When the spectrum readout appears, acknowledge it to archive the result."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "ChemCam only fires on MastCam-tagged rocks — selecting an untagged target does nothing. ChemCam has a limited shot count before cooldown. Results are queued for UHF transmission automatically — no extra steps required."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/chemcam-spectrum.jpg",
+            "alt": "ChemCam spectrum readout panel showing elemental peaks and the acknowledge button"
+          }
+        ]
+      }
+    },
+    {
+      "id": "drill",
+      "slot": 3,
+      "icon": "ARM",
+      "name": "DRILL",
+      "type": "ARM POWDER SAMPLER",
+      "desc": "Rotary percussive bit on the arm turret. Collects powdered rock for the lab. Run MastCam and ChemCam on the target first for best results.",
+      "power": "6W / 100W drilling",
+      "controllerType": "DrillController",
+      "tickHandlerType": "DrillTickHandler",
+      "upgrade": {
+        "name": "BIT WEAR KIT",
+        "desc": "Reduces drill time on tagged rocks.",
+        "req": "Requires: Deep Analysis Kit drop"
+      },
+      "help": {
+        "summary": "Core sampler. Collects rock powder for SAM analysis.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Drive within 1.5m of a rock target. Press [3] to select the drill. Aim the arm with the mouse. Hold [E] to drill — the sample is collected and added to inventory automatically when complete. Nothing to pick up manually."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "Drilling is the highest power draw on the vehicle. After a drill cycle, open the RTG panel and activate the Power Shunt to recover the battery. The shunt disables driving while active — hold position. Targets analyzed by both MastCam and ChemCam yield significantly more science value from the sample."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/drill-active.jpg",
+            "alt": "Drill arm extended toward a rock target with the drill progress indicator active"
+          }
+        ]
+      }
+    },
+    {
+      "id": "apxs",
+      "slot": 4,
+      "icon": "⊕",
+      "name": "APXS",
+      "type": "CONTACT SPECTROMETER",
+      "desc": "Alpha particle X-ray spectrometer. Placed against rock or soil for bulk elemental chemistry. Slower than ChemCam but more accurate for light elements.",
+      "power": "5W idle / 18W active",
+      "controllerType": "APXSController",
+      "tickHandlerType": "APXSTickHandler",
+      "upgrade": {
+        "name": "LONG INTEGRATION",
+        "desc": "Longer dwells, lower detection limits.",
+        "req": "Requires: Contact Science Package drop"
+      },
+      "help": {
+        "summary": "Contact spectrometer. Elemental analysis by physical proximity.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Drive close to a rock target. Press [4] to select APXS. Hold [E] to initiate contact. A brief calibration sequence begins — follow the on-screen prompts. The integration runs automatically after calibration. Do not move the rover while APXS is integrating."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "APXS requires physical proximity — standoff analysis is not possible. It is slower than ChemCam but more accurate for light elements. A rock analyzed by both ChemCam and APXS yields significantly more science value than one analyzed by only one. Results are queued for transmission automatically."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/apxs-contact.jpg",
+            "alt": "APXS instrument panel showing the contact calibration prompt and integration progress bar"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dan",
+      "slot": 5,
+      "icon": "NEU",
+      "name": "DAN",
+      "type": "NEUTRON SCANNER",
+      "desc": "Fires neutrons into the ground and detects hydrogen. Maps subsurface water content while driving. A signal spike indicates ice or hydrated minerals.",
+      "power": "10W",
+      "controllerType": "DANController",
+      "tickHandlerType": "DANTickHandler",
+      "upgrade": {
+        "name": "DEPTH EXTENDER",
+        "desc": "Scan depth from 0.5m to 1.0m below surface.",
+        "req": "Requires: Subsurface Package drop"
+      },
+      "help": {
+        "summary": "Subsurface hydrogen detector. Finds ice and hydrated minerals while driving.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [5] to select DAN. Press ACTIVATE or [E] to enable passive scan. Drive normally — DAN scans automatically while moving. Watch the signal readout. When the return count spikes, stop immediately. Hold [E] for 4 seconds to initiate prospecting. Stay still for the full integration cycle."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "Driving away from a signal resets integration — stop the moment you see a spike. Once prospecting begins, the rover cannot move for the full cycle duration (approximately 2 Mars hours). Attempting to drive cancels the prospect. The spike may be subtle — watch the readout carefully while driving."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/dan-signal.jpg",
+            "alt": "DAN instrument panel showing the neutron return count readout with a visible signal spike"
+          },
+          {
+            "src": "/images/help/dan-prospecting.jpg",
+            "alt": "DAN prospecting phase active — rover stationary, integration timer running"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sam",
+      "slot": 6,
+      "icon": "DRL",
+      "name": "SAM",
+      "type": "SAMPLE ANALYSIS SUITE",
+      "desc": "Onboard analytical lab: gas chromatograph, mass spectrometer, tunable laser. Identifies organics, measures isotope ratios, characterizes molecular composition.",
+      "power": "25W active",
+      "controllerType": "SAMController",
+      "tickHandlerType": "SAMTickHandler",
+      "upgrade": {
+        "name": "SENSITIVITY MODULE",
+        "desc": "Detects organics at 10x lower concentration.",
+        "req": "Requires: Full Science Suite drop"
+      },
+      "help": {
+        "summary": "Onboard lab. Runs chemical analysis on drill samples.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Drill a sample first — it enters inventory automatically. Press [6] to select SAM. Open the experiment panel, load the sample, and select a mode: Pyrolysis (organics and volatiles), Wet Chemistry (soluble minerals), or Isotope Analysis (elemental ratios). Confirm to queue. Acknowledge the readout when the experiment finishes."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "SAM draws 25W while an experiment is running — the highest passive draw on the vehicle. Monitor your power budget. Only one experiment runs at a time. The experiment processes in the background; you can drive while it runs. Do not let the RTG degrade while SAM is active."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/sam-panel.jpg",
+            "alt": "SAM instrument panel showing experiment mode selection and the active experiment progress bar"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rtg",
+      "slot": 7,
+      "icon": "⚡",
+      "name": "RTG",
+      "type": "POWER GENERATOR",
+      "desc": "Radioisotope Thermoelectric Generator. Converts plutonium-238 decay heat to electricity. The rover's only power source.",
+      "power": "110W baseline",
+      "controllerType": "RTGController",
+      "tickHandlerType": "RoverVfxTickHandler",
+      "upgrade": {
+        "name": "HEAT EXCHANGER",
+        "desc": "Improves thermal efficiency. Faster charge rate.",
+        "req": "Requires: Engineering Package drop"
+      },
+      "help": {
+        "summary": "Primary power source. The only instrument where failure ends the mission.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Boot via the power HUD on startup. Monitor durability in this panel. OVERDRIVE temporarily boosts reactor output — all instruments lock out for approximately 19 seconds during and after the burst. POWER SHUNT immediately refills the battery but disables driving while the cycle is active."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "RTG at 0% durability ends the mission immediately — no recovery. Every other instrument can break and the mission continues in degraded state. The RTG cannot. Repair as soon as durability drops. Repair cost scales with damage level — early repair is always cheaper. Each repair slightly lowers the maximum durability ceiling."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/rtg-panel.jpg",
+            "alt": "RTG instrument panel showing durability bar, OVERDRIVE and POWER SHUNT buttons"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rems",
+      "slot": 8,
+      "icon": "☂",
+      "name": "REMS",
+      "type": "WEATHER STATION",
+      "desc": "Twin boom sensors on the mast: temperature, wind, pressure, humidity, UV. Provides continuous environmental monitoring and storm alerts.",
+      "power": "1W",
+      "controllerType": "REMSController",
+      "tickHandlerType": "REMSTickHandler",
+      "upgrade": {
+        "name": "DUST STORM PREDICTOR",
+        "desc": "Forecasts storms 2 sols ahead.",
+        "req": "Requires: Meteorology Package drop"
+      },
+      "help": {
+        "summary": "Weather station. Passive environmental monitoring with sample quality bonus.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [8] to select REMS. Press ACTIVATE or [E] to enable surveying. REMS runs passively at approximately 1W once on. Current conditions — pressure, temperature, wind speed, UV index — update continuously in the panel."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "When REMS is active and surveying, it applies a +10% sample quality bonus to all science collected within approximately 3 meters of the rover. Keep REMS running during any science work. It also provides dust storm level alerts — watch the REMS panel for incoming storm warnings before they affect instrument operation."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/rems-readout.jpg",
+            "alt": "REMS panel showing live pressure, temperature, wind, and UV readouts with surveying status active"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rad",
+      "slot": 9,
+      "icon": "☢",
+      "name": "RAD",
+      "type": "RADIATION DETECTOR",
+      "desc": "Measures high-energy radiation: protons, heavy ions, neutrons, gamma rays. Monitors cumulative dose and alerts on solar particle events.",
+      "power": "2W",
+      "controllerType": "RADController",
+      "tickHandlerType": "RadTickHandler",
+      "upgrade": {
+        "name": "PARTICLE SPECTROMETER",
+        "desc": "Identifies individual isotopes in cosmic ray flux.",
+        "req": "Requires: Deep Space Package drop"
+      },
+      "help": {
+        "summary": "Radiation monitor. Tracks cumulative dose and alerts on solar events.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [9] to select RAD. Press ACTIVATE or [E] to enable monitoring. RAD runs passively at approximately 2W. Cumulative dose is tracked across the session and shown in the panel."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "High-radiation zones increase instrument durability decay rates — all instruments degrade faster under elevated radiation. RAD alerts you to solar particle events before they peak. Moving to lower-radiation terrain reduces passive damage to all instruments."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/rad-panel.jpg",
+            "alt": "RAD panel showing current radiation level, cumulative dose, and zone indicator"
+          }
+        ]
+      }
+    },
+    {
+      "id": "heater",
+      "slot": 10,
+      "icon": "♨",
+      "name": "HEATER",
+      "type": "THERMAL MANAGEMENT",
+      "desc": "Warm Electronics Box heating system. Keeps internal temperature above survival thresholds. Competes with science instruments for power.",
+      "power": "0–12W",
+      "controllerType": "HeaterController",
+      "tickHandlerType": "HeaterTickHandler",
+      "upgrade": {
+        "name": "INSULATION UPGRADE",
+        "desc": "Reduces heat loss rate by 30%. Less heater draw at cold sites.",
+        "req": "Requires: Engineering Package drop"
+      },
+      "help": {
+        "summary": "Thermal management. Automatic — protects instruments from cold damage.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [H] to open the thermal panel. The heater runs automatically — no manual activation. The thermostat engages below -10°C and shuts off above +5°C. Current rover internal temperature and ambient temperature are shown in the panel."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "The heater draws up to 12W when active — competing directly with science instruments for power. Colder landing sites mean more heater cycles and less power available for science. Monitor the thermal zone indicator: COLD reduces instrument efficiency, CRITICAL locks some instruments entirely."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/heater-panel.jpg",
+            "alt": "Heater panel showing internal temperature, ambient temperature, heater draw, and thermal zone status"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lga",
+      "slot": 11,
+      "icon": "📡",
+      "name": "LGA",
+      "type": "LOW-GAIN ANTENNA",
+      "desc": "Omnidirectional low-gain antenna for direct-to-Earth communication. Primary command uplink and mission mailbox.",
+      "power": "5W",
+      "controllerType": "AntennaLGController",
+      "tickHandlerType": "AntennaTickHandler",
+      "upgrade": {
+        "name": "SIGNAL AMPLIFIER",
+        "desc": "Doubles direct-to-Earth data rate.",
+        "req": "Requires: Comms Package drop"
+      },
+      "help": {
+        "summary": "Mission mailbox. Missions arrive here; completed results transmit from here.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [R] to open the LGA panel. Missions from Mission Control arrive as messages in your inbox. When a mission is complete and awaiting transmit, file results from this panel. Press ACTIVATE or [E] to toggle the antenna link."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "Check the LGA when unsure what to do next — new mission assignments appear here. The LGA has a low data rate and is not suitable for large science packages; use UHF for bulk science transmission. The DSN Archaeology upgrade (if installed) extends the receiver into legacy frequency bands."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/lga-inbox.jpg",
+            "alt": "LGA panel showing the message inbox with an unread mission assignment"
+          }
+        ]
+      }
+    },
+    {
+      "id": "uhf",
+      "slot": 12,
+      "icon": "📶",
+      "name": "UHF",
+      "type": "UHF RELAY ANTENNA",
+      "desc": "High-bandwidth UHF antenna for relay via overhead orbiters (MRO, MAVEN). Primary science downlink.",
+      "power": "8W",
+      "controllerType": "AntennaUHFController",
+      "tickHandlerType": "AntennaTickHandler",
+      "upgrade": {
+        "name": "DUAL-BAND MODULE",
+        "desc": "Enables simultaneous uplink/downlink during passes. Halves transfer time.",
+        "req": "Requires: Comms Package drop"
+      },
+      "help": {
+        "summary": "Science downlink. Transmits queued data automatically during orbital relay windows.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [T] to open the UHF panel. Press ACTIVATE or [E] to enable. All science results you collect are queued automatically — you do not select individual items. When an orbital relay window opens, the antenna transmits from the top of the queue. Science Points are awarded when Earth acknowledges receipt."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "Relay windows are on a fixed schedule — if the panel shows time to next pass, wait for it. Missing a window means waiting for the following orbit. Data transmits oldest-first. SP is awarded on acknowledgment, not on collection — data sitting in the queue does not count toward mission objectives."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/uhf-panel.jpg",
+            "alt": "UHF panel showing orbital pass schedule, transmission queue length, and active uplink progress"
+          }
+        ]
+      }
+    },
+    {
+      "id": "wheels",
+      "slot": 13,
+      "icon": "○",
+      "name": "WHLS",
+      "type": "MOBILITY / DRIVE",
+      "desc": "Rocker-bogie wheel motors and steering actuators. Power draw only active while the chassis is moving.",
+      "power": "0–5W",
+      "controllerType": "RoverWheelsController",
+      "tickHandlerType": "RoverMovementTickHandler",
+      "upgrade": {
+        "name": "EFFICIENCY MOTORS",
+        "desc": "Lower draw per meter; same top speed.",
+        "req": "Requires: Engineering Package drop"
+      },
+      "help": {
+        "summary": "Drive system. WASD to move; wheel condition affects speed.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Press [B] to open the wheels panel. WASD controls movement. Current drive speed and active modifiers are shown in the panel. Use REPAIR if wheel condition has degraded."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "Wheel condition degrades over time and from hazard events. Degraded wheels reduce movement speed. Power draw is only active while moving. Some operations lock the drive system temporarily — the RTG Power Shunt disables driving while active, and DAN prospecting immobilizes the rover for the full integration cycle."
+          }
+        ],
+        "images": [
+          {
+            "src": "/images/help/wheels-panel.jpg",
+            "alt": "Wheels panel showing drive speed, wheel condition, and active speed modifiers"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mic",
+      "slot": 14,
+      "icon": "🎙",
+      "name": "MIC",
+      "type": "AUDIO SENSOR",
+      "desc": "Rover-mounted microphone capturing Mars ambient sound. Audio sourced from NASA Perseverance recordings.",
+      "power": "1W",
+      "controllerType": "MicController",
+      "tickHandlerType": "MicTickHandler",
+      "upgrade": {
+        "name": "HIGH-FIDELITY MIC",
+        "desc": "Wider frequency response captures faint geological sounds at greater distance.",
+        "req": "Requires: Science Pack Alpha drop"
+      },
+      "help": {
+        "summary": "Ambient microphone. Layers wind, atmosphere, and storm audio.",
+        "sections": [
+          {
+            "heading": "OPERATION",
+            "body": "Select the MIC slot to open the panel. Press ACTIVATE or [E] to enable ambient audio. The microphone layers wind, atmospheric pressure, and storm intensity into the ambient soundscape."
+          },
+          {
+            "heading": "WATCH FOR",
+            "body": "Audio reacts in real time to wind speed, time of day, and storm intensity — louder and more turbulent during dust storms. Approximately 1W passive draw while active."
+          }
+        ],
+        "images": []
+      }
+    }
+  ]
+}
