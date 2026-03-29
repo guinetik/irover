@@ -5,8 +5,6 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
-import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export interface ChemCamHudRefs {
   chemCamUnreadCount: Ref<number>
@@ -58,7 +56,6 @@ export function createChemCamHudController(
     isDrilling, drillProgress,
   } = refs
   const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
-  const { defBySlot } = useInstrumentProvider()
 
   let targetingInitialised = false
   let heldFirePlayback: AudioPlaybackHandle | null = null
@@ -116,11 +113,7 @@ export function createChemCamHudController(
       chemCamUnreadCount.value = ccInst.unreadCount
       ccInst.currentSP = totalSP
       ccInst.currentSol = marsSol
-      if (ccInst.isSequenceAdvancing) {
-        const ccDef = defBySlot(ccInst.slot)
-        const perf = resolveInstrumentPerformance(ccDef?.tier ?? ccInst.tier, ccInst.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-        ccInst.durationMultiplier = 1 / perf.speedFactor
-      }
+      // durationMultiplier is now set by the domain tick handler (ChemCamTickHandler)
       const showCardProgress =
         activeInstrumentSlot === 2 && !chemCamIsActiveInstrument
         && (ccInst.phase === 'PULSE_TRAIN' || ccInst.phase === 'INTEGRATING')
@@ -143,9 +136,7 @@ export function createChemCamHudController(
       const cc = controller.activeInstrument
       cc.currentSP = totalSP
       cc.currentSol = marsSol
-      const ccDef2 = defBySlot(cc.slot)
-      const perfCc = resolveInstrumentPerformance(ccDef2?.tier ?? cc.tier, cc.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-      cc.accuracyMod = perfCc.accuracyFactor
+      // accuracyMod is now set by the domain tick handler (ChemCamTickHandler)
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax

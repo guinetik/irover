@@ -1,20 +1,20 @@
-// src/instruments/tickHandlers/drillTickHandler.ts
+// src/instruments/tickHandlers/danTickHandler.ts
 import type { TickHandler } from '@/instruments/InstrumentFactory'
 import type { InstrumentController } from '@/three/instruments/InstrumentController'
 import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
-import { DrillController } from '@/three/instruments/DrillController'
+import { DANController } from '@/three/instruments/DANController'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 
-export function createDrillTickHandler(controller: InstrumentController): TickHandler {
+export function createDanTickHandler(controller: InstrumentController): TickHandler {
   const { mod } = usePlayerProfile()
-  const drill = controller as DrillController
+  const dan = controller as DANController
 
   return {
     tick(_delta: number, env: InstrumentEnvironment): void {
-      const perf = resolveInstrumentPerformance(drill.tier, drill.durabilityFactor, env, mod('analysisSpeed'), mod('instrumentAccuracy'))
-      drill.drillDurationMultiplier = 1 / perf.speedFactor
-      drill.accuracyMod = perf.accuracyFactor
+      const perf = resolveInstrumentPerformance(dan.tier, dan.durabilityFactor, env, mod('analysisSpeed'), mod('instrumentAccuracy'))
+      dan.accuracyMod = perf.accuracyFactor
+      dan.analysisSpeedMod = perf.speedFactor
     },
     dispose(): void {},
   }

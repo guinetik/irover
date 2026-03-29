@@ -1,20 +1,20 @@
-// src/instruments/tickHandlers/drillTickHandler.ts
+// src/instruments/tickHandlers/chemCamTickHandler.ts
 import type { TickHandler } from '@/instruments/InstrumentFactory'
 import type { InstrumentController } from '@/three/instruments/InstrumentController'
 import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
-import { DrillController } from '@/three/instruments/DrillController'
+import { ChemCamController } from '@/three/instruments/ChemCamController'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 
-export function createDrillTickHandler(controller: InstrumentController): TickHandler {
+export function createChemCamTickHandler(controller: InstrumentController): TickHandler {
   const { mod } = usePlayerProfile()
-  const drill = controller as DrillController
+  const cc = controller as ChemCamController
 
   return {
     tick(_delta: number, env: InstrumentEnvironment): void {
-      const perf = resolveInstrumentPerformance(drill.tier, drill.durabilityFactor, env, mod('analysisSpeed'), mod('instrumentAccuracy'))
-      drill.drillDurationMultiplier = 1 / perf.speedFactor
-      drill.accuracyMod = perf.accuracyFactor
+      const perf = resolveInstrumentPerformance(cc.tier, cc.durabilityFactor, env, mod('analysisSpeed'), mod('instrumentAccuracy'))
+      cc.durationMultiplier = 1 / perf.speedFactor
+      cc.accuracyMod = perf.accuracyFactor
     },
     dispose(): void {},
   }

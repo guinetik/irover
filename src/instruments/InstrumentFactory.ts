@@ -1,10 +1,11 @@
 // src/instruments/InstrumentFactory.ts
 import type { InstrumentDef } from '@/types/instruments'
 import type { InstrumentController } from '@/three/instruments/InstrumentController'
+import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
 import { CONTROLLER_REGISTRY, TICK_HANDLER_REGISTRY } from './InstrumentRegistry'
 
 export interface TickHandler {
-  tick(delta: number): void
+  tick(delta: number, env: InstrumentEnvironment): void
   dispose(): void
 }
 

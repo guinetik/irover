@@ -71,6 +71,7 @@ import { useDSNArchive } from '@/composables/useDSNArchive'
 import { useSiteMissionPois } from '@/composables/useSiteMissionPois'
 import { useLGAMailbox } from '@/composables/useLGAMailbox'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
+import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 import { secondsPerSol } from '@/lib/missionTime'
 import { addWaypointMarker, removeWaypointMarker, updateWaypointMarkers, setWaypointMarkerProgress, clearWaypointMarkers } from '@/three/WaypointMarkers'
 import { tickPoiArrivals, getPoiDwellProgress } from '@/composables/usePoiArrival'
@@ -523,6 +524,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   const { pois: missionPoisRef } = useSiteMissionPois()
   const { pushMessage } = useLGAMailbox()
   const { profile: playerProfile } = usePlayerProfile()
+  const { tickController } = useInstrumentProvider()
 
   // --- Three.js core ---
   let renderer: THREE.WebGLRenderer | null = null
@@ -1056,6 +1058,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       )
       tickTransmit(effSceneDelta, marsSol.value)
       updateWaypointMarkers(simulationTime)
+
+      // --- Domain instrument tick handlers (performance resolution) ---
+      tickController.tick(fctx.sceneDelta, fctx.env)
 
       // --- Delegated ticks ---
       orbitalDropHandler.tick(fctx)

@@ -5,8 +5,6 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
-import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export interface DrillHudRefs {
   crosshairVisible: Ref<boolean>
@@ -43,7 +41,6 @@ export function createDrillHudController(
 ): SiteTickHandler & { lastResult: DrillHudResult; initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling } = refs
   const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
-  const { defBySlot } = useInstrumentProvider()
 
   const lastResult: DrillHudResult = { rockDrilling: false }
   let gameplayInitialised = false
@@ -71,10 +68,6 @@ export function createDrillHudController(
 
     if (controller?.mode === 'active' && controller.activeInstrument instanceof DrillController) {
       const drill = controller.activeInstrument
-      const drillDef = defBySlot(drill.slot)
-      const perf = resolveInstrumentPerformance(drillDef?.tier ?? drill.tier, drill.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-      drill.drillDurationMultiplier = 1 / perf.speedFactor
-      drill.accuracyMod = perf.accuracyFactor
       drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
       crosshairColor.value = drill.hasTarget && drill.canCollectCurrentTarget ? 'green' : 'red'

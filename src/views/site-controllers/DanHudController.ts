@@ -23,8 +23,6 @@ export interface PendingCraterResult {
 import type { ArchivedVent } from '@/types/ventArchive'
 import { createBioCapsule, disposeBioCapsule } from '@/three/DanCapsuleModel'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
-import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
 
 /** Public URL for the DAN drill-site marker (replaces procedural cone). */
@@ -242,8 +240,6 @@ export function createDanHudController(
     consumeDanExtractor,
     updateDanProspectDrillSite,
   } = callbacks
-
-  const { defBySlot } = useInstrumentProvider()
 
   // Cache inconclusive count — refreshed each prospect completion, cheap to read each frame
   let inconclusiveCount = getInconclusiveCount()
@@ -509,10 +505,7 @@ export function createDanHudController(
       danInst.totalSP = fctx.totalSP
       danInst.inconclusiveCount = inconclusiveCount
     }
-    const danDef = defBySlot(danInst.slot)
-    const perf = resolveInstrumentPerformance(danDef?.tier ?? danInst.tier, danInst.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-    danInst.accuracyMod = perf.accuracyFactor
-    danInst.analysisSpeedMod = perf.speedFactor
+    // accuracyMod and analysisSpeedMod are now set by the domain tick handler (DANTickHandler)
     // Suppress passive sampling during crater mode — rover is stationary, scan is fixed-duration
     if (danInst.prospectPhase !== 'crater-confirm' && danInst.prospectPhase !== 'crater-scanning') {
       danInst.update(sceneDelta)
@@ -579,7 +572,7 @@ export function createDanHudController(
 
     // --- Crater scanning phase (parallel branch — never crosses normal prospect flow) ---
     if (danInst.prospectPhase === 'crater-scanning' && activeCrater) {
-      const adjustedDuration = DAN_CRATER_SCAN_DURATION_SEC / perf.speedFactor
+      const adjustedDuration = DAN_CRATER_SCAN_DURATION_SEC / danInst.analysisSpeedMod
       danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / adjustedDuration)
       danInst.prospectProgress = danProspectProgress.value
 
@@ -643,7 +636,7 @@ export function createDanHudController(
             }
           }
         } else if (danInst.prospectPhase === 'prospecting') {
-          const prospectDurationSec = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION / perf.speedFactor
+          const prospectDurationSec = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION / danInst.analysisSpeedMod
           danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / prospectDurationSec)
           danInst.prospectProgress = danProspectProgress.value
 

@@ -8,8 +8,6 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
-import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export interface MastCamHudRefs {
   mastcamFilterLabel: Ref<string>
@@ -54,7 +52,6 @@ export function createMastCamHudController(
     isDrilling, drillProgress,
   } = refs
   const { sampleToastRef, awardSP, playerMod, startHeldActionSound, startHeldMovementSound } = callbacks
-  const { defBySlot } = useInstrumentProvider()
 
   let surveyInitialised = false
   let heldTagPlayback: AudioPlaybackHandle | null = null
@@ -119,9 +116,6 @@ export function createMastCamHudController(
         heldTagPlayback.stop()
         heldTagPlayback = null
       }
-      const mcDef = defBySlot(mc.slot)
-      const perf = resolveInstrumentPerformance(mcDef?.tier ?? mc.tier, mc.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-      mc.durationMultiplier = 1 / perf.speedFactor
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -145,9 +139,6 @@ export function createMastCamHudController(
     // Animate tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
-      const mcDef2 = defBySlot(mcInst.slot)
-      const perfMc = resolveInstrumentPerformance(mcDef2?.tier ?? mcInst.tier, mcInst.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-      mcInst.surveyRange = 5 * perfMc.accuracyFactor
       mcInst.updateTagMarkers(simulationTime)
     }
 

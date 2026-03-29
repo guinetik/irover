@@ -1,6 +1,7 @@
 // src/instruments/InstrumentTickController.ts
 import type { InstrumentDef } from '@/types/instruments'
 import type { InstrumentController } from '@/three/instruments/InstrumentController'
+import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
 import type { InstrumentTuple } from './InstrumentFactory'
 
 export class InstrumentTickController {
@@ -10,9 +11,9 @@ export class InstrumentTickController {
     this.tuples = tuples
   }
 
-  tick(delta: number): void {
+  tick(delta: number, env: InstrumentEnvironment): void {
     for (const tuple of this.tuples) {
-      tuple.tickHandler?.tick(delta)
+      tuple.tickHandler?.tick(delta, env)
     }
   }
 

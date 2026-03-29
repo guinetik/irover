@@ -4,8 +4,11 @@ import { InstrumentTickController } from '../InstrumentTickController'
 import { createInstrumentTuple } from '../InstrumentFactory'
 import instrumentsRaw from '../../../public/data/instruments.json'
 import type { InstrumentDef } from '@/types/instruments'
+import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
 
 const instruments = instrumentsRaw.instruments as InstrumentDef[]
+
+const CALM_ENV: InstrumentEnvironment = { thermalZone: 'OPTIMAL', stormLevel: 0, radiationLevel: 0 }
 
 function makeController(): InstrumentTickController {
   const tuples = instruments.map(def => createInstrumentTuple(def))
@@ -47,7 +50,7 @@ describe('InstrumentTickController', () => {
 
   it('tick does not throw when all tickHandlers are null', () => {
     const ctrl = makeController()
-    expect(() => ctrl.tick(0.016)).not.toThrow()
+    expect(() => ctrl.tick(0.016, CALM_ENV)).not.toThrow()
   })
 
   it('tick forwards to tickHandlers that have a tick method', () => {
@@ -55,8 +58,8 @@ describe('InstrumentTickController', () => {
     const fakeTick = vi.fn()
     ;(tuples[0] as any).tickHandler = { tick: fakeTick, dispose: vi.fn() }
     const ctrl = new InstrumentTickController(tuples)
-    ctrl.tick(0.016)
-    expect(fakeTick).toHaveBeenCalledWith(0.016)
+    ctrl.tick(0.016, CALM_ENV)
+    expect(fakeTick).toHaveBeenCalledWith(0.016, CALM_ENV)
   })
 
   it('dispose calls controller.dispose for all tuples', () => {
