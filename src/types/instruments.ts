@@ -91,6 +91,10 @@ export interface InstrumentDef {
   tickHandlerType: string
   upgrade: InstrumentUpgradeDef
   help: InstrumentHelp
+  /** Keyboard/usage hint shown at bottom of instrument card. */
+  hint: string
+  /** Optional temperature warning shown on instrument card (e.g. ChemCam cold penalty). */
+  tempWarning?: string
   /**
    * Ordered list of modifier-driven stats this instrument exposes.
    * Order controls display order in the overlay stat panel (Plan B).

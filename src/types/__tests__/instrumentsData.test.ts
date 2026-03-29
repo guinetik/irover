@@ -116,6 +116,21 @@ describe('instruments.json', () => {
     }
   })
 
+  it('every instrument has a non-empty hint string', () => {
+    for (const inst of instruments) {
+      expect(typeof inst.hint, `${inst.id} hint must be a string`).toBe('string')
+      expect(inst.hint.length, `${inst.id} hint must be non-empty`).toBeGreaterThan(0)
+    }
+  })
+
+  it('tempWarning is a string when present', () => {
+    for (const inst of instruments) {
+      if (inst.tempWarning === undefined) continue
+      expect(typeof inst.tempWarning, `${inst.id} tempWarning must be a string`).toBe('string')
+      expect(inst.tempWarning.length, `${inst.id} tempWarning must be non-empty when present`).toBeGreaterThan(0)
+    }
+  })
+
   it('chainBonuses entries have valid key, numeric baseValue, label, and description', () => {
     for (const inst of instruments) {
       if (!inst.chainBonuses) continue
