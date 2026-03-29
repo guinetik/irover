@@ -59,6 +59,8 @@ export interface RadTickHandler extends SiteTickHandler {
   getSafeDist(): number | null
   /** Dev-only: compute safe zone cluster centroids from the field. */
   getDevSafeZoneCentroids?(): Array<{ x: number; z: number }>
+  /** Returns the radiation field data and thresholds for POI placement, or null if field not yet initialized. */
+  getFieldData(): { field: Float32Array; gridSize: number; terrainScale: number; thresholds: RadiationThresholds } | null
 }
 
 /**
@@ -135,6 +137,11 @@ export function createRadTickHandler(
     if (radInst) radInst.decoding = false
     radDecoding.value = false
     dismissEvent()
+  }
+
+  function getFieldData(): { field: Float32Array; gridSize: number; terrainScale: number; thresholds: RadiationThresholds } | null {
+    if (!field) return null
+    return { field, gridSize, terrainScale, thresholds }
   }
 
   // Keep a reference to the last-seen RoverController for out-of-tick calls
@@ -288,5 +295,5 @@ export function createRadTickHandler(
     return findSafeZoneCentroids(field, gridSize, terrainScale, thresholds)
   }
 
-  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan, getSafeDist, getDevSafeZoneCentroids }
+  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan, getSafeDist, getDevSafeZoneCentroids, getFieldData }
 }
