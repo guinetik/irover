@@ -455,7 +455,7 @@
       "power": "5W",
       "tier": "standard",
       "controllerType": "AntennaLGController",
-      "tickHandlerType": "AntennaTickHandler",
+      "tickHandlerType": "AntennaLGTickHandler",
       "upgrade": {
         "name": "SIGNAL AMPLIFIER",
         "desc": "Doubles direct-to-Earth data rate.",
@@ -493,7 +493,7 @@
       "power": "8W",
       "tier": "standard",
       "controllerType": "AntennaUHFController",
-      "tickHandlerType": "AntennaTickHandler",
+      "tickHandlerType": "AntennaUHFTickHandler",
       "upgrade": {
         "name": "DUAL-BAND MODULE",
         "desc": "Enables simultaneous uplink/downlink during passes. Halves transfer time.",

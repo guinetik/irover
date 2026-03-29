@@ -15,7 +15,7 @@ import type { DSNTransmission } from '@/types/dsnArchive'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 
-export interface AntennaTickRefs {
+export interface AntennaHudRefs {
   uhfPassActive: Ref<boolean>
   uhfTransmitting: Ref<boolean>
   uhfCurrentOrbiter: Ref<string>
@@ -28,7 +28,7 @@ export interface AntennaTickRefs {
   passiveUiRevision: Ref<number>
 }
 
-export interface AntennaTickCallbacks {
+export interface AntennaHudCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardTransmission: (archiveId: string, baseSP: number, label: string) => SPGain | null
   playerMod: (key: keyof ProfileModifiers) => number
@@ -43,9 +43,9 @@ export interface AntennaTickCallbacks {
  * - LGA heartbeat: sends daily heartbeat at 0800, receives incoming messages
  * - UHF transmission: detects orbital passes, auto-transmits queued discoveries, awards bonus SP
  */
-export function createAntennaTickHandler(
-  refs: AntennaTickRefs,
-  callbacks: AntennaTickCallbacks,
+export function createAntennaHudController(
+  refs: AntennaHudRefs,
+  callbacks: AntennaHudCallbacks,
 ): SiteTickHandler {
   const orbitalPasses = useOrbitalPasses()
   const mailbox = useLGAMailbox()
@@ -67,7 +67,6 @@ export function createAntennaTickHandler(
 
     // Update link status
     lgaCtrl.linkStatus = lgaCtrl.passiveSubsystemEnabled ? 'LINKED' : 'OFF'
-    lgaCtrl.accuracyMod = callbacks.playerMod('instrumentAccuracy')
 
     // Always sync unread count (mission pushMessage can add messages while LGA is off)
     lgaCtrl.unreadCount = mailbox.unreadCount.value
@@ -113,7 +112,6 @@ export function createAntennaTickHandler(
     uhfCtrl.linkStatus = uhfCtrl.passiveSubsystemEnabled
       ? (uhfCtrl.passActive ? 'RELAY LOCK' : 'WAITING PASS')
       : 'OFF'
-    uhfCtrl.accuracyMod = callbacks.playerMod('instrumentAccuracy')
 
     const { marsSol, marsTimeOfDay, sceneDelta } = fctx
     const activePass = orbitalPasses.getActivePass(marsSol, marsTimeOfDay)

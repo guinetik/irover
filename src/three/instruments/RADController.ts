@@ -21,7 +21,7 @@ export class RADController extends InstrumentController {
   readonly viewPitch = 1.0
   override readonly selectionIdlePowerW = 2
 
-  // --- Live radiation state (synced by RadTickHandler each frame) ---
+  // --- Live radiation state (synced by RadHudController each frame) ---
 
   /** Current radiation scalar at rover position (0.0–1.2). */
   radiationLevel = 0.0
@@ -51,7 +51,7 @@ export class RADController extends InstrumentController {
   private lastSol = -1
 
   /**
-   * Update dose accumulation. Called each frame by RadTickHandler.
+   * Update dose accumulation. Called each frame by RadHudController.
    */
   accumulateDose(doseRateMGy: number, deltaSec: number, currentSol: number): void {
     if (currentSol !== this.lastSol) {

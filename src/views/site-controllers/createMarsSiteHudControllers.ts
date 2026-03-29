@@ -11,12 +11,12 @@ import { createDrillHudController } from './DrillHudController'
 import { createMastCamHudController } from './MastCamHudController'
 import { createChemCamHudController } from './ChemCamHudController'
 import { createOrbitalDropTickHandler, type OrbitalDropTickHandler } from './OrbitalDropTickHandler'
-import { createAntennaTickHandler } from './AntennaTickHandler'
+import { createAntennaHudController } from './AntennaHudController'
 import { createAPXSHudController } from './APXSHudController'
 import { createMicTickHandler } from './MicTickHandler'
 import { createPassiveSystemsAudioTickHandler } from './PassiveSystemsAudioTickHandler'
 import { createRoverMovementSoundHandler } from './RoverMovementSoundHandler'
-import { createRadTickHandler } from './RadTickHandler'
+import { createRadHudController } from './RadHudController'
 import { createMeteorController } from './MeteorController'
 import { useAudio } from '@/audio/useAudio'
 import { useMeteorArchive } from '@/composables/useMeteorArchive'
@@ -34,11 +34,11 @@ export interface MarsSiteHudControllers {
   chemCamHandler: ReturnType<typeof createChemCamHudController>
   apxsHandler: ReturnType<typeof createAPXSHudController>
   orbitalDropHandler: OrbitalDropTickHandler
-  antennaHandler: ReturnType<typeof createAntennaTickHandler>
+  antennaHandler: ReturnType<typeof createAntennaHudController>
   micHandler: ReturnType<typeof createMicTickHandler>
   passiveSystemsAudioHandler: ReturnType<typeof createPassiveSystemsAudioTickHandler>
   roverMovementSoundHandler: ReturnType<typeof createRoverMovementSoundHandler>
-  radHandler: ReturnType<typeof createRadTickHandler>
+  radHandler: ReturnType<typeof createRadHudController>
   meteorHandler: ReturnType<typeof createMeteorController>
   /** Disposes handlers in a stable order (matches previous inline disposal). */
   disposeAll: () => void
@@ -300,7 +300,7 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
     startThrusterLoop: () => ctx.startInstrumentActionLoop('sfx.thrusters'),
   })
 
-  const antennaHandler = createAntennaTickHandler(
+  const antennaHandler = createAntennaHudController(
     {
       uhfPassActive,
       uhfTransmitting,
@@ -337,7 +337,7 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
     },
   )
 
-  const radHandler = createRadTickHandler(
+  const radHandler = createRadHudController(
     {
       radZone: refs.radZone,
       radLevel: refs.radLevel,

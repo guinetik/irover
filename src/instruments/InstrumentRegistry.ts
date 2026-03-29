@@ -19,6 +19,8 @@ import { createDrillTickHandler } from './tickHandlers/drillTickHandler'
 import { createMastCamTickHandler } from './tickHandlers/mastCamTickHandler'
 import { createChemCamTickHandler } from './tickHandlers/chemCamTickHandler'
 import { createDanTickHandler } from './tickHandlers/danTickHandler'
+import { createAntennaLGTickHandler } from './tickHandlers/antennaLGTickHandler'
+import { createAntennaUHFTickHandler } from './tickHandlers/antennaUHFTickHandler'
 
 export type ControllerConstructor = new () => InstrumentController
 export type TickHandlerFactory = (controller: InstrumentController) => TickHandler
@@ -49,4 +51,6 @@ export const TICK_HANDLER_REGISTRY: Record<string, TickHandlerFactory> = {
   MastCamTickHandler: createMastCamTickHandler,
   ChemCamTickHandler: createChemCamTickHandler,
   DANTickHandler: createDanTickHandler,
+  AntennaLGTickHandler: createAntennaLGTickHandler,
+  AntennaUHFTickHandler: createAntennaUHFTickHandler,
 }

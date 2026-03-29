@@ -17,7 +17,7 @@ import type { RadiationZone, RadiationThresholds } from '@/lib/radiation'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type SampleToast from '@/components/SampleToast.vue'
 
-export interface RadTickRefs {
+export interface RadHudRefs {
   radZone: Ref<RadiationZone>
   radLevel: Ref<number>
   radDoseRate: Ref<number>
@@ -29,7 +29,7 @@ export interface RadTickRefs {
   radDecoding: Ref<boolean>
 }
 
-export interface RadTickCallbacks {
+export interface RadHudCallbacks {
   radiationIndex: number
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playEventSting?: () => void
@@ -40,7 +40,7 @@ export interface RadTickCallbacks {
   hasLeadLined?: () => boolean
 }
 
-export interface RadTickHandler extends SiteTickHandler {
+export interface RadHudHandler extends SiteTickHandler {
   /** Set the radiation scalar field after terrain generation. */
   setField(field: Float32Array, gridSize: number, terrainScale: number): void
   /** Dismiss a pending radiation event alert. */
@@ -73,10 +73,10 @@ export interface RadTickHandler extends SiteTickHandler {
  * - Shows zone-transition toasts
  * - Spawns radiation events on a randomised timer
  */
-export function createRadTickHandler(
-  refs: RadTickRefs,
-  callbacks: RadTickCallbacks,
-): RadTickHandler {
+export function createRadHudController(
+  refs: RadHudRefs,
+  callbacks: RadHudCallbacks,
+): RadHudHandler {
   const {
     radZone, radLevel, radDoseRate, radCumulativeDose,
     radParticleRate, radEnabled, radEventAlertPending,

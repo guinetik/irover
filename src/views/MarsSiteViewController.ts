@@ -845,7 +845,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         },
         showRadSafeZones: () => {
           const handler = tickHandlers.radHandler
-          // Access the field data through a dev helper on RadTickHandler
+          // Access the field data through a dev helper on RadHudController
           const centroids = handler.getDevSafeZoneCentroids?.() ?? []
           let placed = 0
           for (let i = 0; i < centroids.length; i++) {

@@ -5,4 +5,4 @@ export { createDrillHudController, type DrillHudRefs, type DrillHudCallbacks, ty
 export { createMastCamHudController, type MastCamHudRefs, type MastCamHudCallbacks } from './MastCamHudController'
 export { createChemCamHudController, type ChemCamHudRefs, type ChemCamHudCallbacks } from './ChemCamHudController'
 export { createOrbitalDropTickHandler, type OrbitalDropTickCallbacks, type OrbitalDropTickHandler } from './OrbitalDropTickHandler'
-export { createAntennaTickHandler, type AntennaTickRefs, type AntennaTickCallbacks } from './AntennaTickHandler'
+export { createAntennaHudController, type AntennaHudRefs, type AntennaHudCallbacks } from './AntennaHudController'
