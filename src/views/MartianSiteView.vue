@@ -293,6 +293,11 @@
       :water-confirmed="danWaterResult"
       @close="danDialogVisible = false"
     />
+    <CraterDiscoveryDialog
+      :result="pendingCraterResult?.discovery ?? null"
+      @acknowledge="handleCraterAcknowledge"
+      @close="pendingCraterResult = null"
+    />
     <RADEventAlert
       :visible="radEventAlertPending"
       @decode="onRadDecode"
@@ -628,6 +633,8 @@ import SampleToast from '@/components/SampleToast.vue'
 import SAMDialog from '@/components/SAMDialog.vue'
 import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
+import CraterDiscoveryDialog from '@/components/CraterDiscoveryDialog.vue'
+import type { PendingCraterResult } from '@/views/site-controllers/DanTickHandler'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import RADHud from '@/components/RADHud.vue'
@@ -1005,6 +1012,7 @@ const danProspectPhase = ref<string>('idle')
 const danProspectProgress = ref(0)
 const danDialogVisible = ref(false)
 const danCraterModeAvailable = ref(false)
+const pendingCraterResult = ref<PendingCraterResult | null>(null)
 const danSignalStrength = ref(0)
 const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
@@ -1877,6 +1885,68 @@ function cancelCraterMode(): void {
   siteHandle.value?.cancelCraterMode()
 }
 
+function handleCraterAcknowledge(): void {
+  const pending = pendingCraterResult.value
+  if (!pending) return
+
+  const { discovery, ventPlaced, crater } = pending
+  pendingCraterResult.value = null
+
+  // 1. Award SP (use awardSurvival for custom base SP, non-idempotent)
+  const gain = awardSurvival(`Crater: ${discovery.name}`, discovery.sp)
+  if (gain) sampleToastRef.value?.showSP(gain.amount, 'CRATER DISCOVERY', gain.bonus)
+
+  // 2. Drop side products into inventory
+  if (discovery.sideProducts.length > 0) {
+    const { addComponent } = useInventory()
+    for (const sp of discovery.sideProducts) {
+      const res = addComponent(sp.itemId, sp.quantity)
+      if (res.ok) {
+        const label = INVENTORY_CATALOG[sp.itemId]?.label ?? sp.itemId
+        sampleToastRef.value?.showPayloadItem(label, sp.quantity)
+      }
+    }
+  }
+
+  // 3. Archive to DAN science log
+  const { archiveProspect } = useDanArchive()
+  archiveProspect({
+    capturedSol: marsSol.value,
+    siteId,
+    siteLatDeg: siteLat.value,
+    siteLonDeg: siteLon.value,
+    roverWorldX: roverWorldX.value,
+    roverWorldZ: roverWorldZ.value,
+    roverSpawnX: roverSpawnXZ.value.x,
+    roverSpawnZ: roverSpawnXZ.value.z,
+    signalStrength: 1,
+    quality: 'Strong',
+    waterConfirmed: false,
+    reservoirQuality: 0,
+    drillSite: { x: crater.x, y: 0, z: crater.z },
+    craterDiscovery: {
+      discoveryId: discovery.id,
+      discoveryName: discovery.name,
+      ventPlaced,
+      ventType: discovery.ventType ?? undefined,
+    },
+  })
+
+  // 4. Handle vent placement if applicable
+  if (ventPlaced && discovery.ventType) {
+    // Revert crater terrain (fracking flattens ground)
+    if (crater.deformData && siteHandle.value?.siteScene?.terrain) {
+      siteHandle.value.siteScene.terrain.revertCrater(crater.deformData)
+    }
+    // Remove rock + crater, archive vent
+    siteHandle.value?.acknowledgedCraterDiscovery(crater, discovery.ventType)
+
+    sampleToastRef.value?.showDAN(
+      `PNEUMATIC FRACTURING COMPLETE \u2014 ${discovery.ventType === 'co2' ? 'CO\u2082' : 'CH\u2084'} VENT EXPOSED`,
+    )
+  }
+}
+
 /**
  * Clears localStorage and loads home so singleton state resets (full document navigation).
  */
@@ -2155,6 +2225,7 @@ function createSiteControllerContext() {
       danWaterResult,
       danDialogVisible,
       danCraterModeAvailable,
+      pendingCraterResult,
       internalTempC,
       ambientEffectiveC,
       heaterW,

@@ -1,4 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
+import { useVentArchive } from '@/composables/useVentArchive'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -284,6 +285,7 @@ export interface MarsSiteViewRefs {
   danWaterResult: Ref<boolean | null>
   danDialogVisible: Ref<boolean>
   danCraterModeAvailable: Ref<boolean>
+  pendingCraterResult: Ref<import('@/views/site-controllers/DanTickHandler').PendingCraterResult | null>
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
@@ -446,6 +448,8 @@ export interface MarsSiteViewControllerHandle {
   handleDanProspect: () => void
   confirmCraterMode: () => void
   cancelCraterMode: () => void
+  /** Called from Vue after user acknowledges a crater discovery — handles rock removal, vent placement, dan.glb marker. */
+  acknowledgedCraterDiscovery: (crater: import('./site-controllers/MeteorController').MeteorCrater, ventType: 'co2' | 'methane') => void
   handleRadDecode: () => void
   handleRadDismiss: () => void
 }
@@ -776,6 +780,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
             timeOfDay: marsTimeOfDay.value,
             subject: def.name,
             body: def.briefing,
+            description: def.description,
             type: 'mission',
             from: def.patron ?? 'Mission Control',
             missionId: def.id,
@@ -1226,6 +1231,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
               timeOfDay: marsTimeOfDay.value,
               subject: firstDef.name,
               body: firstDef.briefing,
+              description: firstDef.description,
               type: 'mission',
               from: firstDef.patron ?? 'Mission Control',
               missionId: firstDef.id,
@@ -1427,6 +1433,20 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     cancelCraterMode: () => {
       const fctx = buildFrameContext()
       if (fctx) danHandler.cancelCraterMode(fctx)
+    },
+    acknowledgedCraterDiscovery: (crater, ventType) => {
+      // Remove rock from scene, remove crater from tracking, archive vent, place dan.glb
+      tickHandlers.meteorHandler.unregisterMeteoriteRockFromCrater(crater)
+      tickHandlers.meteorHandler.removeCrater(crater.id)
+      useVentArchive().archiveVent({
+        siteId,
+        ventType,
+        placedSol: ctx.refs.marsSol.value,
+        x: crater.x,
+        z: crater.z,
+      })
+      // Place dan.glb buildable at crater center on now-flat terrain
+      danHandler.placeVentMarker(crater.x, crater.z)
     },
     handleRadDecode: () => {
       tickHandlers.radHandler.startDecode()

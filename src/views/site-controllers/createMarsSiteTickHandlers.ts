@@ -69,6 +69,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     lgaUnreadCount,
     micEnabled,
     danCraterModeAvailable,
+    pendingCraterResult,
   } = refs
 
   const getSpeedBreakdownBase = (): Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'> => ({
@@ -119,6 +120,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       roverWorldZ,
       roverSpawnXZ,
       danCraterModeAvailable,
+      pendingCraterResult,
     },
     {
       siteId: ctx.siteId,

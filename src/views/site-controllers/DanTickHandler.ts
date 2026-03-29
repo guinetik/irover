@@ -11,8 +11,15 @@ import { DAN_INITIATE_DURATION_SEC, DAN_PROSPECT_DURATION_MARS_HOURS } from '@/v
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { MeteorCrater } from './MeteorController'
-import type { VentType } from '@/lib/meteor/craterDiscovery'
+import type { VentType, CraterDiscovery } from '@/lib/meteor/craterDiscovery'
 import { rollCraterDiscovery } from '@/lib/meteor/craterDiscovery'
+
+/** Pending crater discovery awaiting player acknowledgment. */
+export interface PendingCraterResult {
+  discovery: CraterDiscovery
+  ventPlaced: boolean
+  crater: MeteorCrater
+}
 import type { ArchivedVent } from '@/types/ventArchive'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
@@ -117,6 +124,8 @@ export interface DanTickRefs {
   roverWorldZ: Ref<number>
   roverSpawnXZ: Ref<{ x: number; z: number }>
   danCraterModeAvailable: Ref<boolean>
+  /** Set by tick handler when crater scan completes; Vue reads this to show result dialog. */
+  pendingCraterResult: Ref<PendingCraterResult | null>
 }
 
 export interface DanTickCallbacks {
@@ -174,6 +183,8 @@ export interface DanTickHandler extends SiteTickHandler {
   confirmCraterMode(fctx: SiteFrameContext): void
   /** Cancels crater scanning mode, returning to idle. */
   cancelCraterMode(fctx: SiteFrameContext): void
+  /** Places a dan.glb buildable at the given world position (used after crater acknowledge). */
+  placeVentMarker(x: number, z: number): void
 }
 
 /**
@@ -190,7 +201,7 @@ export function createDanTickHandler(
     siteTerrainParams, danTotalSamples, danHitAvailable, danProspectPhase,
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,
     passiveUiRevision, siteLat, siteLon, roverWorldX, roverWorldZ, roverSpawnXZ,
-    danCraterModeAvailable,
+    danCraterModeAvailable, pendingCraterResult,
   } = refs
   const {
     siteId,
@@ -230,6 +241,8 @@ export function createDanTickHandler(
   const DAN_CRATER_SCAN_DURATION_SEC = 30
   /** Tracks vent GLB markers placed in the scene for disposal. */
   const ventMarkers: THREE.Object3D[] = []
+  /** Last siteScene reference from tick — used by placeVentMarker called outside tick. */
+  let lastSiteScene: SiteFrameContext['siteScene'] | null = null
 
   /**
    * Rebuilds completed disc + GLB from the persisted DAN archive after a full reload.
@@ -443,8 +456,22 @@ export function createDanTickHandler(
     danCraterModeAvailable.value = false
   }
 
+  function placeVentMarker(x: number, z: number): void {
+    const sceneRef = lastSiteScene?.scene
+    const terrainRef = lastSiteScene?.terrain
+    void loadDanDrillMarkerTemplate().then((template) => {
+      if (!tickHandlerActive || !sceneRef) return
+      const marker = template.clone(true)
+      const groundY = terrainRef ? terrainRef.heightAt(x, z) : 0
+      placeDanDrillMarkerInstance(marker, x, z, groundY)
+      sceneRef.add(marker)
+      ventMarkers.push(marker)
+    })
+  }
+
   function tick(fctx: SiteFrameContext): void {
     const { rover: controller, siteScene, sceneDelta, isSleeping, marsSol, dustStormPhase, dustStormLevel } = fctx
+    lastSiteScene = siteScene
 
     const danInst = controller?.instruments.find(i => i.id === 'dan') as DANController | undefined
     if (!danInst || !fctx.roverReady) {
@@ -525,69 +552,11 @@ export function createDanTickHandler(
         const discovery = rollCraterDiscovery()
         const wantVent = discovery.ventType !== null && !hasActiveVent(discovery.ventType)
 
-        // Archive the crater discovery in DAN archive
-        archiveDanProspect({
-          capturedSol: marsSol,
-          siteId,
-          siteLatDeg: siteLat.value,
-          siteLonDeg: siteLon.value,
-          roverWorldX: roverWorldX.value,
-          roverWorldZ: roverWorldZ.value,
-          roverSpawnX: roverSpawnXZ.value.x,
-          roverSpawnZ: roverSpawnXZ.value.z,
-          signalStrength: 1,
-          quality: 'Strong',
-          waterConfirmed: false,
-          reservoirQuality: 0,
-          drillSite: { x: activeCrater.x, y: 0, z: activeCrater.z },
-          craterDiscovery: {
-            discoveryId: discovery.id,
-            discoveryName: discovery.name,
-            ventPlaced: wantVent,
-            ventType: discovery.ventType ?? undefined,
-          },
-        })
-
-        // Award SP
-        const gain = awardDAN(`Crater discovery: ${discovery.name}`)
-        if (gain) sampleToastRef.value?.showSP(gain.amount, 'CRATER DISCOVERY', gain.bonus)
-
-        if (wantVent && discovery.ventType) {
-          // Revert crater terrain (fracking flattens ground)
-          if (activeCrater.deformData && siteScene?.terrain) {
-            siteScene.terrain.revertCrater(activeCrater.deformData)
-          }
-
-          // Notify controller to handle rock removal, crater cleanup, vent archival
-          onCraterDiscovery({
-            discovery: { id: discovery.id, name: discovery.name, sp: discovery.sp, ventType: discovery.ventType },
-            ventPlaced: true,
-            crater: activeCrater,
-          })
-
-          // Place vent buildable (dan.glb) at crater center on now-flat terrain
-          const ventX = activeCrater.x
-          const ventZ = activeCrater.z
-          const sceneRef = siteScene?.scene
-          const terrainRef = siteScene?.terrain
-          void loadDanDrillMarkerTemplate().then((template) => {
-            if (!tickHandlerActive || !sceneRef) return
-            const marker = template.clone(true)
-            // Query ground height inside callback — terrain revert is complete by now
-            const groundY = terrainRef ? terrainRef.heightAt(ventX, ventZ) : 0
-            placeDanDrillMarkerInstance(marker, ventX, ventZ, groundY)
-            sceneRef.add(marker)
-            ventMarkers.push(marker)
-          })
-
-          sampleToastRef.value?.showDAN(
-            `PNEUMATIC FRACTURING COMPLETE \u2014 ${discovery.ventType === 'co2' ? 'CO\u2082' : 'CH\u2084'} VENT EXPOSED`,
-          )
-        } else {
-          sampleToastRef.value?.showDAN(`Crater analysis: ${discovery.name} (+${discovery.sp} SP)`)
-        }
+        // Store pending result — Vue shows the result dialog, user must acknowledge
+        pendingCraterResult.value = { discovery, ventPlaced: wantVent, crater: activeCrater }
 
         // Cleanup — deactivate DAN, unlock rover, return to idle
+        syncDanProspectingPlayback(false)
         danInst.forceOff()
         danInst.prospectPhase = 'idle'
         danInst.prospectComplete = false
@@ -767,5 +736,5 @@ export function createDanTickHandler(
     ventMarkers.length = 0
   }
 
-  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode }
+  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode, placeVentMarker }
 }
