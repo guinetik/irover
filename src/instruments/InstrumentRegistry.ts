@@ -15,6 +15,7 @@ import { RoverWheelsController } from '@/three/instruments/RoverWheelsController
 import { MicController } from '@/three/instruments/MicController'
 import type { InstrumentController } from '@/three/instruments/InstrumentController'
 import type { TickHandler } from './InstrumentFactory'
+import { createDrillTickHandler } from './tickHandlers/drillTickHandler'
 
 export type ControllerConstructor = new () => InstrumentController
 export type TickHandlerFactory = (controller: InstrumentController) => TickHandler
@@ -40,4 +41,6 @@ export const CONTROLLER_REGISTRY: Record<string, ControllerConstructor> = {
  * Tick handler registry — populated in Plan B when the live system is wired.
  * Defined here so InstrumentFactory can reference it without Plan B changes.
  */
-export const TICK_HANDLER_REGISTRY: Record<string, TickHandlerFactory> = {}
+export const TICK_HANDLER_REGISTRY: Record<string, TickHandlerFactory> = {
+  DrillTickHandler: createDrillTickHandler,
+}

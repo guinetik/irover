@@ -7,12 +7,15 @@ import instrumentsRaw from '../../../public/data/instruments.json'
 const instruments = instrumentsRaw.instruments as InstrumentDef[]
 
 describe('createInstrumentTuple', () => {
-  it('returns a tuple with def, controller, and null tickHandler for every instrument in JSON', () => {
+  it('returns a tuple with def and controller for every instrument in JSON; tickHandler is null or a valid TickHandler', () => {
     for (const def of instruments) {
       const tuple = createInstrumentTuple(def)
       expect(tuple.def).toBe(def)
       expect(tuple.controller).toBeDefined()
-      expect(tuple.tickHandler).toBeNull()
+      if (tuple.tickHandler !== null) {
+        expect(typeof tuple.tickHandler.tick).toBe('function')
+        expect(typeof tuple.tickHandler.dispose).toBe('function')
+      }
     }
   })
 
