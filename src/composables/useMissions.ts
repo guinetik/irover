@@ -8,6 +8,7 @@ import { useChemCamArchive } from './useChemCamArchive'
 import { useDanArchive } from './useDanArchive'
 import { useSamArchive } from './useSamArchive'
 import { useAPXSArchive } from './useAPXSArchive'
+import { useRadArchive } from './useRadArchive'
 import { INVENTORY_CATALOG } from '@/types/inventory'
 import { devSpawnInventoryItem } from '@/composables/useInventory'
 import { getMastCamTagCount, getTotalMastCamTags } from './useMastCamTags'
@@ -418,6 +419,13 @@ function wireArchiveCheckers(): void {
     return avionicsDistanceM.value >= required
   })
 
+  // rad-activate: flag set externally when player enables RAD passive subsystem
+  registerChecker('rad-activate', () => radActivated.value)
+
+  // rad-decode: archive-based — check if player has ever completed a decode (retroactive)
+  const { events: radEvents } = useRadArchive()
+  registerChecker('rad-decode', () => radEvents.value.length >= 1)
+
 }
 
 /** Set to true when the player activates RTG overdrive (called from view layer). */
@@ -426,6 +434,8 @@ const rtgShuntTriggered = ref(false)
 const remsActivated = ref(false)
 const danActivated = ref(false)
 const danScanCompleted = ref(false)
+const radActivated = ref(false)
+const radDecodeCompleted = ref(false)
 const repairKitUsed = ref(false)
 const upgradedInstruments = ref<Set<string>>(new Set())
 const powerBooted = ref(false)
@@ -477,12 +487,22 @@ function addAvionicsDistance(deltaM: number): void {
   avionicsDistanceM.value += deltaM
 }
 
+function notifyRadActivated(): void {
+  radActivated.value = true
+}
+
+function notifyRadDecodeCompleted(): void {
+  radDecodeCompleted.value = true
+}
+
 function resetForTests(): void {
   rtgOverdriveTriggered.value = false
   rtgShuntTriggered.value = false
   remsActivated.value = false
   danActivated.value = false
   danScanCompleted.value = false
+  radActivated.value = false
+  radDecodeCompleted.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
   powerBooted.value = false
@@ -506,6 +526,8 @@ export function resetMissionProgressForDev(): void {
   remsActivated.value = false
   danActivated.value = false
   danScanCompleted.value = false
+  radActivated.value = false
+  radDecodeCompleted.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
   powerBooted.value = false
@@ -611,6 +633,8 @@ export function useMissions() {
     notifyPowerBooted,
     notifyUiInspected,
     addAvionicsDistance,
+    notifyRadActivated,
+    notifyRadDecodeCompleted,
     getMissionDef,
     resetForTests,
   }
