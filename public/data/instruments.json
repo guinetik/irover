@@ -38,6 +38,14 @@
       "stats": [
         { "key": "analysisSpeed", "label": "SCAN SPEED" },
         { "key": "instrumentAccuracy", "label": "RANGE" }
+      ],
+      "chainBonuses": [
+        {
+          "key": "chainDrillBonus",
+          "baseValue": 0.4,
+          "label": "DRILL BONUS",
+          "description": "Tagged rocks drill 40% faster"
+        }
       ]
     },
     {
@@ -78,6 +86,14 @@
         { "key": "analysisSpeed", "label": "ANALYSIS SPEED" },
         { "key": "instrumentAccuracy", "label": "ACCURACY" },
         { "key": "powerConsumption", "label": "POWER DRAW" }
+      ],
+      "chainBonuses": [
+        {
+          "key": "chainLootBonus",
+          "baseValue": 0.3,
+          "label": "LOOT YIELD",
+          "description": "Analyzed rocks yield 30% heavier samples"
+        }
       ]
     },
     {
@@ -157,6 +173,14 @@
       "stats": [
         { "key": "analysisSpeed", "label": "ANALYSIS SPEED" },
         { "key": "instrumentAccuracy", "label": "ACCURACY" }
+      ],
+      "chainBonuses": [
+        {
+          "key": "instrumentAccuracy",
+          "baseValue": 2,
+          "label": "TRACE ELEMENTS",
+          "description": "Yields 1–2 surface trace elements on drill"
+        }
       ]
     },
     {
