@@ -16,12 +16,13 @@ void main() {
   float acrossWind = dot(center, windPerp);
   float d = length(vec2(alongWind / stretch, acrossWind));
 
-  // Tight circular falloff — discard outside radius for clean circles
-  if (d > 0.35) discard;
-  float alpha = smoothstep(0.35, 0.15, d) * vAlpha;
+  // Hard-edged crystal falloff
+  if (d > 0.42) discard;
+  float alpha = smoothstep(0.42, 0.30, d) * vAlpha;
 
-  // Darken particles in storms so they contrast against the haze overlay
+  // Boost brightness for additive blending — particles add light to background so they
+  // always show up regardless of terrain or sky color behind them
   float stormDarken = smoothstep(0.8, 3.0, uWindSpeed) * 0.65;
-  vec3 color = uParticleColor * (1.0 - stormDarken);
+  vec3 color = uParticleColor * (1.0 - stormDarken) * 2.2;
   gl_FragColor = vec4(color, alpha);
 }

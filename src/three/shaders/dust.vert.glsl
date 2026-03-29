@@ -3,6 +3,7 @@ uniform float uDustCover;
 uniform vec3 uWindDirection;
 uniform float uWindSpeed;
 uniform vec3 uCameraPos;
+uniform vec3 uCameraForward;
 uniform float uVerticalDrift;
 /**
  * World-space Y of the rover (terrain surface level).
@@ -23,14 +24,15 @@ void main() {
 
   // Tight XZ box around camera — storms pack a little tighter
   float stormDensity = smoothstep(1.0, 4.0, uWindSpeed);
-  float boxXZ = mix(22.0, 14.0, stormDensity);
+  float boxXZ = mix(10.0, 6.0, stormDensity);
 
   // Rover-relative Y box: particles stay close to terrain regardless of elevation.
   // boxY is intentionally narrow so nothing floats high above the rover.
   float boxY = 5.0;
 
-  // XZ — wrap around camera (same as before)
-  pos.xz = mod(pos.xz - uCameraPos.xz + boxXZ * 0.5, vec2(boxXZ)) - boxXZ * 0.5 + uCameraPos.xz;
+  // XZ — wrap around a box biased forward so most particles are in the visible frustum
+  vec2 boxCenter = uCameraPos.xz + uCameraForward.xz * boxXZ * 0.35;
+  pos.xz = mod(pos.xz - boxCenter + boxXZ * 0.5, vec2(boxXZ)) - boxXZ * 0.5 + boxCenter;
 
   // Y — wrap around rover instead of absolute 0..18
   // Offset the box slightly downward so more particles are near ground level.
@@ -59,15 +61,15 @@ void main() {
   vDist = -mvPosition.z;
 
   // Fade with distance and near camera
-  float distFade = smoothstep(20.0, 3.0, vDist);
+  float distFade = smoothstep(10.0, 2.0, vDist);
   float nearFade = smoothstep(0.3, 1.5, vDist);
 
-  // Always visible base + wind adds more
-  float baseAlpha = 0.50;
-  float windAlpha = smoothstep(0.5, 3.0, uWindSpeed) * 0.25;
+  // Lower alpha — additive blending accumulates, so keep per-particle contribution small
+  float baseAlpha = 0.28;
+  float windAlpha = smoothstep(0.5, 3.0, uWindSpeed) * 0.15;
   vAlpha = distFade * nearFade * (baseAlpha + windAlpha);
 
-  gl_PointSize = aSize * (120.0 / -mvPosition.z);
+  gl_PointSize = min(aSize * (45.0 / -mvPosition.z), 6.0);
   gl_Position = projectionMatrix * mvPosition;
 
   // Project wind direction to screen space for fragment streaking
