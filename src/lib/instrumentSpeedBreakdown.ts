@@ -1,5 +1,5 @@
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
-import { computeStormPerformancePenalty } from '@/lib/hazards'
+import { computeStormPerformancePenalty, computeRadiationPerformancePenalty } from '@/lib/hazards'
 import type { InstrumentTier } from '@/lib/hazards'
 
 export interface SpeedBuffEntry {
@@ -32,6 +32,8 @@ export interface SpeedBreakdownInput {
   /** Active dust storm level (1-5) and instrument tier — adds storm penalty entry. */
   stormLevel?: number
   instrumentTier?: InstrumentTier
+  /** Radiation level (0-1) and instrument tier — adds radiation penalty entry. */
+  radiationLevel?: number
   extras?: SpeedBuffEntry[]
   speedPctOverride?: number
 }
@@ -100,6 +102,19 @@ export function buildSpeedBreakdown(input: SpeedBreakdownInput): SpeedBreakdown 
     })
   }
 
+  // Radiation penalty
+  let radiationSpeedFactor = 1
+  if (input.radiationLevel && input.radiationLevel > 0.25 && input.instrumentTier) {
+    const radDurMult = computeRadiationPerformancePenalty(input.radiationLevel, input.instrumentTier)
+    radiationSpeedFactor = 1 / radDurMult
+    const pctDelta = radiationSpeedFactor - 1
+    buffs.push({
+      label: 'RADIATION',
+      value: fmtBuff(pctDelta),
+      color: RED,
+    })
+  }
+
   // Extras (display-only)
   if (input.extras) {
     for (const extra of input.extras) {
@@ -109,7 +124,7 @@ export function buildSpeedBreakdown(input: SpeedBreakdownInput): SpeedBreakdown 
 
   // Compute speedPct
   const profileMult = 1 + profileSum
-  let speedPct = profileMult * thermalSpeedFactor * stormSpeedFactor * 100
+  let speedPct = profileMult * thermalSpeedFactor * stormSpeedFactor * radiationSpeedFactor * 100
   if (input.speedPctOverride !== undefined) {
     speedPct = input.speedPctOverride
   }
