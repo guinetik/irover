@@ -22,6 +22,8 @@ const VALID_MODIFIER_KEYS = [
   'buildSpeed',
   'structureDurability',
   'radiationTolerance',
+  'chainDrillBonus',
+  'chainLootBonus',
 ]
 
 describe('instruments.json', () => {
@@ -110,6 +112,23 @@ describe('instruments.json', () => {
         ).toContain(bonus.key)
         expect(typeof bonus.value, `${inst.id} provides entry value must be number`).toBe('number')
         expect(bonus.label, `${inst.id} provides entry missing label`).toBeTruthy()
+      }
+    }
+  })
+
+  it('chainBonuses entries have valid key, numeric baseValue, label, and description', () => {
+    for (const inst of instruments) {
+      if (!inst.chainBonuses) continue
+      for (const bonus of inst.chainBonuses) {
+        expect(bonus.key, `${inst.id} chainBonus missing key`).toBeTruthy()
+        expect(
+          VALID_MODIFIER_KEYS,
+          `${inst.id} chainBonus key "${bonus.key}" is not a valid ProfileModifiers key`,
+        ).toContain(bonus.key)
+        expect(typeof bonus.baseValue, `${inst.id} chainBonus baseValue must be number`).toBe('number')
+        expect(bonus.baseValue, `${inst.id} chainBonus baseValue must be > 0`).toBeGreaterThan(0)
+        expect(bonus.label, `${inst.id} chainBonus missing label`).toBeTruthy()
+        expect(bonus.description, `${inst.id} chainBonus missing description`).toBeTruthy()
       }
     }
   })
