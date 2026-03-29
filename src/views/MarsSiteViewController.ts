@@ -1445,8 +1445,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         x: crater.x,
         z: crater.z,
       })
-      // Place dan.glb buildable at crater center on now-flat terrain
-      danHandler.placeVentMarker(crater.x, crater.z)
+      // Place bio capsule buildable colored by fluid type
+      danHandler.placeVentMarker(crater.x, crater.z, ventType)
     },
     handleRadDecode: () => {
       tickHandlers.radHandler.startDecode()

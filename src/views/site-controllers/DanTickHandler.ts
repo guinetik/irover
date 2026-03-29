@@ -21,6 +21,7 @@ export interface PendingCraterResult {
   crater: MeteorCrater
 }
 import type { ArchivedVent } from '@/types/ventArchive'
+import { createBioCapsule, disposeBioCapsule } from '@/three/BioCapsuleModel'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
@@ -183,8 +184,8 @@ export interface DanTickHandler extends SiteTickHandler {
   confirmCraterMode(fctx: SiteFrameContext): void
   /** Cancels crater scanning mode, returning to idle. */
   cancelCraterMode(fctx: SiteFrameContext): void
-  /** Places a dan.glb buildable at the given world position (used after crater acknowledge). */
-  placeVentMarker(x: number, z: number): void
+  /** Places a bio capsule buildable at the given world position, colored by fluid type. */
+  placeVentMarker(x: number, z: number, fluidType: 'water' | 'co2' | 'methane'): void
 }
 
 /**
@@ -375,19 +376,16 @@ export function createDanTickHandler(
         }
       }
 
-      // Restore persisted vent buildables (dan.glb at archived positions)
+      // Restore persisted vent buildables (bio capsule colored by type)
       const siteVents = getVentsForSite(siteId)
       for (const vent of siteVents) {
         const sceneRef = fctx.siteScene?.scene
         const terrainRef = fctx.siteScene?.terrain
-        void loadDanDrillMarkerTemplate().then((template) => {
-          if (!tickHandlerActive || !sceneRef) return
-          const marker = template.clone(true)
-          // Query ground height at placement time (terrain is fully loaded)
-          const groundY = terrainRef ? terrainRef.terrainHeightAt(vent.x, vent.z) : 0
-          placeDanDrillMarkerInstance(marker, vent.x, vent.z, groundY)
-          sceneRef.add(marker)
-          ventMarkers.push(marker)
+        if (!sceneRef) continue
+        const groundY = terrainRef ? terrainRef.terrainHeightAt(vent.x, vent.z) : 0
+        void createBioCapsule(vent.ventType, vent.x, vent.z, groundY, sceneRef).then((instance) => {
+          if (!instance || !tickHandlerActive) return
+          ventMarkers.push(instance)
         })
       }
     }
@@ -461,18 +459,14 @@ export function createDanTickHandler(
     danCraterModeAvailable.value = false
   }
 
-  function placeVentMarker(x: number, z: number): void {
+  function placeVentMarker(x: number, z: number, fluidType: 'water' | 'co2' | 'methane'): void {
     const sceneRef = lastSiteScene?.scene
     const terrainRef = lastSiteScene?.terrain
-    void loadDanDrillMarkerTemplate().then((template) => {
-      if (!tickHandlerActive || !sceneRef) return
-      const marker = template.clone(true)
-      // Use terrainHeightAt (heightmap only) — heightAt includes rock colliders which
-      // may still reference the now-removed meteorite rock at this position.
-      const groundY = terrainRef ? terrainRef.terrainHeightAt(x, z) : 0
-      placeDanDrillMarkerInstance(marker, x, z, groundY)
-      sceneRef.add(marker)
-      ventMarkers.push(marker)
+    if (!sceneRef) return
+    const groundY = terrainRef ? terrainRef.terrainHeightAt(x, z) : 0
+    void createBioCapsule(fluidType, x, z, groundY, sceneRef).then((instance) => {
+      if (!instance || !tickHandlerActive) return
+      ventMarkers.push(instance)
     })
   }
 
@@ -760,7 +754,7 @@ export function createDanTickHandler(
     danCompletedDiscs.length = 0
     for (const vm of ventMarkers) {
       vm.parent?.remove(vm)
-      disposeDrillMarkerRoot(vm)
+      disposeBioCapsule(vm)
     }
     ventMarkers.length = 0
   }
