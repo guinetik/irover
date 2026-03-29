@@ -61,12 +61,14 @@ export function useInstrumentDurability() {
   const { stacks, consumeItem } = useInventory()
 
   let upgradesHydrated = false
+  let lastSavedSol = -1
 
   /**
    * Called each frame from MarsSiteViewController to sync controller state
    * into Vue reactive refs.
+   * @param sol — current Mars sol; durability is persisted once per sol change (not per frame).
    */
-  function syncFromControllers(instruments: InstrumentController[]): void {
+  function syncFromControllers(instruments: InstrumentController[], sol?: number): void {
     instrumentRefs = instruments
 
     // Restore persisted state once on first sync
@@ -87,8 +89,12 @@ export function useInstrumentDurability() {
       }
     }
 
-    // Persist durability each frame (writes are cheap — only stores damaged instruments)
-    saveDurability(instruments)
+    // Persist durability once per sol change (not every frame)
+    const currentSol = sol ?? -1
+    if (currentSol !== lastSavedSol && currentSol >= 0) {
+      lastSavedSol = currentSol
+      saveDurability(instruments)
+    }
 
     snapshots.value = instruments.map(inst => ({
       id: inst.id,

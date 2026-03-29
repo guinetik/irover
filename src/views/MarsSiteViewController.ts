@@ -958,7 +958,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         }
       }
       if (controller) {
-        syncFromControllers(controller.instruments)
+        syncFromControllers(controller.instruments, marsSol.value)
       }
       roverHeading.value = controller?.cameraHeading ?? 0
       {
