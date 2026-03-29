@@ -177,7 +177,7 @@
 
         <!-- Broken state -->
         <div v-if="instrumentOperational === false" class="ov-broken">
-          PERMANENTLY DAMAGED
+          {{ activeSlot === 7 ? 'RTG CRITICAL — TOTAL FAILURE IMMINENT' : 'PERMANENTLY DAMAGED' }}
         </div>
 
         <!-- Hint -->
