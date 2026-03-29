@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
-import type { InstrumentTier } from '@/lib/hazards'
 import type { RadiationZone, RadEventId } from '@/lib/radiation'
 
 export class RADController extends InstrumentController {
@@ -10,7 +9,6 @@ export class RADController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'science-components'
-  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.10
   override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true

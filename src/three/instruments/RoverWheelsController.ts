@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
-import type { InstrumentTier } from '@/lib/hazards'
 
 /** Toolbar / overlay slot for WHLS — use in Vue bindings instead of a magic number. */
 export const WHLS_SLOT = 13
@@ -41,7 +40,6 @@ export class RoverWheelsController extends InstrumentController {
   override readonly canActivate = false
   override readonly passiveDecayPerSol = 0.15
   override readonly repairComponentId = 'mechatronics-components'
-  override readonly tier: InstrumentTier = 'rugged'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 0.5
   /**

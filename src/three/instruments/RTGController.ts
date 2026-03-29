@@ -2,7 +2,6 @@ import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { getRtgPhaseSceneSeconds } from '@/lib/missionTime'
 import { MISSION_COOLDOWN_ID, missionCooldowns } from '@/lib/missionCooldowns'
-import type { InstrumentTier } from '@/lib/hazards'
 
 type RTGPhase = 'idle' | 'overdrive' | 'cooldown' | 'recharging'
 
@@ -22,7 +21,6 @@ export class RTGController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.15
   override readonly repairComponentId = 'mechatronics-components'
-  override readonly tier: InstrumentTier = 'rugged'
   override readonly usageDecayChance = 0.15
   override readonly usageDecayAmount = 1.0
   /** RTG took damage during landing — starts at 60% durability. */

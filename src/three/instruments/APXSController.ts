@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
 import { RockTargeting, type TargetResult } from './RockTargeting'
-import type { InstrumentTier } from '@/lib/hazards'
 
 const ARM_SWING_SPEED = 0.8
 const ARM_EXTEND_SPEED = 0.6
@@ -33,7 +32,6 @@ export class APXSController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'science-components'
-  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.20
   override readonly usageDecayAmount = 1.0
   /** Turret / detector idle while the card is open (orbit). */

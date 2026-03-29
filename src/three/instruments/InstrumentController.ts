@@ -80,7 +80,7 @@ export abstract class InstrumentController {
   readonly usageDecayChance: number = 0.20
   readonly usageDecayAmount: number = 1.0
   readonly repairComponentId: string = 'engineering-components'
-  readonly tier: InstrumentTier = 'standard'
+  tier: InstrumentTier = 'standard'
   hazardDecayMultiplier = 1.0
 
   // ── Upgrade system ──────────────────────────────────────────────────

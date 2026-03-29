@@ -3,7 +3,6 @@ import { getHeaterOverdriveSceneSeconds } from '@/lib/missionTime'
 import { MISSION_COOLDOWN_ID, missionCooldowns } from '@/lib/missionCooldowns'
 import { InstrumentController } from './InstrumentController'
 import type { ThermalZone } from '@/composables/useMarsThermal'
-import type { InstrumentTier } from '@/lib/hazards'
 
 /** Toolbar / overlay slot for HTR — use in Vue bindings instead of a magic number. */
 export const HEATER_SLOT = 10
@@ -23,7 +22,6 @@ export class HeaterController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.15
   override readonly repairComponentId = 'mechatronics-components'
-  override readonly tier: InstrumentTier = 'rugged'
   override readonly usageDecayChance = 0.10
   override readonly usageDecayAmount = 0.5
   override readonly selectionIdlePowerW = 0

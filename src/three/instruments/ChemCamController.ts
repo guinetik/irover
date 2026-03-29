@@ -4,7 +4,6 @@ import { ROCK_TYPES, type RockTypeId } from '@/three/terrain/RockTypes'
 import { mastPanTiltKeysHeld, mastState, MAST_ACTUATOR_HOLD_POWER_W } from './MastState'
 import { generateChemCamSpectrum } from '@/lib/optical/chemCamSpectrum'
 import type { SpectrumPeak } from '@/types/chemcam'
-import type { InstrumentTier } from '@/lib/hazards'
 
 export type { SpectrumPeak } from '@/types/chemcam'
 
@@ -86,7 +85,6 @@ export class ChemCamController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'science-components'
-  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.25
   override readonly usageDecayAmount = 1.2
 

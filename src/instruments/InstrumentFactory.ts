@@ -26,5 +26,6 @@ export function createInstrumentTuple(def: InstrumentDef): InstrumentTuple {
     )
   }
   const controller = new Ctor()
+  controller.tier = def.tier
   return { def, controller, tickHandler: null }
 }

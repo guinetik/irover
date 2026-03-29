@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { InstrumentController } from './InstrumentController'
-import type { InstrumentTier } from '@/lib/hazards'
 
 /** Instrument toolbar / overlay slot index for REMS. */
 export const REMS_SLOT = 8
@@ -16,7 +15,6 @@ export class REMSController extends InstrumentController {
   override readonly canActivate = true
   override readonly passiveDecayPerSol = 0.40
   override readonly repairComponentId = 'science-components'
-  override readonly tier: InstrumentTier = 'sensitive'
   override readonly usageDecayChance = 0.10
   override readonly usageDecayAmount = 0.5
   override readonly billsPassiveBackgroundPower = true
