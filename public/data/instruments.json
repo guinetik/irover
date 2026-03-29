@@ -9,6 +9,7 @@
       "type": "SURVEY CAMERA",
       "desc": "Twin mast cameras for wide-area survey. Filter by rock type — matches show as highlights. Tag a target before spending laser or drill time on it.",
       "power": "4–31W",
+      "tier": "sensitive",
       "controllerType": "MastCamController",
       "tickHandlerType": "MastCamTickHandler",
       "upgrade": {
@@ -56,6 +57,7 @@
       "type": "LASER SPECTROGRAPH",
       "desc": "Standoff laser spectroscopy: vaporizes a pin spot and reads elemental composition. Use after MastCam to judge if a rock is worth drilling.",
       "power": "6–111W",
+      "tier": "sensitive",
       "controllerType": "ChemCamController",
       "tickHandlerType": "ChemCamTickHandler",
       "upgrade": {
@@ -104,6 +106,7 @@
       "type": "ARM POWDER SAMPLER",
       "desc": "Rotary percussive bit on the arm turret. Collects powdered rock for the lab. Run MastCam and ChemCam on the target first for best results.",
       "power": "6W / 100W drilling",
+      "tier": "standard",
       "controllerType": "DrillController",
       "tickHandlerType": "DrillTickHandler",
       "upgrade": {
@@ -144,6 +147,7 @@
       "type": "CONTACT SPECTROMETER",
       "desc": "Alpha particle X-ray spectrometer. Placed against rock or soil for bulk elemental chemistry. Slower than ChemCam but more accurate for light elements.",
       "power": "5W idle / 18W active",
+      "tier": "sensitive",
       "controllerType": "APXSController",
       "tickHandlerType": "APXSTickHandler",
       "upgrade": {
@@ -191,6 +195,7 @@
       "type": "NEUTRON SCANNER",
       "desc": "Fires neutrons into the ground and detects hydrogen. Maps subsurface water content while driving. A signal spike indicates ice or hydrated minerals.",
       "power": "10W",
+      "tier": "sensitive",
       "controllerType": "DANController",
       "tickHandlerType": "DANTickHandler",
       "upgrade": {
@@ -236,6 +241,7 @@
       "type": "SAMPLE ANALYSIS SUITE",
       "desc": "Onboard analytical lab: gas chromatograph, mass spectrometer, tunable laser. Identifies organics, measures isotope ratios, characterizes molecular composition.",
       "power": "25W active",
+      "tier": "sensitive",
       "controllerType": "SAMController",
       "tickHandlerType": "SAMTickHandler",
       "upgrade": {
@@ -276,6 +282,7 @@
       "type": "POWER GENERATOR",
       "desc": "Radioisotope Thermoelectric Generator. Converts plutonium-238 decay heat to electricity. The rover's only power source.",
       "power": "110W baseline",
+      "tier": "rugged",
       "controllerType": "RTGController",
       "tickHandlerType": "RoverVfxTickHandler",
       "upgrade": {
@@ -314,6 +321,7 @@
       "type": "WEATHER STATION",
       "desc": "Twin boom sensors on the mast: temperature, wind, pressure, humidity, UV. Provides continuous environmental monitoring and storm alerts.",
       "power": "1W",
+      "tier": "sensitive",
       "controllerType": "REMSController",
       "tickHandlerType": "REMSTickHandler",
       "upgrade": {
@@ -355,6 +363,7 @@
       "type": "RADIATION DETECTOR",
       "desc": "Measures high-energy radiation: protons, heavy ions, neutrons, gamma rays. Monitors cumulative dose and alerts on solar particle events.",
       "power": "2W",
+      "tier": "sensitive",
       "controllerType": "RADController",
       "tickHandlerType": "RadTickHandler",
       "upgrade": {
@@ -393,6 +402,7 @@
       "type": "THERMAL MANAGEMENT",
       "desc": "Warm Electronics Box heating system. Keeps internal temperature above survival thresholds. Competes with science instruments for power.",
       "power": "0–12W",
+      "tier": "rugged",
       "controllerType": "HeaterController",
       "tickHandlerType": "HeaterTickHandler",
       "upgrade": {
@@ -431,6 +441,7 @@
       "type": "LOW-GAIN ANTENNA",
       "desc": "Omnidirectional low-gain antenna for direct-to-Earth communication. Primary command uplink and mission mailbox.",
       "power": "5W",
+      "tier": "standard",
       "controllerType": "AntennaLGController",
       "tickHandlerType": "AntennaTickHandler",
       "upgrade": {
@@ -467,6 +478,7 @@
       "type": "UHF RELAY ANTENNA",
       "desc": "High-bandwidth UHF antenna for relay via overhead orbiters (MRO, MAVEN). Primary science downlink.",
       "power": "8W",
+      "tier": "standard",
       "controllerType": "AntennaUHFController",
       "tickHandlerType": "AntennaTickHandler",
       "upgrade": {
@@ -503,6 +515,7 @@
       "type": "MOBILITY / DRIVE",
       "desc": "Rocker-bogie wheel motors and steering actuators. Power draw only active while the chassis is moving.",
       "power": "0–5W",
+      "tier": "rugged",
       "controllerType": "RoverWheelsController",
       "tickHandlerType": "RoverMovementTickHandler",
       "upgrade": {
@@ -541,6 +554,7 @@
       "type": "AUDIO SENSOR",
       "desc": "Rover-mounted microphone capturing Mars ambient sound. Audio sourced from NASA Perseverance recordings.",
       "power": "1W",
+      "tier": "standard",
       "controllerType": "MicController",
       "tickHandlerType": "MicTickHandler",
       "upgrade": {

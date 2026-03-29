@@ -1,5 +1,6 @@
 // src/types/instruments.ts
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
+import type { InstrumentTier } from '@/lib/hazards'
 
 export interface InstrumentHelpImage {
   /** Path to screenshot, e.g. "/images/help/dan-panel.jpg". Player-sourced. */
@@ -82,6 +83,8 @@ export interface InstrumentDef {
   desc: string
   /** Display string for power draw, e.g. "10W" or "6W / 100W drilling" */
   power: string
+  /** Hazard vulnerability tier — determines storm/radiation penalty severity. */
+  tier: InstrumentTier
   /** Key into CONTROLLER_REGISTRY */
   controllerType: string
   /** Key into TICK_HANDLER_REGISTRY (populated in Plan B) */
