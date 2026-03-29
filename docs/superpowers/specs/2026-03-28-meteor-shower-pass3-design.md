@@ -41,8 +41,9 @@ DAN Crater Mode is a specialization of the existing DAN prospecting module. Same
 A crater is eligible for crater mode when:
 - Rover position is within the crater's radius
 - The crater still has a meteorite rock (not consumed by a previous vent, not cleared by storm)
+- The crater has NOT already been scanned — check the DAN archive for a `craterDiscovery` entry at this position. One scan per crater, no repeat farming.
 
-The MeteorController already tracks craters from Pass 2. Expose a query: `getCraterAtPosition(x, z): MeteorCrater | null`.
+The MeteorController already tracks craters from Pass 2. Expose a query: `getCraterAtPosition(x, z): MeteorCrater | null`. The DAN archive acts as the "already scanned" flag — storms clear craters (and their rocks), so the archive entry becomes orphaned naturally.
 
 ---
 
