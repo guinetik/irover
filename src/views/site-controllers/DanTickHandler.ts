@@ -262,18 +262,14 @@ export function createDanTickHandler(
     scene.add(disc)
     danCompletedDiscs.push(disc)
 
-    const sceneRef = scene
-    void loadDanDrillMarkerTemplate().then((template) => {
-      if (!tickHandlerActive || !sceneRef) return
-      if (danDrillMarker) {
-        sceneRef.remove(danDrillMarker)
-        disposeDrillMarkerRoot(danDrillMarker)
-        danDrillMarker = null
-      }
-      const marker = template.clone(true)
-      placeDanDrillMarkerInstance(marker, gx, gz, groundY)
-      sceneRef.add(marker)
-      danDrillMarker = marker
+    if (danDrillMarker) {
+      scene.remove(danDrillMarker)
+      disposeBioCapsule(danDrillMarker)
+      danDrillMarker = null
+    }
+    void createBioCapsule('water', gx, gz, groundY, scene).then((instance) => {
+      if (!instance || !tickHandlerActive) return
+      danDrillMarker = instance
     })
 
     danInst.drillSitePosition = new THREE.Vector3(snap.x, snap.y, snap.z)
@@ -677,17 +673,16 @@ export function createDanTickHandler(
               const sceneRef = siteScene?.scene
               if (danDrillMarker && sceneRef) {
                 sceneRef.remove(danDrillMarker)
-                disposeDrillMarkerRoot(danDrillMarker)
+                disposeBioCapsule(danDrillMarker)
                 danDrillMarker = null
               }
 
-              void loadDanDrillMarkerTemplate().then((template) => {
-                if (!tickHandlerActive || !sceneRef) return
-                const marker = template.clone(true)
-                placeDanDrillMarkerInstance(marker, gx, gz, groundY)
-                sceneRef.add(marker)
-                danDrillMarker = marker
-              })
+              if (sceneRef) {
+                void createBioCapsule('water', gx, gz, groundY, sceneRef).then((instance) => {
+                  if (!instance || !tickHandlerActive) return
+                  danDrillMarker = instance
+                })
+              }
 
               danInst.drillSitePosition = hitCenter.clone()
               danInst.reservoirQuality = danInst.prospectStrength
@@ -744,7 +739,7 @@ export function createDanTickHandler(
     }
     if (danDrillMarker) {
       danDrillMarker.parent?.remove(danDrillMarker)
-      disposeDrillMarkerRoot(danDrillMarker)
+      disposeBioCapsule(danDrillMarker)
       danDrillMarker = null
     }
     for (const disc of danCompletedDiscs) {
