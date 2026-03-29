@@ -60,6 +60,13 @@ export function useDanArchive() {
     reservoirQuality?: number
     /** Scene drill marker position when `waterConfirmed` */
     drillSite?: { x: number; y: number; z: number }
+    /** Present only for DAN Crater Mode discoveries. */
+    craterDiscovery?: {
+      discoveryId: string
+      discoveryName: string
+      ventPlaced: boolean
+      ventType?: 'co2' | 'methane'
+    }
     /** @deprecated use reservoirQuality */ waterFraction?: number
     /** @deprecated use siteLatDeg/siteLonDeg */ latitudeDeg?: number
     /** @deprecated use siteLatDeg/siteLonDeg */ longitudeDeg?: number
@@ -94,9 +101,8 @@ export function useDanArchive() {
       reservoirQuality: params.reservoirQuality ?? 0,
       queuedForTransmission: false,
       transmitted: false,
-      ...(params.waterConfirmed && ds
-        ? { drillSiteX: ds.x, drillSiteY: ds.y, drillSiteZ: ds.z }
-        : {}),
+      ...(ds ? { drillSiteX: ds.x, drillSiteY: ds.y, drillSiteZ: ds.z } : {}),
+      ...(params.craterDiscovery ? { craterDiscovery: params.craterDiscovery } : {}),
     }
 
     const next = [...prospects.value, row]

@@ -283,6 +283,7 @@ export interface MarsSiteViewRefs {
   danSignalStrength: Ref<number>
   danWaterResult: Ref<boolean | null>
   danDialogVisible: Ref<boolean>
+  danCraterModeAvailable: Ref<boolean>
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
@@ -381,6 +382,12 @@ export interface MarsSiteViewContext {
     waterConfirmed: boolean
     reservoirQuality: number
     drillSite?: { x: number; y: number; z: number }
+    craterDiscovery?: {
+      discoveryId: string
+      discoveryName: string
+      ventPlaced: boolean
+      ventType?: 'co2' | 'methane'
+    }
   }) => void
   /** Latest saved water drill placement for reload (see {@link ArchivedDANProspect} drillSite*). */
   getLatestPersistedDanDrillSite: (
