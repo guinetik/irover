@@ -128,47 +128,13 @@
           </div>
         </div>
 
-        <!-- Instrument analysis speed indicator -->
-        <div v-if="instrumentSpeedHud && ANALYSIS_INSTRUMENT_SLOTS.has(activeSlot ?? -1)" class="ov-spd-speed">
-          <div class="ov-spd-speed-row">
-            <span class="ov-spd-speed-label">{{ instrumentSpeedLabel }}</span>
-            <span class="ov-spd-speed-value" :style="{ color: instrumentSpeedColor }">{{ instrumentSpeedStr }}</span>
-          </div>
-          <div class="ov-spd-speed-bar-track">
-            <div class="ov-spd-speed-bar-fill" :style="{ width: instrumentSpeedBarPct + '%', background: instrumentSpeedColor }" />
-          </div>
-          <div class="ov-spd-buffs">
-            <div
-              v-for="buff in instrumentSpeedHud.buffs"
-              :key="buff.label"
-              class="ov-spd-buff"
-            >
-              <span class="ov-spd-buff-label">{{ buff.label }}</span>
-              <span class="ov-spd-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Instrument accuracy indicator -->
-        <div v-if="instrumentAccuracyHud" class="ov-spd-speed">
-          <div class="ov-spd-speed-row">
-            <span class="ov-spd-speed-label">ACCURACY</span>
-            <span class="ov-spd-speed-value" :style="{ color: accuracyColor }">{{ accuracyStr }}</span>
-          </div>
-          <div class="ov-spd-speed-bar-track">
-            <div class="ov-spd-speed-bar-fill" :style="{ width: accuracyBarPct + '%', background: accuracyColor }" />
-          </div>
-          <div class="ov-spd-buffs">
-            <div
-              v-for="buff in instrumentAccuracyHud.buffs"
-              :key="buff.label"
-              class="ov-spd-buff"
-            >
-              <span class="ov-spd-buff-label">{{ buff.label }}</span>
-              <span class="ov-spd-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
-            </div>
-          </div>
-        </div>
+        <!-- Instrument stats (data-driven from instruments.json stats[]) -->
+        <InstrumentStatBar
+          v-for="resolved in resolvedStats"
+          :key="resolved.stat.key"
+          :label="resolved.stat.label"
+          :breakdown="resolved.breakdown"
+        />
 
         <!-- Durability bar (all instruments) -->
         <div v-if="durabilityPct !== undefined && durabilityPct < 100" class="ov-durability">
@@ -362,10 +328,13 @@
 import { computed, ref, watch, withDefaults } from 'vue'
 import { useUiSound } from '@/composables/useUiSound'
 import InstrumentHelpDialog from '@/components/InstrumentHelpDialog.vue'
+import InstrumentStatBar from '@/components/InstrumentStatBar.vue'
 import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
+import { usePlayerProfile, ARCHETYPES, FOUNDATIONS, PATRONS } from '@/composables/usePlayerProfile'
+import { useRewardTrack } from '@/composables/useRewardTrack'
+import { resolveInstrumentStats } from '@/composables/useResolvedInstrumentStats'
 import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
 import { DUST_STORM_LEVEL_LABELS, type RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
-import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 
 export interface InstrumentData {
   slot: number
@@ -593,10 +562,12 @@ const props = withDefaults(
     hasUpgrade?: boolean
     /** True when the active instrument is already fully upgraded */
     isUpgraded?: boolean
-    /** Speed breakdown for active analysis instruments (Drill, ChemCam, MastCam, APXS). */
-    instrumentSpeedHud?: SpeedBreakdown | null
-    /** Accuracy breakdown for instruments that use instrumentAccuracy. */
-    instrumentAccuracyHud?: SpeedBreakdown | null
+    /** Slots of instruments whose passive subsystem is active (for provides stacking). */
+    activeInstrumentSlots?: number[]
+    /** Active dust storm level (0 = none). */
+    stormLevel?: number
+    /** Radiation level at rover position (0-1). */
+    radiationLevel?: number
     /** Radiation zone: 'safe' | 'intermediate' | 'hazardous' */
     radZone?: string
     /** Current RAD dose rate in mGy/day */
@@ -640,6 +611,9 @@ const props = withDefaults(
     repairCostComponentId: '',
     repairCostComponentQty: 0,
     lgaUpgraded: false,
+    activeInstrumentSlots: () => [],
+    stormLevel: 0,
+    radiationLevel: 0,
     radZone: 'safe',
     radDoseRate: 0,
     radEnabled: false,
@@ -649,8 +623,25 @@ const props = withDefaults(
 const upgradeOpen = ref(false)
 
 const { defBySlot } = useInstrumentProvider()
+const { profile: playerProfile } = usePlayerProfile()
+const { trackModifiers } = useRewardTrack()
 const helpOpen = ref(false)
 const helpDef = computed(() => props.activeSlot != null ? defBySlot(props.activeSlot) : undefined)
+
+const resolvedStats = computed(() => {
+  if (!props.activeSlot) return []
+  return resolveInstrumentStats({
+    activeSlot: props.activeSlot,
+    activeInstrumentSlots: props.activeInstrumentSlots ?? [],
+    archetype: playerProfile.archetype ? ARCHETYPES[playerProfile.archetype] : null,
+    foundation: playerProfile.foundation ? FOUNDATIONS[playerProfile.foundation] : null,
+    patron: playerProfile.patron ? PATRONS[playerProfile.patron] : null,
+    trackModifiers: trackModifiers.value,
+    thermalZone: props.thermal?.zone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL' | undefined,
+    stormLevel: props.stormLevel,
+    radiationLevel: props.radiationLevel,
+  })
+})
 
 /**
  * Dispatches activation from either activate button variant.
@@ -775,52 +766,6 @@ const wheelsSpeedColor = computed(() => {
 
 const wheelsSpeedBarPct = computed(() => {
   const pct = props.wheelsHud?.speedPct ?? 100
-  return Math.min(100, Math.max(0, pct / 1.5))
-})
-
-const ANALYSIS_INSTRUMENT_SLOTS = new Set([1, 2, 3, 4])  // MastCam, ChemCam, Drill, APXS
-
-const instrumentSpeedLabel = computed(() => {
-  switch (props.activeSlot) {
-    case 3: return 'DRILL SPD'
-    case 2: return 'SCAN SPD'
-    case 1: return 'SURVEY SPD'
-    case 4: return 'ANALYSIS SPD'
-    default: return 'SPD'
-  }
-})
-
-const instrumentSpeedStr = computed(() => {
-  const pct = props.instrumentSpeedHud?.speedPct ?? 100
-  return `${Math.round(pct)}%`
-})
-
-const instrumentSpeedColor = computed(() => {
-  const pct = props.instrumentSpeedHud?.speedPct ?? 100
-  if (pct > 105) return '#5dc9a5'
-  if (pct >= 95) return '#ef9f27'
-  return '#e05030'
-})
-
-const instrumentSpeedBarPct = computed(() => {
-  const pct = props.instrumentSpeedHud?.speedPct ?? 100
-  return Math.min(100, Math.max(0, pct / 1.5))
-})
-
-const accuracyStr = computed(() => {
-  const pct = props.instrumentAccuracyHud?.speedPct ?? 100
-  return `${Math.round(pct)}%`
-})
-
-const accuracyColor = computed(() => {
-  const pct = props.instrumentAccuracyHud?.speedPct ?? 100
-  if (pct > 105) return '#5dc9a5'
-  if (pct >= 95) return '#ef9f27'
-  return '#e05030'
-})
-
-const accuracyBarPct = computed(() => {
-  const pct = props.instrumentAccuracyHud?.speedPct ?? 100
   return Math.min(100, Math.max(0, pct / 1.5))
 })
 
