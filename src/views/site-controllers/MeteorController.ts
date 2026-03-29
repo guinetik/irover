@@ -130,13 +130,11 @@ export function createMeteorController(
           }
         }
 
-        // Knockback — push rover away from blast
-        if (dist < 10) {
-          const pushDir = roverPos.clone().sub(impactPos).normalize()
-          const pushMag = (1 - dist / 10) * 1.0
-          roverPos.x += pushDir.x * pushMag
-          roverPos.z += pushDir.z * pushMag
-        }
+        // Knockback — push rover away from blast (within shockwave radius)
+        const pushDir = roverPos.clone().sub(impactPos).normalize()
+        const pushMag = (1 - dist / shockwaveRadius) * 3.0
+        roverPos.x += pushDir.x * pushMag
+        roverPos.z += pushDir.z * pushMag
 
         // Dust whiteout
         if (dist < 15) {

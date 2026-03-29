@@ -4,7 +4,7 @@ import type { InstrumentTier } from '@/lib/hazards/hazardTypes'
 export const KILL_RADIUS = 1.5
 
 /** Shockwave extends to this multiple of the kill radius. */
-export const SHOCKWAVE_RADIUS_MULTIPLIER = 3
+export const SHOCKWAVE_RADIUS_MULTIPLIER = 10
 
 const SHOCKWAVE_BASE_DAMAGE: Record<InstrumentTier, number> = {
   rugged:    0.03,

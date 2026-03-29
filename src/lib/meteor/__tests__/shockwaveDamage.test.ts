@@ -32,7 +32,7 @@ describe('constants', () => {
     expect(KILL_RADIUS).toBe(1.5)
   })
 
-  it('SHOCKWAVE_RADIUS_MULTIPLIER is 3x', () => {
-    expect(SHOCKWAVE_RADIUS_MULTIPLIER).toBe(3)
+  it('SHOCKWAVE_RADIUS_MULTIPLIER is 10x', () => {
+    expect(SHOCKWAVE_RADIUS_MULTIPLIER).toBe(10)
   })
 })
