@@ -360,17 +360,17 @@ export function createDanTickHandler(
         }
       }
 
-      // Restore persisted vents
+      // Restore persisted vent buildables (dan.glb at archived positions)
       const siteVents = getVentsForSite(siteId)
       for (const vent of siteVents) {
-        const ventGroundY = fctx.siteScene?.terrain
-          ? fctx.siteScene.terrain.heightAt(vent.x, vent.z)
-          : 0
         const sceneRef = fctx.siteScene?.scene
+        const terrainRef = fctx.siteScene?.terrain
         void loadDanDrillMarkerTemplate().then((template) => {
           if (!tickHandlerActive || !sceneRef) return
           const marker = template.clone(true)
-          placeDanDrillMarkerInstance(marker, vent.x, vent.z, ventGroundY)
+          // Query ground height at placement time (terrain is fully loaded)
+          const groundY = terrainRef ? terrainRef.heightAt(vent.x, vent.z) : 0
+          placeDanDrillMarkerInstance(marker, vent.x, vent.z, groundY)
           sceneRef.add(marker)
           ventMarkers.push(marker)
         })
@@ -564,17 +564,17 @@ export function createDanTickHandler(
             craterZ: activeCrater.z,
           })
 
-          // Place vent GLB marker at crater center
+          // Place vent buildable (dan.glb) at crater center on now-flat terrain
           const ventX = activeCrater.x
           const ventZ = activeCrater.z
-          const ventGroundY = siteScene?.terrain
-            ? siteScene.terrain.heightAt(ventX, ventZ)
-            : 0
           const sceneRef = siteScene?.scene
+          const terrainRef = siteScene?.terrain
           void loadDanDrillMarkerTemplate().then((template) => {
             if (!tickHandlerActive || !sceneRef) return
             const marker = template.clone(true)
-            placeDanDrillMarkerInstance(marker, ventX, ventZ, ventGroundY)
+            // Query ground height inside callback — terrain revert is complete by now
+            const groundY = terrainRef ? terrainRef.heightAt(ventX, ventZ) : 0
+            placeDanDrillMarkerInstance(marker, ventX, ventZ, groundY)
             sceneRef.add(marker)
             ventMarkers.push(marker)
           })
