@@ -19,6 +19,21 @@
 
 ---
 
+## 0. Prerequisite: deformCrater Return Value
+
+Pass 2's `deformCrater(x, z, radius, depth, rimHeight)` currently returns `void`. Pass 3 needs it to return the original heightmap values so craters can be reverted (by storms and by vent fracking). This changes the `ITerrainGenerator` interface and all four implementations.
+
+**Do this first** — change the signature to return a `CraterDeformData` (the original cell values before deformation). Add `revertCrater(data: CraterDeformData)` to the interface. All downstream code builds against the new signature.
+
+```typescript
+interface CraterDeformData {
+  cells: Array<{ gx: number; gz: number; originalY: number }>
+  meshVertices: Array<{ meshIndex: number; vertexIndex: number; originalY: number }>
+}
+```
+
+---
+
 ## 1. DAN Crater Mode
 
 DAN Crater Mode is a specialization of the existing DAN prospecting module. Same UI, same animation, different context.
