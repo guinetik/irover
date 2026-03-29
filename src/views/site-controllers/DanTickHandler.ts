@@ -21,7 +21,7 @@ export interface PendingCraterResult {
   crater: MeteorCrater
 }
 import type { ArchivedVent } from '@/types/ventArchive'
-import { createBioCapsule, disposeBioCapsule, updateCapsules } from '@/three/DanCapsuleModel'
+import { createBioCapsule, disposeBioCapsule } from '@/three/DanCapsuleModel'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
@@ -245,8 +245,6 @@ export function createDanTickHandler(
   const ventMarkers: THREE.Object3D[] = []
   /** Last siteScene reference from tick — used by placeVentMarker called outside tick. */
   let lastSiteScene: SiteFrameContext['siteScene'] | null = null
-  /** Accumulated elapsed time for capsule gas animation. */
-  let capsuleElapsed = 0
 
   /**
    * Rebuilds completed disc + GLB from the persisted DAN archive after a full reload.
@@ -539,10 +537,6 @@ export function createDanTickHandler(
     const rp = siteScene.rover?.position
     const groundY = rp && siteScene.terrain ? siteScene.terrain.heightAt(rp.x, rp.z) : 0
     danInst.updateVFX(sceneDelta, groundY)
-
-    // Animate gas capsule fluid (CO2/methane wispy pulse)
-    capsuleElapsed += sceneDelta
-    updateCapsules(capsuleElapsed)
 
     for (const disc of danCompletedDiscs) disc.visible = !!danSelected
 
