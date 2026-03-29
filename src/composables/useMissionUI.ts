@@ -125,9 +125,12 @@ export function useMissionUI(deps: {
       if (obj.params.poiId === 'rad-hotspot-01') {
         const fieldData = siteHandle.value?.getRadiationFieldData()
         if (fieldData) {
+          // Threshold 0: find the absolute hottest cell on the map regardless
+          // of zone classification. On low-rad maps the field peaks below
+          // hazardousMin, so zone-based filtering would find nothing.
           const cell = findHazardousCell(
             fieldData.field, fieldData.gridSize, fieldData.terrainScale,
-            rx, rz, 80, fieldData.thresholds.hazardousMin,
+            rx, rz, 80, 0,
           )
           if (cell) {
             px = Math.max(-390, Math.min(390, cell.x))
