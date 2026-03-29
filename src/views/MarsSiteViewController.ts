@@ -447,6 +447,8 @@ export interface MarsSiteViewControllerHandle {
   acknowledgedCraterDiscovery: (crater: import('./site-controllers/MeteorController').MeteorCrater, ventType: 'co2' | 'methane') => void
   handleRadDecode: () => void
   handleRadDismiss: () => void
+  /** Force-trigger a radiation event immediately (skips timer/cooldown). */
+  forceRadEvent: () => void
   /** Returns radiation field metadata for hazard-aware POI placement, or null if not ready. */
   getRadiationFieldData: () => { field: Float32Array; gridSize: number; terrainScale: number; thresholds: import('@/lib/radiation').RadiationThresholds } | null
 }
@@ -857,6 +859,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           for (let i = 0; i < 200; i++) {
             removeWaypointMarker(`rad-safe-${i}`, siteScene.scene)
           }
+        },
+        forceRadEvent: () => {
+          tickHandlers.radHandler.forceEvent()
         },
       })
     }
@@ -1484,6 +1489,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     },
     handleRadDismiss: () => {
       tickHandlers.radHandler.dismissEvent()
+    },
+    forceRadEvent: () => {
+      tickHandlers.radHandler.forceEvent()
     },
     getRadiationFieldData: () => tickHandlers?.radHandler?.getFieldData() ?? null,
   }

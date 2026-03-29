@@ -57,6 +57,8 @@ export interface RadTickHandler extends SiteTickHandler {
   getSafePan(): number | null
   /** Distance to nearest safe zone in world units. Null when safe or no field. */
   getSafeDist(): number | null
+  /** Force-trigger a radiation event immediately (skips timer and cooldown). */
+  forceEvent(): void
   /** Dev-only: compute safe zone cluster centroids from the field. */
   getDevSafeZoneCentroids?(): Array<{ x: number; z: number }>
   /** Returns the radiation field data and thresholds for POI placement, or null if field not yet initialized. */
@@ -102,11 +104,21 @@ export function createRadTickHandler(
   let cachedSafePan: number | null = null
   let cachedSafeDist: number | null = null
 
+  // Current radiation level — used to scale event spawn rate
+  let currentLevel = 0
+
   function randomEventInterval(): number {
     const base = RAD_SPAWN_CONFIG.baseIntervalSecMin +
       Math.random() * (RAD_SPAWN_CONFIG.baseIntervalSecMax - RAD_SPAWN_CONFIG.baseIntervalSecMin)
     // Storm Chaser perk halves the spawn interval
-    return callbacks.hasStormChaser?.() ? base * 0.5 : base
+    let interval = callbacks.hasStormChaser?.() ? base * 0.5 : base
+    // Scale with radiation level: higher radiation → shorter interval
+    // At level 0 → full interval, at level 1.0 → 25% of interval
+    if (currentLevel > 0) {
+      const speedup = 1 - Math.min(currentLevel, 1.2) * 0.625
+      interval *= Math.max(0.25, speedup)
+    }
+    return interval
   }
 
   function setField(f: Float32Array, gs: number, ts: number): void {
@@ -144,6 +156,20 @@ export function createRadTickHandler(
     return { field, gridSize, terrainScale, thresholds }
   }
 
+  function forceEvent(): void {
+    const radInst = getRadFromLastCtx()
+    if (!radInst || radInst.activeEvent || radInst.eventAlertPending) return
+    if (!radInst.passiveSubsystemEnabled) return
+    const eventId = pickWeightedEvent()
+    radInst.activeEvent = eventId
+    radInst.eventAlertPending = true
+    radEventAlertPending.value = true
+    radActiveEventId.value = eventId
+    eventCooldown = 0
+    eventTimer = randomEventInterval()
+    callbacks.playEventSting?.()
+  }
+
   // Keep a reference to the last-seen RoverController for out-of-tick calls
   let lastRover: SiteFrameContext['rover'] = null
 
@@ -176,6 +202,7 @@ export function createRadTickHandler(
     const roverPos = siteScene.rover?.position ?? new THREE.Vector3()
     const rawLevel = sampleRadiationAt(field, gridSize, terrainScale, roverPos.x, roverPos.z)
     const level = rawLevel
+    currentLevel = level
 
     // --- Apply player's radiation tolerance — reduces effective level for zone/blocking ---
     const tolerance = callbacks.getRadiationTolerance?.() ?? 0
@@ -295,5 +322,5 @@ export function createRadTickHandler(
     return findSafeZoneCentroids(field, gridSize, terrainScale, thresholds)
   }
 
-  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, getSafePan, getSafeDist, getDevSafeZoneCentroids, getFieldData }
+  return { tick, dispose, setField, dismissEvent, startDecode, endDecode, forceEvent, getSafePan, getSafeDist, getDevSafeZoneCentroids, getFieldData }
 }

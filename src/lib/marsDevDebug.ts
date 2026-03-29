@@ -19,6 +19,8 @@ export interface InstallMarsDevDebugApiOptions {
   showRadSafeZones: () => number
   /** Remove all safe-zone waypoint markers. */
   hideRadSafeZones: () => void
+  /** Force-trigger a radiation event immediately. */
+  forceRadEvent: () => void
   /** Apply flat durability hit to an instrument by id. */
   damageInstrument: (id: string, amount: number) => void
   /** List all instruments with durability. */
@@ -79,6 +81,9 @@ export function installMarsDevDebugApi(options: InstallMarsDevDebugApiOptions): 
       },
       hideSafeZones() {
         options.hideRadSafeZones()
+      },
+      triggerEvent() {
+        options.forceRadEvent()
       },
     },
     instruments: {

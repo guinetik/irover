@@ -1075,6 +1075,22 @@ watch(radEnabled, (enabled) => {
   if (enabled) useMissions().notifyRadActivated()
 })
 
+// When player arrives at the rad hotspot (rad-2 done), force a radiation event
+// after a short random delay so they don't have to wait on the spawn timer.
+let radHotspotEventScheduled = false
+watch(activeMissions, (missions) => {
+  if (radHotspotEventScheduled) return
+  const radMission = missions.find(m => m.missionId === 'm12-rad')
+  if (!radMission) return
+  const rad2 = radMission.objectives.find(o => o.id === 'rad-2')
+  const rad3 = radMission.objectives.find(o => o.id === 'rad-3')
+  if (rad2?.done && !rad3?.done) {
+    radHotspotEventScheduled = true
+    const delay = 3000 + Math.random() * 7000 // 3–10s
+    setTimeout(() => siteHandle.value?.forceRadEvent(), delay)
+  }
+}, { deep: true })
+
 const rtgPhase = ref<'idle' | 'overdrive' | 'cooldown' | 'recharging'>('idle')
 const rtgPhaseProgress = ref(0)
 const rtgConservationMode = ref<RTGConservationState>('off')

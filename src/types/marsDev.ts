@@ -88,6 +88,12 @@ export interface MarsDevDebugApi {
      * Removes all safe-zone waypoint markers placed by `showSafeZones()`.
      */
     hideSafeZones(): void
+
+    /**
+     * Force-trigger a radiation event immediately, skipping the spawn timer and cooldown.
+     * RAD must be active. No-op if an event is already pending.
+     */
+    triggerEvent(): void
   }
 
   instruments: {
