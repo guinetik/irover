@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { ArchivedCraterDiscovery } from '@/types/craterArchive'
 
 const STORAGE_KEY = 'mars-crater-archive-v1'
@@ -53,10 +53,12 @@ export function useCraterArchive() {
     if (d) { d.transmitted = true; d.queuedForTransmission = false; persist(discoveries.value) }
   }
 
+  const pendingTransmission = computed(() => discoveries.value.filter(d => d.queuedForTransmission && !d.transmitted))
+
   function resetForTests(): void {
     discoveries.value = []
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { discoveries, archiveDiscovery, queueForTransmission, dequeueFromTransmission, markTransmitted, resetForTests }
+  return { discoveries, pendingTransmission, archiveDiscovery, queueForTransmission, dequeueFromTransmission, markTransmitted, resetForTests }
 }

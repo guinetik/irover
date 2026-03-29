@@ -31,9 +31,9 @@
       :archive-unread-count="dsnUnreadCount"
       @open-achievements="achievementsOpen = true"
       @open-sp-ledger="spLedgerOpen = true"
-      @open-science-log="scienceLogOpen = true"
+      @open-science-log="handleOpenScienceLog"
       @open-mission-log="handleOpenMissionLog"
-      @open-archive="showArchive = true"
+      @open-archive="handleOpenArchive"
       @request-restart="showRestartConfirm = true"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
@@ -990,6 +990,7 @@ watch(
 watch(activeInstrumentSlot, (slot) => {
   if (slot === WHLS_SLOT) useMissions().notifyUiInspected('wheels')
   if (slot === HEATER_SLOT) useMissions().notifyUiInspected('heater')
+  if (slot === 5) useMissions().notifyUiInspected('dan')
   if (slot === 11) useMissions().notifyUiInspected('lga')
 })
 
@@ -1240,6 +1241,15 @@ watch(lgaUpgraded, (upgraded) => {
   }
 })
 
+function handleOpenScienceLog() {
+  scienceLogOpen.value = true
+  useMissions().notifyUiInspected('dan-science')
+}
+
+function handleOpenArchive() {
+  showArchive.value = true
+}
+
 function handleToggleDsnArchaeology() {
   showArchive.value = true
 }
@@ -1269,22 +1279,24 @@ function toggleMicPanel() {
   else siteRover.value.activateInstrument(MIC_SLOT)
 }
 
-function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string) {
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater', archiveId: string) {
   if (source === 'chemcam') queueChemCamTx(archiveId)
   else if (source === 'dan') queueDanTx(archiveId)
   else if (source === 'sam') queueSamTx(archiveId)
   else if (source === 'apxs') queueAPXSTx(archiveId)
   else if (source === 'rad') queueRadTx(archiveId)
   else if (source === 'meteor') queueMeteorTx(archiveId)
+  else if (source === 'crater') queueCraterTx(archiveId)
 }
 
-function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string) {
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater', archiveId: string) {
   if (source === 'chemcam') dequeueChemCamTx(archiveId)
   else if (source === 'dan') dequeueDanTx(archiveId)
   else if (source === 'sam') dequeueSamTx(archiveId)
   else if (source === 'apxs') dequeueAPXSTx(archiveId)
   else if (source === 'rad') dequeueRadTx(archiveId)
   else if (source === 'meteor') dequeueMeteorTx(archiveId)
+  else if (source === 'crater') dequeueCraterTx(archiveId)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -1558,6 +1570,7 @@ const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveri
 const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis, queueForTransmission: queueAPXSTx, dequeueFromTransmission: dequeueAPXSTx } = useAPXSArchive()
 const { events: radArchivedEvents, archiveRadEvent, queueForTransmission: queueRadTx, dequeueFromTransmission: dequeueRadTx } = useRadArchive()
 const { queueForTransmission: queueMeteorTx, dequeueFromTransmission: dequeueMeteorTx } = useMeteorArchive()
+const { queueForTransmission: queueCraterTx, dequeueFromTransmission: dequeueCraterTx } = useCraterArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 
