@@ -96,6 +96,9 @@ export function createRadTickHandler(
   let prevZone: RadiationZone = 'safe'
   let zoneInitialised = false
 
+  // Current radiation level — used to scale event spawn rate
+  let currentLevel = 0
+
   // Event spawn timer
   let eventTimer = randomEventInterval()
   let eventCooldown = 0
@@ -103,9 +106,6 @@ export function createRadTickHandler(
   // Safe zone dowsing — cached per-frame for stereo pan and proximity
   let cachedSafePan: number | null = null
   let cachedSafeDist: number | null = null
-
-  // Current radiation level — used to scale event spawn rate
-  let currentLevel = 0
 
   function randomEventInterval(): number {
     const base = RAD_SPAWN_CONFIG.baseIntervalSecMin +
