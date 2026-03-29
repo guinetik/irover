@@ -33,11 +33,4 @@ export interface ArchivedDANProspect {
   queuedForTransmission: boolean
   /** After UHF transmit — for future funding flow */
   transmitted: boolean
-  /** Present only for DAN Crater Mode discoveries. */
-  craterDiscovery?: {
-    discoveryId: string
-    discoveryName: string
-    ventPlaced: boolean
-    ventType?: 'co2' | 'methane'
-  }
 }

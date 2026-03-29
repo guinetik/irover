@@ -661,6 +661,7 @@ import { useMartianSiteAchievements } from '@/composables/useMartianSiteAchievem
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
 import { useVentArchive } from '@/composables/useVentArchive'
+import { useCraterArchive } from '@/composables/useCraterArchive'
 import { getInventoryItemDef, INVENTORY_CATALOG } from '@/types/inventory'
 import {
   MastCamController,
@@ -1908,28 +1909,21 @@ function handleCraterAcknowledge(): void {
     }
   }
 
-  // 3. Archive to DAN science log
-  const { archiveProspect } = useDanArchive()
-  archiveProspect({
+  // 3. Archive to crater science log
+  useCraterArchive().archiveDiscovery({
     capturedSol: marsSol.value,
     siteId,
-    siteLatDeg: siteLat.value,
-    siteLonDeg: siteLon.value,
-    roverWorldX: roverWorldX.value,
-    roverWorldZ: roverWorldZ.value,
-    roverSpawnX: roverSpawnXZ.value.x,
-    roverSpawnZ: roverSpawnXZ.value.z,
-    signalStrength: 1,
-    quality: 'Strong',
-    waterConfirmed: false,
-    reservoirQuality: 0,
-    drillSite: { x: crater.x, y: 0, z: crater.z },
-    craterDiscovery: {
-      discoveryId: discovery.id,
-      discoveryName: discovery.name,
-      ventPlaced,
-      ventType: discovery.ventType ?? undefined,
-    },
+    latitudeDeg: siteLat.value,
+    longitudeDeg: siteLon.value,
+    craterX: crater.x,
+    craterZ: crater.z,
+    discoveryId: discovery.id,
+    discoveryName: discovery.name,
+    rarity: discovery.rarity,
+    spEarned: gain?.amount ?? discovery.sp,
+    ventPlaced,
+    ventType: discovery.ventType ?? undefined,
+    sideProducts: discovery.sideProducts,
   })
 
   // 4. Handle vent placement if applicable

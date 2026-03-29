@@ -384,12 +384,6 @@ export interface MarsSiteViewContext {
     waterConfirmed: boolean
     reservoirQuality: number
     drillSite?: { x: number; y: number; z: number }
-    craterDiscovery?: {
-      discoveryId: string
-      discoveryName: string
-      ventPlaced: boolean
-      ventType?: 'co2' | 'methane'
-    }
   }) => void
   /** Latest saved water drill placement for reload (see {@link ArchivedDANProspect} drillSite*). */
   getLatestPersistedDanDrillSite: (

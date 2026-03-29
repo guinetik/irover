@@ -9,7 +9,7 @@
           </div>
           <div class="science-panes">
             <nav class="science-cats" aria-label="Categories">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0 && meteorObservations.length === 0" class="science-empty-side">No discoveries yet.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0 && meteorObservations.length === 0 && craterDiscoveries.length === 0" class="science-empty-side">No discoveries yet.</div>
               <div v-if="spectra.length > 0" class="science-accordion">
                 <button
                   type="button"
@@ -172,9 +172,32 @@
                   </li>
                 </ul>
               </div>
+              <!-- CRATER SCIENCE accordion -->
+              <div v-if="craterDiscoveries.length > 0" class="science-accordion science-accordion-crater">
+                <button type="button" class="science-acc-head science-acc-head-crater"
+                  :aria-expanded="craterExpanded" @click="toggleCraterAccordion">
+                  <span class="science-acc-chev" aria-hidden="true">{{ craterExpanded ? '&#x25BC;' : '&#x25B6;' }}</span>
+                  <span class="science-acc-label">CRATER SCIENCE</span>
+                  <span class="science-acc-badge science-acc-badge-crater font-instrument">{{ craterDiscoveries.length }}</span>
+                </button>
+                <ul v-show="craterExpanded" class="science-acc-list" role="list">
+                  <li v-for="c in sortedCraterDiscoveries" :key="c.archiveId">
+                    <button type="button" class="science-acc-item"
+                      :class="{ active: c.archiveId === selectedCraterId }"
+                      @click="selectCraterReport(c.archiveId)">
+                      <span class="sai-rock" :style="{ color: RARITY_COLORS[c.rarity.toLowerCase()] ?? '#888' }">{{ c.discoveryName }}</span>
+                      <span class="sai-meta font-instrument">SOL {{ c.capturedSol }}
+                        <span v-if="c.ventPlaced" class="sai-tx-tag" style="background: rgba(68,170,255,0.2); color: #44aaff;">VENT</span>
+                        <span v-if="c.transmitted" class="sai-tx-tag transmitted">TX</span>
+                        <span v-else-if="c.queuedForTransmission" class="sai-tx-tag queued">QUEUED</span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </nav>
             <div class="science-detail">
-              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0 && meteorObservations.length === 0" class="science-empty">No archived data.</div>
+              <div v-if="spectra.length === 0 && danProspects.length === 0 && samResults.length === 0 && apxsResults.length === 0 && radEvents.length === 0 && meteorObservations.length === 0 && craterDiscoveries.length === 0" class="science-empty">No archived data.</div>
               <!-- ChemCam detail -->
               <template v-if="detailMode === 'chemcam'">
                 <div v-if="!selected" class="science-detail-hint">Select a spectrum in the list.</div>
@@ -411,6 +434,37 @@
                   <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
                 </div>
               </template>
+              <!-- CRATER detail -->
+              <template v-if="detailMode === 'crater' && selectedCrater">
+                <div class="science-detail-header">
+                  <div class="sdh-instrument" style="color: #44aaff">CRATER SCIENCE</div>
+                  <div class="sdh-rock">{{ selectedCrater.discoveryName }}</div>
+                  <div class="sdh-sol">Sol {{ selectedCrater.capturedSol }}</div>
+                </div>
+                <div class="science-detail-body">
+                  <dl class="science-meta">
+                    <div class="sm-row"><dt>Discovery</dt><dd :style="{ color: RARITY_COLORS[selectedCrater.rarity.toLowerCase()] }">{{ selectedCrater.discoveryName }}</dd></div>
+                    <div class="sm-row"><dt>Rarity</dt><dd :style="{ color: RARITY_COLORS[selectedCrater.rarity.toLowerCase()] }">{{ selectedCrater.rarity }}</dd></div>
+                    <div class="sm-row"><dt>SP Earned</dt><dd class="sm-instr" style="color: #5dc9a5">+{{ selectedCrater.spEarned }}</dd></div>
+                    <div class="sm-row"><dt>Vent</dt><dd :style="{ color: selectedCrater.ventPlaced ? '#44aaff' : '#886a50' }">{{ selectedCrater.ventPlaced ? (selectedCrater.ventType === 'co2' ? 'CO\u2082' : 'CH\u2084') + ' VENT PLACED' : 'NONE' }}</dd></div>
+                    <div v-if="selectedCrater.sideProducts.length > 0" class="sm-row"><dt>Products</dt><dd class="sm-instr">{{ selectedCrater.sideProducts.map(p => p.quantity + 'x ' + p.itemId).join(', ') }}</dd></div>
+                    <div class="sm-row"><dt>Method</dt><dd class="sm-instr">DAN Crater Mode</dd></div>
+                    <div class="sm-row"><dt>Site</dt><dd>{{ selectedCrater.siteId }}</dd></div>
+                    <div class="sm-row"><dt>Lat / Lon</dt><dd class="sm-instr">{{ formatLatLon(selectedCrater.latitudeDeg, selectedCrater.longitudeDeg) }}</dd></div>
+                    <div class="sm-row"><dt>Captured</dt><dd class="sm-instr">SOL {{ selectedCrater.capturedSol }} · {{ formatUtc(selectedCrater.capturedAtMs) }}</dd></div>
+                    <div class="sm-row"><dt>Transmitted</dt><dd class="sm-instr">{{ selectedCrater.transmitted ? 'YES' : 'NO' }}</dd></div>
+                  </dl>
+                  <div v-if="!selectedCrater.transmitted" class="tx-queue-actions">
+                    <button v-if="!selectedCrater.queuedForTransmission" type="button"
+                      class="tx-queue-btn tx-queue"
+                      @click="emitQueueForTx('crater', selectedCrater.archiveId)">QUEUE FOR TRANSMISSION</button>
+                    <button v-else type="button"
+                      class="tx-queue-btn tx-dequeue"
+                      @click="emitDequeueFromTx('crater', selectedCrater.archiveId)">REMOVE FROM QUEUE</button>
+                  </div>
+                  <div v-else class="tx-transmitted-badge">TRANSMITTED</div>
+                </div>
+              </template>
               <!-- METEOR detail -->
               <template v-if="detailMode === 'meteor' && selectedMeteor">
                 <div class="science-detail-header">
@@ -458,6 +512,7 @@ import type { ArchivedAPXSAnalysis } from '@/composables/useAPXSArchive'
 import type { ArchivedRADEvent } from '@/types/radArchive'
 import APXSResultChart from '@/components/APXSResultChart.vue'
 import { useMeteorArchive } from '@/composables/useMeteorArchive'
+import { useCraterArchive } from '@/composables/useCraterArchive'
 
 const props = defineProps<{
   open: boolean
@@ -470,8 +525,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string]
-  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string]
+  queueForTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater', archiveId: string]
+  dequeueFromTransmission: [source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater', archiveId: string]
 }>()
 const { observations: meteorObservations } = useMeteorArchive()
 const { playUiCue } = useUiSound()
@@ -529,7 +584,11 @@ const selectedRadId = ref<string | null>(null)
 const meteorExpanded = ref(false)
 const selectedMeteorId = ref<string | null>(null)
 
-const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor'>('chemcam')
+const craterExpanded = ref(false)
+const selectedCraterId = ref<string | null>(null)
+const { discoveries: craterDiscoveries } = useCraterArchive()
+
+const detailMode = ref<'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater'>('chemcam')
 
 /**
  * Plays the science-log report selection cue.
@@ -578,6 +637,16 @@ function selectMeteorReport(archiveId: string): void {
   selectedMeteorId.value = archiveId
 }
 
+function toggleCraterAccordion(): void {
+  playUiCue('ui.switch')
+  craterExpanded.value = !craterExpanded.value
+}
+
+function selectCraterReport(archiveId: string): void {
+  playScienceSelectionCue()
+  selectedCraterId.value = archiveId
+}
+
 watch(selectedDanId, (id) => {
   if (id) detailMode.value = 'dan'
 })
@@ -595,6 +664,9 @@ watch(selectedRadId, (id) => {
 })
 watch(selectedMeteorId, (id) => {
   if (id) detailMode.value = 'meteor'
+})
+watch(selectedCraterId, (id) => {
+  if (id) detailMode.value = 'crater'
 })
 
 watch(
@@ -650,6 +722,14 @@ const sortedMeteorObservations = computed(() =>
 
 const selectedMeteor = computed(() =>
   sortedMeteorObservations.value.find((o) => o.archiveId === selectedMeteorId.value) ?? null,
+)
+
+const sortedCraterDiscoveries = computed(() =>
+  [...craterDiscoveries.value].sort((a, b) => b.capturedAtMs - a.capturedAtMs),
+)
+
+const selectedCrater = computed(() =>
+  sortedCraterDiscoveries.value.find((c) => c.archiveId === selectedCraterId.value) ?? null,
 )
 
 const RARITY_COLORS: Record<string, string> = {

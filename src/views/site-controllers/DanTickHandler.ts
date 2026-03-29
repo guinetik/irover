@@ -155,12 +155,6 @@ export interface DanTickCallbacks {
     waterConfirmed: boolean
     reservoirQuality: number
     drillSite?: { x: number; y: number; z: number }
-    craterDiscovery?: {
-      discoveryId: string
-      discoveryName: string
-      ventPlaced: boolean
-      ventType?: 'co2' | 'methane'
-    }
   }) => void
   getLatestPersistedDanDrillSite: (siteId: string) => DanDrillSiteScene | null
   notifyDanScanCompleted: () => void

@@ -2,6 +2,7 @@ import type { MarsSiteViewContext } from '@/views/MarsSiteViewController'
 import { useMarsData } from '@/composables/useMarsData'
 import { useDanArchive } from '@/composables/useDanArchive'
 import { useVentArchive } from '@/composables/useVentArchive'
+import { useCraterArchive } from '@/composables/useCraterArchive'
 import type { VentType } from '@/lib/meteor/craterDiscovery'
 import type { SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
@@ -137,11 +138,9 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       notifyDanScanCompleted: ctx.notifyDanScanCompleted,
       getCraterAtPosition: (x, z) => meteorHandler.getCraterAtPosition(x, z),
       hasCraterBeenScanned: (x, z) => {
-        const { prospects } = useDanArchive()
-        return prospects.value.some(p =>
-          p.craterDiscovery
-          && p.drillSiteX !== undefined && p.drillSiteZ !== undefined
-          && Math.abs(p.drillSiteX - x) < 2 && Math.abs((p.drillSiteZ ?? 0) - z) < 2,
+        const { discoveries } = useCraterArchive()
+        return discoveries.value.some(d =>
+          Math.abs(d.craterX - x) < 2 && Math.abs(d.craterZ - z) < 2,
         )
       },
       hasActiveVent: (ventType: VentType) => useVentArchive().hasActiveVent(ctx.siteId, ventType),
