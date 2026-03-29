@@ -122,8 +122,9 @@
       :passive-instrument-hud="passiveOverlayPatch.hud"
       :is-active-mode="isInstrumentActive"
       :wheels-hud="activeInstrumentSlot === WHLS_SLOT ? wheelsOverlayHud : null"
-      :instrument-speed-hud="instrumentSpeedHudForSlot"
-      :instrument-accuracy-hud="instrumentAccuracyHud"
+      :active-instrument-slots="activeInstrumentSlots"
+      :storm-level="activeStormLevel"
+      :radiation-level="radiationLevelForOverlay"
       :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, ambientMeasured: remsSurveying, heaterW: heaterEffectiveW, zone: thermalZone } : null"
       :rems-hud="activeInstrumentSlot === REMS_SLOT ? remsHud : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
@@ -712,8 +713,7 @@ import IntroSequence from '@/components/IntroSequence.vue'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import { computeStormPerformancePenalty } from '@/lib/hazards'
+import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 import { getMissionSolForSite, setMissionSolForSite } from '@/lib/siteMissionSolStorage'
 import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
@@ -1116,37 +1116,21 @@ const chemCamOverlaySequenceActive = ref(false)
 const chemCamOverlaySequenceProgress = ref(0)
 const chemCamOverlaySequenceLabel = ref('')
 const chemCamOverlaySequencePulse = ref(false)
-const drillSpeedBreakdown = ref<SpeedBreakdown | null>(null)
-const chemCamSpeedBreakdown = ref<SpeedBreakdown | null>(null)
-const mastCamSpeedBreakdown = ref<SpeedBreakdown | null>(null)
-const apxsSpeedBreakdown = ref<SpeedBreakdown | null>(null)
-
-const instrumentSpeedHudForSlot = computed(() => {
-  switch (activeInstrumentSlot.value) {
-    case 3: return drillSpeedBreakdown.value
-    case 2: return chemCamSpeedBreakdown.value
-    case 1: return mastCamSpeedBreakdown.value
-    case 4: return apxsSpeedBreakdown.value
-    default: return null
-  }
+const activeInstrumentSlots = computed(() => {
+  const rover = siteRover.value
+  if (!rover) return []
+  return rover.instruments
+    .filter(i => i.passiveSubsystemEnabled)
+    .map(i => i.slot)
 })
 
-/** Slots that benefit from instrumentAccuracy: MastCam, ChemCam, Drill, DAN, SAM, LGA, UHF */
-const ACCURACY_SLOTS = new Set([1, 2, 3, 5, 6, 11, 12])
-const instrumentAccuracyHud = computed(() => {
-  if (!activeInstrumentSlot.value || !ACCURACY_SLOTS.has(activeInstrumentSlot.value)) return null
-  const activeInst = siteRover.value?.instruments.find(i => i.slot === activeInstrumentSlot.value)
-  const activeStormLevel = siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0
-  return buildSpeedBreakdown({
-    modifierKey: 'instrumentAccuracy',
-    archetype: playerProfile.archetype ? ARCHETYPES[playerProfile.archetype] : null,
-    foundation: playerProfile.foundation ? FOUNDATIONS[playerProfile.foundation] : null,
-    patron: playerProfile.patron ? PATRONS[playerProfile.patron] : null,
-    trackModifiers: trackModifiers.value,
-    stormLevel: activeStormLevel,
-    instrumentTier: activeInst?.tier,
-  })
+const activeStormLevel = computed(() => {
+  return siteWeather.value.dustStormPhase === 'active'
+    ? (siteWeather.value.dustStormLevel ?? 0)
+    : 0
 })
+
+const radiationLevelForOverlay = computed(() => radLevel.value)
 
 const activeChemCamReadout = computed(() => {
   if (!showChemCamResults.value) return null
@@ -1641,12 +1625,14 @@ function handleSamEnqueue(entry: Omit<SamQueueEntry, 'id'>): void {
   }
   // Apply analysis speed modifier and storm penalty to processing duration
   const samInst = siteRover.value?.instruments.find(i => i.id === 'sam')
-  const samStormPenalty = siteWeather.value.dustStormPhase === 'active' && samInst
-    ? computeStormPerformancePenalty(siteWeather.value.dustStormLevel ?? 0, samInst.tier)
-    : 1
-  const speedMult = playerMod('analysisSpeed')
-  const adjustedRemaining = entry.remainingTimeSec * samStormPenalty / speedMult
-  const adjustedTotal = entry.totalTimeSec * samStormPenalty / speedMult
+  const samEnv = {
+    thermalZone: (thermalZone?.value ?? 'OPTIMAL') as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+    stormLevel: siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0,
+    radiationLevel: radLevel.value,
+  }
+  const samPerf = resolveInstrumentPerformance(samInst?.tier ?? 'standard', samInst?.durabilityFactor ?? 1, samEnv, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+  const adjustedRemaining = entry.remainingTimeSec / samPerf.speedFactor
+  const adjustedTotal = entry.totalTimeSec / samPerf.speedFactor
   const fullEntry = { ...entry, startedAtSol: marsSol.value, remainingTimeSec: adjustedRemaining, totalTimeSec: adjustedTotal }
   samEnqueue(fullEntry)
   samDialogVisible.value = false
@@ -1726,10 +1712,13 @@ function handleAPXSComplete(result: {
 
   const baseTime = 10 + Math.random() * 5
   const apxsInst = siteRover.value?.instruments.find(i => i.id === 'apxs')
-  const apxsStormPenalty = siteWeather.value.dustStormPhase === 'active' && apxsInst
-    ? computeStormPerformancePenalty(siteWeather.value.dustStormLevel ?? 0, apxsInst.tier)
-    : 1
-  const processingTime = baseTime * apxsStormPenalty / playerMod('analysisSpeed')
+  const apxsEnvLocal = {
+    thermalZone: (thermalZone?.value ?? 'OPTIMAL') as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+    stormLevel: siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0,
+    radiationLevel: radLevel.value,
+  }
+  const apxsPerf = resolveInstrumentPerformance(apxsInst?.tier ?? 'standard', apxsInst?.durabilityFactor ?? 1, apxsEnvLocal, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+  const processingTime = baseTime / apxsPerf.speedFactor
 
   apxsEnqueue({
     rockMeshUuid: apxsGameRockUuid.value,
@@ -2289,10 +2278,6 @@ function createSiteControllerContext() {
       siteWeather,
       remsSurveying,
       micEnabled: micListening,
-      drillSpeedBreakdown,
-      chemCamSpeedBreakdown,
-      mastCamSpeedBreakdown,
-      apxsSpeedBreakdown,
       // RAD
       radZone,
       radLevel,

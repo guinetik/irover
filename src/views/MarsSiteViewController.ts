@@ -36,7 +36,6 @@ import type { ThermalTickInput, ThermalZone } from '@/composables/useMarsThermal
 import type { RemsHudSnapshot, RemsWeatherTickInput } from '@/composables/useSiteRemsWeather'
 import type { SiteWeatherSnapshot } from '@/lib/weather/siteWeather'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
-import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { SamQueueEntry } from '@/composables/useSamQueue'
 import type { APXSQueueEntry } from '@/composables/useAPXSQueue'
@@ -324,10 +323,6 @@ export interface MarsSiteViewRefs {
   remsMeteorActiveText: Ref<string | null>
   /** Drives the shockwave dust-whiteout overlay on near impacts. */
   meteorShockWhiteout: Ref<boolean>
-  drillSpeedBreakdown: Ref<SpeedBreakdown | null>
-  chemCamSpeedBreakdown: Ref<SpeedBreakdown | null>
-  mastCamSpeedBreakdown: Ref<SpeedBreakdown | null>
-  apxsSpeedBreakdown: Ref<SpeedBreakdown | null>
   // RAD instrument refs
   radZone: Ref<import('@/lib/radiation').RadiationZone>
   radLevel: Ref<number>

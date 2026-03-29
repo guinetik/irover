@@ -4,7 +4,6 @@ import { useDanArchive } from '@/composables/useDanArchive'
 import { useVentArchive } from '@/composables/useVentArchive'
 import { useCraterArchive } from '@/composables/useCraterArchive'
 import type { VentType } from '@/lib/meteor/craterDiscovery'
-import type { SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
 import { createDanTickHandler } from './DanTickHandler'
 import { useInventory } from '@/composables/useInventory'
@@ -74,14 +73,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     pendingCraterResult,
     pendingWaterDeploy,
   } = refs
-
-  const getSpeedBreakdownBase = (): Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'> => ({
-    modifierKey: 'analysisSpeed',
-    archetype: ctx.profileSources.archetype,
-    foundation: ctx.profileSources.foundation,
-    patron: ctx.profileSources.patron,
-    trackModifiers: ctx.trackModifiers.value,
-  })
 
   // Track which instruments have been used on each meteorite rock (by mesh UUID)
   const meteoriteWorkup = new Map<string, Set<string>>()
@@ -189,7 +180,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       drillProgress: refs.drillProgress,
       isDrilling: refs.isDrilling,
-      speedBreakdown: refs.drillSpeedBreakdown,
     },
     {
       sampleToastRef: ctx.sampleToastRef,
@@ -197,7 +187,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       awardSP: ctx.awardSP,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.drillStart'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
-      getSpeedBreakdownBase,
     },
   )
 
@@ -216,7 +205,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       isDrilling: refs.isDrilling,
       drillProgress: refs.drillProgress,
-      speedBreakdown: refs.mastCamSpeedBreakdown,
     },
     {
       sampleToastRef: ctx.sampleToastRef,
@@ -224,7 +212,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playerMod: ctx.playerMod,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.mastcamTag'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
-      getSpeedBreakdownBase,
       onMeteoriteTagged: (rock: THREE.Mesh, _rockType: string) => {
         ctx.triggerMeteorAchievement('first-meteorite-scan')
         stampMeteoriteWorkup(rock.uuid, 'mastcam')
@@ -267,7 +254,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       isDrilling: refs.isDrilling,
       drillProgress: refs.drillProgress,
-      speedBreakdown: refs.chemCamSpeedBreakdown,
     },
     {
       sampleToastRef: ctx.sampleToastRef,
@@ -275,7 +261,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       awardSP: ctx.awardSP,
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.chemcamFire'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
-      getSpeedBreakdownBase,
       onReadoutComplete: (rockUuid, rockType) => {
         if (rockType === 'iron-meteorite') stampMeteoriteWorkup(rockUuid, 'chemcam')
       },
@@ -290,7 +275,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       crosshairY: refs.crosshairY,
       apxsCountdown: refs.apxsCountdown,
       apxsState: refs.apxsState,
-      speedBreakdown: refs.apxsSpeedBreakdown,
     },
     {
       onLaunchMinigame: (rockUuid, rockType, rockLabel, durationSec) => {
@@ -301,7 +285,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       playerMod: ctx.playerMod,
       playActionSound: () => ctx.playInstrumentActionSound('sfx.apxsContact'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.mastMove'),
-      getSpeedBreakdownBase,
     },
   )
 

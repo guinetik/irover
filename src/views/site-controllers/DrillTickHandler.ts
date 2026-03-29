@@ -5,9 +5,8 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import { computeStormPerformancePenalty } from '@/lib/hazards'
-import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
+import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
+import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export interface DrillTickRefs {
   crosshairVisible: Ref<boolean>
@@ -16,7 +15,6 @@ export interface DrillTickRefs {
   crosshairY: Ref<number>
   drillProgress: Ref<number>
   isDrilling: Ref<boolean>
-  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface DrillTickCallbacks {
@@ -25,7 +23,6 @@ export interface DrillTickCallbacks {
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
   startHeldActionSound: (soundId: 'sfx.drillStart') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
-  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
 }
 
 export interface DrillTickResult {
@@ -44,8 +41,9 @@ export function createDrillTickHandler(
   refs: DrillTickRefs,
   callbacks: DrillTickCallbacks,
 ): SiteTickHandler & { lastResult: DrillTickResult; initIfReady(fctx: SiteFrameContext): void } {
-  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling, speedBreakdown } = refs
-  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
+  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling } = refs
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
+  const { defBySlot } = useInstrumentProvider()
 
   const lastResult: DrillTickResult = { rockDrilling: false }
   let gameplayInitialised = false
@@ -69,16 +67,14 @@ export function createDrillTickHandler(
   }
 
   function tick(fctx: SiteFrameContext): void {
-    const { rover: controller, siteScene, camera, thermalZone } = fctx
+    const { rover: controller, siteScene, camera } = fctx
 
     if (controller?.mode === 'active' && controller.activeInstrument instanceof DrillController) {
       const drill = controller.activeInstrument
-      const z = thermalZone
-      const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
-      const stormPenalty = fctx.dustStormPhase === 'active' ? computeStormPerformancePenalty(fctx.dustStormLevel ?? 0, drill.tier) : 1
-      drill.drillDurationMultiplier = (thermalMult * stormPenalty) / (playerMod('analysisSpeed') * Math.max(0.1, drill.durabilityFactor))
-
-      drill.accuracyMod = playerMod('instrumentAccuracy') * drill.durabilityFactor / stormPenalty
+      const drillDef = defBySlot(drill.slot)
+      const perf = resolveInstrumentPerformance(drillDef?.tier ?? drill.tier, drill.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+      drill.drillDurationMultiplier = 1 / perf.speedFactor
+      drill.accuracyMod = perf.accuracyFactor
       drill.setRoverPosition(siteScene.rover!.position)
       crosshairVisible.value = true
       crosshairColor.value = drill.hasTarget && drill.canCollectCurrentTarget ? 'green' : 'red'
@@ -143,25 +139,6 @@ export function createDrillTickHandler(
       lastResult.rockDrilling = false
     }
 
-    // Speed breakdown — show whenever drill card is visible (not just active mode)
-    const drillInst = controller?.instruments.find(i => i.id === 'drill')
-    if (drillInst instanceof DrillController) {
-      const z = thermalZone
-      const scanBuff = drillInst.mastcamScanDrillSpeedMult < 1
-      const extras = scanBuff
-        ? [{ label: 'MASTCAM SCAN', value: '+40%', color: '#5dc9a5' }]
-        : undefined
-      const activeStormLevel = fctx.dustStormPhase === 'active' ? (fctx.dustStormLevel ?? 0) : 0
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        thermalZone: z as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-        stormLevel: activeStormLevel,
-        instrumentTier: drillInst.tier,
-        extras,
-      })
-    } else {
-      speedBreakdown.value = null
-    }
   }
 
   function dispose(): void {

@@ -3,9 +3,8 @@ import { APXSController } from '@/three/instruments'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
-import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import { computeStormPerformancePenalty } from '@/lib/hazards'
-import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
+import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
+import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export type APXSCountdownState = 'idle' | 'counting' | 'launching' | 'playing'
 
@@ -24,7 +23,6 @@ export interface APXSTickRefs {
   crosshairY: Ref<number>
   apxsCountdown: Ref<number>
   apxsState: Ref<APXSCountdownState>
-  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface APXSTickCallbacks {
@@ -33,15 +31,15 @@ export interface APXSTickCallbacks {
   playerMod: (key: keyof ProfileModifiers) => number
   playActionSound: (soundId: 'sfx.apxsContact') => void
   startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
-  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
 }
 
 export function createAPXSTickHandler(
   refs: APXSTickRefs,
   callbacks: APXSTickCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
-  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState, speedBreakdown } = refs
-  const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
+  const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
+  const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound } = callbacks
+  const { defBySlot } = useInstrumentProvider()
   let gameplayInitialised = false
   let countdownTimer = 0
   let coldToastCooldown = 0
@@ -58,7 +56,7 @@ export function createAPXSTickHandler(
   }
 
   function tick(fctx: SiteFrameContext): void {
-    const { rover: controller, siteScene, camera, thermalZone } = fctx
+    const { rover: controller, siteScene, camera } = fctx
 
     if (apxsState.value === 'playing') {
       heldMovementPlayback?.stop()
@@ -88,8 +86,9 @@ export function createAPXSTickHandler(
         crosshairY.value = (-projected.y * 0.5 + 0.5) * 100
       }
 
-      const stormPenalty = fctx.dustStormPhase === 'active' ? computeStormPerformancePenalty(fctx.dustStormLevel ?? 0, apxs.tier) : 1
-      const duration = (APXS_THERMAL_DURATION[thermalZone] ?? 25) * stormPenalty / (playerMod('analysisSpeed') * Math.max(0.1, apxs.durabilityFactor))
+      const apxsDef = defBySlot(apxs.slot)
+      const perf = resolveInstrumentPerformance(apxsDef?.tier ?? apxs.tier, apxs.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+      const duration = (APXS_THERMAL_DURATION[perf.thermalZone] ?? 25) / perf.speedFactor * perf.thermalMult
 
       // CRITICAL zone blocks APXS
       if (duration <= 0 && hasValidTarget && apxsState.value === 'idle' && coldToastCooldown <= 0) {
@@ -134,19 +133,6 @@ export function createAPXSTickHandler(
       }
     }
 
-    // Speed breakdown — show whenever APXS card is visible (not just active mode)
-    const apxsInst = controller?.instruments.find(i => i.id === 'apxs')
-    if (apxsInst instanceof APXSController) {
-      const activeStormLevel = fctx.dustStormPhase === 'active' ? (fctx.dustStormLevel ?? 0) : 0
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-        stormLevel: activeStormLevel,
-        instrumentTier: apxsInst.tier,
-      })
-    } else {
-      speedBreakdown.value = null
-    }
   }
 
   function dispose(): void {

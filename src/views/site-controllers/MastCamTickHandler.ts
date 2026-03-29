@@ -8,9 +8,8 @@ import type SampleToast from '@/components/SampleToast.vue'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import { computeStormPerformancePenalty } from '@/lib/hazards'
-import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
+import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
+import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export interface MastCamTickRefs {
   mastcamFilterLabel: Ref<string>
@@ -26,7 +25,6 @@ export interface MastCamTickRefs {
   crosshairY: Ref<number>
   isDrilling: Ref<boolean>
   drillProgress: Ref<number>
-  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface MastCamTickCallbacks {
@@ -35,7 +33,6 @@ export interface MastCamTickCallbacks {
   playerMod: (key: keyof ProfileModifiers) => number
   startHeldActionSound: (soundId: 'sfx.mastcamTag') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
-  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
   onMeteoriteTagged?: (rock: THREE.Mesh, rockType: string) => void
 }
 
@@ -54,9 +51,10 @@ export function createMastCamTickHandler(
     mastcamFilterLabel, mastcamScanning, mastcamScanProgress,
     mastPan, mastTilt, mastFov, mastTargetRange,
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
-    isDrilling, drillProgress, speedBreakdown,
+    isDrilling, drillProgress,
   } = refs
-  const { sampleToastRef, awardSP, playerMod, startHeldActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
+  const { sampleToastRef, awardSP, playerMod, startHeldActionSound, startHeldMovementSound } = callbacks
+  const { defBySlot } = useInstrumentProvider()
 
   let surveyInitialised = false
   let heldTagPlayback: AudioPlaybackHandle | null = null
@@ -100,7 +98,7 @@ export function createMastCamTickHandler(
   }
 
   function tick(fctx: SiteFrameContext): void {
-    const { rover: controller, camera, simulationTime, dustStormPhase, dustStormLevel } = fctx
+    const { rover: controller, camera, simulationTime } = fctx
 
     // Enter survey mode when MastCam is active
     if (controller?.mode === 'active' && controller.activeInstrument instanceof MastCamController) {
@@ -121,8 +119,9 @@ export function createMastCamTickHandler(
         heldTagPlayback.stop()
         heldTagPlayback = null
       }
-      const stormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, mc.tier) : 1
-      mc.durationMultiplier = stormPenalty / (playerMod('analysisSpeed') * Math.max(0.1, mc.durabilityFactor))
+      const mcDef = defBySlot(mc.slot)
+      const perf = resolveInstrumentPerformance(mcDef?.tier ?? mc.tier, mc.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+      mc.durationMultiplier = 1 / perf.speedFactor
       if (mc['overlayMeshes'].length === 0) {
         mc.enterSurveyMode()
         mc.rebuildOverlays()
@@ -146,18 +145,10 @@ export function createMastCamTickHandler(
     // Animate tag markers (always, not just in active mode)
     const mcInst = controller?.instruments.find(i => i.id === 'mastcam')
     if (mcInst instanceof MastCamController) {
-      const mcStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, mcInst.tier) : 1
-      mcInst.surveyRange = 5 * playerMod('instrumentAccuracy') * Math.max(0.1, mcInst.durabilityFactor) / mcStormPenalty
+      const mcDef2 = defBySlot(mcInst.slot)
+      const perfMc = resolveInstrumentPerformance(mcDef2?.tier ?? mcInst.tier, mcInst.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+      mcInst.surveyRange = 5 * perfMc.accuracyFactor
       mcInst.updateTagMarkers(simulationTime)
-      // Speed breakdown — show whenever MastCam card is visible
-      const activeStormLevel = dustStormPhase === 'active' ? (dustStormLevel ?? 0) : 0
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        stormLevel: activeStormLevel,
-        instrumentTier: mcInst.tier,
-      })
-    } else {
-      speedBreakdown.value = null
     }
 
     // HUD state + crosshair + telemetry

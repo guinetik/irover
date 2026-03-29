@@ -5,9 +5,8 @@ import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
-import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import { computeStormPerformancePenalty } from '@/lib/hazards'
-import type { SpeedBreakdown, SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
+import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
+import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
 export interface ChemCamTickRefs {
   chemCamUnreadCount: Ref<number>
@@ -29,7 +28,6 @@ export interface ChemCamTickRefs {
   crosshairY: Ref<number>
   isDrilling: Ref<boolean>
   drillProgress: Ref<number>
-  speedBreakdown: Ref<SpeedBreakdown | null>
 }
 
 export interface ChemCamTickCallbacks {
@@ -38,7 +36,6 @@ export interface ChemCamTickCallbacks {
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
   startHeldActionSound: (soundId: 'sfx.chemcamFire') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
-  getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
   onReadoutComplete?: (rockMeshUuid: string, rockType: string) => void
 }
 
@@ -58,9 +55,10 @@ export function createChemCamTickHandler(
     chemCamOverlaySequenceActive, chemCamOverlaySequenceProgress, chemCamOverlaySequenceLabel, chemCamOverlaySequencePulse,
     mastPan, mastTilt, mastFov, mastTargetRange,
     crosshairVisible, crosshairColor, crosshairX, crosshairY,
-    isDrilling, drillProgress, speedBreakdown,
+    isDrilling, drillProgress,
   } = refs
-  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound, getSpeedBreakdownBase } = callbacks
+  const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
+  const { defBySlot } = useInstrumentProvider()
 
   let targetingInitialised = false
   let heldFirePlayback: AudioPlaybackHandle | null = null
@@ -88,7 +86,7 @@ export function createChemCamTickHandler(
   }
 
   function tick(fctx: SiteFrameContext): void {
-    const { rover: controller, camera, thermalZone, marsSol, totalSP, activeInstrumentSlot, dustStormPhase, dustStormLevel } = fctx
+    const { rover: controller, camera, marsSol, totalSP, activeInstrumentSlot } = fctx
 
     const ccInst = controller?.instruments.find(i => i.id === 'chemcam')
     const chemCamIsActiveInstrument =
@@ -119,10 +117,9 @@ export function createChemCamTickHandler(
       ccInst.currentSP = totalSP
       ccInst.currentSol = marsSol
       if (ccInst.isSequenceAdvancing) {
-        const z = thermalZone
-        const thermalMult = z === 'OPTIMAL' ? 1.0 : z === 'COLD' ? 0.85 : z === 'FRIGID' ? 1.25 : 2.0
-        const stormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, ccInst.tier) : 1
-        ccInst.durationMultiplier = (thermalMult * stormPenalty) / (playerMod('analysisSpeed') * Math.max(0.1, ccInst.durabilityFactor))
+        const ccDef = defBySlot(ccInst.slot)
+        const perf = resolveInstrumentPerformance(ccDef?.tier ?? ccInst.tier, ccInst.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+        ccInst.durationMultiplier = 1 / perf.speedFactor
       }
       const showCardProgress =
         activeInstrumentSlot === 2 && !chemCamIsActiveInstrument
@@ -138,25 +135,17 @@ export function createChemCamTickHandler(
         chemCamOverlaySequenceActive.value = false
       }
 
-      // Speed breakdown — show whenever ChemCam card is visible
-      const activeStormLevel = dustStormPhase === 'active' ? (dustStormLevel ?? 0) : 0
-      speedBreakdown.value = buildSpeedBreakdown({
-        ...getSpeedBreakdownBase(),
-        thermalZone: thermalZone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-        stormLevel: activeStormLevel,
-        instrumentTier: ccInst.tier,
-      })
     } else {
       chemCamOverlaySequenceActive.value = false
-      speedBreakdown.value = null
     }
 
     if (controller?.mode === 'active' && controller.activeInstrument instanceof ChemCamController) {
       const cc = controller.activeInstrument
       cc.currentSP = totalSP
       cc.currentSol = marsSol
-      const ccStormPenalty = dustStormPhase === 'active' ? computeStormPerformancePenalty(dustStormLevel ?? 0, cc.tier) : 1
-      cc.accuracyMod = playerMod('instrumentAccuracy') * cc.durabilityFactor / ccStormPenalty
+      const ccDef2 = defBySlot(cc.slot)
+      const perfCc = resolveInstrumentPerformance(ccDef2?.tier ?? cc.tier, cc.durabilityFactor, fctx.env, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
+      cc.accuracyMod = perfCc.accuracyFactor
       chemcamPhase.value = cc.phase
       chemcamShotsRemaining.value = cc.shotsRemaining
       chemcamShotsMax.value = cc.shotsMax
