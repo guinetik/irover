@@ -96,6 +96,11 @@ export class DrillController extends InstrumentController {
   /** Instrument accuracy modifier — scales trace element drop count (set each frame by tick handler). */
   accuracyMod = 1.0
 
+  /** MastCam scan chain bonus base value — set by domain tick handler from instruments.json. */
+  chainDrillBonusBase = 0
+  /** ChemCam loot chain bonus base value — set by domain tick handler from instruments.json. */
+  chainLootBonusBase = 0
+
   /** Set drill duration multiplier (e.g. 1.25 in COLD thermal zone) */
   set drillDurationMultiplier(v: number) {
     if (this.drill) this.drill.durationMultiplier = v
@@ -205,7 +210,7 @@ export class DrillController extends InstrumentController {
       // MastCam scan buff: 40% faster drilling on tagged rocks
       if (this.currentTarget) {
         const scanned = this.currentTarget.rock.userData.mastcamScanned === true
-        this.drill.scanSpeedMult = scanned ? (1 - 0.4 * mod('chainDrillBonus')) : 1.0
+        this.drill.scanSpeedMult = scanned ? (1 - this.chainDrillBonusBase * mod('chainDrillBonus')) : 1.0
       }
 
       if (drillActive) {
@@ -244,7 +249,7 @@ export class DrillController extends InstrumentController {
 
     // Stacking weight multipliers: ChemCam +30%, APXS +20%
     let weightMult = 1.0
-    if (chemcamAnalyzed) weightMult += 0.3 * mod('chainLootBonus')
+    if (chemcamAnalyzed) weightMult += this.chainLootBonusBase * mod('chainLootBonus')
     if (apxsAnalyzed) weightMult += 0.2
     const res = this.inventory.addRockSample(rockType, rock.uuid, weightMult)
     if (res.ok) {
