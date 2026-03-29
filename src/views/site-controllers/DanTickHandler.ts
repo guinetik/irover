@@ -384,7 +384,7 @@ export function createDanTickHandler(
           if (!tickHandlerActive || !sceneRef) return
           const marker = template.clone(true)
           // Query ground height at placement time (terrain is fully loaded)
-          const groundY = terrainRef ? terrainRef.heightAt(vent.x, vent.z) : 0
+          const groundY = terrainRef ? terrainRef.terrainHeightAt(vent.x, vent.z) : 0
           placeDanDrillMarkerInstance(marker, vent.x, vent.z, groundY)
           sceneRef.add(marker)
           ventMarkers.push(marker)
@@ -467,7 +467,9 @@ export function createDanTickHandler(
     void loadDanDrillMarkerTemplate().then((template) => {
       if (!tickHandlerActive || !sceneRef) return
       const marker = template.clone(true)
-      const groundY = terrainRef ? terrainRef.heightAt(x, z) : 0
+      // Use terrainHeightAt (heightmap only) — heightAt includes rock colliders which
+      // may still reference the now-removed meteorite rock at this position.
+      const groundY = terrainRef ? terrainRef.terrainHeightAt(x, z) : 0
       placeDanDrillMarkerInstance(marker, x, z, groundY)
       sceneRef.add(marker)
       ventMarkers.push(marker)
