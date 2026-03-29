@@ -118,6 +118,30 @@ function applyMaterials(root: THREE.Object3D, accent: THREE.Color): void {
   })
 }
 
+/**
+ * Stretches the capsule body by offsetting top-cap nodes upward and scaling body-zone nodes on Y.
+ * Zone boundaries from the GLB: base < 1.1 < body < 3.6 < top.
+ */
+function stretchBody(root: THREE.Object3D, extra: number): void {
+  if (extra <= 0) return
+  const BODY_MIN = 1.1
+  const TOP_MIN = 3.6
+  // Only operate on direct children of the RootNode (depth-3 in the hierarchy)
+  const rootNode = root.getObjectByName('RootNode')
+  if (!rootNode) return
+  for (const child of rootNode.children) {
+    const y = child.position.y
+    if (y >= TOP_MIN) {
+      // Top cap — push up
+      child.position.y += extra
+    } else if (y >= BODY_MIN) {
+      // Body zone — scale Y and shift up by half the extra
+      child.scale.y *= (1 + extra / (TOP_MIN - BODY_MIN))
+      child.position.y += extra * 0.5
+    }
+  }
+}
+
 function placeInstance(instance: THREE.Object3D, x: number, z: number, groundY: number): void {
   instance.position.set(0, 0, 0)
   instance.scale.set(1, 1, 1)
@@ -171,6 +195,7 @@ export async function createBioCapsule(
     const accent = FLUID_COLORS[fluidType] ?? FLUID_COLORS.water
     instance.userData.fluidType = fluidType
     applyMaterials(instance, accent)
+    stretchBody(instance, 1.0)
     placeInstance(instance, x, z, groundY)
     scene.add(instance)
     return instance
