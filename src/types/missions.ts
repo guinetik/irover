@@ -5,6 +5,8 @@ export type ObjectiveType =
   | 'apxs'
   | 'mastcam-tag'
   | 'chemcam'
+  | 'dan-activate'
+  | 'dan-scan'
   | 'dan-prospect'
   | 'transmit'
   | 'rtg-overdrive'

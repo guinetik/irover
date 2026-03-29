@@ -5,6 +5,7 @@ export interface LGAMessage {
   timeOfDay: number       // 0-1 fraction of sol
   subject: string
   body: string
+  description?: string
   read: boolean
   type?: 'info' | 'mission' | 'alert'
   from?: string

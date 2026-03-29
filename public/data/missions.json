@@ -133,13 +133,17 @@
       "id": "m09-dan",
       "name": "DAN — Subsurface Baseline",
       "patron": null,
-      "description": "Neutron survey for hydrogen signatures. Planners call it science; MSI calls it inventory; TRC calls it a line item.",
-      "briefing": "Passive map while you roll. When the return peaks, hold still and let it resolve — one confirmed water-ice signature for the archive. That datum will be fought over by three committees who agree on nothing except that you should have scanned faster. Do not scan faster. Scan until it locks.",
+      "description": "Neutron survey checkout. The detector doesn't care what it finds — it just counts what bounces back.",
+      "briefing": "DAN fires neutrons at the ground and listens for the slow ones. Hydrogen — usually locked in ice or hydrated minerals — thermalises the return. The detector doesn't know what you're hoping for. It counts what comes back and lets statistics argue later.\n\nPull up the instrument panel and find DAN. Activate it. Drive around — the passive scan runs automatically while wheels are turning. When the return count spikes, hold position and let it integrate. Could be ice. Could be bound water in clay. Could be a statistical ghost that dissolves at higher confidence. That's the instrument working as designed.\n\nOnce a signal resolves, review it in the science archive. Whether it confirms subsurface water or fizzles into noise, the procedure is the same. DAN doesn't do wishful thinking and neither should you.",
       "reward": { "sp": 45 },
       "unlocks": ["sam"],
       "chain": "m10-sam",
       "objectives": [
-        { "id": "dan-1", "type": "dan-prospect", "label": "Water-ice prospect — confirmed", "params": { "minWaterChance": 0.3 }, "sequential": false }
+        { "id": "dan-1", "type": "ui-inspect", "label": "Inspect DAN instrument [5]", "params": { "target": "dan" }, "sequential": true },
+        { "id": "dan-2", "type": "dan-activate", "label": "Activate DAN — passive scan online", "params": {}, "sequential": true },
+        { "id": "dan-3", "type": "dan-scan", "label": "Drive until DAN registers a signal", "params": {}, "sequential": true },
+        { "id": "dan-4", "type": "dan-prospect", "label": "Prospect signal to completion", "params": { "count": 1 }, "sequential": true },
+        { "id": "dan-5", "type": "ui-inspect", "label": "Review results in science archive", "params": { "target": "dan-science" }, "sequential": true }
       ]
     },
     {

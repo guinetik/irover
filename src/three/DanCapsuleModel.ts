@@ -195,7 +195,7 @@ export async function createBioCapsule(
     const accent = FLUID_COLORS[fluidType] ?? FLUID_COLORS.water
     instance.userData.fluidType = fluidType
     applyMaterials(instance, accent)
-    stretchBody(instance, 2.0)
+    stretchBody(instance, 1.2)
     placeInstance(instance, x, z, groundY)
     scene.add(instance)
     return instance
