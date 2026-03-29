@@ -1,4 +1,5 @@
 // src/types/instruments.ts
+import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 
 export interface InstrumentHelpImage {
   /** Path to screenshot, e.g. "/images/help/dan-panel.jpg". Player-sourced. */
@@ -27,6 +28,29 @@ export interface InstrumentUpgradeDef {
   req: string
 }
 
+export interface InstrumentStatDef {
+  /**
+   * Key into ProfileModifiers — ties this stat to every buff/nerf source:
+   * archetype, foundation, patron, reward track.
+   * Must match a key on the ProfileModifiers interface exactly.
+   */
+  key: keyof ProfileModifiers
+  /** Display label shown in the overlay stat panel, e.g. "DRILL SPEED", "ACCURACY" */
+  label: string
+}
+
+export interface InstrumentPassiveBonus {
+  /**
+   * Which ProfileModifiers key is buffed when this instrument's passive
+   * subsystem is active (e.g. REMS active → spYield gets +5%).
+   */
+  key: keyof ProfileModifiers
+  /** Additive percentage offset, e.g. 0.05 = +5%, -0.05 = -5% */
+  value: number
+  /** Label shown in other instruments' buff breakdown, e.g. "REMS ACTIVE" */
+  label: string
+}
+
 export interface InstrumentDef {
   /** Stable lowercase identifier, e.g. "dan", "chemcam" */
   id: string
@@ -46,4 +70,17 @@ export interface InstrumentDef {
   tickHandlerType: string
   upgrade: InstrumentUpgradeDef
   help: InstrumentHelp
+  /**
+   * Ordered list of modifier-driven stats this instrument exposes.
+   * Order controls display order in the overlay stat panel (Plan B).
+   * Empty array = instrument has no modifier-driven stats (LGA, UHF, Mic).
+   */
+  stats: InstrumentStatDef[]
+  /**
+   * Passive bonuses this instrument emits to all other instruments when its
+   * passive subsystem is enabled. Collected by Plan B's computed layer and
+   * stacked into modifier resolution for every other instrument.
+   * Most instruments omit this field.
+   */
+  provides?: InstrumentPassiveBonus[]
 }
