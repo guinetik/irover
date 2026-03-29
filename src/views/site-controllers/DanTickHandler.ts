@@ -238,7 +238,8 @@ export function createDanTickHandler(
   let drillSiteHydratedFromStorage = false
 
   let activeCrater: MeteorCrater | null = null
-  const DAN_CRATER_SCAN_DURATION_SEC = 30
+  /** Crater scan base duration — same conversion as normal DAN prospect (2 mars-hours → ~15 scene seconds). */
+  const DAN_CRATER_SCAN_DURATION_SEC = (DAN_PROSPECT_DURATION_MARS_HOURS * 60 / MARS_SOL_CLOCK_MINUTES) * SOL_DURATION
   /** Tracks vent GLB markers placed in the scene for disposal. */
   const ventMarkers: THREE.Object3D[] = []
   /** Last siteScene reference from tick — used by placeVentMarker called outside tick. */
@@ -316,10 +317,12 @@ export function createDanTickHandler(
     danProspectProgress.value = 0
     danDialogVisible.value = false
     danWaterResult.value = null
+    controller.criticalPowerMobilitySuspended = false
     controller.config.moveSpeed = 5
 
     activeCrater = null
     danCraterModeAvailable.value = false
+    pendingCraterResult.value = null
 
     syncDanProspectingPlayback(false)
     passiveUiRevision.value++
@@ -392,9 +395,9 @@ export function createDanTickHandler(
 
   function handleDanProspect(fctx: SiteFrameContext): void {
     const danInst = fctx.rover?.instruments.find(i => i.id === 'dan') as DANController | undefined
-    if (!danInst?.pendingHit || !danInst.passiveSubsystemEnabled) return
+    if (!danInst?.passiveSubsystemEnabled) return
 
-    // Crater detection — check if rover is inside an eligible crater
+    // Crater detection — does NOT require a pending hit. If rover is in a crater, offer crater mode immediately.
     const roverPos = fctx.siteScene?.rover?.position
     if (roverPos) {
       const crater = getCraterAtPosition(roverPos.x, roverPos.z)
@@ -407,6 +410,8 @@ export function createDanTickHandler(
       }
     }
 
+    // Normal prospect requires a pending hit
+    if (!danInst.pendingHit) return
     const hit = danInst.pendingHit
 
     if (!danDiscMesh) {
@@ -441,8 +446,8 @@ export function createDanTickHandler(
     danProspectProgress.value = 0
     danCraterModeAvailable.value = false
 
-    // Immobilize rover
-    if (fctx.rover) fctx.rover.config.moveSpeed = 0
+    // Immobilize rover — suspend mobility (blocks WASD turn + move, same as critical sleep)
+    if (fctx.rover) fctx.rover.criticalPowerMobilitySuspended = true
   }
 
   function cancelCraterMode(fctx: SiteFrameContext): void {
@@ -511,6 +516,25 @@ export function createDanTickHandler(
 
     danHitAvailable.value = danInst.pendingHit !== null
 
+    // Auto-detect crater when DAN is active and idle — show confirmation immediately
+    if (
+      danInst.passiveSubsystemEnabled
+      && danInst.prospectPhase === 'idle'
+      && !activeCrater
+      && !danCraterModeAvailable.value
+    ) {
+      const rp2 = siteScene.rover?.position
+      if (rp2) {
+        const crater = getCraterAtPosition(rp2.x, rp2.z)
+        if (crater && crater.rockMesh && !hasCraterBeenScanned(crater.x, crater.z)) {
+          activeCrater = crater
+          danInst.prospectPhase = 'crater-confirm'
+          danProspectPhase.value = 'crater-confirm'
+          danCraterModeAvailable.value = true
+        }
+      }
+    }
+
     // VFX: always tick so dots hide when deselected
     const danSelected = controller?.activeInstrument?.id === 'dan'
     danInst.vfxVisible = !!danSelected
@@ -563,7 +587,10 @@ export function createDanTickHandler(
         danProspectPhase.value = 'idle'
         danProspectProgress.value = 0
         activeCrater = null
-        if (controller) controller.config.moveSpeed = 5
+        if (controller) {
+          controller.criticalPowerMobilitySuspended = false
+          controller.config.moveSpeed = 5
+        }
         danInst.pendingHit = null
         danHitAvailable.value = false
       }
