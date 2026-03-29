@@ -20,6 +20,10 @@ export interface ProfileModifiers {
   buildSpeed: number
   structureDurability: number
   radiationTolerance: number
+  /** Drill speed multiplier on MastCam-tagged rocks. 0 = no bonus, 0.4 = 40% faster (base). */
+  chainDrillBonus: number
+  /** Sample weight multiplier on ChemCam-analyzed rocks. 0 = no bonus, 0.3 = +30% weight (base). */
+  chainLootBonus: number
 }
 
 const ZERO_MODIFIERS: ProfileModifiers = {
@@ -38,6 +42,8 @@ const ZERO_MODIFIERS: ProfileModifiers = {
   buildSpeed: 0,
   structureDurability: 0,
   radiationTolerance: 0,
+  chainDrillBonus: 0,
+  chainLootBonus: 0,
 }
 
 // --- Archetypes (Step 1) ---
