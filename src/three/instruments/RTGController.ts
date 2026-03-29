@@ -152,6 +152,11 @@ export class RTGController extends InstrumentController {
     this.rtgMaterialsIsolated = true
   }
 
+  /** RTG can degrade all the way to 0% (game over), unlike other instruments that floor at breakThreshold. */
+  override applyHazardDamage(amount: number): void {
+    this.durabilityPct = Math.max(0, this.durabilityPct - amount)
+  }
+
   override update(delta: number): void {
     if (this.phase === 'idle') {
       this.currentPowerW = Math.min(this.totalPowerW, this.currentPowerW + this.chargeRateWPerHr * delta * 0.01)

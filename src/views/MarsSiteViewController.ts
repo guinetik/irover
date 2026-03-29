@@ -529,6 +529,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
   let lastSkyTimeOfDay = -1
   let lastActiveInstrumentAudioState: ActiveInstrumentAudioState = { mode: null, instrumentId: null }
+  let rtgWarningFired = false
   let roverSpawnCaptured = false
   let firstMissionDelivered = false
   let landingSoundPlayed = false
@@ -912,8 +913,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         const nightPenaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
         const nightPenalty = 1.0 - nightFactor * nightPenaltyFactor
         const rtg = controller.instruments.find(i => i.id === 'rtg') as RTGController | undefined
-        // RTG failure = game over
-        if (rtg && !rtg.operational) {
+        // RTG critical warning at 10%
+        if (rtg && rtg.durabilityPct <= 10 && rtg.durabilityPct > 0 && !rtgWarningFired) {
+          rtgWarningFired = true
+          ctx.sampleToastRef.value?.showComm('⚠ RTG CRITICAL — durability below 10%. Repair immediately or face total power loss.')
+        }
+        // RTG at 0% durability = game over (other instruments break at 25%, RTG must hit absolute zero)
+        if (rtg && rtg.durabilityPct <= 0) {
           ctx.onRtgGameOver()
         }
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
