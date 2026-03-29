@@ -229,6 +229,8 @@ export function createDanTickHandler(
 
   let activeCrater: MeteorCrater | null = null
   const DAN_CRATER_SCAN_DURATION_SEC = 30
+  /** Tracks vent GLB markers placed in the scene for disposal. */
+  const ventMarkers: THREE.Object3D[] = []
 
   /**
    * Rebuilds completed disc + GLB from the persisted DAN archive after a full reload.
@@ -370,6 +372,7 @@ export function createDanTickHandler(
           const marker = template.clone(true)
           placeDanDrillMarkerInstance(marker, vent.x, vent.z, ventGroundY)
           sceneRef.add(marker)
+          ventMarkers.push(marker)
         })
       }
     }
@@ -545,7 +548,7 @@ export function createDanTickHandler(
 
         // Award SP
         const gain = awardDAN(`Crater discovery: ${discovery.name}`)
-        if (gain) sampleToastRef.value?.showSP(discovery.sp, 'CRATER DISCOVERY', gain.bonus)
+        if (gain) sampleToastRef.value?.showSP(gain.amount, 'CRATER DISCOVERY', gain.bonus)
 
         if (wantVent && discovery.ventType) {
           // Revert crater terrain (fracking flattens ground)
@@ -573,6 +576,7 @@ export function createDanTickHandler(
             const marker = template.clone(true)
             placeDanDrillMarkerInstance(marker, ventX, ventZ, ventGroundY)
             sceneRef.add(marker)
+            ventMarkers.push(marker)
           })
 
           sampleToastRef.value?.showDAN(
@@ -754,6 +758,11 @@ export function createDanTickHandler(
       ;(disc.material as THREE.Material).dispose()
     }
     danCompletedDiscs.length = 0
+    for (const vm of ventMarkers) {
+      vm.parent?.remove(vm)
+      disposeDrillMarkerRoot(vm)
+    }
+    ventMarkers.length = 0
   }
 
   return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode }
