@@ -81,6 +81,17 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     trackModifiers: ctx.trackModifiers.value,
   })
 
+  // Track which instruments have been used on each meteorite rock (by mesh UUID)
+  const meteoriteWorkup = new Map<string, Set<string>>()
+  function stampMeteoriteWorkup(rockUuid: string, instrument: string): void {
+    let set = meteoriteWorkup.get(rockUuid)
+    if (!set) { set = new Set(); meteoriteWorkup.set(rockUuid, set) }
+    set.add(instrument)
+    if (set.has('mastcam') && set.has('chemcam') && set.has('apxs')) {
+      ctx.triggerMeteorAchievement('full-meteorite-workup')
+    }
+  }
+
   const roverVfxHandler = createRoverVfxTickHandler({
     rtgPhase: refs.rtgPhase,
     rtgPhaseProgress: refs.rtgPhaseProgress,
@@ -211,6 +222,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       getSpeedBreakdownBase,
       onMeteoriteTagged: (rock: THREE.Mesh, _rockType: string) => {
         ctx.triggerMeteorAchievement('first-meteorite-scan')
+        stampMeteoriteWorkup(rock.uuid, 'mastcam')
         const { archiveObservation } = useMeteorArchive()
         // Weight from iron-meteorite range (0.5–1.5 kg) scaled by mesh size
         const baseWeight = 0.5 + Math.random() * 1.0
@@ -259,6 +271,9 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.chemcamFire'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
       getSpeedBreakdownBase,
+      onReadoutComplete: (rockUuid, rockType) => {
+        if (rockType === 'iron-meteorite') stampMeteoriteWorkup(rockUuid, 'chemcam')
+      },
     },
   )
 
@@ -273,7 +288,10 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       speedBreakdown: refs.apxsSpeedBreakdown,
     },
     {
-      onLaunchMinigame: ctx.onAPXSLaunchMinigame,
+      onLaunchMinigame: (rockUuid, rockType, rockLabel, durationSec) => {
+        ctx.onAPXSLaunchMinigame(rockUuid, rockType, rockLabel, durationSec)
+        if (rockType === 'iron-meteorite') stampMeteoriteWorkup(rockUuid, 'apxs')
+      },
       onBlockedByCold: ctx.onAPXSBlockedByCold,
       playerMod: ctx.playerMod,
       playActionSound: () => ctx.playInstrumentActionSound('sfx.apxsContact'),

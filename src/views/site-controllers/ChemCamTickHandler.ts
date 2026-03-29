@@ -39,6 +39,7 @@ export interface ChemCamTickCallbacks {
   startHeldActionSound: (soundId: 'sfx.chemcamFire') => AudioPlaybackHandle
   startHeldMovementSound: (soundId: 'sfx.cameraMove') => AudioPlaybackHandle
   getSpeedBreakdownBase: () => Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'>
+  onReadoutComplete?: (rockMeshUuid: string, rockType: string) => void
 }
 
 /**
@@ -80,6 +81,7 @@ export function createChemCamTickHandler(
         sampleToastRef.value?.showChemCam(readout.rockType, readout.rockLabel)
         const gain = awardSP('chemcam', readout.rockMeshUuid, readout.rockLabel)
         if (gain) sampleToastRef.value?.showSP(gain.amount, gain.source, gain.bonus)
+        callbacks.onReadoutComplete?.(readout.rockMeshUuid, readout.rockType)
       }
       targetingInitialised = true
     }
