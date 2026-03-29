@@ -177,6 +177,31 @@ This keeps all DAN science in one archive and one Science Log accordion. Crater 
 
 ---
 
+## 7. DAN Tick Handler Implementation Guidance
+
+The existing `DANProspectPhase` union is:
+```typescript
+type DANProspectPhase = 'idle' | 'drive-to-zone' | 'initiating' | 'prospecting' | 'complete'
+```
+
+The tick handler's prospect state machine branches on these phases at ~line 432-460. Crater mode needs to **bypass** `drive-to-zone` and `initiating` entirely — the rover is already at the spot.
+
+**Add two new phase values:**
+```typescript
+type DANProspectPhase = 'idle' | 'drive-to-zone' | 'initiating' | 'prospecting' | 'complete'
+  | 'crater-confirm' | 'crater-scanning'
+```
+
+**`crater-confirm`:** Set when DAN activates inside an eligible crater. The power shunt confirmation UI shows. On confirm → transition to `crater-scanning` + immobilize rover. On deny → transition to `idle` and proceed with regular DAN passive mode.
+
+**`crater-scanning`:** The 30-second scan. Same branch location as `prospecting` in the tick function — advance progress, check completion. On complete → roll discovery table, archive result, handle vent placement, deactivate DAN, unlock rover, transition to `idle`.
+
+**Key rule:** The existing `drive-to-zone` → `initiating` → `prospecting` → `complete` chain is untouched. Crater mode is a parallel branch that enters from `idle` and returns to `idle`. The two paths never cross.
+
+The tick handler is 400+ lines. The crater branch adds ~60-80 lines in the same `tick()` function. If the implementer prefers, the crater-specific logic can be extracted to a helper function called from within `tick()` to keep the main function readable.
+
+---
+
 ## File Layout
 
 ### New Files
