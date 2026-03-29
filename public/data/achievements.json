@@ -322,6 +322,72 @@
       "type": "DSN ARCHAEOLOGY"
     }
   ],
+  "meteor-science": [
+    {
+      "id": "meteor-first-shower",
+      "event": "first-shower",
+      "icon": "☄",
+      "title": "INCOMING",
+      "description": "First meteor shower begins. REMS confirms elevated bolide activity.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-first-meteorite",
+      "event": "first-meteorite-scan",
+      "icon": "🪨",
+      "title": "NOT FROM AROUND HERE",
+      "description": "First instrument scan of an iron-meteorite rock from a shower.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-first-crater-dan",
+      "event": "first-crater-mode",
+      "icon": "🔬",
+      "title": "WHAT'S UNDERNEATH",
+      "description": "DAN Crater Mode initiated for the first time.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-first-vent",
+      "event": "first-vent-placed",
+      "icon": "♨",
+      "title": "VENT SECURED",
+      "description": "First volatile vent placed. The crater is permanent now — storms won't touch it.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-methane-trace",
+      "event": "methane-detected",
+      "icon": "⚗",
+      "title": "THE METHANE QUESTION",
+      "description": "CH₄ detected in a crater vent. Geological or biological? DAN can't tell.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-shockwave-survivor",
+      "event": "survived-shockwave",
+      "icon": "💥",
+      "title": "TOO CLOSE",
+      "description": "Caught in a meteor shockwave. All instruments took damage.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-heavy-shower",
+      "event": "survived-heavy-shower",
+      "icon": "🌠",
+      "title": "METEOR STORM",
+      "description": "Survived a heavy shower — 6 or more impacts in a single event.",
+      "type": "METEOR SCIENCE"
+    },
+    {
+      "id": "meteor-full-workup",
+      "event": "full-meteorite-workup",
+      "icon": "⭐",
+      "title": "COMPLETE SPECIMEN",
+      "description": "ChemCam, APXS, and SAM all performed on the same meteorite rock.",
+      "type": "METEOR SCIENCE"
+    }
+  ],
   "reward-track": [
     {
       "sp": 50,
@@ -421,6 +487,15 @@
       "perkId": "night-vision"
     },
     {
+      "sp": 485,
+      "id": "track-impact-brace",
+      "icon": "🛡",
+      "title": "IMPACT BRACE",
+      "description": "Shock-absorbing firmware. Meteor shockwave damage reduced by 30%.",
+      "type": "PERK",
+      "perkId": "impact-brace"
+    },
+    {
       "sp": 520,
       "id": "track-steady-hand",
       "icon": "🎯",
@@ -488,6 +563,15 @@
       "type": "REWARD TRACK",
       "modifierKey": "powerConsumption",
       "modifierValue": -0.025
+    },
+    {
+      "sp": 845,
+      "id": "track-meteor-sense",
+      "icon": "🌠",
+      "title": "METEOR SENSE",
+      "description": "Marker warning time extended by 5 seconds.",
+      "type": "PERK",
+      "perkId": "meteor-sense"
     },
     {
       "sp": 880,

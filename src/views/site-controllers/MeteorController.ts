@@ -5,11 +5,21 @@ import { MeteorFallRenderer } from '@/three/MeteorFallRenderer'
 import type { RockFactory } from '@/three/terrain/RockFactory'
 import type { MeteorFall, MeteorShower, ShowerSeverity } from '@/lib/meteor'
 import { computeShockwaveDamage, KILL_RADIUS, SHOCKWAVE_RADIUS_MULTIPLIER, rollCraterParams } from '@/lib/meteor'
+import { useRewardTrack } from '@/composables/useRewardTrack'
 import type { AudioManager } from '@/audio/AudioManager'
 import type { Ref } from 'vue'
 import type { MarsSky } from '@/three/MarsSky'
-import type { ITerrainGenerator } from '@/three/terrain/TerrainGenerator'
+import type { ITerrainGenerator, CraterDeformData } from '@/three/terrain/TerrainGenerator'
 import type { RoverController } from '@/three/RoverController'
+
+export interface MeteorCrater {
+  id: string
+  x: number
+  z: number
+  radius: number
+  rockMesh: THREE.Mesh | null
+  deformData: CraterDeformData | null
+}
 
 const SEVERITY_LABELS: Record<ShowerSeverity, string> = {
   light: 'Light',
@@ -24,6 +34,8 @@ export interface MeteorControllerOptions {
   remsMeteorActiveText: Ref<string | null>
   onGameOver?: () => void
   shockWhiteoutActive: Ref<boolean>
+  triggerMeteorAchievement?: (event: string) => void
+  meteorSenseBonus?: number
 }
 
 export interface MeteorSceneComponents {
@@ -44,12 +56,16 @@ export function createMeteorController(
   getActiveMeteoriteRocks: () => THREE.Mesh[]
   /** Dev: force-trigger a meteor shower at the given severity. */
   triggerShower: (severity: ShowerSeverity) => void
+  getCraterAtPosition: (x: number, z: number) => MeteorCrater | null
+  removeCrater: (craterId: string) => void
+  unregisterMeteoriteRockFromCrater: (crater: MeteorCrater) => void
 } {
   const {
     meteorRisk,
     audioManager,
     remsMeteorIncomingText,
     remsMeteorActiveText,
+    triggerMeteorAchievement,
   } = options
 
   let renderer: MeteorFallRenderer | null = null
@@ -69,18 +85,23 @@ export function createMeteorController(
   let lastRoverPosition: THREE.Vector3 | null = null
 
   const meteoriteRocks: THREE.Mesh[] = []
+  const craters: MeteorCrater[] = []
   const fallingMeshes = new Map<string, THREE.Mesh>()
   let lastStormPhase: string = 'none'
+  let lastShowerSeverity: ShowerSeverity | null = null
 
   const tickHandler = createMeteorTickHandler({
     meteorRisk,
     heightAt: (x, z) => heightAt?.(x, z) ?? 0,
+    meteorSenseBonus: options.meteorSenseBonus ?? 0,
 
     onShowerScheduled(shower: MeteorShower) {
       const label = SEVERITY_LABELS[shower.severity]
       remsMeteorIncomingText.value =
         `REMS: Meteor shower incoming — elevated bolide activity detected. Expect ${label}.`
       targetSkyIntensity = 1
+      lastShowerSeverity = shower.severity
+      triggerMeteorAchievement?.('first-shower')
     },
 
     onFallMarkerShow(fall: MeteorFall) {
@@ -124,10 +145,12 @@ export function createMeteorController(
       if (dist < shockwaveRadius && roverPos) {
         // Apply damage to each instrument
         if (lastRoverController) {
+          const brace = useRewardTrack().hasPerk('impact-brace') ? 0.7 : 1.0
           for (const inst of lastRoverController.instruments) {
             const dmg = computeShockwaveDamage(dist, shockwaveRadius, inst.tier)
-            if (dmg > 0) inst.applyHazardDamage(dmg * 100) // durabilityPct is 0-100
+            if (dmg > 0) inst.applyHazardDamage(dmg * brace * 100) // durabilityPct is 0-100
           }
+          triggerMeteorAchievement?.('survived-shockwave')
         }
 
         // Knockback — push rover away from blast (within shockwave radius)
@@ -153,12 +176,20 @@ export function createMeteorController(
 
       renderer.onImpact(fall, roverPos ?? new THREE.Vector3())
 
-      // Terrain crater deformation
+      // Terrain crater deformation — nuke any rocks in the blast zone first
       if (terrain) {
-        const crater = rollCraterParams()
-        terrain.deformCrater(fall.targetX, fall.targetZ, crater.radius, crater.depth, crater.rimHeight)
-        // Reposition rock to new ground level
+        const craterParams = rollCraterParams()
+        rockFactory.removeRocksInRadius(fall.targetX, fall.targetZ, craterParams.radius * 1.3, terrainGroup)
+        const deformData = terrain.deformCrater(fall.targetX, fall.targetZ, craterParams.radius, craterParams.depth, craterParams.rimHeight)
         mesh.position.y = terrain.terrainHeightAt(fall.targetX, fall.targetZ)
+        craters.push({
+          id: fall.id,
+          x: fall.targetX,
+          z: fall.targetZ,
+          radius: craterParams.radius,
+          rockMesh: mesh,
+          deformData,
+        })
       }
 
       rockFactory.registerMeteoriteRock(mesh, terrainGroup)
@@ -171,6 +202,8 @@ export function createMeteorController(
       remsMeteorIncomingText.value = null
       remsMeteorActiveText.value = null
       targetSkyIntensity = 0
+      if (lastShowerSeverity === 'heavy') triggerMeteorAchievement?.('survived-heavy-shower')
+      lastShowerSeverity = null
     },
   })
 
@@ -192,6 +225,13 @@ export function createMeteorController(
       rockFactory.unregisterMeteoriteRock(rock, terrainGroup)
     }
     meteoriteRocks.length = 0
+    // Revert all crater terrain deformations
+    for (const crater of craters) {
+      if (crater.deformData && terrain) {
+        terrain.revertCrater(crater.deformData)
+      }
+    }
+    craters.length = 0
   }
 
   function getActiveMeteoriteRocks(): THREE.Mesh[] {
@@ -241,5 +281,30 @@ export function createMeteorController(
     tickHandler.forceShower(severity)
   }
 
-  return { tick, dispose, setSceneComponents, onStormActive, getActiveMeteoriteRocks, triggerShower }
+  function getCraterAtPosition(x: number, z: number): MeteorCrater | null {
+    for (const crater of craters) {
+      const dx = crater.x - x
+      const dz = crater.z - z
+      if (Math.sqrt(dx * dx + dz * dz) <= crater.radius) return crater
+    }
+    return null
+  }
+
+  function removeCrater(craterId: string): void {
+    const idx = craters.findIndex(c => c.id === craterId)
+    if (idx !== -1) craters.splice(idx, 1)
+  }
+
+  function unregisterMeteoriteRockFromCrater(crater: MeteorCrater): void {
+    if (!crater.rockMesh || !rockFactory || !terrainGroup) return
+    rockFactory.unregisterMeteoriteRock(crater.rockMesh, terrainGroup)
+    const rockIdx = meteoriteRocks.indexOf(crater.rockMesh)
+    if (rockIdx !== -1) meteoriteRocks.splice(rockIdx, 1)
+    crater.rockMesh = null
+  }
+
+  return {
+    tick, dispose, setSceneComponents, onStormActive, getActiveMeteoriteRocks, triggerShower,
+    getCraterAtPosition, removeCrater, unregisterMeteoriteRockFromCrater,
+  }
 }

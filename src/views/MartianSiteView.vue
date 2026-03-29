@@ -31,9 +31,9 @@
       :archive-unread-count="dsnUnreadCount"
       @open-achievements="achievementsOpen = true"
       @open-sp-ledger="spLedgerOpen = true"
-      @open-science-log="scienceLogOpen = true"
+      @open-science-log="handleOpenScienceLog"
       @open-mission-log="handleOpenMissionLog"
-      @open-archive="showArchive = true"
+      @open-archive="handleOpenArchive"
       @request-restart="showRestartConfirm = true"
     />
     <DANProspectBar :phase="danProspectPhase" :progress="danProspectProgress" />
@@ -293,6 +293,11 @@
       :water-confirmed="danWaterResult"
       @close="danDialogVisible = false"
     />
+    <CraterDiscoveryDialog
+      :result="pendingCraterResult?.discovery ?? null"
+      @acknowledge="handleCraterAcknowledge"
+      @close="pendingCraterResult = null"
+    />
     <RADEventAlert
       :visible="radEventAlertPending"
       @decode="onRadDecode"
@@ -400,6 +405,21 @@
                 RESTART
               </button>
               <button type="button" class="overdrive-btn cancel" @click="cancelRestart()">CANCEL</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+      <Transition name="deploy-fade">
+        <div v-if="danCraterModeAvailable" key="crater-confirm" class="overdrive-confirm-overlay">
+          <div class="overdrive-confirm conservation-dialog">
+            <div class="overdrive-icon conservation-icon">&#x2604;</div>
+            <div class="overdrive-title">CRATER DETECTED</div>
+            <div class="overdrive-desc">
+              Initiate DAN Crater Mode? The rover will be immobilized during the 30-second scan.
+            </div>
+            <div class="overdrive-buttons">
+              <button class="overdrive-btn confirm conservation-confirm" @click="confirmCraterMode()">INITIATE SCAN</button>
+              <button class="overdrive-btn cancel" @click="cancelCraterMode()">CANCEL</button>
             </div>
           </div>
         </div>
@@ -613,6 +633,8 @@ import SampleToast from '@/components/SampleToast.vue'
 import SAMDialog from '@/components/SAMDialog.vue'
 import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
+import CraterDiscoveryDialog from '@/components/CraterDiscoveryDialog.vue'
+import type { PendingCraterResult } from '@/views/site-controllers/DanTickHandler'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import RADHud from '@/components/RADHud.vue'
@@ -638,6 +660,8 @@ import { useRewardTrack } from '@/composables/useRewardTrack'
 import { useMartianSiteAchievements } from '@/composables/useMartianSiteAchievements'
 import { useChemCamArchive } from '@/composables/useChemCamArchive'
 import { useDanArchive } from '@/composables/useDanArchive'
+import { useVentArchive } from '@/composables/useVentArchive'
+import { useCraterArchive } from '@/composables/useCraterArchive'
 import { getInventoryItemDef, INVENTORY_CATALOG } from '@/types/inventory'
 import {
   MastCamController,
@@ -816,6 +840,18 @@ const mapMarkers = computed((): import('@/components/MapOverlay.vue').MapMarker[
       out.push({ id: `dan-${p.archiveId}`, x: p.drillSiteX, z: p.drillSiteZ, color: '#44aaff', label: 'Water drill site' })
     }
   }
+  // Vent sites
+  const siteVents = useVentArchive().getVentsForSite(siteId)
+  for (const v of siteVents) {
+    out.push({
+      id: `vent-${v.archiveId}`,
+      x: v.x,
+      z: v.z,
+      color: v.ventType === 'co2' ? '#ff8844' : '#44ff88',
+      label: v.ventType === 'co2' ? 'CO\u2082 VENT' : 'CH\u2084 VENT',
+      pulse: true,
+    })
+  }
   return out
 })
 
@@ -954,6 +990,7 @@ watch(
 watch(activeInstrumentSlot, (slot) => {
   if (slot === WHLS_SLOT) useMissions().notifyUiInspected('wheels')
   if (slot === HEATER_SLOT) useMissions().notifyUiInspected('heater')
+  if (slot === 5) useMissions().notifyUiInspected('dan')
   if (slot === 11) useMissions().notifyUiInspected('lga')
 })
 
@@ -976,6 +1013,8 @@ const danHitAvailable = ref(false)
 const danProspectPhase = ref<string>('idle')
 const danProspectProgress = ref(0)
 const danDialogVisible = ref(false)
+const danCraterModeAvailable = ref(false)
+const pendingCraterResult = ref<PendingCraterResult | null>(null)
 const danSignalStrength = ref(0)
 const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
@@ -1202,6 +1241,15 @@ watch(lgaUpgraded, (upgraded) => {
   }
 })
 
+function handleOpenScienceLog() {
+  scienceLogOpen.value = true
+  useMissions().notifyUiInspected('dan-science')
+}
+
+function handleOpenArchive() {
+  showArchive.value = true
+}
+
 function handleToggleDsnArchaeology() {
   showArchive.value = true
 }
@@ -1231,22 +1279,24 @@ function toggleMicPanel() {
   else siteRover.value.activateInstrument(MIC_SLOT)
 }
 
-function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string) {
+function handleQueueForTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater', archiveId: string) {
   if (source === 'chemcam') queueChemCamTx(archiveId)
   else if (source === 'dan') queueDanTx(archiveId)
   else if (source === 'sam') queueSamTx(archiveId)
   else if (source === 'apxs') queueAPXSTx(archiveId)
   else if (source === 'rad') queueRadTx(archiveId)
   else if (source === 'meteor') queueMeteorTx(archiveId)
+  else if (source === 'crater') queueCraterTx(archiveId)
 }
 
-function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor', archiveId: string) {
+function handleDequeueFromTx(source: 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'meteor' | 'crater', archiveId: string) {
   if (source === 'chemcam') dequeueChemCamTx(archiveId)
   else if (source === 'dan') dequeueDanTx(archiveId)
   else if (source === 'sam') dequeueSamTx(archiveId)
   else if (source === 'apxs') dequeueAPXSTx(archiveId)
   else if (source === 'rad') dequeueRadTx(archiveId)
   else if (source === 'meteor') dequeueMeteorTx(archiveId)
+  else if (source === 'crater') dequeueCraterTx(archiveId)
 }
 
 function handleChemCamAck(readoutId: string) {
@@ -1395,6 +1445,7 @@ const {
   triggerSamAchievement,
   triggerAPXSAchievement,
   triggerRadAchievement,
+  triggerMeteorAchievement,
 } = useMartianSiteAchievements({
   achievementRef,
   sampleToastRef,
@@ -1520,6 +1571,7 @@ const { archiveDiscovery: archiveSamDiscovery, discoveries: samArchivedDiscoveri
 const { analyses: apxsArchivedAnalyses, archiveAnalysis: archiveAPXSAnalysis, queueForTransmission: queueAPXSTx, dequeueFromTransmission: dequeueAPXSTx } = useAPXSArchive()
 const { events: radArchivedEvents, archiveRadEvent, queueForTransmission: queueRadTx, dequeueFromTransmission: dequeueRadTx } = useRadArchive()
 const { queueForTransmission: queueMeteorTx, dequeueFromTransmission: dequeueMeteorTx } = useMeteorArchive()
+const { queueForTransmission: queueCraterTx, dequeueFromTransmission: dequeueCraterTx } = useCraterArchive()
 
 const samResultDialogEntry = ref<SamQueueEntry | null>(null)
 
@@ -1841,6 +1893,74 @@ function cancelConservation() {
   showConservationConfirm.value = false
 }
 
+function confirmCraterMode(): void {
+  siteHandle.value?.confirmCraterMode()
+}
+function cancelCraterMode(): void {
+  siteHandle.value?.cancelCraterMode()
+}
+
+function handleCraterAcknowledge(): void {
+  const pending = pendingCraterResult.value
+  if (!pending) return
+
+  const { discovery, ventPlaced, crater } = pending
+  pendingCraterResult.value = null
+
+  // 1. Award SP (use awardSurvival for custom base SP, non-idempotent)
+  const gain = awardSurvival(`Crater: ${discovery.name}`, discovery.sp)
+  if (gain) sampleToastRef.value?.showSP(gain.amount, 'CRATER DISCOVERY', gain.bonus)
+
+  // 2. Drop side products into inventory
+  if (discovery.sideProducts.length > 0) {
+    const { addComponent } = useInventory()
+    for (const sp of discovery.sideProducts) {
+      const res = addComponent(sp.itemId, sp.quantity)
+      if (res.ok) {
+        const label = INVENTORY_CATALOG[sp.itemId]?.label ?? sp.itemId
+        sampleToastRef.value?.showPayloadItem(label, sp.quantity)
+      }
+    }
+  }
+
+  // 3. Fire meteor science achievements
+  triggerMeteorAchievement('first-crater-mode')
+  if (ventPlaced) triggerMeteorAchievement('first-vent-placed')
+  if (discovery.ventType === 'methane') triggerMeteorAchievement('methane-detected')
+  // TODO: 'full-meteorite-workup' requires cross-instrument meteorite tracking
+
+  // 4. Archive to crater science log
+  useCraterArchive().archiveDiscovery({
+    capturedSol: marsSol.value,
+    siteId,
+    latitudeDeg: siteLat.value,
+    longitudeDeg: siteLon.value,
+    craterX: crater.x,
+    craterZ: crater.z,
+    discoveryId: discovery.id,
+    discoveryName: discovery.name,
+    rarity: discovery.rarity,
+    spEarned: gain?.amount ?? discovery.sp,
+    ventPlaced,
+    ventType: discovery.ventType ?? undefined,
+    sideProducts: discovery.sideProducts,
+  })
+
+  // 5. Handle vent placement if applicable
+  if (ventPlaced && discovery.ventType) {
+    // Revert crater terrain (fracking flattens ground)
+    if (crater.deformData && siteHandle.value?.siteScene?.terrain) {
+      siteHandle.value.siteScene.terrain.revertCrater(crater.deformData)
+    }
+    // Remove rock + crater, archive vent
+    siteHandle.value?.acknowledgedCraterDiscovery(crater, discovery.ventType)
+
+    sampleToastRef.value?.showDAN(
+      `PNEUMATIC FRACTURING COMPLETE \u2014 ${discovery.ventType === 'co2' ? 'CO\u2082' : 'CH\u2084'} VENT EXPOSED`,
+    )
+  }
+}
+
 /**
  * Clears localStorage and loads home so singleton state resets (full document navigation).
  */
@@ -2017,6 +2137,7 @@ function createSiteControllerContext() {
     apxsTick,
     totalSP,
     triggerDanAchievement,
+    triggerMeteorAchievement,
     notifyDanScanCompleted: () => useMissions().notifyDanScanCompleted(),
     awardTransmission,
     playInstrumentActionSound: (soundId) => {
@@ -2118,6 +2239,8 @@ function createSiteControllerContext() {
       danSignalStrength,
       danWaterResult,
       danDialogVisible,
+      danCraterModeAvailable,
+      pendingCraterResult,
       internalTempC,
       ambientEffectiveC,
       heaterW,

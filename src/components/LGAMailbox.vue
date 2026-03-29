@@ -116,7 +116,7 @@ function formatTimeOfDay(tod: number): string {
           SOL {{ msg.sol }} — {{ formatTimeOfDay(msg.timeOfDay) }}
         </div>
         <div class="msg-body-preview">
-          <span class="msg-body-clip" :title="msg.body">{{ msg.body }}</span>
+          <span class="msg-body-clip" :title="msg.description ?? msg.body">{{ msg.description ?? msg.body }}</span>
         </div>
       </div>
     </div>

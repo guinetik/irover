@@ -19,6 +19,7 @@ export interface DANHit {
 }
 
 export type DANProspectPhase = 'idle' | 'drive-to-zone' | 'initiating' | 'prospecting' | 'complete'
+  | 'crater-confirm' | 'crater-scanning'
 
 export class DANController extends InstrumentController {
   readonly id = 'dan'

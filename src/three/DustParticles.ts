@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import dustVert from '@/three/shaders/dust.vert.glsl?raw'
 import dustFrag from '@/three/shaders/dust.frag.glsl?raw'
 
-const PARTICLE_COUNT = 3000
+const PARTICLE_COUNT = 1000
 
 /** Baseline wind speed (m/s) that maps to a normalized factor of 1.0. */
 const WIND_BASELINE_MS = 5
@@ -89,11 +89,11 @@ export class DustParticles {
     const phases = new Float32Array(PARTICLE_COUNT)
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      positions[i * 3]     = (Math.random() - 0.5) * 22
+      positions[i * 3]     = (Math.random() - 0.5) * 10
       // Y initialized within the rover-relative box height; shader wraps to rover Y at runtime
       positions[i * 3 + 1] = Math.random() * BOX_Y
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 22
-      sizes[i]  = (0.4 + Math.random() * 0.8) * sizeMultiplier
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10
+      sizes[i]  = (0.15 + Math.random() * 0.35) * sizeMultiplier
       speeds[i] = (0.3 + Math.random() * 0.7) * speedMultiplier
       phases[i] = Math.random()
     }
@@ -111,6 +111,7 @@ export class DustParticles {
         uWindDirection: { value: windDirection },
         uWindSpeed:     { value: (config.windSpeedMs ?? WIND_BASELINE_MS) / WIND_BASELINE_MS },
         uCameraPos:     { value: new THREE.Vector3() },
+        uCameraForward: { value: new THREE.Vector3(0, 0, -1) },
         uParticleColor: { value: particleColor },
         uVerticalDrift: { value: verticalDrift },
         /**
@@ -123,7 +124,7 @@ export class DustParticles {
       fragmentShader: dustFrag,
       transparent: true,
       depthWrite:  false,
-      blending:    THREE.NormalBlending,
+      blending:    THREE.AdditiveBlending,
     })
 
     this.mesh = new THREE.Points(geometry, this.material)
@@ -151,10 +152,14 @@ export class DustParticles {
   update(elapsed: number, cameraPosition: THREE.Vector3, roverPosition?: THREE.Vector3) {
     this.material.uniforms.uTime.value = elapsed
     this.material.uniforms.uCameraPos.value.copy(cameraPosition)
-    // Use rover Y when available; otherwise estimate terrain as 4 units below camera
     this.material.uniforms.uRoverY.value = roverPosition
       ? roverPosition.y
       : cameraPosition.y - 4.0
+    // Forward = camera looking toward rover; flat XZ so box stays at ground level
+    if (roverPosition) {
+      const fwd = this.material.uniforms.uCameraForward.value
+      fwd.subVectors(roverPosition, cameraPosition).setY(0).normalize()
+    }
   }
 
   dispose() {

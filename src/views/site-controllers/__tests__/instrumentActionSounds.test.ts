@@ -677,6 +677,7 @@ describe('instrument action sounds', () => {
         roverWorldX: ref(0),
         roverWorldZ: ref(0),
         roverSpawnXZ: ref({ x: 0, z: 0 }),
+        danCraterModeAvailable: ref(false),
       },
       {
         siteId: 'test-site',
@@ -689,7 +690,13 @@ describe('instrument action sounds', () => {
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
         getLatestPersistedDanDrillSite: () => null,
+        notifyDanScanCompleted: () => {},
         startHeldActionSound,
+        getCraterAtPosition: () => null,
+        hasCraterBeenScanned: () => false,
+        hasActiveVent: () => false,
+        onCraterDiscovery: () => {},
+        getVentsForSite: () => [],
       },
     )
 
@@ -740,6 +747,7 @@ describe('instrument action sounds', () => {
         roverWorldX: ref(0),
         roverWorldZ: ref(0),
         roverSpawnXZ: ref({ x: 0, z: 0 }),
+        danCraterModeAvailable: ref(false),
       },
       {
         siteId: 'test-site',
@@ -753,6 +761,12 @@ describe('instrument action sounds', () => {
         triggerDanAchievement: () => null,
         archiveDanProspect: () => null,
         getLatestPersistedDanDrillSite: () => null,
+        notifyDanScanCompleted: () => {},
+        getCraterAtPosition: () => null,
+        hasCraterBeenScanned: () => false,
+        hasActiveVent: () => false,
+        onCraterDiscovery: () => {},
+        getVentsForSite: () => [],
       },
     )
 

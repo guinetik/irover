@@ -1,4 +1,4 @@
-export type TransmissionSource = 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad'
+export type TransmissionSource = 'chemcam' | 'dan' | 'sam' | 'apxs' | 'rad' | 'crater'
 
 export interface TransmissionQueueItem {
   archiveId: string

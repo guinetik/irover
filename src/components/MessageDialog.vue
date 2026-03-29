@@ -18,9 +18,8 @@
             </button>
           </div>
           <div class="msg-body">
-            <div class="msg-body-content">
-              <p><ScrambleText :text="message.body" :play-sound="true" :speed="15" :scramble-frames="3" :stagger="0.3" /></p>
-            </div>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div class="msg-body-content" v-html="message.body" />
           </div>
           <div class="msg-footer">
             <div class="footer-actions">

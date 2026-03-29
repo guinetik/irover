@@ -1,6 +1,9 @@
 import type { MarsSiteViewContext } from '@/views/MarsSiteViewController'
 import { useMarsData } from '@/composables/useMarsData'
 import { useDanArchive } from '@/composables/useDanArchive'
+import { useVentArchive } from '@/composables/useVentArchive'
+import { useCraterArchive } from '@/composables/useCraterArchive'
+import type { VentType } from '@/lib/meteor/craterDiscovery'
 import type { SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
 import { createDanTickHandler } from './DanTickHandler'
@@ -66,6 +69,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     uhfTransmittedThisPass,
     lgaUnreadCount,
     micEnabled,
+    danCraterModeAvailable,
+    pendingCraterResult,
   } = refs
 
   const getSpeedBreakdownBase = (): Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'> => ({
@@ -75,6 +80,17 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     patron: ctx.profileSources.patron,
     trackModifiers: ctx.trackModifiers.value,
   })
+
+  // Track which instruments have been used on each meteorite rock (by mesh UUID)
+  const meteoriteWorkup = new Map<string, Set<string>>()
+  function stampMeteoriteWorkup(rockUuid: string, instrument: string): void {
+    let set = meteoriteWorkup.get(rockUuid)
+    if (!set) { set = new Set(); meteoriteWorkup.set(rockUuid, set) }
+    set.add(instrument)
+    if (set.has('mastcam') && set.has('chemcam') && set.has('apxs')) {
+      ctx.triggerMeteorAchievement('full-meteorite-workup')
+    }
+  }
 
   const roverVfxHandler = createRoverVfxTickHandler({
     rtgPhase: refs.rtgPhase,
@@ -88,6 +104,17 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     heaterOverdriveReady: refs.heaterOverdriveReady,
     heaterHeatBoostActive: refs.heaterHeatBoostActive,
     heaterHeatBoostProgressElapsed01: refs.heaterHeatBoostProgressElapsed01,
+  })
+
+  const meteorHandler = createMeteorController({
+    meteorRisk: useMarsData().landmarks.value.find(l => l.id === ctx.siteId)?.meteorRisk ?? 0.25,
+    audioManager: useAudio(),
+    remsMeteorIncomingText: refs.remsMeteorIncomingText,
+    remsMeteorActiveText: refs.remsMeteorActiveText,
+    shockWhiteoutActive: refs.meteorShockWhiteout,
+    onGameOver: ctx.onMeteorGameOver,
+    triggerMeteorAchievement: ctx.triggerMeteorAchievement,
+    meteorSenseBonus: ctx.hasPerk('meteor-sense') ? 5 : 0,
   })
 
   const danHandler = createDanTickHandler(
@@ -106,6 +133,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       roverWorldX,
       roverWorldZ,
       roverSpawnXZ,
+      danCraterModeAvailable,
+      pendingCraterResult,
     },
     {
       siteId: ctx.siteId,
@@ -119,6 +148,31 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       triggerDanAchievement: ctx.triggerDanAchievement,
       archiveDanProspect: ctx.archiveDanProspect,
       getLatestPersistedDanDrillSite: ctx.getLatestPersistedDanDrillSite,
+      notifyDanScanCompleted: ctx.notifyDanScanCompleted,
+      getCraterAtPosition: (x, z) => meteorHandler.getCraterAtPosition(x, z),
+      hasCraterBeenScanned: (x, z) => {
+        const { discoveries } = useCraterArchive()
+        return discoveries.value.some(d =>
+          Math.abs(d.craterX - x) < 2 && Math.abs(d.craterZ - z) < 2,
+        )
+      },
+      hasActiveVent: (ventType: VentType) => useVentArchive().hasActiveVent(ctx.siteId, ventType),
+      onCraterDiscovery: ({ discovery, ventPlaced, crater }) => {
+        if (ventPlaced) {
+          meteorHandler.unregisterMeteoriteRockFromCrater(crater)
+          meteorHandler.removeCrater(crater.id)
+        }
+        if (ventPlaced && discovery.ventType) {
+          useVentArchive().archiveVent({
+            siteId: ctx.siteId,
+            ventType: discovery.ventType,
+            placedSol: refs.marsSol.value,
+            x: crater.x,
+            z: crater.z,
+          })
+        }
+      },
+      getVentsForSite: (siteId) => useVentArchive().getVentsForSite(siteId),
     },
   )
 
@@ -167,6 +221,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
       getSpeedBreakdownBase,
       onMeteoriteTagged: (rock: THREE.Mesh, _rockType: string) => {
+        ctx.triggerMeteorAchievement('first-meteorite-scan')
+        stampMeteoriteWorkup(rock.uuid, 'mastcam')
         const { archiveObservation } = useMeteorArchive()
         // Weight from iron-meteorite range (0.5–1.5 kg) scaled by mesh size
         const baseWeight = 0.5 + Math.random() * 1.0
@@ -215,6 +271,9 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       startHeldActionSound: () => ctx.startInstrumentActionLoop('sfx.chemcamFire'),
       startHeldMovementSound: () => ctx.startInstrumentActionLoop('sfx.cameraMove'),
       getSpeedBreakdownBase,
+      onReadoutComplete: (rockUuid, rockType) => {
+        if (rockType === 'iron-meteorite') stampMeteoriteWorkup(rockUuid, 'chemcam')
+      },
     },
   )
 
@@ -229,7 +288,10 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       speedBreakdown: refs.apxsSpeedBreakdown,
     },
     {
-      onLaunchMinigame: ctx.onAPXSLaunchMinigame,
+      onLaunchMinigame: (rockUuid, rockType, rockLabel, durationSec) => {
+        ctx.onAPXSLaunchMinigame(rockUuid, rockType, rockLabel, durationSec)
+        if (rockType === 'iron-meteorite') stampMeteoriteWorkup(rockUuid, 'apxs')
+      },
       onBlockedByCold: ctx.onAPXSBlockedByCold,
       playerMod: ctx.playerMod,
       playActionSound: () => ctx.playInstrumentActionSound('sfx.apxsContact'),
@@ -308,15 +370,6 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       hasLeadLined: () => ctx.hasPerk('lead-lined'),
     },
   )
-
-  const meteorHandler = createMeteorController({
-    meteorRisk: useMarsData().landmarks.value.find(l => l.id === ctx.siteId)?.meteorRisk ?? 0.25,
-    audioManager: useAudio(),
-    remsMeteorIncomingText: refs.remsMeteorIncomingText,
-    remsMeteorActiveText: refs.remsMeteorActiveText,
-    shockWhiteoutActive: refs.meteorShockWhiteout,
-    onGameOver: ctx.onMeteorGameOver,
-  })
 
   const passiveSystemsAudioHandler = createPassiveSystemsAudioTickHandler(
     {

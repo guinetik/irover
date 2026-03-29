@@ -19,8 +19,17 @@
           <!-- Rover dot -->
           <div
             v-if="roverPixel"
-            class="map-overlay__rover-dot"
+            class="map-overlay__dot map-overlay__dot--rover"
             :style="{ left: roverPixel.x + 'px', top: roverPixel.y + 'px' }"
+          />
+          <!-- Generic markers -->
+          <div
+            v-for="dot in markerPixels"
+            :key="dot.id"
+            class="map-overlay__dot"
+            :class="dot.pulse && 'map-overlay__dot--pulse'"
+            :style="{ left: dot.px + 'px', top: dot.py + 'px', '--dot-color': dot.color }"
+            :title="dot.label"
           />
           <!-- Cursor readout -->
           <div
@@ -41,17 +50,35 @@ import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 
 const DEG_PER_METER = 1 / 59200
 
-const props = defineProps<{
-  open: boolean
-  siteName: string
-  mapCanvasMars: HTMLCanvasElement | null
-  mapCanvasHypso: HTMLCanvasElement | null
-  baseLat: number
-  baseLon: number
-  roverX: number
-  roverZ: number
-  terrainScale: number
-}>()
+export interface MapMarker {
+  id: string
+  /** World-space X (same coordinate system as rover position). */
+  x: number
+  /** World-space Z. */
+  z: number
+  /** CSS color for the dot and glow. */
+  color: string
+  /** Optional tooltip text. */
+  label?: string
+  /** Whether the dot should pulse (default false). */
+  pulse?: boolean
+}
+
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    siteName: string
+    mapCanvasMars: HTMLCanvasElement | null
+    mapCanvasHypso: HTMLCanvasElement | null
+    baseLat: number
+    baseLon: number
+    roverX: number
+    roverZ: number
+    terrainScale: number
+    markers?: MapMarker[]
+  }>(),
+  { markers: () => [] },
+)
 
 defineEmits<{ close: [] }>()
 
@@ -84,12 +111,26 @@ function pixelToLatLon(px: number, py: number, canvasW: number, canvasH: number)
   }
 }
 
+function worldToPixel(wx: number, wz: number, displayW: number, displayH: number) {
+  return {
+    x: (wx / props.terrainScale + 0.5) * displayW,
+    y: (wz / props.terrainScale + 0.5) * displayH,
+  }
+}
+
 const roverPixel = computed(() => {
   const { w, h } = canvasDisplaySize.value
   if (w === 0 || h === 0) return null
-  const nx = props.roverX / props.terrainScale + 0.5
-  const ny = props.roverZ / props.terrainScale + 0.5
-  return { x: nx * w, y: ny * h }
+  return worldToPixel(props.roverX, props.roverZ, w, h)
+})
+
+const markerPixels = computed(() => {
+  const { w, h } = canvasDisplaySize.value
+  if (w === 0 || h === 0) return []
+  return props.markers.map(m => {
+    const p = worldToPixel(m.x, m.z, w, h)
+    return { id: m.id, px: p.x, py: p.y, color: m.color, label: m.label ?? '', pulse: m.pulse ?? false }
+  })
 })
 
 function onMouseMove(e: MouseEvent) {
@@ -273,19 +314,28 @@ onBeforeUnmount(() => resizeObs?.disconnect())
   cursor: crosshair;
 }
 
-.map-overlay__rover-dot {
+.map-overlay__dot {
   position: absolute;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #00ffcc;
-  box-shadow: 0 0 8px #00ffcc, 0 0 16px rgba(0, 255, 204, 0.4);
+  background: var(--dot-color, #ffffff);
+  border: 2px solid color-mix(in srgb, var(--dot-color, #ffffff) 55%, black);
+  box-shadow: 0 0 6px var(--dot-color, #ffffff);
   transform: translate(-50%, -50%);
   pointer-events: none;
-  animation: rover-pulse 1.5s ease-in-out infinite;
 }
 
-@keyframes rover-pulse {
+.map-overlay__dot--rover {
+  --dot-color: #00ffcc;
+  animation: map-dot-pulse 1.5s ease-in-out infinite;
+}
+
+.map-overlay__dot--pulse {
+  animation: map-dot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes map-dot-pulse {
   0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   50% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.7; }
 }

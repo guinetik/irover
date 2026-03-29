@@ -5,6 +5,7 @@ import { useDanArchive } from './useDanArchive'
 import { useSamArchive } from './useSamArchive'
 import { useAPXSArchive } from './useAPXSArchive'
 import { useRadArchive } from './useRadArchive'
+import { useCraterArchive } from './useCraterArchive'
 import type { TransmissionQueueItem } from '@/types/transmissionQueue'
 import { BANDWIDTH_SEC } from '@/types/transmissionQueue'
 
@@ -24,6 +25,7 @@ export function useTransmissionQueue(): {
   const sam = useSamArchive()
   const apxs = useAPXSArchive()
   const rad = useRadArchive()
+  const crater = useCraterArchive()
 
   const queue = computed<TransmissionQueueItem[]>(() => {
     const items: (TransmissionQueueItem & { _capturedAtMs: number })[] = []
@@ -94,6 +96,20 @@ export function useTransmissionQueue(): {
       })
     }
 
+    // Crater discoveries — rarity from discovery table
+    for (const disc of crater.pendingTransmission.value) {
+      const rarity = disc.rarity.toLowerCase() as 'common' | 'uncommon' | 'rare'
+      items.push({
+        archiveId: disc.archiveId,
+        source: 'crater',
+        label: `Crater: ${disc.discoveryName}`,
+        rarity,
+        bandwidthSec: BANDWIDTH_SEC[rarity],
+        originalSP: disc.spEarned,
+        _capturedAtMs: disc.capturedAtMs,
+      })
+    }
+
     // FIFO sort by capture time (oldest first)
     items.sort((a, b) => a._capturedAtMs - b._capturedAtMs)
 
@@ -114,6 +130,8 @@ export function useTransmissionQueue(): {
       apxs.markTransmitted(item.archiveId)
     } else if (item.source === 'rad') {
       rad.markTransmitted(item.archiveId)
+    } else if (item.source === 'crater') {
+      crater.markTransmitted(item.archiveId)
     }
   }
 

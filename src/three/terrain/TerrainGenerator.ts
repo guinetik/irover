@@ -23,6 +23,11 @@ import { TERRAIN_SCALE } from './terrainConstants'
 export { TERRAIN_SCALE } from './terrainConstants'
 const SCALE = TERRAIN_SCALE;
 
+export interface CraterDeformData {
+  cells: Array<{ gx: number; gz: number; originalY: number }>
+  meshVertices: Array<{ meshIndex: number; vertexIndex: number; originalY: number }>
+}
+
 /** Common interface for all terrain generators. */
 export interface ITerrainGenerator {
   readonly group: THREE.Group
@@ -42,7 +47,9 @@ export interface ITerrainGenerator {
   /** 2D color map canvas (hypsometric blue-red ramp), available after generate(). */
   readonly mapCanvasHypso: HTMLCanvasElement | null
   /** Deform terrain at (x, z) to create a crater of the given radius/depth/rimHeight. */
-  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): void
+  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): CraterDeformData | null
+  /** Revert a previously deformed crater using the data returned by deformCrater. */
+  revertCrater(data: CraterDeformData): void
 }
 
 export type TerrainGeneratorType = 'default' | 'glb' | 'mars-global' | 'elevation'
@@ -854,8 +861,8 @@ export class DefaultTerrainGenerator implements ITerrainGenerator {
     return this.rockSpawner.getSmallRocks();
   }
 
-  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): void {
-    if (!this.heightmap || !this.terrainMesh) return
+  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): CraterDeformData | null {
+    if (!this.heightmap || !this.terrainMesh) return null
     const hm = this.heightmap
     const influenceRadius = radius * 1.3
     const cellSize = SCALE / (GRID_SIZE - 1)
@@ -868,6 +875,7 @@ export class DefaultTerrainGenerator implements ITerrainGenerator {
     const gzMin = Math.max(0, gzCenter - cellSpan)
     const gzMax = Math.min(GRID_SIZE - 1, gzCenter + cellSpan)
 
+    const cells: CraterDeformData['cells'] = []
     for (let gz = gzMin; gz <= gzMax; gz++) {
       for (let gx = gxMin; gx <= gxMax; gx++) {
         const wx = (gx / (GRID_SIZE - 1) - 0.5) * SCALE
@@ -877,11 +885,14 @@ export class DefaultTerrainGenerator implements ITerrainGenerator {
         const dist = Math.sqrt(dx * dx + dz * dz)
         if (dist > influenceRadius) continue
         const offset = computeCraterDepth(dist, radius, depth, rimHeight)
-        hm[gz * GRID_SIZE + gx] += offset
+        const idx = gz * GRID_SIZE + gx
+        cells.push({ gx, gz, originalY: hm[idx] })
+        hm[idx] += offset
       }
     }
 
     const pos = this.terrainMesh.geometry.attributes.position
+    const meshVertices: CraterDeformData['meshVertices'] = []
     for (let i = 0; i < pos.count; i++) {
       const vx = pos.getX(i)
       const vz = pos.getZ(i)
@@ -890,7 +901,23 @@ export class DefaultTerrainGenerator implements ITerrainGenerator {
       const dist = Math.sqrt(dx * dx + dz * dz)
       if (dist > influenceRadius) continue
       const offset = computeCraterDepth(dist, radius, depth, rimHeight)
+      meshVertices.push({ meshIndex: 0, vertexIndex: i, originalY: pos.getY(i) })
       pos.setY(i, pos.getY(i) + offset)
+    }
+    this.terrainMesh.geometry.attributes.position.needsUpdate = true
+    this.terrainMesh.geometry.computeVertexNormals()
+    return { cells, meshVertices }
+  }
+
+  revertCrater(data: CraterDeformData): void {
+    if (!this.heightmap || !this.terrainMesh) return
+    const hm = this.heightmap
+    for (const c of data.cells) {
+      hm[c.gz * GRID_SIZE + c.gx] = c.originalY
+    }
+    const pos = this.terrainMesh.geometry.attributes.position
+    for (const v of data.meshVertices) {
+      pos.setY(v.vertexIndex, v.originalY)
     }
     this.terrainMesh.geometry.attributes.position.needsUpdate = true
     this.terrainMesh.geometry.computeVertexNormals()

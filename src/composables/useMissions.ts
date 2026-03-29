@@ -170,8 +170,9 @@ function complete(missionId: string, currentSol: number): void {
         direction: 'received',
         sol: currentSol,
         timeOfDay: 0.5,
-        subject: chainDef ? `New Mission: ${chainDef.name}` : `New Mission Available`,
+        subject: chainDef?.name ?? 'New Mission Available',
         body: chainDef?.briefing ?? 'A new mission has been transmitted from Mission Control.',
+        description: chainDef?.description,
         type: 'mission',
         from: chainDef?.patron ?? 'Mission Control',
         missionId: chainId,
@@ -322,12 +323,21 @@ function wireArchiveCheckers(): void {
     return matching.length >= (p.count ?? 1)
   })
 
-  // dan-prospect: check for confirmed water with signal strength threshold
+  // dan-activate: flag set externally when player selects DAN instrument
+  registerChecker('dan-activate', () => danActivated.value)
+
+  // dan-scan: flag set externally when DAN resolves any signal (hit, not necessarily water)
+  registerChecker('dan-scan', () => danScanCompleted.value)
+
+  // dan-prospect: count completed prospects; optionally require water confirmation
   registerChecker('dan-prospect', (p) => {
+    const requireWater = p.minWaterChance !== undefined || p.waterRequired === true
     const threshold = p.signalStrength ?? 0
-    const matching = prospects.value.filter(
-      (d) => d.waterConfirmed && d.signalStrength >= threshold,
-    )
+    const matching = prospects.value.filter((d) => {
+      if (requireWater && !d.waterConfirmed) return false
+      if (d.signalStrength < threshold) return false
+      return true
+    })
     return matching.length >= (p.count ?? 1)
   })
 
@@ -412,6 +422,8 @@ function wireArchiveCheckers(): void {
 const rtgOverdriveTriggered = ref(false)
 const rtgShuntTriggered = ref(false)
 const remsActivated = ref(false)
+const danActivated = ref(false)
+const danScanCompleted = ref(false)
 const repairKitUsed = ref(false)
 const upgradedInstruments = ref<Set<string>>(new Set())
 const powerBooted = ref(false)
@@ -429,6 +441,14 @@ function notifyRtgShunt(): void {
 
 function notifyRemsActivated(): void {
   remsActivated.value = true
+}
+
+function notifyDanActivated(): void {
+  danActivated.value = true
+}
+
+function notifyDanScanCompleted(): void {
+  danScanCompleted.value = true
 }
 
 function notifyRepairKitUsed(): void {
@@ -459,6 +479,8 @@ function resetForTests(): void {
   rtgOverdriveTriggered.value = false
   rtgShuntTriggered.value = false
   remsActivated.value = false
+  danActivated.value = false
+  danScanCompleted.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
   powerBooted.value = false
@@ -480,6 +502,8 @@ export function resetMissionProgressForDev(): void {
   rtgOverdriveTriggered.value = false
   rtgShuntTriggered.value = false
   remsActivated.value = false
+  danActivated.value = false
+  danScanCompleted.value = false
   repairKitUsed.value = false
   upgradedInstruments.value = new Set()
   powerBooted.value = false
@@ -577,6 +601,8 @@ export function useMissions() {
     notifyRtgOverdrive,
     notifyRtgShunt,
     notifyRemsActivated,
+    notifyDanActivated,
+    notifyDanScanCompleted,
     notifyRepairKitUsed,
     notifyUpgradeInstalled,
     notifyPowerBooted,

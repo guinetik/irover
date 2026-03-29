@@ -94,9 +94,7 @@ export function useDanArchive() {
       reservoirQuality: params.reservoirQuality ?? 0,
       queuedForTransmission: false,
       transmitted: false,
-      ...(params.waterConfirmed && ds
-        ? { drillSiteX: ds.x, drillSiteY: ds.y, drillSiteZ: ds.z }
-        : {}),
+      ...(ds ? { drillSiteX: ds.x, drillSiteY: ds.y, drillSiteZ: ds.z } : {}),
     }
 
     const next = [...prospects.value, row]
