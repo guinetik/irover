@@ -139,7 +139,7 @@ export function createMeteorController(
         // Dust whiteout
         if (dist < 15) {
           options.shockWhiteoutActive.value = true
-          setTimeout(() => { options.shockWhiteoutActive.value = false }, 1500)
+          setTimeout(() => { options.shockWhiteoutActive.value = false }, 150)
         }
       }
 

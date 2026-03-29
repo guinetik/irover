@@ -66,7 +66,7 @@ onUnmounted(stopNoise)
   transition: opacity 0.05s ease;
 }
 .glitch-leave-active {
-  transition: opacity 0.4s ease;
+  transition: opacity 0.08s ease;
 }
 .glitch-enter-from,
 .glitch-leave-to {
