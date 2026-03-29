@@ -7,7 +7,7 @@ import mountainFrag from '@/three/shaders/mountain.frag.glsl?raw'
 import rockTextureUrl from '@/assets/texture1.jpg?url'
 import dustTextureUrl from '@/assets/texture2.jpg?url'
 import { RockFactory, type RockCollider } from './RockFactory'
-import type { ITerrainGenerator } from './TerrainGenerator'
+import type { ITerrainGenerator, CraterDeformData } from './TerrainGenerator'
 import type { TerrainParams } from '@/types/terrain'
 import { SimplexNoise } from '@/lib/math/simplexNoise'
 import { pickDetailTextures } from '@/lib/terrain/detailTextures'
@@ -500,8 +500,8 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     }
   }
 
-  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): void {
-    if (!this.heightmap) return
+  deformCrater(x: number, z: number, radius: number, depth: number, rimHeight: number): CraterDeformData | null {
+    if (!this.heightmap) return null
     const hm = this.heightmap
     const influenceRadius = radius * 1.3
     const cellSize = SCALE / (GRID_SIZE - 1)
@@ -514,6 +514,7 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
     const gzMin = Math.max(0, gzCenter - cellSpan)
     const gzMax = Math.min(GRID_SIZE - 1, gzCenter + cellSpan)
 
+    const cells: CraterDeformData['cells'] = []
     for (let gz = gzMin; gz <= gzMax; gz++) {
       for (let gx = gxMin; gx <= gxMax; gx++) {
         const wx = (gx / (GRID_SIZE - 1) - 0.5) * SCALE
@@ -522,12 +523,16 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
         const dz = wz - z
         const dist = Math.sqrt(dx * dx + dz * dz)
         if (dist > influenceRadius) continue
+        const idx = gz * GRID_SIZE + gx
+        cells.push({ gx, gz, originalY: hm[idx] })
         const offset = computeCraterDepth(dist, radius, depth, rimHeight)
-        hm[gz * GRID_SIZE + gx] += offset
+        hm[idx] += offset
       }
     }
 
-    for (const mesh of this.terrainMeshes) {
+    const meshVertices: CraterDeformData['meshVertices'] = []
+    for (let mi = 0; mi < this.terrainMeshes.length; mi++) {
+      const mesh = this.terrainMeshes[mi]
       const pos = mesh.geometry.attributes.position
       for (let i = 0; i < pos.count; i++) {
         const vx = pos.getX(i)
@@ -536,9 +541,29 @@ export class GlbTerrainGenerator implements ITerrainGenerator {
         const dz = vz - z
         const dist = Math.sqrt(dx * dx + dz * dz)
         if (dist > influenceRadius) continue
+        meshVertices.push({ meshIndex: mi, vertexIndex: i, originalY: pos.getY(i) })
         const offset = computeCraterDepth(dist, radius, depth, rimHeight)
         pos.setY(i, pos.getY(i) + offset)
       }
+      mesh.geometry.attributes.position.needsUpdate = true
+      mesh.geometry.computeVertexNormals()
+    }
+
+    return { cells, meshVertices }
+  }
+
+  revertCrater(data: CraterDeformData): void {
+    if (!this.heightmap) return
+    const hm = this.heightmap
+    for (const c of data.cells) {
+      hm[c.gz * GRID_SIZE + c.gx] = c.originalY
+    }
+    for (const v of data.meshVertices) {
+      const mesh = this.terrainMeshes[v.meshIndex]
+      if (!mesh) continue
+      mesh.geometry.attributes.position.setY(v.vertexIndex, v.originalY)
+    }
+    for (const mesh of this.terrainMeshes) {
       mesh.geometry.attributes.position.needsUpdate = true
       mesh.geometry.computeVertexNormals()
     }
