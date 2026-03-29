@@ -10,6 +10,7 @@ import type { MarsSiteViewControllerHandle } from '@/views/MarsSiteViewControlle
 import { isOrbitalDropItemId } from '@/types/orbitalDrop'
 import { rewardItemsForOrbitalDrop } from '@/lib/missionRewardOrbital'
 import { resolveRandomOrbitalDropPosition } from '@/lib/orbitalDropSpawn'
+import { findHazardousCell, findSafeZoneCentroids } from '@/lib/radiation'
 
 /**
  * All mission-related UI state and logic, extracted from MartianSiteView.
@@ -119,6 +120,49 @@ export function useMissionUI(deps: {
     goToObjs.forEach((obj, i) => {
       let px: number
       let pz: number
+
+      // Radiation-aware POI placement
+      if (obj.params.poiId === 'rad-hotspot-01') {
+        const fieldData = siteHandle.value?.getRadiationFieldData()
+        if (fieldData) {
+          const cell = findHazardousCell(
+            fieldData.field, fieldData.gridSize, fieldData.terrainScale,
+            rx, rz, 80, fieldData.thresholds.hazardousMin,
+          )
+          if (cell) {
+            px = Math.max(-390, Math.min(390, cell.x))
+            pz = Math.max(-390, Math.min(390, cell.z))
+            plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
+            return // skip default placement (forEach continue)
+          }
+        }
+        // Fallback: place at distance like normal go-to
+      } else if (obj.params.poiId === 'rad-safe-return') {
+        // Place at the nearest safe zone centroid to the hotspot
+        const hotspotPos = plannedPoiPositions.get('rad-hotspot-01')
+        const fieldData = siteHandle.value?.getRadiationFieldData()
+        if (hotspotPos && fieldData) {
+          const centroids = findSafeZoneCentroids(
+            fieldData.field, fieldData.gridSize, fieldData.terrainScale, fieldData.thresholds,
+          )
+          if (centroids.length > 0) {
+            // Pick centroid nearest to the hotspot
+            let bestDist = Infinity
+            let bestC = centroids[0]
+            for (const c of centroids) {
+              const dx = c.x - hotspotPos.x
+              const dz = c.z - hotspotPos.z
+              const d = dx * dx + dz * dz
+              if (d < bestDist) { bestDist = d; bestC = c }
+            }
+            px = Math.max(-390, Math.min(390, bestC.x))
+            pz = Math.max(-390, Math.min(390, bestC.z))
+            plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
+            return // skip default placement (forEach continue)
+          }
+        }
+        // Fallback: place at distance like normal go-to
+      }
 
       if (obj.params.nearRocks) {
         // Place at the nearest large rock to the rover spawn — "return to the outcrop"
