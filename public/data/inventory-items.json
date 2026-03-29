@@ -158,6 +158,15 @@
       "maxStack": 500
     },
     {
+      "id": "dan-extractor",
+      "category": "component",
+      "label": "DAN Extractor",
+      "description": "Deployable subsurface fluid extraction unit. Drills passively into confirmed DAN signal sites — water-ice, CO₂, or methane pockets. Must be installed at a verified signal location.",
+      "image": "/inventory/capsule.png",
+      "weightPerUnit": 2.0,
+      "maxStack": 5
+    },
+    {
       "id": "mechatronics-components",
       "category": "component",
       "label": "Mechatronics components (MC)",

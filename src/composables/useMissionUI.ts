@@ -8,6 +8,8 @@ import { addWaypointMarker, removeWaypointMarker } from '@/three/WaypointMarkers
 import { setRtgTutorialMode } from '@/lib/missionTime'
 import type { MarsSiteViewControllerHandle } from '@/views/MarsSiteViewController'
 import { isOrbitalDropItemId } from '@/types/orbitalDrop'
+import { rewardItemsForOrbitalDrop } from '@/lib/missionRewardOrbital'
+import { resolveRandomOrbitalDropPosition } from '@/lib/orbitalDropSpawn'
 
 /**
  * All mission-related UI state and logic, extracted from MartianSiteView.
@@ -115,10 +117,30 @@ export function useMissionUI(deps: {
     const rz = roverWorldZ.value
     const goToObjs = def.objectives.filter((o) => o.type === 'go-to')
     goToObjs.forEach((obj, i) => {
-      const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
-      const dist = 8 + i * 15
-      const px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
-      const pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
+      let px: number
+      let pz: number
+
+      if (obj.params.nearRocks) {
+        // Place at the nearest large rock to the rover spawn — "return to the outcrop"
+        const colliders = siteHandle.value?.siteScene?.terrain.rockColliders ?? []
+        let best = { x: rx + 5, z: rz + 5 }
+        let bestDist = Infinity
+        for (const r of colliders) {
+          if (r.radius < 1.0) continue
+          const dx = r.x - rx
+          const dz = r.z - rz
+          const d = Math.sqrt(dx * dx + dz * dz)
+          if (d < bestDist) { bestDist = d; best = { x: r.x, z: r.z } }
+        }
+        px = Math.max(-390, Math.min(390, best.x))
+        pz = Math.max(-390, Math.min(390, best.z))
+      } else {
+        const angle = (i / goToObjs.length) * Math.PI * 2 - Math.PI / 2
+        const dist = typeof obj.params.dist === 'number' ? obj.params.dist : 8 + i * 15
+        px = Math.max(-390, Math.min(390, rx + Math.cos(angle) * dist))
+        pz = Math.max(-390, Math.min(390, rz + Math.sin(angle) * dist))
+      }
+
       plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
     })
     revealEligiblePois(missionId)
@@ -300,7 +322,7 @@ export function useMissionUI(deps: {
         }
       }
     }
-    // Fire callback for newly completed missions
+    // Fire callback for newly completed missions + orbital drops for component item rewards
     if (curr.length > (prev?.length ?? 0)) {
       const newest = curr[curr.length - 1]
       if (newest.missionId === 'm04-rtg') setRtgTutorialMode(false)
@@ -308,6 +330,22 @@ export function useMissionUI(deps: {
       if (def) {
         const unlockLabel = def.unlocks.length > 0 ? def.unlocks.join(', ').toUpperCase() : null
         deps.onMissionComplete?.(def.name, def.reward.sp ?? 0, unlockLabel)
+        const orbitalStacks = rewardItemsForOrbitalDrop(def.reward)
+        for (const stack of orbitalStacks) {
+          const pos = resolveRandomOrbitalDropPosition(
+            { x: roverWorldX.value, z: roverWorldZ.value },
+            {},
+          )
+          try {
+            siteHandle.value?.spawnOrbitalDropItem(stack.id, {
+              quantity: stack.quantity,
+              x: pos.x,
+              z: pos.z,
+            })
+          } catch {
+            /* scene not ready or invalid id */
+          }
+        }
       }
     }
   })

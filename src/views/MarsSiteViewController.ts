@@ -19,6 +19,8 @@ import { installOrbitalDropDebugApi } from '@/lib/orbitalDropDebug'
 import { installMarsDevDebugApi } from '@/lib/marsDevDebug'
 import { DebugFlyCamera } from '@/lib/debugFlyCamera'
 import { listOrbitalDropItemIds } from '@/types/orbitalDrop'
+import { rewardItemsForOrbitalDrop } from '@/lib/missionRewardOrbital'
+import { resolveRandomOrbitalDropPosition } from '@/lib/orbitalDropSpawn'
 import type { Landmark } from '@/types/landmark'
 import type { TerrainParams } from '@/types/terrain'
 import type { TerrainGeneratorType } from '@/three/terrain/TerrainGenerator'
@@ -286,6 +288,7 @@ export interface MarsSiteViewRefs {
   danDialogVisible: Ref<boolean>
   danCraterModeAvailable: Ref<boolean>
   pendingCraterResult: Ref<import('@/views/site-controllers/DanTickHandler').PendingCraterResult | null>
+  pendingWaterDeploy: Ref<import('@/views/site-controllers/DanTickHandler').PendingWaterDeploy | null>
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
@@ -443,6 +446,8 @@ export interface MarsSiteViewControllerHandle {
   handleDanProspect: () => void
   confirmCraterMode: () => void
   cancelCraterMode: () => void
+  confirmWaterDeploy: () => void
+  skipWaterDeploy: () => void
   /** Called from Vue after user acknowledges a crater discovery — handles rock removal, vent placement, dan.glb marker. */
   acknowledgedCraterDiscovery: (crater: import('./site-controllers/MeteorController').MeteorCrater, ventType: 'co2' | 'methane') => void
   handleRadDecode: () => void
@@ -769,6 +774,28 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           const def = list[n]
           resetMissionProgressForDev()
           const priorCompletedIds = grantMissionCatalogProgressForDevUpTo(n, marsSol.value)
+          const fctx = buildFrameContext()
+          if (fctx) {
+            for (const missionId of priorCompletedIds) {
+              const missionDef = missions.catalog.value.find((m) => m.id === missionId)
+              if (!missionDef) continue
+              for (const stack of rewardItemsForOrbitalDrop(missionDef.reward)) {
+                const pos = resolveRandomOrbitalDropPosition(
+                  { x: roverWorldX.value, z: roverWorldZ.value },
+                  {},
+                )
+                try {
+                  orbitalDropHandler.spawnOrbitalDropItem(fctx, stack.id, {
+                    quantity: stack.quantity,
+                    x: pos.x,
+                    z: pos.z,
+                  })
+                } catch {
+                  /* invalid id / scene */
+                }
+              }
+            }
+          }
           pushMessage({
             direction: 'received',
             sol: marsSol.value,
@@ -1428,6 +1455,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     cancelCraterMode: () => {
       const fctx = buildFrameContext()
       if (fctx) danHandler.cancelCraterMode(fctx)
+    },
+    confirmWaterDeploy: () => {
+      const fctx = buildFrameContext()
+      if (fctx) danHandler.confirmWaterDeploy(fctx)
+    },
+    skipWaterDeploy: () => {
+      danHandler.skipWaterDeploy()
     },
     acknowledgedCraterDiscovery: (crater, ventType) => {
       // Remove rock from scene, remove crater from tracking, archive vent, place dan.glb

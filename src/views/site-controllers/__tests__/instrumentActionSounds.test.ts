@@ -678,6 +678,8 @@ describe('instrument action sounds', () => {
         roverWorldZ: ref(0),
         roverSpawnXZ: ref({ x: 0, z: 0 }),
         danCraterModeAvailable: ref(false),
+        pendingCraterResult: ref(null),
+        pendingWaterDeploy: ref(null),
       },
       {
         siteId: 'test-site',
@@ -697,6 +699,8 @@ describe('instrument action sounds', () => {
         hasActiveVent: () => false,
         onCraterDiscovery: () => {},
         getVentsForSite: () => [],
+        consumeDanExtractor: () => false,
+        updateDanProspectDrillSite: () => {},
       },
     )
 
@@ -748,6 +752,8 @@ describe('instrument action sounds', () => {
         roverWorldZ: ref(0),
         roverSpawnXZ: ref({ x: 0, z: 0 }),
         danCraterModeAvailable: ref(false),
+        pendingCraterResult: ref(null),
+        pendingWaterDeploy: ref(null),
       },
       {
         siteId: 'test-site',
@@ -767,6 +773,8 @@ describe('instrument action sounds', () => {
         hasActiveVent: () => false,
         onCraterDiscovery: () => {},
         getVentsForSite: () => [],
+        consumeDanExtractor: () => false,
+        updateDanProspectDrillSite: () => {},
       },
     )
 

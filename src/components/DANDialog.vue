@@ -47,7 +47,18 @@
             </div>
           </div>
         </div>
-        <div class="dan-footer">[ESC] CLOSE</div>
+        <div class="dan-footer">
+          <template v-if="waterConfirmed && pendingDeploy">
+            <template v-if="extractorCount > 0">
+              <button type="button" class="dan-action-btn dan-deploy-btn" @click="emitDeploy">
+                DEPLOY EXTRACTOR <span class="dan-cost">(1× DAN Extractor)</span>
+              </button>
+              <button type="button" class="dan-action-btn dan-skip-btn" @click="emitSkip">SKIP</button>
+            </template>
+            <span v-else class="dan-no-extractor">NO DAN EXTRACTOR IN INVENTORY — <button type="button" class="dan-action-btn dan-skip-btn" @click="emitSkip">SKIP</button></span>
+          </template>
+          <template v-else>[ESC] CLOSE</template>
+        </div>
       </div>
     </Transition>
   </Teleport>
@@ -64,15 +75,27 @@ const props = defineProps<{
   totalSamples: number
   prospectPhase: string
   waterConfirmed: boolean | null
+  pendingDeploy: boolean
+  extractorCount: number
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; deploy: []; skip: [] }>()
 
 const { playUiCue } = useUiSound()
 
 function emitClose(): void {
   playUiCue('ui.confirm')
   emit('close')
+}
+
+function emitDeploy(): void {
+  playUiCue('ui.confirm')
+  emit('deploy')
+}
+
+function emitSkip(): void {
+  playUiCue('ui.confirm')
+  emit('skip')
 }
 
 const danImgSrc = computed(() => {
@@ -145,7 +168,14 @@ const statusColor = computed(() => {
 .dan-stat-value { font-size: 12px; color: rgba(200, 220, 240, 0.9); }
 .dan-stat-bar-track { height: 4px; background: rgba(68, 170, 255, 0.1); border-radius: 2px; overflow: hidden; }
 .dan-stat-bar-fill { height: 100%; background: #44aaff; border-radius: 2px; transition: width 0.3s ease; }
-.dan-footer { padding: 8px 16px; font-size: 10px; color: rgba(255, 255, 255, 0.2); letter-spacing: 0.1em; border-top: 1px solid rgba(68, 170, 255, 0.1); }
+.dan-footer { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 10px; color: rgba(255, 255, 255, 0.2); letter-spacing: 0.1em; border-top: 1px solid rgba(68, 170, 255, 0.1); }
+.dan-action-btn { background: none; border: 1px solid rgba(68, 170, 255, 0.3); border-radius: 4px; padding: 4px 10px; font-size: 10px; font-family: var(--font-ui); letter-spacing: 0.08em; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.dan-deploy-btn { color: #44aaff; border-color: rgba(68, 170, 255, 0.5); }
+.dan-deploy-btn:hover { background: rgba(68, 170, 255, 0.12); border-color: #44aaff; }
+.dan-skip-btn { color: rgba(255, 255, 255, 0.35); }
+.dan-skip-btn:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.3); }
+.dan-cost { color: rgba(68, 170, 255, 0.55); font-size: 9px; }
+.dan-no-extractor { display: flex; align-items: center; gap: 8px; color: rgba(255, 150, 80, 0.7); font-size: 10px; letter-spacing: 0.08em; }
 .dan-slide-enter-active, .dan-slide-leave-active { transition: all 0.25s ease; }
 .dan-slide-enter-from { opacity: 0; transform: translateY(-50%) translateX(20px); }
 .dan-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(20px); }

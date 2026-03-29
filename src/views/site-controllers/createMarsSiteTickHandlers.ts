@@ -7,6 +7,7 @@ import type { VentType } from '@/lib/meteor/craterDiscovery'
 import type { SpeedBreakdownInput } from '@/lib/instrumentSpeedBreakdown'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
 import { createDanTickHandler } from './DanTickHandler'
+import { useInventory } from '@/composables/useInventory'
 import { createDrillTickHandler } from './DrillTickHandler'
 import { createMastCamTickHandler } from './MastCamTickHandler'
 import { createChemCamTickHandler } from './ChemCamTickHandler'
@@ -71,6 +72,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     micEnabled,
     danCraterModeAvailable,
     pendingCraterResult,
+    pendingWaterDeploy,
   } = refs
 
   const getSpeedBreakdownBase = (): Omit<SpeedBreakdownInput, 'thermalZone' | 'extras' | 'speedPctOverride'> => ({
@@ -135,6 +137,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
       roverSpawnXZ,
       danCraterModeAvailable,
       pendingCraterResult,
+      pendingWaterDeploy,
     },
     {
       siteId: ctx.siteId,
@@ -173,6 +176,8 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
         }
       },
       getVentsForSite: (siteId) => useVentArchive().getVentsForSite(siteId),
+      consumeDanExtractor: () => useInventory().consumeItem('dan-extractor', 1).ok,
+      updateDanProspectDrillSite: (x, y, z) => useDanArchive().updateDrillSite(ctx.siteId, x, y, z),
     },
   )
 

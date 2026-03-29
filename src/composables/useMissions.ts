@@ -11,6 +11,7 @@ import { useAPXSArchive } from './useAPXSArchive'
 import { INVENTORY_CATALOG } from '@/types/inventory'
 import { devSpawnInventoryItem } from '@/composables/useInventory'
 import { getMastCamTagCount, getTotalMastCamTags } from './useMastCamTags'
+import { isOrbitalDropItemId } from '@/types/orbitalDrop'
 
 const STORAGE_KEY = 'mars-missions-v1'
 
@@ -152,10 +153,11 @@ function complete(missionId: string, currentSol: number): void {
     awardSurvival('mission:' + missionId, def.reward.sp)
   }
 
-  // Grant item rewards
+  // Grant non-orbital item rewards (mined rocks, etc.). Component rewards arrive via orbital drop — spawned from the site layer.
   if (def.reward.items && def.reward.items.length > 0) {
     const { addComponent } = useInventory()
     for (const item of def.reward.items) {
+      if (isOrbitalDropItemId(item.id)) continue
       addComponent(item.id, item.quantity)
     }
   }
@@ -521,7 +523,7 @@ export function resetMissionProgressForDev(): void {
 
 /**
  * Marks a single mission as completed and applies SP + item rewards (equivalent to normal completion rewards),
- * without scheduling chained LGA messages. Item grants use dev spawn so cargo capacity does not block rewards.
+ * without scheduling chained LGA messages. Non-orbital items use dev spawn; orbital component rewards are omitted here — spawn drops from the site (e.g. dev mission jump).
  */
 function grantMissionCompletedForDev(missionId: string, currentSol: number): void {
   const def = getMissionDef(missionId)
@@ -551,6 +553,7 @@ function grantMissionCompletedForDev(missionId: string, currentSol: number): voi
 
   if (def.reward.items && def.reward.items.length > 0) {
     for (const item of def.reward.items) {
+      if (isOrbitalDropItemId(item.id)) continue
       devSpawnInventoryItem(item.id, item.quantity)
     }
   }

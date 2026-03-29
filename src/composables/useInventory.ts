@@ -15,7 +15,6 @@ const STORAGE_KEY = 'mars-inventory-v1'
 
 /** Default cargo for a new campaign (no saved inventory). */
 const STARTER_STACKS: InventoryStack[] = [
-  { itemId: 'ice', quantity: 10, totalWeightKg: 1.0 },
   { itemId: 'welding-wire', quantity: 8, totalWeightKg: 2.0 },
 ]
 

@@ -291,7 +291,11 @@
       :total-samples="danTotalSamples"
       :prospect-phase="danProspectPhase"
       :water-confirmed="danWaterResult"
+      :pending-deploy="pendingWaterDeploy !== null"
+      :extractor-count="danExtractorCount"
       @close="danDialogVisible = false"
+      @deploy="siteHandle?.confirmWaterDeploy()"
+      @skip="siteHandle?.skipWaterDeploy()"
     />
     <CraterDiscoveryDialog
       :result="pendingCraterResult?.discovery ?? null"
@@ -634,7 +638,7 @@ import SAMDialog from '@/components/SAMDialog.vue'
 import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
 import CraterDiscoveryDialog from '@/components/CraterDiscoveryDialog.vue'
-import type { PendingCraterResult } from '@/views/site-controllers/DanTickHandler'
+import type { PendingCraterResult, PendingWaterDeploy } from '@/views/site-controllers/DanTickHandler'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import RADHud from '@/components/RADHud.vue'
@@ -1015,9 +1019,13 @@ const danProspectProgress = ref(0)
 const danDialogVisible = ref(false)
 const danCraterModeAvailable = ref(false)
 const pendingCraterResult = ref<PendingCraterResult | null>(null)
+const pendingWaterDeploy = ref<PendingWaterDeploy | null>(null)
 const danSignalStrength = ref(0)
 const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
+const danExtractorCount = computed(
+  () => inventoryStacks.value.find((s) => s.itemId === 'dan-extractor')?.quantity ?? 0,
+)
 
 // --- RAD state ---
 const radZone = ref<import('@/lib/radiation').RadiationZone>('safe')
@@ -2241,6 +2249,7 @@ function createSiteControllerContext() {
       danDialogVisible,
       danCraterModeAvailable,
       pendingCraterResult,
+      pendingWaterDeploy,
       internalTempC,
       ambientEffectiveC,
       heaterW,

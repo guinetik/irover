@@ -738,15 +738,16 @@ export class SiteScene {
   }
 
   private findClearSpawn(): { x: number; z: number } {
-    // Sample a grid of candidates and pick the flattest, rock-free spot
+    // Sample a grid of candidates and pick the flattest, rock-free spot that is also close to
+    // at least one large rock — so the rover lands near a visible outcrop as the narrative expects.
     const colliders = this.terrain.rockColliders
+    const largeRocks = colliders.filter((r) => r.radius >= 1.0)
     let bestSpot = { x: 0, z: 0 }
-    let bestSlope = Infinity
+    let bestScore = Infinity
 
     for (let x = -40; x <= 40; x += 10) {
       for (let z = -40; z <= 40; z += 10) {
         const slope = this.terrain.slopeAt(x, z)
-        if (slope >= bestSlope) continue
 
         const tooClose = colliders.some((r) => {
           if (r.radius < 0.6) return false
@@ -756,8 +757,20 @@ export class SiteScene {
         })
         if (tooClose) continue
 
-        bestSlope = slope
-        bestSpot = { x, z }
+        // Soft penalty for spots farther than 35 units from any large rock
+        let nearestLargeRockDist = Infinity
+        for (const r of largeRocks) {
+          const dx = x - r.x
+          const dz = z - r.z
+          nearestLargeRockDist = Math.min(nearestLargeRockDist, Math.sqrt(dx * dx + dz * dz))
+        }
+        const rockPenalty = largeRocks.length > 0 ? Math.max(0, nearestLargeRockDist - 35) * 0.02 : 0
+        const score = slope + rockPenalty
+
+        if (score < bestScore) {
+          bestScore = score
+          bestSpot = { x, z }
+        }
       }
     }
     return bestSpot

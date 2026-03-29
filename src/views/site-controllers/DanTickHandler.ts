@@ -109,6 +109,12 @@ function createCompletedDanDiscMesh(): THREE.Mesh {
   return new THREE.Mesh(geo, mat)
 }
 
+export interface PendingWaterDeploy {
+  x: number
+  z: number
+  groundY: number
+}
+
 export interface DanTickRefs {
   siteTerrainParams: Ref<TerrainParams | null>
   danTotalSamples: Ref<number>
@@ -127,6 +133,8 @@ export interface DanTickRefs {
   danCraterModeAvailable: Ref<boolean>
   /** Set by tick handler when crater scan completes; Vue reads this to show result dialog. */
   pendingCraterResult: Ref<PendingCraterResult | null>
+  /** Set by tick handler when water is confirmed — Vue shows deploy-or-skip decision dialog. */
+  pendingWaterDeploy: Ref<PendingWaterDeploy | null>
 }
 
 export interface DanTickCallbacks {
@@ -134,6 +142,16 @@ export interface DanTickCallbacks {
   siteTier: number
   /** Count of inconclusive (waterConfirmed: false) prospects in the archive — boosts detection */
   getInconclusiveCount: () => number
+  /**
+   * Attempt to consume one DAN extractor from inventory.
+   * Returns true if deducted successfully, false if none available.
+   */
+  consumeDanExtractor: () => boolean
+  /**
+   * Persist drill-site coordinates for the latest water-confirmed prospect on this site.
+   * Called after player confirms deploy — NOT at prospect-complete time.
+   */
+  updateDanProspectDrillSite: (x: number, y: number, z: number) => void
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
@@ -180,6 +198,10 @@ export interface DanTickHandler extends SiteTickHandler {
   cancelCraterMode(fctx: SiteFrameContext): void
   /** Places a bio capsule buildable at the given world position, colored by fluid type. */
   placeVentMarker(x: number, z: number, fluidType: 'water' | 'co2' | 'methane'): void
+  /** Player chose to deploy a DAN extractor at the confirmed water site. Consumes one extractor. */
+  confirmWaterDeploy(fctx: SiteFrameContext): void
+  /** Player skipped the deploy decision — no extractor consumed, no capsule placed. */
+  skipWaterDeploy(): void
 }
 
 /**
@@ -196,7 +218,7 @@ export function createDanTickHandler(
     siteTerrainParams, danTotalSamples, danHitAvailable, danProspectPhase,
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,
     passiveUiRevision, siteLat, siteLon, roverWorldX, roverWorldZ, roverSpawnXZ,
-    danCraterModeAvailable, pendingCraterResult,
+    danCraterModeAvailable, pendingCraterResult, pendingWaterDeploy,
   } = refs
   const {
     siteId,
@@ -216,6 +238,8 @@ export function createDanTickHandler(
     hasActiveVent,
     onCraterDiscovery,
     getVentsForSite,
+    consumeDanExtractor,
+    updateDanProspectDrillSite,
   } = callbacks
 
   // Cache inconclusive count — refreshed each prospect completion, cheap to read each frame
@@ -649,9 +673,7 @@ export function createDanTickHandler(
               quality: danSignalQualityLabel(danInst.prospectStrength),
               waterConfirmed: hasWater,
               reservoirQuality: danInst.prospectStrength,
-              drillSite: hasWater
-                ? { x: hitCenter.x, y: hitCenter.y, z: hitCenter.z }
-                : undefined,
+              // drillSite deliberately omitted — stored only after player confirms deploy
             })
 
             // Refresh inconclusive count — each failed prospect makes the next detection easier
@@ -664,22 +686,12 @@ export function createDanTickHandler(
                 ? siteScene.terrain.heightAt(gx, gz)
                 : hitCenter.y - 0.05
 
-              const sceneRef = siteScene?.scene
-              if (danDrillMarker && sceneRef) {
-                sceneRef.remove(danDrillMarker)
-                disposeBioCapsule(danDrillMarker)
-                danDrillMarker = null
-              }
-
-              if (sceneRef) {
-                void createBioCapsule('water', gx, gz, groundY, sceneRef).then((instance) => {
-                  if (!instance || !tickHandlerActive) return
-                  danDrillMarker = instance
-                })
-              }
-
               danInst.drillSitePosition = hitCenter.clone()
               danInst.reservoirQuality = danInst.prospectStrength
+
+              // Surface the deploy decision to the player — no capsule placed until confirmed
+              pendingWaterDeploy.value = { x: gx, z: gz, groundY }
+              danDialogVisible.value = true // (Re-)open dialog in case user dismissed it during prospect
 
               sampleToastRef.value?.showDAN('Subsurface ice confirmed — marking drill site')
               triggerDanAchievement('water-confirmed')
@@ -748,5 +760,35 @@ export function createDanTickHandler(
     ventMarkers.length = 0
   }
 
-  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode, placeVentMarker }
+  function confirmWaterDeploy(fctx: SiteFrameContext): void {
+    const pending = pendingWaterDeploy.value
+    if (!pending) return
+    if (!consumeDanExtractor()) {
+      sampleToastRef.value?.showDAN('No DAN extractor in inventory — deploy cancelled')
+      pendingWaterDeploy.value = null
+      return
+    }
+    pendingWaterDeploy.value = null
+    const { x: gx, z: gz, groundY } = pending
+    // Persist drillSite now that deploy is confirmed
+    updateDanProspectDrillSite(gx, groundY, gz)
+    const sceneRef = fctx.siteScene?.scene
+    if (danDrillMarker && sceneRef) {
+      sceneRef.remove(danDrillMarker)
+      disposeBioCapsule(danDrillMarker)
+      danDrillMarker = null
+    }
+    if (sceneRef) {
+      void createBioCapsule('water', gx, gz, groundY, sceneRef).then((instance) => {
+        if (!instance || !tickHandlerActive) return
+        danDrillMarker = instance
+      })
+    }
+  }
+
+  function skipWaterDeploy(): void {
+    pendingWaterDeploy.value = null
+  }
+
+  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode, placeVentMarker, confirmWaterDeploy, skipWaterDeploy }
 }

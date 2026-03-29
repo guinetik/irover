@@ -128,6 +128,27 @@ export function useDanArchive() {
   }
 
   /**
+   * Stores drill-site coordinates on the most recent water-confirmed entry for `siteId` that doesn't
+   * yet have them. Called after the player confirms deploy — not at prospect-complete time.
+   */
+  function updateDrillSite(siteId: string, x: number, y: number, z: number): void {
+    let foundIdx = -1
+    for (let i = prospects.value.length - 1; i >= 0; i--) {
+      const p = prospects.value[i]
+      if (p.siteId === siteId && p.waterConfirmed && p.drillSiteX === undefined) {
+        foundIdx = i
+        break
+      }
+    }
+    if (foundIdx === -1) return
+    const next = prospects.value.map((p, i) =>
+      i === foundIdx ? { ...p, drillSiteX: x, drillSiteY: y, drillSiteZ: z } : p,
+    )
+    prospects.value = next
+    saveToStorage(next)
+  }
+
+  /**
    * Latest water-confirmed drill placement for a site (from persisted archive rows with coords).
    */
   function getLatestPersistedDanDrillSiteForSite(siteId: string): DanDrillSiteScene | null {
@@ -141,6 +162,7 @@ export function useDanArchive() {
     queueForTransmission,
     dequeueFromTransmission,
     markTransmitted,
+    updateDrillSite,
     getLatestPersistedDanDrillSiteForSite,
   }
 }

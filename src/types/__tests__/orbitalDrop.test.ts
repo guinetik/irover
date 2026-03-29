@@ -9,11 +9,12 @@ describe('orbitalDrop item catalog helpers', () => {
     expect(listOrbitalDropItemIds()).toEqual([
       'engineering-components',
       'science-components',
+      'dan-extractor',
       'mechatronics-components',
       'digital-components',
       'welding-wire',
       'ice',
-      "dsn-archaeology-module"
+      'dsn-archaeology-module',
     ])
   })
 
