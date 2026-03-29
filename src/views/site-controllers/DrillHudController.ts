@@ -8,7 +8,7 @@ import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
-export interface DrillTickRefs {
+export interface DrillHudRefs {
   crosshairVisible: Ref<boolean>
   crosshairColor: Ref<'green' | 'red'>
   crosshairX: Ref<number>
@@ -17,7 +17,7 @@ export interface DrillTickRefs {
   isDrilling: Ref<boolean>
 }
 
-export interface DrillTickCallbacks {
+export interface DrillHudCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
@@ -25,7 +25,7 @@ export interface DrillTickCallbacks {
   startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
 }
 
-export interface DrillTickResult {
+export interface DrillHudResult {
   /** True when the drill is actively boring into a rock this frame. Used by the power tick. */
   rockDrilling: boolean
 }
@@ -37,15 +37,15 @@ export interface DrillTickResult {
  * - Collection toasts, SP awards, trace-element drops
  * - Lazy `initGameplay` call on first ready frame
  */
-export function createDrillTickHandler(
-  refs: DrillTickRefs,
-  callbacks: DrillTickCallbacks,
-): SiteTickHandler & { lastResult: DrillTickResult; initIfReady(fctx: SiteFrameContext): void } {
+export function createDrillHudController(
+  refs: DrillHudRefs,
+  callbacks: DrillHudCallbacks,
+): SiteTickHandler & { lastResult: DrillHudResult; initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, drillProgress, isDrilling } = refs
   const { sampleToastRef, playerMod, awardSP, startHeldActionSound, startHeldMovementSound } = callbacks
   const { defBySlot } = useInstrumentProvider()
 
-  const lastResult: DrillTickResult = { rockDrilling: false }
+  const lastResult: DrillHudResult = { rockDrilling: false }
   let gameplayInitialised = false
   let cargoFullToastCooldown = 0
   let heldDrillPlayback: AudioPlaybackHandle | null = null

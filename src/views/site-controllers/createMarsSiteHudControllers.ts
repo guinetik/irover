@@ -5,14 +5,14 @@ import { useVentArchive } from '@/composables/useVentArchive'
 import { useCraterArchive } from '@/composables/useCraterArchive'
 import type { VentType } from '@/lib/meteor/craterDiscovery'
 import { createRoverVfxTickHandler } from './RoverVfxTickHandler'
-import { createDanTickHandler } from './DanTickHandler'
+import { createDanHudController } from './DanHudController'
 import { useInventory } from '@/composables/useInventory'
-import { createDrillTickHandler } from './DrillTickHandler'
-import { createMastCamTickHandler } from './MastCamTickHandler'
-import { createChemCamTickHandler } from './ChemCamTickHandler'
+import { createDrillHudController } from './DrillHudController'
+import { createMastCamHudController } from './MastCamHudController'
+import { createChemCamHudController } from './ChemCamHudController'
 import { createOrbitalDropTickHandler, type OrbitalDropTickHandler } from './OrbitalDropTickHandler'
 import { createAntennaTickHandler } from './AntennaTickHandler'
-import { createAPXSTickHandler } from './APXSTickHandler'
+import { createAPXSHudController } from './APXSHudController'
 import { createMicTickHandler } from './MicTickHandler'
 import { createPassiveSystemsAudioTickHandler } from './PassiveSystemsAudioTickHandler'
 import { createRoverMovementSoundHandler } from './RoverMovementSoundHandler'
@@ -26,13 +26,13 @@ import * as THREE from 'three'
  * All per-frame subsystems created for the Mars site view, plus a single {@link disposeAll} for teardown.
  * Keeps {@link createMarsSiteViewController} focused on Three.js lifecycle and the animation loop.
  */
-export interface MarsSiteTickHandlers {
+export interface MarsSiteHudControllers {
   roverVfxHandler: ReturnType<typeof createRoverVfxTickHandler>
-  danHandler: ReturnType<typeof createDanTickHandler>
-  drillHandler: ReturnType<typeof createDrillTickHandler>
-  mastCamHandler: ReturnType<typeof createMastCamTickHandler>
-  chemCamHandler: ReturnType<typeof createChemCamTickHandler>
-  apxsHandler: ReturnType<typeof createAPXSTickHandler>
+  danHandler: ReturnType<typeof createDanHudController>
+  drillHandler: ReturnType<typeof createDrillHudController>
+  mastCamHandler: ReturnType<typeof createMastCamHudController>
+  chemCamHandler: ReturnType<typeof createChemCamHudController>
+  apxsHandler: ReturnType<typeof createAPXSHudController>
   orbitalDropHandler: OrbitalDropTickHandler
   antennaHandler: ReturnType<typeof createAntennaTickHandler>
   micHandler: ReturnType<typeof createMicTickHandler>
@@ -49,7 +49,7 @@ export interface MarsSiteTickHandlers {
  * significant; disposal order is preserved for symmetry with historical behavior.
  * @param ctx View context from the Mars site SFC
  */
-export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTickHandlers {
+export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSiteHudControllers {
   const { refs } = ctx
   const {
     siteTerrainParams,
@@ -110,7 +110,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     meteorSenseBonus: ctx.hasPerk('meteor-sense') ? 5 : 0,
   })
 
-  const danHandler = createDanTickHandler(
+  const danHandler = createDanHudController(
     {
       siteTerrainParams,
       danTotalSamples: refs.danTotalSamples,
@@ -172,7 +172,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
-  const drillHandler = createDrillTickHandler(
+  const drillHandler = createDrillHudController(
     {
       crosshairVisible: refs.crosshairVisible,
       crosshairColor: refs.crosshairColor,
@@ -190,7 +190,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
-  const mastCamHandler = createMastCamTickHandler(
+  const mastCamHandler = createMastCamHudController(
     {
       mastcamFilterLabel: refs.mastcamFilterLabel,
       mastcamScanning: refs.mastcamScanning,
@@ -233,7 +233,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
-  const chemCamHandler = createChemCamTickHandler(
+  const chemCamHandler = createChemCamHudController(
     {
       chemCamUnreadCount: refs.chemCamUnreadCount,
       chemcamPhase: refs.chemcamPhase,
@@ -267,7 +267,7 @@ export function createMarsSiteTickHandlers(ctx: MarsSiteViewContext): MarsSiteTi
     },
   )
 
-  const apxsHandler = createAPXSTickHandler(
+  const apxsHandler = createAPXSHudController(
     {
       crosshairVisible: refs.crosshairVisible,
       crosshairColor: refs.crosshairColor,

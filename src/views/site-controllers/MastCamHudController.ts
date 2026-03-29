@@ -11,7 +11,7 @@ import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
-export interface MastCamTickRefs {
+export interface MastCamHudRefs {
   mastcamFilterLabel: Ref<string>
   mastcamScanning: Ref<boolean>
   mastcamScanProgress: Ref<number>
@@ -27,7 +27,7 @@ export interface MastCamTickRefs {
   drillProgress: Ref<number>
 }
 
-export interface MastCamTickCallbacks {
+export interface MastCamHudCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
   playerMod: (key: keyof ProfileModifiers) => number
@@ -43,9 +43,9 @@ export interface MastCamTickCallbacks {
  * - Tag marker animation (always, even when not in active mode)
  * - HUD state: filter label, scan progress, crosshair, telemetry
  */
-export function createMastCamTickHandler(
-  refs: MastCamTickRefs,
-  callbacks: MastCamTickCallbacks,
+export function createMastCamHudController(
+  refs: MastCamHudRefs,
+  callbacks: MastCamHudCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const {
     mastcamFilterLabel, mastcamScanning, mastcamScanProgress,

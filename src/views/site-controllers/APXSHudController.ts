@@ -16,7 +16,7 @@ const APXS_THERMAL_DURATION: Record<string, number> = {
   CRITICAL: 0,
 }
 
-export interface APXSTickRefs {
+export interface APXSHudRefs {
   crosshairVisible: Ref<boolean>
   crosshairColor: Ref<'green' | 'red'>
   crosshairX: Ref<number>
@@ -25,7 +25,7 @@ export interface APXSTickRefs {
   apxsState: Ref<APXSCountdownState>
 }
 
-export interface APXSTickCallbacks {
+export interface APXSHudCallbacks {
   onLaunchMinigame: (rockMeshUuid: string, rockType: string, rockLabel: string, durationSec: number) => void
   onBlockedByCold: () => void
   playerMod: (key: keyof ProfileModifiers) => number
@@ -33,9 +33,9 @@ export interface APXSTickCallbacks {
   startHeldMovementSound: (soundId: 'sfx.mastMove') => AudioPlaybackHandle
 }
 
-export function createAPXSTickHandler(
-  refs: APXSTickRefs,
-  callbacks: APXSTickCallbacks,
+export function createAPXSHudController(
+  refs: APXSHudRefs,
+  callbacks: APXSHudCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const { crosshairVisible, crosshairColor, crosshairX, crosshairY, apxsCountdown, apxsState } = refs
   const { onLaunchMinigame, onBlockedByCold, playerMod, playActionSound, startHeldMovementSound } = callbacks

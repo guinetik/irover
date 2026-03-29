@@ -116,7 +116,7 @@ export interface PendingWaterDeploy {
   groundY: number
 }
 
-export interface DanTickRefs {
+export interface DanHudRefs {
   siteTerrainParams: Ref<TerrainParams | null>
   danTotalSamples: Ref<number>
   danHitAvailable: Ref<boolean>
@@ -138,7 +138,7 @@ export interface DanTickRefs {
   pendingWaterDeploy: Ref<PendingWaterDeploy | null>
 }
 
-export interface DanTickCallbacks {
+export interface DanHudCallbacks {
   siteId: string
   siteTier: number
   /** Count of inconclusive (waterConfirmed: false) prospects in the archive — boosts detection */
@@ -188,7 +188,7 @@ export interface DanTickCallbacks {
   getVentsForSite: (siteId: string) => ArchivedVent[]
 }
 
-export interface DanTickHandler extends SiteTickHandler {
+export interface DanHudController extends SiteTickHandler {
   /** Initiates a DAN prospect from the current pending hit. Called from the Vue template. */
   handleDanProspect(fctx: SiteFrameContext): void
   /** Lazily initialises DAN particle VFX once the rover is ready. */
@@ -211,10 +211,10 @@ export interface DanTickHandler extends SiteTickHandler {
  * - Full prospect state machine (drive-to-zone -> initiating -> prospecting -> complete)
  * - Disc + `/dan.glb` drill-site marker placement and archiving
  */
-export function createDanTickHandler(
-  refs: DanTickRefs,
-  callbacks: DanTickCallbacks,
-): DanTickHandler {
+export function createDanHudController(
+  refs: DanHudRefs,
+  callbacks: DanHudCallbacks,
+): DanHudController {
   const {
     siteTerrainParams, danTotalSamples, danHitAvailable, danProspectPhase,
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,

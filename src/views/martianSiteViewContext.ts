@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { generateComposition, type APXSComposition } from '@/lib/apxsComposition'
 import type { MarsSiteViewContext } from '@/views/MarsSiteViewController'
-import type { APXSCountdownState } from '@/views/site-controllers/APXSTickHandler'
+import type { APXSCountdownState } from '@/views/site-controllers/APXSHudController'
 
 /**
  * Inputs for {@link buildMarsSiteViewContext}: same surface as {@link MarsSiteViewContext}, except APXS

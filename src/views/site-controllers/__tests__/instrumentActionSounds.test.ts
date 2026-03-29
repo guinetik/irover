@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import * as THREE from 'three'
 import type { SiteFrameContext } from '../SiteFrameContext'
-import { createChemCamTickHandler } from '../ChemCamTickHandler'
-import { createAPXSTickHandler } from '../APXSTickHandler'
-import { createDrillTickHandler } from '../DrillTickHandler'
-import { createDanTickHandler } from '../DanTickHandler'
-import { createMastCamTickHandler } from '../MastCamTickHandler'
+import { createChemCamHudController } from '../ChemCamHudController'
+import { createAPXSHudController } from '../APXSHudController'
+import { createDrillHudController } from '../DrillHudController'
+import { createDanHudController } from '../DanHudController'
+import { createMastCamHudController } from '../MastCamHudController'
 import { ChemCamController } from '@/three/instruments/ChemCamController'
 import { APXSController } from '@/three/instruments/APXSController'
 import { DrillController } from '@/three/instruments/DrillController'
@@ -82,7 +82,7 @@ describe('instrument action sounds', () => {
     mastCamPrivate.scanning = true
     mastCamPrivate.scanTarget = { userData: {} }
 
-    const handler = createMastCamTickHandler(
+    const handler = createMastCamHudController(
       {
         mastcamFilterLabel: ref('ALL TYPES'),
         mastcamScanning: ref(false),
@@ -127,7 +127,7 @@ describe('instrument action sounds', () => {
     mastCamPrivate.scanning = false
     mastCamPrivate.scanTarget = null
 
-    const handler = createMastCamTickHandler(
+    const handler = createMastCamHudController(
       {
         mastcamFilterLabel: ref('ALL TYPES'),
         mastcamScanning: ref(false),
@@ -190,7 +190,7 @@ describe('instrument action sounds', () => {
     mastCamPrivate.scanning = true
     mastCamPrivate.scanTarget = { userData: {} }
 
-    const handler = createMastCamTickHandler(
+    const handler = createMastCamHudController(
       {
         mastcamFilterLabel: ref('ALL TYPES'),
         mastcamScanning: ref(false),
@@ -234,7 +234,7 @@ describe('instrument action sounds', () => {
     const chemCam = new ChemCamController()
     chemCam.phase = 'ARMED'
 
-    const handler = createChemCamTickHandler(
+    const handler = createChemCamHudController(
       {
         chemCamUnreadCount: ref(0),
         chemcamPhase: ref('IDLE'),
@@ -301,7 +301,7 @@ describe('instrument action sounds', () => {
     chemCam.handleInput(new Set(['KeyE']), 0.016)
     chemCam.phase = 'PULSE_TRAIN'
 
-    const handler = createChemCamTickHandler(
+    const handler = createChemCamHudController(
       {
         chemCamUnreadCount: ref(0),
         chemcamPhase: ref('IDLE'),
@@ -349,7 +349,7 @@ describe('instrument action sounds', () => {
     const startHeldMovementSound = vi.fn(() => movementHandle)
     const mastCam = new MastCamController()
 
-    const handler = createMastCamTickHandler(
+    const handler = createMastCamHudController(
       {
         mastcamFilterLabel: ref('ALL TYPES'),
         mastcamScanning: ref(false),
@@ -389,7 +389,7 @@ describe('instrument action sounds', () => {
     const startHeldMovementSound = vi.fn(() => movementHandle)
     const chemCam = new ChemCamController()
 
-    const handler = createChemCamTickHandler(
+    const handler = createChemCamHudController(
       {
         chemCamUnreadCount: ref(0),
         chemcamPhase: ref('IDLE'),
@@ -438,7 +438,7 @@ describe('instrument action sounds', () => {
     chemCam.phase = 'PULSE_TRAIN'
     chemCam.handleInput(new Set(['KeyA', 'KeyE']), 0.016)
 
-    const handler = createChemCamTickHandler(
+    const handler = createChemCamHudController(
       {
         chemCamUnreadCount: ref(0),
         chemcamPhase: ref('IDLE'),
@@ -491,7 +491,7 @@ describe('instrument action sounds', () => {
       point: new THREE.Vector3(),
     }
 
-    const handler = createAPXSTickHandler(
+    const handler = createAPXSHudController(
       {
         crosshairVisible: ref(false),
         crosshairColor: ref<'green' | 'red'>('red'),
@@ -542,7 +542,7 @@ describe('instrument action sounds', () => {
       progress: 0,
     }
 
-    const handler = createDrillTickHandler(
+    const handler = createDrillHudController(
       {
         crosshairVisible: ref(false),
         crosshairColor: ref<'green' | 'red'>('red'),
@@ -605,7 +605,7 @@ describe('instrument action sounds', () => {
     drillPrivate.swingAngle = 0
     drillPrivate.targetSwing = 0.5
 
-    const handler = createDrillTickHandler(
+    const handler = createDrillHudController(
       {
         crosshairVisible: ref(false),
         crosshairColor: ref<'green' | 'red'>('red'),
@@ -640,7 +640,7 @@ describe('instrument action sounds', () => {
     const startHeldProspectingSound = vi.fn(() => makeHandle())
     const dan = new DANController()
 
-    const handler = createDanTickHandler(
+    const handler = createDanHudController(
       {
         siteTerrainParams: ref(null),
         danTotalSamples: ref(0),
@@ -714,7 +714,7 @@ describe('instrument action sounds', () => {
       timestamp: Date.now(),
     }
 
-    const handler = createDanTickHandler(
+    const handler = createDanHudController(
       {
         siteTerrainParams: ref(null),
         danTotalSamples: ref(0),

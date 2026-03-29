@@ -8,7 +8,7 @@ import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 
-export interface ChemCamTickRefs {
+export interface ChemCamHudRefs {
   chemCamUnreadCount: Ref<number>
   chemcamPhase: Ref<string>
   chemcamShotsRemaining: Ref<number>
@@ -30,7 +30,7 @@ export interface ChemCamTickRefs {
   drillProgress: Ref<number>
 }
 
-export interface ChemCamTickCallbacks {
+export interface ChemCamHudCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardSP: (source: 'mastcam' | 'chemcam' | 'drill', rockMeshUuid: string, label: string) => SPGain | null
@@ -46,9 +46,9 @@ export interface ChemCamTickCallbacks {
  * - Instrument-card overlay sequence progress (firing / integrating when not in active view)
  * - Active-mode HUD: phase, shots, crosshair, telemetry
  */
-export function createChemCamTickHandler(
-  refs: ChemCamTickRefs,
-  callbacks: ChemCamTickCallbacks,
+export function createChemCamHudController(
+  refs: ChemCamHudRefs,
+  callbacks: ChemCamHudCallbacks,
 ): SiteTickHandler & { initIfReady(fctx: SiteFrameContext): void } {
   const {
     chemCamUnreadCount, chemcamPhase, chemcamShotsRemaining, chemcamShotsMax, chemcamProgressPct,

@@ -60,7 +60,7 @@ import {
 } from '@/three/instruments'
 
 import type { SiteFrameContext } from './site-controllers/SiteFrameContext'
-import { createMarsSiteTickHandlers } from './site-controllers/createMarsSiteTickHandlers'
+import { createMarsSiteHudControllers } from './site-controllers/createMarsSiteHudControllers'
 import { useInstrumentDurability } from '@/composables/useInstrumentDurability'
 import {
   grantMissionCatalogProgressForDevUpTo,
@@ -286,8 +286,8 @@ export interface MarsSiteViewRefs {
   danWaterResult: Ref<boolean | null>
   danDialogVisible: Ref<boolean>
   danCraterModeAvailable: Ref<boolean>
-  pendingCraterResult: Ref<import('@/views/site-controllers/DanTickHandler').PendingCraterResult | null>
-  pendingWaterDeploy: Ref<import('@/views/site-controllers/DanTickHandler').PendingWaterDeploy | null>
+  pendingCraterResult: Ref<import('@/views/site-controllers/DanHudController').PendingCraterResult | null>
+  pendingWaterDeploy: Ref<import('@/views/site-controllers/DanHudController').PendingWaterDeploy | null>
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
@@ -555,7 +555,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   let prevRoverZ = 0
   let roverPosInitialized = false
 
-  const tickHandlers = createMarsSiteTickHandlers(ctx)
+  const tickHandlers = createMarsSiteHudControllers(ctx)
   const {
     roverVfxHandler,
     danHandler,
