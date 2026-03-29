@@ -2,6 +2,7 @@ import type * as THREE from 'three'
 import type { SiteScene } from '@/three/SiteScene'
 import type { RoverController } from '@/three/RoverController'
 import type { ThermalZone } from '@/composables/useMarsThermal'
+import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
 
 /**
  * Per-frame snapshot built by the orchestrator and passed to every {@link SiteTickHandler}.
@@ -31,6 +32,8 @@ export interface SiteFrameContext {
   dustStormLevel: number | null
   /** Radiation scalar at rover position (0.0–1.2), 0 when RAD not yet initialized. */
   radiationLevel: number
+  /** Pre-built instrument environment for resolveInstrumentPerformance — built once per frame. */
+  env: InstrumentEnvironment
 }
 
 /**

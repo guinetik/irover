@@ -929,6 +929,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         dustStormPhase: siteWeather.value.dustStormPhase,
         dustStormLevel: siteWeather.value.dustStormLevel,
         radiationLevel: radLevel.value,
+        env: {
+          thermalZone: thermalZone.value as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
+          stormLevel: siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0,
+          radiationLevel: radLevel.value,
+        },
       }
 
       const nextActiveInstrumentAudioState: ActiveInstrumentAudioState = {
