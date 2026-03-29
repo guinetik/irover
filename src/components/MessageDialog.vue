@@ -209,7 +209,6 @@ function emitAcceptMission(missionId: string): void {
   font-size: 15px;
   line-height: 1.7;
   font-family: 'Inter', sans-serif;
-  white-space: pre-line;
 }
 .msg-body-content p { 
   margin: 0 0 16px 0; 
