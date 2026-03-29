@@ -736,6 +736,8 @@ function clearProgressionStorage(): void {
     'mars-lifetime-sp',
     'mars-site-mission-sol-v1',
     'mars-power-booted',
+    'mars.skipSiteIntro',
+    'mars-site-sol-v1',
   ]
   for (const key of PROGRESSION_KEYS) {
     try { localStorage.removeItem(key) } catch { /* ignore */ }
