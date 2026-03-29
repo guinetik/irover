@@ -85,7 +85,7 @@ danScanRadius, movementSpeed, heaterDraw, radiationTolerance  →  instrument-sp
 
 | Instrument | `stats` array |
 |------------|--------------|
-| MastCam | `analysisSpeed` "SCAN SPEED", `instrumentAccuracy` "ACCURACY" |
+| MastCam | `analysisSpeed` "SCAN SPEED", `instrumentAccuracy` "RANGE" |
 | ChemCam | `analysisSpeed` "ANALYSIS SPEED", `instrumentAccuracy` "ACCURACY", `powerConsumption` "POWER DRAW" |
 | Drill | `analysisSpeed` "DRILL SPEED", `instrumentAccuracy` "ACCURACY", `powerConsumption` "POWER DRAW" |
 | APXS | `analysisSpeed` "ANALYSIS SPEED", `instrumentAccuracy` "ACCURACY" |

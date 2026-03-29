@@ -37,7 +37,7 @@
       },
       "stats": [
         { "key": "analysisSpeed", "label": "SCAN SPEED" },
-        { "key": "instrumentAccuracy", "label": "ACCURACY" }
+        { "key": "instrumentAccuracy", "label": "RANGE" }
       ]
     },
     {
