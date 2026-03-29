@@ -3,8 +3,11 @@ import { InstrumentController } from './InstrumentController'
 import { RockTargeting, type TargetResult } from './RockTargeting'
 import { LaserDrill } from './LaserDrill'
 import { useInventory } from '@/composables/useInventory'
+import { usePlayerProfile } from '@/composables/usePlayerProfile'
 import type { CollectedRockSample } from '@/types/inventory'
 import type { RockTypeId } from '@/three/terrain/RockTypes'
+
+const { mod } = usePlayerProfile()
 
 const ARM_SWING_SPEED = 0.8
 const ARM_EXTEND_SPEED = 0.6
@@ -202,7 +205,7 @@ export class DrillController extends InstrumentController {
       // MastCam scan buff: 40% faster drilling on tagged rocks
       if (this.currentTarget) {
         const scanned = this.currentTarget.rock.userData.mastcamScanned === true
-        this.drill.scanSpeedMult = scanned ? 0.6 : 1.0
+        this.drill.scanSpeedMult = scanned ? (1 - 0.4 * mod('chainDrillBonus')) : 1.0
       }
 
       if (drillActive) {
@@ -241,7 +244,7 @@ export class DrillController extends InstrumentController {
 
     // Stacking weight multipliers: ChemCam +30%, APXS +20%
     let weightMult = 1.0
-    if (chemcamAnalyzed) weightMult += 0.3
+    if (chemcamAnalyzed) weightMult += 0.3 * mod('chainLootBonus')
     if (apxsAnalyzed) weightMult += 0.2
     const res = this.inventory.addRockSample(rockType, rock.uuid, weightMult)
     if (res.ok) {
