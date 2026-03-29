@@ -10,6 +10,13 @@
             <div class="ov-type">{{ instrument.type }}</div>
           </div>
           <div class="ov-slot">{{ instrument.slot }}</div>
+          <button
+            v-if="helpDef?.help"
+            type="button"
+            class="ov-help-btn"
+            title="Field reference"
+            @click="helpOpen = true"
+          >?</button>
         </div>
 
         <!-- Description -->
@@ -342,12 +349,20 @@
         </div>
       </div>
     </Transition>
+    <InstrumentHelpDialog
+      :help="helpDef?.help ?? null"
+      :instrument-name="helpDef?.name ?? ''"
+      :open="helpOpen"
+      @close="helpOpen = false"
+    />
   </Teleport>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch, withDefaults } from 'vue'
 import { useUiSound } from '@/composables/useUiSound'
+import InstrumentHelpDialog from '@/components/InstrumentHelpDialog.vue'
+import { useInstrumentProvider } from '@/composables/useInstrumentProvider'
 import { HEATER_SLOT, REMS_SLOT, WHLS_SLOT } from '@/three/instruments'
 import { DUST_STORM_LEVEL_LABELS, type RemsHudSnapshot } from '@/composables/useSiteRemsWeather'
 import type { SpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
@@ -632,6 +647,10 @@ const props = withDefaults(
 )
 
 const upgradeOpen = ref(false)
+
+const { defBySlot } = useInstrumentProvider()
+const helpOpen = ref(false)
+const helpDef = computed(() => props.activeSlot != null ? defBySlot(props.activeSlot) : undefined)
 
 /**
  * Dispatches activation from either activate button variant.
@@ -1414,4 +1433,28 @@ const isRadiationBlocked = computed(() => {
 .ov-rad-title { color: #ff6644; font-size: 14px; letter-spacing: 0.15em; margin-top: 8px; }
 .ov-rad-body { color: #b8a888; font-size: 11px; text-align: center; margin-top: 8px; line-height: 1.6; }
 .ov-rad-safe { color: #44dd88; font-size: 11px; margin-top: 12px; }
+
+.ov-help-btn {
+  background: rgba(196, 149, 106, 0.08);
+  border: 1px solid rgba(196, 149, 106, 0.2);
+  border-radius: 4px;
+  color: rgba(196, 149, 106, 0.7);
+  font-family: var(--font-instrument, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.ov-help-btn:hover {
+  background: rgba(196, 149, 106, 0.18);
+  border-color: rgba(196, 149, 106, 0.45);
+  color: rgba(220, 210, 200, 0.9);
+}
 </style>
