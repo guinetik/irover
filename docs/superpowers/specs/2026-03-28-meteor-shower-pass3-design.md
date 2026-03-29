@@ -192,9 +192,21 @@ type DANProspectPhase = 'idle' | 'drive-to-zone' | 'initiating' | 'prospecting' 
   | 'crater-confirm' | 'crater-scanning'
 ```
 
-**`crater-confirm`:** Set when DAN activates inside an eligible crater. The power shunt confirmation UI shows. On confirm → transition to `crater-scanning` + immobilize rover. On deny → transition to `idle` and proceed with regular DAN passive mode.
+### Detection → Confirmation (Vue boundary)
 
-**`crater-scanning`:** The 30-second scan. Same branch location as `prospecting` in the tick function — advance progress, check completion. On complete → roll discovery table, archive result, handle vent placement, deactivate DAN, unlock rover, transition to `idle`.
+When DAN activates and the tick handler detects an eligible crater:
+1. Tick handler sets a **reactive ref** (e.g., `danCraterModeAvailable: Ref<boolean>`) to `true`
+2. The tick handler sets `prospectPhase = 'crater-confirm'` to pause normal DAN logic
+3. `MartianSiteView.vue` watches this ref and shows a confirmation dialog (same pattern as `showConservationConfirm` — reuse the `overdrive-confirm-overlay` CSS with DAN-themed copy)
+4. Dialog text: "CRATER DETECTED — Initiate DAN Crater Mode? Rover will be immobilized during scan."
+5. **Confirm button** → calls a callback that sets `prospectPhase = 'crater-scanning'` + immobilizes rover
+6. **Cancel button** → calls a callback that sets `prospectPhase = 'idle'` + `danCraterModeAvailable = false`, regular DAN resumes
+
+The tick handler does NOT show UI — it sets refs. Vue shows UI. Callbacks flow back. Same boundary as RTG power shunt.
+
+### crater-scanning phase
+
+The 30-second scan. Same branch location as `prospecting` in the tick function — advance progress, check completion. On complete → roll discovery table, archive result, handle vent placement, deactivate DAN, unlock rover, transition to `idle`.
 
 **Key rule:** The existing `drive-to-zone` → `initiating` → `prospecting` → `complete` chain is untouched. Crater mode is a parallel branch that enters from `idle` and returns to `idle`. The two paths never cross.
 
