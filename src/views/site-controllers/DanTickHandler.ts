@@ -10,6 +10,10 @@ import type SampleToast from '@/components/SampleToast.vue'
 import { DAN_INITIATE_DURATION_SEC, DAN_PROSPECT_DURATION_MARS_HOURS } from '@/views/MarsSiteViewController'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
+import type { MeteorCrater } from './MeteorController'
+import type { VentType } from '@/lib/meteor/craterDiscovery'
+import { rollCraterDiscovery } from '@/lib/meteor/craterDiscovery'
+import type { ArchivedVent } from '@/types/ventArchive'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
@@ -112,6 +116,7 @@ export interface DanTickRefs {
   roverWorldX: Ref<number>
   roverWorldZ: Ref<number>
   roverSpawnXZ: Ref<{ x: number; z: number }>
+  danCraterModeAvailable: Ref<boolean>
 }
 
 export interface DanTickCallbacks {
@@ -140,8 +145,25 @@ export interface DanTickCallbacks {
     waterConfirmed: boolean
     reservoirQuality: number
     drillSite?: { x: number; y: number; z: number }
+    craterDiscovery?: {
+      discoveryId: string
+      discoveryName: string
+      ventPlaced: boolean
+      ventType?: 'co2' | 'methane'
+    }
   }) => void
   getLatestPersistedDanDrillSite: (siteId: string) => DanDrillSiteScene | null
+  notifyDanScanCompleted: () => void
+  getCraterAtPosition: (x: number, z: number) => MeteorCrater | null
+  hasCraterBeenScanned: (x: number, z: number) => boolean
+  hasActiveVent: (ventType: VentType) => boolean
+  onCraterDiscovery: (params: {
+    discovery: { id: string; name: string; sp: number; ventType: VentType | null }
+    ventPlaced: boolean
+    craterX: number
+    craterZ: number
+  }) => void
+  getVentsForSite: (siteId: string) => ArchivedVent[]
 }
 
 export interface DanTickHandler extends SiteTickHandler {
@@ -149,6 +171,10 @@ export interface DanTickHandler extends SiteTickHandler {
   handleDanProspect(fctx: SiteFrameContext): void
   /** Lazily initialises DAN particle VFX once the rover is ready. */
   initIfReady(fctx: SiteFrameContext): void
+  /** Confirms crater scanning mode after user acknowledges the crater-confirm dialog. */
+  confirmCraterMode(fctx: SiteFrameContext): void
+  /** Cancels crater scanning mode, returning to idle. */
+  cancelCraterMode(fctx: SiteFrameContext): void
 }
 
 /**
@@ -165,6 +191,7 @@ export function createDanTickHandler(
     siteTerrainParams, danTotalSamples, danHitAvailable, danProspectPhase,
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,
     passiveUiRevision, siteLat, siteLon, roverWorldX, roverWorldZ, roverSpawnXZ,
+    danCraterModeAvailable,
   } = refs
   const {
     siteId,
@@ -178,6 +205,12 @@ export function createDanTickHandler(
     triggerDanAchievement,
     archiveDanProspect,
     getLatestPersistedDanDrillSite,
+    notifyDanScanCompleted,
+    getCraterAtPosition,
+    hasCraterBeenScanned,
+    hasActiveVent,
+    onCraterDiscovery,
+    getVentsForSite,
   } = callbacks
 
   // Cache inconclusive count — refreshed each prospect completion, cheap to read each frame
@@ -193,6 +226,9 @@ export function createDanTickHandler(
   let tickHandlerActive = true
   /** Ensures we only hydrate drill art from localStorage once per handler lifetime. */
   let drillSiteHydratedFromStorage = false
+
+  let activeCrater: MeteorCrater | null = null
+  const DAN_CRATER_SCAN_DURATION_SEC = 30
 
   /**
    * Rebuilds completed disc + GLB from the persisted DAN archive after a full reload.
@@ -268,6 +304,9 @@ export function createDanTickHandler(
     danWaterResult.value = null
     controller.config.moveSpeed = 5
 
+    activeCrater = null
+    danCraterModeAvailable.value = false
+
     syncDanProspectingPlayback(false)
     passiveUiRevision.value++
 
@@ -318,12 +357,40 @@ export function createDanTickHandler(
           hydratePersistedDrillSite(fctx, danInit, snap)
         }
       }
+
+      // Restore persisted vents
+      const siteVents = getVentsForSite(siteId)
+      for (const vent of siteVents) {
+        const ventGroundY = fctx.siteScene?.terrain
+          ? fctx.siteScene.terrain.heightAt(vent.x, vent.z)
+          : 0
+        const sceneRef = fctx.siteScene?.scene
+        void loadDanDrillMarkerTemplate().then((template) => {
+          if (!tickHandlerActive || !sceneRef) return
+          const marker = template.clone(true)
+          placeDanDrillMarkerInstance(marker, vent.x, vent.z, ventGroundY)
+          sceneRef.add(marker)
+        })
+      }
     }
   }
 
   function handleDanProspect(fctx: SiteFrameContext): void {
     const danInst = fctx.rover?.instruments.find(i => i.id === 'dan') as DANController | undefined
     if (!danInst?.pendingHit || !danInst.passiveSubsystemEnabled) return
+
+    // Crater detection — check if rover is inside an eligible crater
+    const roverPos = fctx.siteScene?.rover?.position
+    if (roverPos) {
+      const crater = getCraterAtPosition(roverPos.x, roverPos.z)
+      if (crater && crater.rockMesh && !hasCraterBeenScanned(crater.x, crater.z)) {
+        activeCrater = crater
+        danInst.prospectPhase = 'crater-confirm'
+        danProspectPhase.value = 'crater-confirm'
+        danCraterModeAvailable.value = true
+        return // Don't start normal prospect
+      }
+    }
 
     const hit = danInst.pendingHit
 
@@ -348,6 +415,30 @@ export function createDanTickHandler(
     danProspectProgress.value = 0
     danWaterResult.value = null
     danDialogVisible.value = true
+  }
+
+  function confirmCraterMode(fctx: SiteFrameContext): void {
+    const danInst = fctx.rover?.instruments.find(i => i.id === 'dan') as DANController | undefined
+    if (!danInst || !activeCrater) return
+
+    danInst.prospectPhase = 'crater-scanning'
+    danProspectPhase.value = 'crater-scanning'
+    danProspectProgress.value = 0
+    danCraterModeAvailable.value = false
+
+    // Immobilize rover
+    if (fctx.rover) fctx.rover.config.moveSpeed = 0
+  }
+
+  function cancelCraterMode(fctx: SiteFrameContext): void {
+    const danInst = fctx.rover?.instruments.find(i => i.id === 'dan') as DANController | undefined
+    if (!danInst) return
+
+    activeCrater = null
+    danInst.prospectPhase = 'idle'
+    danProspectPhase.value = 'idle'
+    danProspectProgress.value = 0
+    danCraterModeAvailable.value = false
   }
 
   function tick(fctx: SiteFrameContext): void {
@@ -411,9 +502,98 @@ export function createDanTickHandler(
       danInst.hitConsumed = true
       danHitAvailable.value = true
       triggerDanAchievement('first-hit')
+      notifyDanScanCompleted()
     }
 
     syncDanScanPlayback(danInst.passiveSubsystemEnabled)
+
+    // --- Crater scanning phase (parallel branch — never crosses normal prospect flow) ---
+    if (danInst.prospectPhase === 'crater-scanning' && activeCrater) {
+      const speedMod = playerMod('analysisSpeed') / danStormPenalty
+      const adjustedDuration = DAN_CRATER_SCAN_DURATION_SEC / speedMod
+      danProspectProgress.value = Math.min(1, danProspectProgress.value + sceneDelta / adjustedDuration)
+      danInst.prospectProgress = danProspectProgress.value
+
+      syncDanProspectingPlayback(true)
+
+      if (danProspectProgress.value >= 1) {
+        const discovery = rollCraterDiscovery()
+        const wantVent = discovery.ventType !== null && !hasActiveVent(discovery.ventType)
+
+        // Archive the crater discovery in DAN archive
+        archiveDanProspect({
+          capturedSol: marsSol,
+          siteId,
+          siteLatDeg: siteLat.value,
+          siteLonDeg: siteLon.value,
+          roverWorldX: roverWorldX.value,
+          roverWorldZ: roverWorldZ.value,
+          roverSpawnX: roverSpawnXZ.value.x,
+          roverSpawnZ: roverSpawnXZ.value.z,
+          signalStrength: 1,
+          quality: 'Strong',
+          waterConfirmed: false,
+          reservoirQuality: 0,
+          drillSite: { x: activeCrater.x, y: 0, z: activeCrater.z },
+          craterDiscovery: {
+            discoveryId: discovery.id,
+            discoveryName: discovery.name,
+            ventPlaced: wantVent,
+            ventType: discovery.ventType ?? undefined,
+          },
+        })
+
+        // Award SP
+        const gain = awardDAN(`Crater discovery: ${discovery.name}`)
+        if (gain) sampleToastRef.value?.showSP(discovery.sp, 'CRATER DISCOVERY', gain.bonus)
+
+        if (wantVent && discovery.ventType) {
+          // Revert crater terrain (fracking flattens ground)
+          if (activeCrater.deformData && siteScene?.terrain) {
+            siteScene.terrain.revertCrater(activeCrater.deformData)
+          }
+
+          // Notify controller to handle rock removal, crater cleanup, vent archival
+          onCraterDiscovery({
+            discovery: { id: discovery.id, name: discovery.name, sp: discovery.sp, ventType: discovery.ventType },
+            ventPlaced: true,
+            craterX: activeCrater.x,
+            craterZ: activeCrater.z,
+          })
+
+          // Place vent GLB marker at crater center
+          const ventX = activeCrater.x
+          const ventZ = activeCrater.z
+          const ventGroundY = siteScene?.terrain
+            ? siteScene.terrain.heightAt(ventX, ventZ)
+            : 0
+          const sceneRef = siteScene?.scene
+          void loadDanDrillMarkerTemplate().then((template) => {
+            if (!tickHandlerActive || !sceneRef) return
+            const marker = template.clone(true)
+            placeDanDrillMarkerInstance(marker, ventX, ventZ, ventGroundY)
+            sceneRef.add(marker)
+          })
+
+          sampleToastRef.value?.showDAN(
+            `PNEUMATIC FRACTURING COMPLETE \u2014 ${discovery.ventType === 'co2' ? 'CO\u2082' : 'CH\u2084'} VENT EXPOSED`,
+          )
+        } else {
+          sampleToastRef.value?.showDAN(`Crater analysis: ${discovery.name} (+${discovery.sp} SP)`)
+        }
+
+        // Cleanup — deactivate DAN, unlock rover, return to idle
+        danInst.prospectPhase = 'idle'
+        danInst.prospectComplete = false
+        danProspectPhase.value = 'idle'
+        danProspectProgress.value = 0
+        activeCrater = null
+        if (controller) controller.config.moveSpeed = 5
+        danInst.pendingHit = null
+        danHitAvailable.value = false
+      }
+      return // Skip normal prospect state machine
+    }
 
     // --- Prospect phase state machine (freezes if DAN standby — abandon clears in-flight work above) ---
     if (
@@ -576,5 +756,5 @@ export function createDanTickHandler(
     danCompletedDiscs.length = 0
   }
 
-  return { tick, dispose, handleDanProspect, initIfReady }
+  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode }
 }
