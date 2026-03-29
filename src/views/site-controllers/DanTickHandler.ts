@@ -21,7 +21,7 @@ export interface PendingCraterResult {
   crater: MeteorCrater
 }
 import type { ArchivedVent } from '@/types/ventArchive'
-import { createBioCapsule, disposeBioCapsule } from '@/three/BioCapsuleModel'
+import { createBioCapsule, disposeBioCapsule } from '@/three/DanCapsuleModel'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { computeStormPerformancePenalty } from '@/lib/hazards'
 import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
