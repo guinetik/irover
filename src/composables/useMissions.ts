@@ -300,6 +300,7 @@ function wireArchiveCheckers(): void {
   const { prospects } = useDanArchive()
   const { discoveries } = useSamArchive()
   const { analyses } = useAPXSArchive()
+  const { events: radEvents } = useRadArchive()
 
   // gather: count items in inventory
   // itemId "rock-sample" is special — matches any rock-category item
@@ -377,7 +378,21 @@ function wireArchiveCheckers(): void {
     if (!p.archive || p.archive === 'apxs') {
       count += analyses.value.filter((a) => a.transmitted).length
     }
+    if (!p.archive || p.archive === 'rad') {
+      count += radEvents.value.filter((e) => e.transmitted).length
+    }
     return count >= (p.count ?? 1)
+  })
+
+  // queue-transmission: check if player has queued (or already transmitted) an item from a source archive
+  registerChecker('queue-transmission', (p) => {
+    const source = p.source as string
+    if (source === 'chemcam') return spectra.value.some((s) => s.queuedForTransmission || s.transmitted)
+    if (source === 'dan') return prospects.value.some((d) => d.queuedForTransmission || d.transmitted)
+    if (source === 'sam') return discoveries.value.some((d) => d.queuedForTransmission || d.transmitted)
+    if (source === 'apxs') return analyses.value.some((a) => a.queuedForTransmission || a.transmitted)
+    if (source === 'rad') return radEvents.value.some((e) => e.queuedForTransmission || e.transmitted)
+    return false
   })
 
   // mastcam-tag: count tagged rocks by type
@@ -423,7 +438,6 @@ function wireArchiveCheckers(): void {
   registerChecker('rad-activate', () => radActivated.value)
 
   // rad-decode: archive-based — check if player has ever completed a decode (retroactive)
-  const { events: radEvents } = useRadArchive()
   registerChecker('rad-decode', () => radEvents.value.length >= 1)
 
 }
