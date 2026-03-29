@@ -70,6 +70,11 @@ function saveToStorage(rows: ArchivedChemCamSpectrum[]): void {
 
 const spectra = ref<ArchivedChemCamSpectrum[]>(loadFromStorage())
 
+/** Clears singleton state. Used by unit tests only. */
+export function resetForTests(): void {
+  spectra.value = []
+}
+
 /**
  * Persisted ChemCam spectra acknowledged by the player (LIBS peaks + rock + location).
  * Call `markTransmitted` when AntennaLG (or UHF) downlink is implemented.

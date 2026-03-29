@@ -6,6 +6,7 @@ import {
 } from '../useMissions'
 import type { MissionCatalog } from '@/types/missions'
 import { resetForTests as resetRadArchive, useRadArchive } from '../useRadArchive'
+import { resetForTests as resetChemCamArchive, useChemCamArchive } from '../useChemCamArchive'
 
 // --- Minimal localStorage mock for Node environment ---
 const store: Record<string, string> = {}
@@ -239,5 +240,157 @@ describe('RAD objective checkers', () => {
 
     m.checkAllObjectives(0, 0, [], 1)
     expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+  })
+})
+
+// Helper: build a minimal mission catalog with a single queue-transmission objective
+function makeQueueTransmitCatalog(source: string): MissionCatalog {
+  return {
+    version: 1,
+    missions: [{
+      id: 'transmit-test', name: 'Transmit Test', patron: null, description: 'test', briefing: 'test',
+      reward: { sp: 10 }, unlocks: [], chain: null,
+      objectives: [
+        { id: 'qt1', type: 'queue-transmission', label: 'Queue for transmission', params: { source }, sequential: false },
+      ],
+    }],
+  }
+}
+
+describe('queue-transmission checker', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetRadArchive()
+    resetChemCamArchive()
+    const { resetForTests } = useMissions()
+    resetForTests()
+  })
+
+  it('returns false when no items exist for source=rad', () => {
+    const m = useMissions()
+    m.loadCatalog(makeQueueTransmitCatalog('rad'))
+    m.wireArchiveCheckers()
+    m.accept('transmit-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+  })
+
+  it('returns true when a rad event has queuedForTransmission === true', () => {
+    const { archiveRadEvent, queueForTransmission } = useRadArchive()
+    const event = archiveRadEvent({
+      eventId: 'gcr-fluctuation', classifiedAs: 'gcr-fluctuation',
+      eventName: 'GCR Fluctuation', rarity: 'common', resolved: true, confidence: 0.85,
+      caught: 10, total: 15, grade: 'B', spEarned: 20, sideProducts: [],
+      capturedSol: 5, siteId: 'test', latitudeDeg: 0, longitudeDeg: 0,
+    })
+    queueForTransmission(event.archiveId)
+
+    const m = useMissions()
+    m.loadCatalog(makeQueueTransmitCatalog('rad'))
+    m.wireArchiveCheckers()
+    m.accept('transmit-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+  })
+
+  it('returns true retroactively when a rad event has transmitted === true', () => {
+    const { archiveRadEvent, markTransmitted } = useRadArchive()
+    const event = archiveRadEvent({
+      eventId: 'gcr-fluctuation', classifiedAs: 'gcr-fluctuation',
+      eventName: 'GCR Fluctuation', rarity: 'common', resolved: true, confidence: 0.85,
+      caught: 10, total: 15, grade: 'B', spEarned: 20, sideProducts: [],
+      capturedSol: 3, siteId: 'test', latitudeDeg: 0, longitudeDeg: 0,
+    })
+    markTransmitted(event.archiveId)
+
+    const m = useMissions()
+    m.loadCatalog(makeQueueTransmitCatalog('rad'))
+    m.wireArchiveCheckers()
+    m.accept('transmit-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+  })
+
+  it('returns false when no items exist for source=chemcam', () => {
+    const m = useMissions()
+    m.loadCatalog(makeQueueTransmitCatalog('chemcam'))
+    m.wireArchiveCheckers()
+    m.accept('transmit-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+  })
+
+  it('returns true when a chemcam spectrum has queuedForTransmission === true', () => {
+    const { spectra, queueForTransmission } = useChemCamArchive()
+    // Manually insert a minimal spectrum row into the reactive ref
+    const fakeSpectrum = {
+      archiveId: 'cc-test-1', sourceReadoutId: 'r1', acknowledgedAtMs: 1000, solAcknowledged: 1,
+      capturedSol: 1, capturedAtMs: 1000, siteId: 'test', latitudeDeg: 0, longitudeDeg: 0,
+      roverWorldX: 0, roverWorldZ: 0, rockMeshUuid: 'mesh-1', rockType: 'basalt' as const,
+      rockLabel: 'Basalt', calibration: 1, peaks: [],
+      queuedForTransmission: false, transmitted: false,
+    }
+    spectra.value = [fakeSpectrum]
+    queueForTransmission('cc-test-1')
+
+    const m = useMissions()
+    m.loadCatalog(makeQueueTransmitCatalog('chemcam'))
+    m.wireArchiveCheckers()
+    m.accept('transmit-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+  })
+
+  it('returns false when unknown source is given', () => {
+    const m = useMissions()
+    m.loadCatalog(makeQueueTransmitCatalog('unknown-source'))
+    m.wireArchiveCheckers()
+    m.accept('transmit-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+  })
+})
+
+describe('transmit checker — RAD counting', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetRadArchive()
+    const { resetForTests } = useMissions()
+    resetForTests()
+  })
+
+  it('does not count RAD transmitted events before fix (verifying current behavior)', () => {
+    // This test verifies the transmit checker counts RAD after the fix
+    const { archiveRadEvent, markTransmitted } = useRadArchive()
+    const event = archiveRadEvent({
+      eventId: 'gcr-fluctuation', classifiedAs: 'gcr-fluctuation',
+      eventName: 'GCR Fluctuation', rarity: 'common', resolved: true, confidence: 0.85,
+      caught: 10, total: 15, grade: 'B', spEarned: 20, sideProducts: [],
+      capturedSol: 2, siteId: 'site-a', latitudeDeg: 0, longitudeDeg: 0,
+    })
+    markTransmitted(event.archiveId)
+
+    const m = useMissions()
+    m.loadCatalog({
+      version: 1,
+      missions: [{
+        id: 'transmit-rad-test', name: 'Transmit RAD Test', patron: null, description: 'test', briefing: 'test',
+        reward: { sp: 10 }, unlocks: [], chain: null,
+        objectives: [
+          { id: 'tx1', type: 'transmit', label: 'Transmit data', params: { archive: 'rad', count: 1 }, sequential: false },
+        ],
+      }],
+    })
+    m.wireArchiveCheckers()
+    m.accept('transmit-rad-test', 1)
+
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
   })
 })
