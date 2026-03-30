@@ -433,7 +433,7 @@
       "power": "0–12W",
       "tier": "rugged",
       "idlePowerW": 0,
-      "activePowerW": 0,
+      "activePowerW": 12,
       "controllerType": "HeaterController",
       "tickHandlerType": "HeaterTickHandler",
       "upgrade": {

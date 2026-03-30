@@ -9,6 +9,8 @@ export interface ThermalTickInput {
   /** Site ambient bounds from landmarks.json / TerrainParams */
   temperatureMinK: number
   temperatureMaxK: number
+  /** Max heater output in watts — from HeaterController.activePowerW (instruments.json). */
+  maxHeaterW?: number
 }
 
 // --- TODO: Instrument durability & modifier system ---
@@ -76,6 +78,8 @@ function computeZone(tempC: number): ThermalZone {
 
 export function useMarsThermal() {
   function tickThermal(deltaSeconds: number, input: ThermalTickInput): void {
+    const maxW = input.maxHeaterW ?? MAX_HEATER_W
+
     // --- Ambient ---
     ambientEffectiveC.value = diurnalAmbientC(
       input.timeOfDay,
@@ -87,7 +91,7 @@ export function useMarsThermal() {
     if (internalTempC.value < THERMOSTAT_FLOOR_C) {
       // Proportional ramp: colder = more heater
       const need = Math.min(1, (THERMOSTAT_FLOOR_C - internalTempC.value) / 20)
-      heaterW.value = need * MAX_HEATER_W
+      heaterW.value = need * maxW
     } else if (internalTempC.value > THERMOSTAT_CEILING_C) {
       heaterW.value = 0
     }
@@ -97,7 +101,7 @@ export function useMarsThermal() {
     const heaterOverdriveMul = missionCooldowns.isActive(MISSION_COOLDOWN_ID.HEATER_OVERDRIVE_HEAT) ? 2 : 1
     const effectiveW = heaterW.value * heaterOverdriveMul
     heaterEffectiveW.value = effectiveW
-    const heaterWarmRate = (effectiveW / MAX_HEATER_W) * HEATER_MAX_WARM_CS
+    const heaterWarmRate = (effectiveW / maxW) * HEATER_MAX_WARM_CS
     const heatIn = (RTG_WASTE_HEAT_CS + heaterWarmRate) * deltaSeconds
     const heatLoss = HEAT_LOSS_COEFF * INSULATION_FACTOR *
       (internalTempC.value - ambientEffectiveC.value) * deltaSeconds
