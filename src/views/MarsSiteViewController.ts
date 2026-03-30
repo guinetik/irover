@@ -968,15 +968,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           ctx.onRtgGameOver()
         }
         const rtgBoost = rtg?.speedMultiplier ?? 1.0
-        const speedMult = playerMod('movementSpeed')
-        const wheelsCtrl = controller.instruments.find(i => i.id === 'wheels')
-        const wheelsDurability = Math.max(0.1, wheelsCtrl?.durabilityFactor ?? 1.0)
-        const swNow = siteWeather.value
-        const stormPenalty = swNow.dustStormPhase === 'active'
-          ? 1.0 - (swNow.dustStormLevel! * 0.12)
-          : 1.0
-        controller.config.moveSpeed = 1.5 * nightPenalty * stormPenalty * rtgBoost * speedMult * wheelsDurability
-        controller.config.turnSpeed = 0.75 * nightPenalty * stormPenalty * rtgBoost * speedMult * wheelsDurability
+        const wheelsCtrl = controller.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+        // movementSpeedMod includes profile + durability + storm + radiation (from domain tick handler)
+        const wheelsMod = wheelsCtrl?.movementSpeedMod ?? 1.0
+        controller.config.moveSpeed = 1.5 * nightPenalty * rtgBoost * wheelsMod
+        controller.config.turnSpeed = 0.75 * nightPenalty * rtgBoost * wheelsMod
       }
 
       // --- Core rover update + position sync ---

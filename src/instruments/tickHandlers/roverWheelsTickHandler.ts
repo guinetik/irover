@@ -3,7 +3,9 @@ import type { InstrumentController } from '@/three/instruments/InstrumentControl
 import type { InstrumentEnvironment } from '@/lib/instrumentPerformance'
 import { RoverWheelsController } from '@/three/instruments/RoverWheelsController'
 import { usePlayerProfile } from '@/composables/usePlayerProfile'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
+
+/** Movement-specific storm penalty: 12% speed loss per storm level (harsher than instrument tier penalty). */
+const STORM_SPEED_LOSS_PER_LEVEL = 0.12
 
 export function createRoverWheelsTickHandler(controller: InstrumentController): TickHandler {
   const { mod } = usePlayerProfile()
@@ -11,8 +13,10 @@ export function createRoverWheelsTickHandler(controller: InstrumentController): 
 
   return {
     tick(_delta: number, env: InstrumentEnvironment): void {
-      const perf = resolveInstrumentPerformance(wheels.tier, wheels.durabilityFactor, env, mod('movementSpeed'), mod('instrumentAccuracy'))
-      wheels.movementSpeedMod = perf.speedFactor
+      const profileMod = mod('movementSpeed')
+      const durability = Math.max(0.1, wheels.durabilityFactor)
+      const stormPenalty = env.stormLevel > 0 ? 1.0 - (env.stormLevel * STORM_SPEED_LOSS_PER_LEVEL) : 1.0
+      wheels.movementSpeedMod = profileMod * durability * Math.max(0, stormPenalty)
     },
     dispose(): void {},
   }
