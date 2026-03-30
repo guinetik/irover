@@ -2133,18 +2133,18 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if (e.code === 'Tab') {
     if (e.repeat) return
     e.preventDefault()
-    toggleInventoryFromToolbar()
+    if (playerProfile.sandbox || unlockedInstruments.value.includes('inventory')) toggleInventoryFromToolbar()
   }
   if (e.code === 'Digit0' || e.code === 'Backquote') {
     if (e.repeat) return
     toggleProfilePanel()
   }
   if (e.key === 'm' || e.key === 'M') {
-    toggleMapOverlay()
+    if (playerProfile.sandbox || unlockedInstruments.value.includes('map')) toggleMapOverlay()
     return
   }
   if (e.key === 'p' || e.key === 'P') {
-    toggleMicPanel()
+    if (playerProfile.sandbox || unlockedInstruments.value.includes('mic')) toggleMicPanel()
     return
   }
   if (e.code === 'KeyF' && !e.repeat && orbitalDrops.nearbyDrop.value) {
