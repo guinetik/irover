@@ -71,4 +71,64 @@ describe('InstrumentTickController', () => {
       expect(spy).toHaveBeenCalled()
     }
   })
+
+  // --- provides collection ---
+
+  it('getActiveProvides returns empty object before first tick', () => {
+    const ctrl = makeController()
+    expect(ctrl.getActiveProvides()).toEqual({})
+  })
+
+  it('collects provides from instruments with passiveSubsystemEnabled', () => {
+    const remsDef = instruments.find(d => d.id === 'rems')!
+    expect(remsDef.provides).toBeDefined()
+
+    const tuple = createInstrumentTuple(remsDef)
+    tuple.controller.passiveSubsystemEnabled = true
+
+    const ctrl = new InstrumentTickController([tuple])
+    ctrl.tick(0.016, CALM_ENV)
+
+    const provides = ctrl.getActiveProvides()
+    expect(provides.spYield).toBe(0.05)
+  })
+
+  it('does not collect provides when passiveSubsystemEnabled is false', () => {
+    const remsDef = instruments.find(d => d.id === 'rems')!
+    const tuple = createInstrumentTuple(remsDef)
+    tuple.controller.passiveSubsystemEnabled = false
+
+    const ctrl = new InstrumentTickController([tuple])
+    ctrl.tick(0.016, CALM_ENV)
+
+    const provides = ctrl.getActiveProvides()
+    expect(provides.spYield).toBeUndefined()
+  })
+
+  it('stacks provides from multiple active instruments', () => {
+    const remsDef = instruments.find(d => d.id === 'rems')!
+    const tuple1 = createInstrumentTuple(remsDef)
+    tuple1.controller.passiveSubsystemEnabled = true
+    const tuple2 = createInstrumentTuple(remsDef)
+    tuple2.controller.passiveSubsystemEnabled = true
+
+    const ctrl = new InstrumentTickController([tuple1, tuple2])
+    ctrl.tick(0.016, CALM_ENV)
+
+    const provides = ctrl.getActiveProvides()
+    expect(provides.spYield).toBeCloseTo(0.10)
+  })
+
+  it('dispose clears activeProvides', () => {
+    const remsDef = instruments.find(d => d.id === 'rems')!
+    const tuple = createInstrumentTuple(remsDef)
+    tuple.controller.passiveSubsystemEnabled = true
+
+    const ctrl = new InstrumentTickController([tuple])
+    ctrl.tick(0.016, CALM_ENV)
+    expect(ctrl.getActiveProvides().spYield).toBe(0.05)
+
+    ctrl.dispose()
+    expect(ctrl.getActiveProvides()).toEqual({})
+  })
 })

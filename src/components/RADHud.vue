@@ -70,8 +70,9 @@ const barFillPct = computed(() => Math.min(100, (props.level / 1.2) * 100))
 <style scoped>
 .rad-hud {
   position: fixed;
-  top: 80px;
-  right: 16px;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 50;
   width: 170px;
   background: rgba(8, 4, 2, 0.82);
@@ -183,6 +184,6 @@ const barFillPct = computed(() => Math.min(100, (props.level / 1.2) * 100))
 .rad-fade-enter-from,
 .rad-fade-leave-to {
   opacity: 0;
-  transform: translateX(12px);
+  transform: translateX(-50%) translateY(-8px);
 }
 </style>

@@ -365,8 +365,7 @@ describe('transmit checker — RAD counting', () => {
     resetForTests()
   })
 
-  it('does not count RAD transmitted events before fix (verifying current behavior)', () => {
-    // This test verifies the transmit checker counts RAD after the fix
+  it('counts RAD transmitted events when archive=rad is specified', () => {
     const { archiveRadEvent, markTransmitted } = useRadArchive()
     const event = archiveRadEvent({
       eventId: 'gcr-fluctuation', classifiedAs: 'gcr-fluctuation',

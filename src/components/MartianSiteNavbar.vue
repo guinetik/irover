@@ -9,7 +9,25 @@
         :night-factor="currentNightFactor"
         :ambient-celsius="ambientCelsius"
       />
-      <h2 class="site-name">{{ siteTitle }}</h2>
+      <div class="site-title-row">
+        <h2 class="site-name">{{ siteTitle }}</h2>
+        <div
+          v-if="remsTickerText"
+          class="rems-ticker"
+          role="status"
+          aria-live="polite"
+        >
+          <div class="rems-ticker-viewport">
+            <div
+              class="rems-ticker-track font-instrument"
+              :style="{ animationDuration: `${tickerDurationSec}s` }"
+            >
+              <span class="rems-ticker-chunk">{{ tickerChunk }}</span>
+              <span class="rems-ticker-chunk" aria-hidden="true">{{ tickerChunk }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <button type="button" class="sound-toggle" :title="muted ? 'Unmute' : 'Mute'" @click="toggleMute">
         {{ muted ? '🔇' : '🔊' }}
       </button>
@@ -64,17 +82,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Howler } from 'howler'
 import { useAudio } from '@/audio/useAudio'
 import SiteCompass from '@/components/SiteCompass.vue'
 import type { SiteCompassPoi } from '@/components/SiteCompass.vue'
 import SolClock from '@/components/SolClock.vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     /** Map / site label (route id or display name). */
     siteTitle: string
+    /** REMS dust-storm / meteor lines — shown as a looping marquee beside the site title. */
+    remsTickerText?: string | null
     showSolClock: boolean
     marsSol: number
     marsTimeOfDay: number
@@ -92,8 +112,29 @@ withDefaults(
     showArchiveButton?: boolean
     archiveUnreadCount?: number
   }>(),
-  { compassPois: () => [], currentNightFactor: 0, activeMissionCount: 0, showArchiveButton: false, archiveUnreadCount: 0 },
+  {
+    compassPois: () => [],
+    currentNightFactor: 0,
+    activeMissionCount: 0,
+    showArchiveButton: false,
+    archiveUnreadCount: 0,
+    remsTickerText: null,
+  },
 )
+
+/** Padded segment duplicated for a seamless horizontal loop. */
+const tickerChunk = computed(() => {
+  const t = props.remsTickerText
+  if (!t) return ''
+  return `     ${t}     •     `
+})
+
+/** Scale scroll duration with copy length (px/sec roughly constant). */
+const tickerDurationSec = computed(() => {
+  const t = props.remsTickerText
+  if (!t) return 28
+  return Math.min(95, Math.max(16, t.length * 0.2))
+})
 
 const audio = useAudio()
 const muted = ref(Boolean((Howler as unknown as { _muted?: boolean })._muted))
@@ -460,8 +501,16 @@ function handleScienceLogClick(): void {
   background: rgba(196, 149, 106, 0.85);
 }
 
-.site-name {
+.site-title-row {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.site-name {
+  flex: 0 1 auto;
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -472,6 +521,65 @@ function handleScienceLogClick(): void {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* REMS weather — news-style ticker beside site name (scrolls left → right, seamless loop). */
+.rems-ticker {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.rems-ticker-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 10px,
+    #000 calc(100% - 10px),
+    transparent
+  );
+}
+
+.rems-ticker-track {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  animation: rems-ticker-marquee linear infinite;
+  will-change: transform;
+}
+
+.rems-ticker-chunk {
+  flex-shrink: 0;
+  padding-right: 2em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  color: #e8c9a0;
+  text-shadow: 0 0 12px rgba(232, 201, 160, 0.25);
+  white-space: nowrap;
+}
+
+@keyframes rems-ticker-marquee {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rems-ticker-track {
+    animation: none;
+    transform: translateX(0);
+  }
 }
 
 .sound-toggle {

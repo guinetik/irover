@@ -2,17 +2,9 @@
   <div class="martian-site-view w-full h-full">
     <LoadingOverlay :is-loading="siteLoading" :site-name="siteId" />
     <canvas ref="canvasRef" class="block w-full h-full" />
-    <Transition name="deploy-fade">
-      <div
-        v-if="remsStormIncomingText || remsStormActiveText || remsMeteorIncomingText || remsMeteorActiveText"
-        class="rems-storm-banner font-instrument"
-        role="status"
-      >
-        {{ remsStormActiveText || remsStormIncomingText || remsMeteorActiveText || remsMeteorIncomingText }}
-      </div>
-    </Transition>
     <MartianSiteNavbar
       :site-title="siteId"
+      :rems-ticker-text="remsTickerLine"
       :show-sol-clock="introComplete"
       :mars-sol="marsSol"
       :mars-time-of-day="marsTimeOfDay"
@@ -1418,6 +1410,19 @@ const {
   tickRemsWeather,
   triggerStorm,
 } = useSiteRemsWeather()
+/** One or more REMS weather lines joined for the top-bar marquee (dust + meteor if both active). */
+const remsTickerLine = computed(() => {
+  const lines = [
+    remsStormActiveText.value,
+    remsStormIncomingText.value,
+    remsMeteorActiveText.value,
+    remsMeteorIncomingText.value,
+  ].filter((s): s is string => Boolean(s))
+  if (!lines.length) return null
+  const seen = new Set<string>()
+  const unique = lines.filter((s) => (seen.has(s) ? false : (seen.add(s), true)))
+  return unique.join('   ◆   ')
+})
 const remsSurveying = ref(false)
 const micListening = ref(false)
 /** True when automatic thermostat is drawing bus power (heaterW from thermal tick). */
