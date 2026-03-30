@@ -24,6 +24,7 @@ import type { ArchivedVent } from '@/types/ventArchive'
 import { createBioCapsule, disposeBioCapsule } from '@/three/DanCapsuleModel'
 import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import type { DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
+import type { ExtractorDockTarget, ExtractorDockState } from '@/types/extractorDock'
 
 /** Public URL for the DAN drill-site marker (replaces procedural cone). */
 const DAN_DRILL_MARKER_GLB = '/dan.glb'
@@ -134,6 +135,8 @@ export interface DanHudRefs {
   pendingCraterResult: Ref<PendingCraterResult | null>
   /** Set by tick handler when water is confirmed — Vue shows deploy-or-skip decision dialog. */
   pendingWaterDeploy: Ref<PendingWaterDeploy | null>
+  danDockEnabled: Ref<boolean>
+  pendingExtractorDock: Ref<ExtractorDockState | null>
 }
 
 export interface DanHudCallbacks {
@@ -151,6 +154,25 @@ export interface DanHudCallbacks {
    * Called after player confirms deploy — NOT at prospect-complete time.
    */
   updateDanProspectDrillSite: (x: number, y: number, z: number) => void
+  /** Returns all deployed extractors (water + gas) for this site, shaped for proximity checks. */
+  getAllExtractorsForSite: (siteId: string) => ExtractorDockTarget[]
+  /** Persists updated storedKg/lastChargedSol to the appropriate archive. */
+  updateExtractorStorage: (
+    archiveId: string,
+    archiveType: 'dan' | 'vent',
+    storedKg: number,
+    lastChargedSol: number,
+  ) => void
+  /** Deducts watts from RTG currentPowerW (one-time flat cost). */
+  deductRTGPower: (watts: number) => void
+  /** Adds the extracted fluid item to rover inventory. */
+  addInventoryItem: (itemId: string, quantity: number) => void
+  /** Plays magnetic docking sound effect. */
+  playDockSound: () => void
+  /** Sets the DAN Dock toggle in ProfilePanel (called on undock to prevent re-dock). */
+  setDanDockEnabled: (enabled: boolean) => void
+  /** Returns current mission sol for charge accumulation. */
+  getCurrentSol: () => number
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playerMod: (key: keyof ProfileModifiers) => number
   awardDAN: (reason: string) => SPGain | null
@@ -201,6 +223,12 @@ export interface DanHudController extends SiteTickHandler {
   confirmWaterDeploy(fctx: SiteFrameContext): void
   /** Player skipped the deploy decision — no extractor consumed, no capsule placed. */
   skipWaterDeploy(): void
+  /** Extract fluid from currently docked extractor into inventory. */
+  extractFromDock(): void
+  /** Release rover from docked extractor and disable DAN Dock toggle. */
+  undockExtractor(fctx: SiteFrameContext): void
+  /** Called by MartianSiteView on each new sol to accumulate charge and persist. */
+  onNewSol(sol: number): void
 }
 
 /**
@@ -786,5 +814,10 @@ export function createDanHudController(
     pendingWaterDeploy.value = null
   }
 
-  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode, placeVentMarker, confirmWaterDeploy, skipWaterDeploy }
+  // Docking stubs — full implementation lives in Task 10 (DanTickHandler docking logic).
+  function extractFromDock(): void {}
+  function undockExtractor(_fctx: SiteFrameContext): void {}
+  function onNewSol(_sol: number): void {}
+
+  return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode, placeVentMarker, confirmWaterDeploy, skipWaterDeploy, extractFromDock, undockExtractor, onNewSol }
 }
