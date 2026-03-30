@@ -458,6 +458,12 @@ export interface MarsSiteViewControllerHandle {
   forceRadEvent: () => void
   /** Returns radiation field metadata for hazard-aware POI placement, or null if not ready. */
   getRadiationFieldData: () => { field: Float32Array; gridSize: number; terrainScale: number; thresholds: import('@/lib/radiation').RadiationThresholds } | null
+  /** Immediately transfer stored fluid from docked extractor to inventory. */
+  extractFromDock: () => void
+  /** Undock the rover from the current extractor (re-enables mobility). */
+  undockExtractor: () => void
+  /** Advance extractor charge state for all extractors when the sol increments. */
+  onNewSol: (sol: number) => void
 }
 
 /**
@@ -1498,5 +1504,15 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       tickHandlers.radHandler.forceEvent()
     },
     getRadiationFieldData: () => tickHandlers?.radHandler?.getFieldData() ?? null,
+    extractFromDock: () => {
+      danHandler.extractFromDock()
+    },
+    undockExtractor: () => {
+      const fctx = buildFrameContext()
+      if (fctx) danHandler.undockExtractor(fctx)
+    },
+    onNewSol: (sol: number) => {
+      danHandler.onNewSol(sol)
+    },
   }
 }
