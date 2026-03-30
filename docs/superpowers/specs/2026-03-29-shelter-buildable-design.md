@@ -38,6 +38,7 @@ Mirrors `instruments.json` — each buildable is fully described by its JSON ent
       "category": "shelter",
       "placement": "exterior",
       "footprint": { "x": 20, "z": 20 },
+      "maxPlacementSlope": 0.3,
       "door": {
         "meshName": "Cube012__0",
         "axis": "x",
@@ -45,6 +46,7 @@ Mirrors `instruments.json` — each buildable is fully described by its JSON ent
         "speed": 2.0,
         "triggerDistance": 8
       },
+      "scale": 0.5,
       "controllerType": "HabitatController",
       "inventoryItemId": "shelter-kit",
       "features": ["hazard-shield"]
@@ -62,6 +64,8 @@ Key fields:
 - **`footprint`** — axis-aligned bounding size used for placement preview, `isRoverInside` detection, and meteor exclusion.
 - **`door`** — optional. If present, the controller finds the named mesh and animates it. `axis` is the rotation axis, `openAngle` is the target rotation in radians, `speed` is radians/sec, `triggerDistance` is how close the rover must be for the door to open.
 - **`model`** — path to the GLB file loaded by the controller.
+- **`scale`** — uniform scale factor applied to the loaded model. The rover uses `ROVER_SCALE = 0.5`; the shelter's scale is tuned to match and stored here, not hardcoded in the controller.
+- **`maxPlacementSlope`** — maximum terrain slope (0–1) at the placement point. Above this threshold the wireframe turns red and placement is blocked. Prevents shelters from spawning on cliffs.
 
 ### Inventory Item
 
@@ -75,9 +79,12 @@ New entry in `public/data/inventory-items.json`:
   "description": "Prefab pressurized shelter module. Activate to construct.",
   "image": "/inventory/shelter-kit.png",
   "action": "place-buildable:shelter",
+  "weightPerUnit": 50.0,
   "maxStack": 1
 }
 ```
+
+The existing `addComponent()` in `useInventory.ts` gates on `def.weightPerUnit != null && def.maxStack != null` and only accepts categories `component`, `trace`, or `refined`. The `"buildable"` category must be added to that category check so shelter-kit items can enter inventory through `addComponent()`. This is a one-line gate change — no dedicated method needed.
 
 ### Inventory Action System
 
@@ -92,9 +99,10 @@ Items gain an optional `"action"` string field. When the player clicks an item w
 1. Player receives a `shelter-kit` via orbital drop (delivered to inventory).
 2. Player clicks the shelter-kit in inventory UI. The `"place-buildable:shelter"` action fires.
 3. The handler loads the buildable's GLB model from `config.model` and renders it as a **green wireframe** (THREE.MeshBasicMaterial, wireframe: true, green color) positioned a fixed distance in front of the rover along its current heading, snapped to terrain via `heightAt(x, z)`.
-4. The preview inherits the rover's current Y rotation so the door faces the rover's forward direction. No manual rotation control.
-5. Player confirms placement (click or key). The wireframe is replaced with the real textured model at that position. The item is consumed from inventory.
-6. Player can cancel (Escape) to abort — the item remains in inventory.
+4. **Slope validation:** The placement point is checked via `slopeAt(x, z)`. If the terrain slope exceeds a threshold (e.g. defined in the buildable JSON as `maxPlacementSlope`, defaulting to 0.3), the wireframe turns red and placement is rejected. The player must face a flatter area.
+5. The preview inherits the rover's current Y rotation so the door faces the rover's forward direction. No manual rotation control.
+6. Player confirms placement (click or key). The wireframe is replaced with the real textured model at that position. The item is consumed from inventory.
+7. Player can cancel (Escape) to abort — the item remains in inventory.
 
 ## HabitatController
 
@@ -146,7 +154,8 @@ When the rover is inside any buildable with the `"hazard-shield"` feature, the f
 
 ### Implementation
 
-- A single derived boolean — `isShielded` — propagated through the site frame context: `buildables.some(b => b.isRoverInside && b.features.includes('hazard-shield'))`.
+- The `useBuildables()` composable exposes a computed `isShielded` ref: `buildables.some(b => b.isRoverInside && b.features.includes('hazard-shield'))`.
+- Hazard tick handlers and postfx passes import `useBuildables()` and read `isShielded` — same singleton composable pattern used elsewhere. No prop drilling through the view controller.
 - Each hazard system and postfx pass already runs per-frame. They early-return or skip their effect when `isShielded` is true.
 - No event bus or pub/sub. Just a flag check at the top of each relevant update/render path.
 
@@ -162,7 +171,7 @@ Meteor impact position sampling rejects any candidate point that falls within a 
 
 ## Persistence
 
-Placed buildables are saved to localStorage:
+Placed buildables are saved to localStorage under the key `mars-buildables-v1` (consistent with existing `mars-inventory-v1` naming):
 
 ```json
 {
@@ -178,7 +187,7 @@ Placed buildables are saved to localStorage:
 ```
 
 - On site load, the system reads stored buildables for the current siteId and instantiates them via the BuildableRegistry.
-- On game over: the buildables storage is cleared.
+- On game over: `mars-buildables-v1` is cleared (add to the existing game-over wipe logic).
 - On new site: different siteId means no buildables to restore.
 - Permanent per playthrough — once placed, the shelter stays until game over.
 
