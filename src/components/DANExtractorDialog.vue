@@ -98,20 +98,24 @@ const chargeRatePct = computed(() => Math.min(100, Math.round(props.chargeRateKg
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
+  background: transparent;
   z-index: 50;
+  pointer-events: none;
 }
 
 .ext-dialog {
-  width: 420px;
-  background: rgba(5, 10, 25, 0.94);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(93, 201, 165, 0.3);
-  border-radius: 10px;
+  width: 520px;
+  min-height: 240px;
+  background: rgba(5, 10, 25, 0.45);
+  backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(93, 201, 165, 0.35);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   font-family: var(--font-ui);
   overflow: hidden;
+  pointer-events: all;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(93, 201, 165, 0.1);
 }
 
 .ext-header {
