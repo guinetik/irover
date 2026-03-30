@@ -26,7 +26,7 @@
           </div>
         </div>
 
-        <div v-if="cargoFull" class="ext-cargo-warn">CARGO FULL — MAKE ROOM TO EXTRACT</div>
+        <div v-if="cargoFull && storedKg > 0" class="ext-cargo-warn">CARGO FULL — MAKE ROOM TO EXTRACT</div>
 
         <div class="ext-footer">
           <button
