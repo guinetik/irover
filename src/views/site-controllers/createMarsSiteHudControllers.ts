@@ -352,7 +352,6 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
       radiationIndex: refs.siteTerrainParams.value?.radiationIndex ?? 0.25,
       sampleToastRef: ctx.sampleToastRef,
       playEventSting: () => ctx.playInstrumentActionSound('sfx.radEventSting' as any),
-      getRadiationTolerance: () => ctx.playerMod('radiationTolerance') - 1,
       hasStormChaser: () => ctx.hasPerk('storm-chaser'),
       hasLeadLined: () => ctx.hasPerk('lead-lined'),
     },

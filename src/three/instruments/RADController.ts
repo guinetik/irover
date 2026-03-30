@@ -20,6 +20,9 @@ export class RADController extends InstrumentController {
   readonly viewAngle = 0.45
   readonly viewPitch = 1.0
 
+  /** Radiation tolerance from player profile — subtracted from effective level for zone classification. Set by domain tick handler. */
+  toleranceMod = 0
+
   // --- Live radiation state (synced by RadHudController each frame) ---
 
   /** Current radiation scalar at rover position (0.0–1.2). */

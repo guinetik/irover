@@ -33,7 +33,6 @@ export interface RadHudCallbacks {
   radiationIndex: number
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   playEventSting?: () => void
-  getRadiationTolerance?: () => number
   /** True when 'storm-chaser' perk is unlocked — event spawn interval halved. */
   hasStormChaser?: () => boolean
   /** True when 'lead-lined' perk is unlocked — radiation hazard decay halved. */
@@ -205,7 +204,7 @@ export function createRadHudController(
     currentLevel = level
 
     // --- Apply player's radiation tolerance — reduces effective level for zone/blocking ---
-    const tolerance = callbacks.getRadiationTolerance?.() ?? 0
+    const tolerance = radInst.toleranceMod
     const effectiveLevel = Math.max(0, level - tolerance)
     // Hard cap: raw level >= 0.90 ALWAYS counts as hazardous regardless of tolerance
     const HARD_CAP_LEVEL = 0.90
