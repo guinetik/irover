@@ -742,6 +742,7 @@ function clearProgressionStorage(): void {
   const PROGRESSION_KEYS = [
     'mars-active-site-v1',
     'mars-apxs-archive-v1',
+    'mars-buildables-v1',
     'mars-chemcam-archive-v1',
     'mars-dan-archive-v1',
     'mars-dsn-archive-v1',
