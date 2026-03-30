@@ -1168,8 +1168,10 @@ const wheelsOverlayHud = computed(() => {
   const w = siteRover.value?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
   if (!w) return { powerStr: '—', statusStr: '—', healthPct: 100, speedPct: 100, speedBuffs: [] }
   const moving = roverIsMoving.value
-  const draw = w.getDrivePowerW()
-  const powerStr = moving ? `${draw.toFixed(0)} W` : '0 W'
+  const idleW = w.selectionIdlePowerW
+  const driveW = w.getDrivePowerW()
+  const totalW = moving ? idleW + driveW : idleW
+  const powerStr = `${totalW.toFixed(0)} W`
   const statusStr = !w.operational ? 'OFFLINE' : moving ? 'DRIVING' : 'READY'
 
   // Night penalty extra

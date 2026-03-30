@@ -600,7 +600,7 @@ const instrument = computed(() => {
       status: wh.statusStr,
       health: `${Math.round(wh.healthPct)}%`,
       statusColor: offline ? '#e05030' : wh.statusStr === 'DRIVING' ? '#ef9f27' : '#5dc9a5',
-      powerColor: wh.powerStr.startsWith('0 W') ? '#6b4a30' : '#ef9f27',
+      powerColor: wh.statusStr === 'DRIVING' ? '#ef9f27' : '#6b4a30',
     }
   }
   return base
