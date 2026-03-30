@@ -712,22 +712,9 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       controller.onInstrumentActivateRequest = onInstrumentActivateRequest
     }
 
-    const instrumentControllers = [
-      new MastCamController(),
-      new ChemCamController(),
-      new DrillController(),
-      new APXSController(),
-      new DANController(),
-      new SAMController(),
-      new RTGController(),
-      new HeaterController(),
-      new REMSController(),
-      new RADController(),
-      new RoverWheelsController(),
-      new AntennaLGController(),
-      new AntennaUHFController(),
-      new MicController(),
-    ]
+    // Use factory-created controllers from the provider — JSON-driven properties
+    // (tier, idlePowerW, activePowerW) are already set by InstrumentFactory.
+    const instrumentControllers = tickController.getAllControllers()
     if (controller) {
       controller.instruments = instrumentControllers
     }
@@ -928,6 +915,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         totalSP: totalSP.value,
         activeInstrumentSlot: activeInstrumentSlot.value,
         windMs: siteWeather.value.windMs,
+        windDirDeg: siteWeather.value.windDirDeg,
         dustStormPhase: siteWeather.value.dustStormPhase,
         dustStormLevel: siteWeather.value.dustStormLevel,
         radiationLevel: radLevel.value,
@@ -977,7 +965,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Core rover update + position sync ---
       if (controller) {
-        controller.criticalPowerMobilitySuspended = isSleeping.value
+        const wheelsOff = !(controller.instruments.find(i => i.id === 'wheels')?.passiveSubsystemEnabled ?? true)
+        controller.criticalPowerMobilitySuspended = isSleeping.value || wheelsOff
       }
       controller?.update(effSceneDelta)
       // Debug fly camera overrides rover camera when active
@@ -1400,6 +1389,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       totalSP: totalSP.value,
       activeInstrumentSlot: activeInstrumentSlot.value,
       windMs: 0,
+      windDirDeg: 0,
       dustStormPhase: 'none' as const,
       dustStormLevel: null,
       radiationLevel: radLevel.value,
