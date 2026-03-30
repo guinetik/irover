@@ -183,8 +183,8 @@ export interface DanHudCallbacks {
   ) => void
   /** Deducts watts from RTG currentPowerW (one-time flat cost). */
   deductRTGPower: (watts: number) => void
-  /** Adds the extracted fluid item to rover inventory. */
-  addInventoryItem: (itemId: string, quantity: number) => void
+  /** Adds the extracted fluid item to rover inventory. Returns false if cargo is full. */
+  addInventoryItem: (itemId: string, quantity: number) => boolean
   /** Plays magnetic docking sound effect. */
   playDockSound: () => void
   /** Sets the DAN Dock toggle in ProfilePanel (called on undock to prevent re-dock). */
@@ -945,11 +945,15 @@ export function createDanHudController(
     const transferKg = Math.min(dock.storedKg, 0.1)
     const units = Math.round(transferKg / weightPerUnit)
 
-    addInventoryItem(itemId, units)
+    if (!addInventoryItem(itemId, units)) {
+      // Inventory full — signal the dialog via a special storedKg sentinel the UI reads
+      pendingExtractorDock.value = { ...dock, cargoFull: true }
+      return
+    }
     deductRTGPower(dock.extractPowerW)
 
     const newStoredKg = dock.storedKg - transferKg
-    pendingExtractorDock.value = { ...dock, storedKg: newStoredKg }
+    pendingExtractorDock.value = { ...dock, storedKg: newStoredKg, cargoFull: false }
     updateExtractorStorage(dock.archiveId, dock.archiveType, newStoredKg, getCurrentSol())
   }
 

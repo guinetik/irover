@@ -29,4 +29,5 @@ export interface ExtractorDockState {
   maxStorageKg: number         // 1.0 × danStorageCapacityMod
   chargeRateKgPerSol: number   // reservoirQuality × danChargeRateMod
   extractPowerW: number        // 5.0 × danPowerCostMod
+  cargoFull?: boolean          // true when last extract failed due to full inventory
 }

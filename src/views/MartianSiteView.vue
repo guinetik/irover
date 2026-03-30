@@ -302,6 +302,7 @@
       :max-storage-kg="pendingExtractorDock?.maxStorageKg ?? 1"
       :charge-rate-kg-per-sol="pendingExtractorDock?.chargeRateKgPerSol ?? 0"
       :extract-power-w="pendingExtractorDock?.extractPowerW ?? 5"
+      :cargo-full="pendingExtractorDock?.cargoFull ?? false"
       @extract="siteHandle?.extractFromDock()"
       @undock="siteHandle?.undockExtractor()"
     />
@@ -2191,8 +2192,7 @@ function createSiteControllerContext() {
     trackModifiers,
     hasPerk,
     deductRTGPower: (watts) => {
-      const rtg = siteRover.value?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
-      rtg?.deductPower?.(watts)
+      drainBatteryFraction(watts / capacityWh.value)
     },
     tickPower,
     tickThermal,

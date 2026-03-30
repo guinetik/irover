@@ -185,7 +185,7 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
           useVentArchive().updateExtractorStorage(archiveId, storedKg, lastChargedSol)
         }
       },
-      addInventoryItem: (itemId, qty) => useInventory().addComponent(itemId, qty),
+      addInventoryItem: (itemId, qty) => useInventory().addComponent(itemId, qty).ok,
       playDockSound: () => {},  // placeholder — sfx.danDock not yet in audio manifest
       setDanDockEnabled: (v: boolean) => { danDockEnabled.value = v },
       getCurrentSol: () => ctx.refs.marsSol?.value ?? 0,

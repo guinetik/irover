@@ -26,11 +26,13 @@
           </div>
         </div>
 
+        <div v-if="cargoFull" class="ext-cargo-warn">CARGO FULL — MAKE ROOM TO EXTRACT</div>
+
         <div class="ext-footer">
           <button
             type="button"
             class="ext-btn ext-btn--extract"
-            :disabled="storedKg <= 0"
+            :disabled="storedKg <= 0 || cargoFull"
             @click="emitExtract"
           >
             EXTRACT (100g)
@@ -56,6 +58,7 @@ const props = defineProps<{
   maxStorageKg: number
   chargeRateKgPerSol: number
   extractPowerW: number
+  cargoFull?: boolean
 }>()
 
 const emit = defineEmits<{ extract: []; undock: [] }>()
@@ -171,6 +174,15 @@ const chargeRatePct = computed(() => Math.min(100, Math.round(props.chargeRateKg
 
 .ext-btn--undock { color: rgba(255, 255, 255, 0.35); margin-left: auto; }
 .ext-btn--undock:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.3); }
+
+.ext-cargo-warn {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #e05030;
+  text-align: center;
+  padding: 6px 16px 0;
+}
 
 .ext-slide-enter-active, .ext-slide-leave-active { transition: opacity 0.25s ease; }
 .ext-slide-enter-from, .ext-slide-leave-to { opacity: 0; }
