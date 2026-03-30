@@ -37,7 +37,9 @@ export class RoverWheelsController extends InstrumentController {
    * (negative pitch sat too low when focused on wheel height).
    */
   readonly viewPitch = 0.1
-  override readonly canActivate = false
+  override readonly canActivate = true
+  override readonly passiveSubsystemOnly = true
+  override readonly billsPassiveBackgroundPower = true
   override readonly passiveDecayPerSol = 0.15
   override readonly repairComponentId = 'mechatronics-components'
   override readonly usageDecayChance = 0.15

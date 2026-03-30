@@ -13,6 +13,10 @@ export function createRoverWheelsTickHandler(controller: InstrumentController): 
 
   return {
     tick(_delta: number, env: InstrumentEnvironment): void {
+      if (!wheels.passiveSubsystemEnabled) {
+        wheels.movementSpeedMod = 0
+        return
+      }
       const profileMod = mod('movementSpeed')
       const durability = Math.max(0.1, wheels.durabilityFactor)
       const stormPenalty = env.stormLevel > 0 ? 1.0 - (env.stormLevel * STORM_SPEED_LOSS_PER_LEVEL) : 1.0
