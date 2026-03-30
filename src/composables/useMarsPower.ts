@@ -174,6 +174,11 @@ export interface PowerTickInput {
   /** Heater draw from thermal system (W, 0–12). Added to consumption. */
   heaterW?: number
   /**
+   * Wheels idle power draw (W) from instruments.json `idlePowerW` — core avionics always-on draw.
+   * When omitted, falls back to `RoverPowerProfile.baseCoreW`.
+   */
+  wheelsIdlePowerW?: number
+  /**
    * Multiplier on modeled bus consumption after profile + modifiers (e.g. RTG power shunt = 0.5).
    * Default 1 — does not affect generation.
    */
@@ -235,7 +240,7 @@ export function useMarsPower() {
       baseUse = SLEEP_HIBERNATION_CORE_W
       heaterBusW = heaterRaw * SLEEP_HEATER_BUS_FRACTION
     } else {
-      baseUse = profile.baseCoreW
+      baseUse = input.wheelsIdlePowerW ?? profile.baseCoreW
       baseUse += input.driveMotorW ?? 0
       if (input.rockDrilling) baseUse += drillActiveW
       const instrumentLines = input.instrumentLines
@@ -272,7 +277,7 @@ export function useMarsPower() {
       lines.push({
         id: 'core',
         label: 'Core avionics',
-        w: profile.baseCoreW * consMod * loadFactor,
+        w: (input.wheelsIdlePowerW ?? profile.baseCoreW) * consMod * loadFactor,
       })
       const driveW = input.driveMotorW ?? 0
       if (driveW > 1e-6) {

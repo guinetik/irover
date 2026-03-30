@@ -6,7 +6,7 @@ export const WHLS_SLOT = 13
 
 /**
  * Mobility / wheel motors — billed on the main bus while the chassis translates.
- * `baseDriveW` is synced from {@link useMarsPower} profile each frame; durability and
+ * `activePowerW` comes from instruments.json via {@link InstrumentFactory}; durability and
  * upgrades scale effective draw and (at 0% durability) disable drive in {@link RoverController}.
  */
 export class RoverWheelsController extends InstrumentController {
@@ -45,12 +45,6 @@ export class RoverWheelsController extends InstrumentController {
   /** Movement speed modifier — set each frame by domain tick handler. */
   movementSpeedMod = 1.0
 
-  /**
-   * Nominal motor draw (W) while moving — mirror `RoverPowerProfile.baseDriveW`;
-   * MartianSiteView copies from the live profile each frame.
-   */
-  baseDriveW = 5
-
   override readonly maxUpgradeLevel = 5
 
   /**
@@ -67,7 +61,7 @@ export class RoverWheelsController extends InstrumentController {
    * Instantaneous wheel-motor draw (W) for the power tick while the rover is translating.
    */
   getDrivePowerW(): number {
-    return this.baseDriveW * this.powerEfficiency
+    return this.activePowerW * this.powerEfficiency
   }
 
 }

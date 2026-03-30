@@ -1014,7 +1014,6 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         if (moving) controlsHintDismissed.value = true
       }
       const wheelsInst = controller?.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
-      if (wheelsInst) wheelsInst.baseDriveW = roverPowerProfile.baseDriveW
       if (siteScene?.rover) {
         roverWorldX.value = siteScene.rover.position.x
         roverWorldZ.value = siteScene.rover.position.z
@@ -1194,6 +1193,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           rockDrillActivePowerW: drillForPower?.activePowerW,
           driveMotorW,
           driveMotorHudLabel: 'Rover wheels',
+          wheelsIdlePowerW: wheelsForPower?.selectionIdlePowerW,
           instrumentLines,
           heaterW: heaterEffectiveW.value,
           powerLoadFactor,

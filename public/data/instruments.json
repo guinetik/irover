@@ -556,10 +556,10 @@
       "name": "WHLS",
       "type": "MOBILITY / DRIVE",
       "desc": "Rocker-bogie wheel motors and steering actuators. Power draw only active while the chassis is moving.",
-      "power": "0–5W",
+      "power": "5W idle / 5W driving",
       "tier": "rugged",
-      "idlePowerW": 0,
-      "activePowerW": 0,
+      "idlePowerW": 5,
+      "activePowerW": 5,
       "controllerType": "RoverWheelsController",
       "tickHandlerType": "RoverMovementTickHandler",
       "upgrade": {
