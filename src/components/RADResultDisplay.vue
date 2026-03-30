@@ -100,7 +100,7 @@ watch(() => props.visible, (v) => {
   } else {
     cancelAnimationFrame(processingRaf)
   }
-})
+}, { immediate: true })
 
 // Enter key to acknowledge
 function onKeyDown(e: KeyboardEvent): void {
