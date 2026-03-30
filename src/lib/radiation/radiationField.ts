@@ -352,3 +352,35 @@ export function findHazardousCell(
     value: finalValue,
   }
 }
+
+/**
+ * Inject a radiation hotspot into the field at a world position.
+ * Paints a gaussian bump centred at (worldX, worldZ) with the given peak
+ * value and radius (in grid cells). Mutates the field in place.
+ */
+export function injectRadiationHotspot(
+  field: Float32Array,
+  gridSize: number,
+  terrainScale: number,
+  worldX: number,
+  worldZ: number,
+  peakValue: number,
+  radiusCells: number,
+): void {
+  const gMax = gridSize - 1
+  const cx = (worldX / terrainScale + 0.5) * gMax
+  const cz = (worldZ / terrainScale + 0.5) * gMax
+  const r2 = radiusCells * radiusCells
+
+  for (let gz = 0; gz < gridSize; gz++) {
+    for (let gx = 0; gx < gridSize; gx++) {
+      const dx = gx - cx
+      const dz = gz - cz
+      const d2 = dx * dx + dz * dz
+      if (d2 > r2 * 4) continue // skip cells far outside radius
+      const falloff = Math.exp(-d2 / (2 * r2))
+      const idx = gz * gridSize + gx
+      field[idx] = Math.min(1.20, Math.max(field[idx], peakValue * falloff))
+    }
+  }
+}

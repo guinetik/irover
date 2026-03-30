@@ -10,7 +10,7 @@ import type { MarsSiteViewControllerHandle } from '@/views/MarsSiteViewControlle
 import { isOrbitalDropItemId } from '@/types/orbitalDrop'
 import { rewardItemsForOrbitalDrop } from '@/lib/missionRewardOrbital'
 import { resolveRandomOrbitalDropPosition } from '@/lib/orbitalDropSpawn'
-import { findHazardousCell, findSafeZoneCentroids } from '@/lib/radiation'
+import { findHazardousCell, findSafeZoneCentroids, injectRadiationHotspot, classifyZone } from '@/lib/radiation'
 
 /**
  * All mission-related UI state and logic, extracted from MartianSiteView.
@@ -125,41 +125,63 @@ export function useMissionUI(deps: {
       if (obj.params.poiId === 'rad-hotspot-01') {
         const fieldData = siteHandle.value?.getRadiationFieldData()
         if (fieldData) {
-          // Threshold 0: find the absolute hottest cell on the map regardless
-          // of zone classification. On low-rad maps the field peaks below
-          // hazardousMin, so zone-based filtering would find nothing.
-          const cell = findHazardousCell(
-            fieldData.field, fieldData.gridSize, fieldData.terrainScale,
-            rx, rz, 80, 0,
-          )
+          const { field: f, gridSize: gs, terrainScale: ts, thresholds } = fieldData
+          const halfExtent = ts * 0.48 // stay within terrain bounds with margin
+
+          // Find the hottest cell ≥80m from rover (threshold 0 = any radiation)
+          const cell = findHazardousCell(f, gs, ts, rx, rz, 80, 0)
           if (cell) {
-            px = Math.max(-390, Math.min(390, cell.x))
-            pz = Math.max(-390, Math.min(390, cell.z))
+            px = Math.max(-halfExtent, Math.min(halfExtent, cell.x))
+            pz = Math.max(-halfExtent, Math.min(halfExtent, cell.z))
+
+            // If the hotspot is below intermediate, inject a radiation bump so
+            // the player actually drives into danger. Low-rad maps need this.
+            const zone = classifyZone(cell.value, thresholds)
+            if (zone === 'safe') {
+              // Paint a gaussian hotspot at intermediate+ level
+              const targetLevel = thresholds.safeMax + (thresholds.hazardousMin - thresholds.safeMax) * 0.6
+              injectRadiationHotspot(f, gs, ts, px, pz, targetLevel, Math.ceil(gs * 0.06))
+            }
+
             plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
             return // skip default placement (forEach continue)
           }
         }
         // Fallback: place at distance like normal go-to
       } else if (obj.params.poiId === 'rad-safe-return') {
-        // Place at the nearest safe zone centroid to the hotspot
+        // Place at safe zone centroid that is far enough from the hotspot
+        // AND from the rover (which is at/near the hotspot) to prevent auto-complete.
         const hotspotPos = plannedPoiPositions.get('rad-hotspot-01')
         const fieldData = siteHandle.value?.getRadiationFieldData()
         if (hotspotPos && fieldData) {
-          const centroids = findSafeZoneCentroids(
-            fieldData.field, fieldData.gridSize, fieldData.terrainScale, fieldData.thresholds,
-          )
+          const { field: f, gridSize: gs, terrainScale: ts, thresholds } = fieldData
+          const halfExtent = ts * 0.48
+          const centroids = findSafeZoneCentroids(f, gs, ts, thresholds)
+
           if (centroids.length > 0) {
-            // Pick centroid nearest to the hotspot
+            // Filter centroids within terrain bounds and ≥30m from both hotspot and rover
+            const MIN_DIST = 30
+            const MIN_DIST2 = MIN_DIST * MIN_DIST
+            const valid = centroids.filter(c => {
+              if (Math.abs(c.x) > halfExtent || Math.abs(c.z) > halfExtent) return false
+              const dxH = c.x - hotspotPos.x, dzH = c.z - hotspotPos.z
+              if (dxH * dxH + dzH * dzH < MIN_DIST2) return false
+              const dxR = c.x - rx, dzR = c.z - rz
+              if (dxR * dxR + dzR * dzR < MIN_DIST2) return false
+              return true
+            })
+            // Pick nearest valid centroid to hotspot (so the return trip crosses the gradient)
+            const pool = valid.length > 0 ? valid : centroids
             let bestDist = Infinity
-            let bestC = centroids[0]
-            for (const c of centroids) {
+            let bestC = pool[0]
+            for (const c of pool) {
               const dx = c.x - hotspotPos.x
               const dz = c.z - hotspotPos.z
               const d = dx * dx + dz * dz
               if (d < bestDist) { bestDist = d; bestC = c }
             }
-            px = Math.max(-390, Math.min(390, bestC.x))
-            pz = Math.max(-390, Math.min(390, bestC.z))
+            px = Math.max(-halfExtent, Math.min(halfExtent, bestC.x))
+            pz = Math.max(-halfExtent, Math.min(halfExtent, bestC.z))
             plannedPoiPositions.set(obj.params.poiId, { x: px, z: pz, label: obj.label })
             return // skip default placement (forEach continue)
           }
