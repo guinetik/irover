@@ -7,7 +7,7 @@ import type { BuildableDef, BuildableFootprint } from '@/types/buildables'
 /** Default interaction distance when not specified in the buildable definition. */
 const DEFAULT_INTERACTION_DISTANCE = 12
 /** Camera distance when viewing the rover inside the shelter. */
-const INTERIOR_CAMERA_DISTANCE = 3.5
+const INTERIOR_CAMERA_DISTANCE = 0.8
 /** Camera pitch (radians) when viewing the rover inside the shelter. */
 const INTERIOR_CAMERA_PITCH = 0.8
 
