@@ -2052,7 +2052,8 @@ function onRadDecodeComplete(result: {
   sp: number
   sideProducts: Array<{ itemId: string; quantity: number }>
 }): void {
-  // End decode in the tick handler
+  // End decode — clears radDecoding flag + dismisses the event in the tick handler
+  radDecoding.value = false
   siteHandle.value?.handleRadDismiss()
 
   // Store result and show processing → result screen (SP/archive on acknowledge)
