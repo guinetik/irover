@@ -98,6 +98,8 @@ export class DrillController extends InstrumentController {
   chainDrillBonusBase = 0
   /** ChemCam loot chain bonus base value — set by domain tick handler from instruments.json. */
   chainLootBonusBase = 0
+  /** APXS trace element max drop count — set by domain tick handler from instruments.json chainBonuses. */
+  apxsTraceDropBase = 0
 
   /** Set drill duration multiplier (e.g. 1.25 in COLD thermal zone) */
   set drillDurationMultiplier(v: number) {
@@ -281,8 +283,8 @@ export class DrillController extends InstrumentController {
         const apxsEls = rock.userData.apxsElements as string[] | undefined
         if (apxsEls && apxsEls.length > 0) {
           const apxsDrops: { element: string; label: string }[] = []
-          // Drop 1-2 dominant surface elements
-          const dropCount = Math.min(apxsEls.length, 1 + Math.floor(Math.random() * 2 * this.accuracyMod))
+          // Drop 1–N dominant surface elements (N from APXS chainBonus baseValue)
+          const dropCount = Math.min(apxsEls.length, 1 + Math.floor(Math.random() * this.apxsTraceDropBase * this.accuracyMod))
           const shuffled = [...apxsEls].sort(() => Math.random() - 0.5)
           for (let i = 0; i < dropCount; i++) {
             const el = shuffled[i]
