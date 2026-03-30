@@ -86,6 +86,9 @@ const MOD_LABELS: Record<keyof ProfileModifiers, string> = {
   heaterEfficiency: 'HEATER OUTPUT',
   chainDrillBonus: 'CHAIN DRILL BONUS',
   chainLootBonus: 'CHAIN LOOT BONUS',
+  danChargeRate: 'DAN CHARGE RATE',
+  danPowerCost: 'DAN PWR COST',
+  danStorageCapacity: 'DAN STORAGE',
 }
 
 // For "cost" and "draw" modifiers, lower is better (invert the color logic)
