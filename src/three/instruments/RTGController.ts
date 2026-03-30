@@ -194,4 +194,12 @@ export class RTGController extends InstrumentController {
     })
     return true
   }
+
+  /**
+   * Instantly deduct `watts` from currentPowerW (one-time extraction cost).
+   * Clamps to zero — does not go negative.
+   */
+  deductPower(watts: number): void {
+    this.currentPowerW = Math.max(0, this.currentPowerW - watts)
+  }
 }
