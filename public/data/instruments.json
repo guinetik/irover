@@ -256,10 +256,10 @@
       "name": "SAM",
       "type": "SAMPLE ANALYSIS SUITE",
       "desc": "Onboard analytical lab: gas chromatograph, mass spectrometer, tunable laser. Identifies organics, measures isotope ratios, characterizes molecular composition.",
-      "power": "25W active",
+      "power": "1W idle / 25W active",
       "tier": "sensitive",
-      "idlePowerW": 0,
-      "activePowerW": 0,
+      "idlePowerW": 1,
+      "activePowerW": 25,
       "controllerType": "SAMController",
       "tickHandlerType": "SAMTickHandler",
       "upgrade": {

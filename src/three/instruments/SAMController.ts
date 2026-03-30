@@ -90,9 +90,12 @@ export class SAMController extends InstrumentController {
     this.closeCovers()
   }
 
+  /** Composite speed factor from resolveInstrumentPerformance — set each frame by domain tick handler. */
+  perfSpeedFactor = 1.0
+
   /** SAM draws power only during active experiments — not from card view or activate. */
   experimentRunning = false
   override getInstrumentBusPowerW(_phase: 'instrument' | 'active'): number {
-    return this.experimentRunning ? 25 : 0
+    return this.experimentRunning ? this.activePowerW : 0
   }
 }

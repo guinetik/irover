@@ -672,6 +672,7 @@ import {
   HEATER_SLOT,
   MIC_SLOT,
   REMS_SLOT,
+  APXSController,
   RoverWheelsController,
   WHLS_SLOT,
   type RTGConservationState,
@@ -706,7 +707,6 @@ import IntroSequence from '@/components/IntroSequence.vue'
 import { isSiteIntroSequenceSkipped } from '@/lib/siteIntroSequence'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
 import { buildSpeedBreakdown } from '@/lib/instrumentSpeedBreakdown'
-import { resolveInstrumentPerformance } from '@/lib/instrumentPerformance'
 import { getMissionSolForSite, setMissionSolForSite } from '@/lib/siteMissionSolStorage'
 import { useAudio } from '@/audio/useAudio'
 import { useUiSound } from '@/composables/useUiSound'
@@ -1671,16 +1671,11 @@ function handleSamEnqueue(entry: Omit<SamQueueEntry, 'id'>): void {
       consumeItem(ing.itemId, ing.quantity)
     }
   }
-  // Apply analysis speed modifier and storm penalty to processing duration
-  const samInst = siteRover.value?.instruments.find(i => i.id === 'sam')
-  const samEnv = {
-    thermalZone: (thermalZone?.value ?? 'OPTIMAL') as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-    stormLevel: siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0,
-    radiationLevel: radLevel.value,
-  }
-  const samPerf = resolveInstrumentPerformance(samInst?.tier ?? 'standard', samInst?.durabilityFactor ?? 1, samEnv, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-  const adjustedRemaining = entry.remainingTimeSec / samPerf.speedFactor
-  const adjustedTotal = entry.totalTimeSec / samPerf.speedFactor
+  // Apply analysis speed from domain tick handler (includes profile + storm + radiation + durability)
+  const samInst = siteRover.value?.instruments.find(i => i.id === 'sam') as SAMController | undefined
+  const samSpeed = samInst?.perfSpeedFactor ?? 1
+  const adjustedRemaining = entry.remainingTimeSec / samSpeed
+  const adjustedTotal = entry.totalTimeSec / samSpeed
   const fullEntry = { ...entry, startedAtSol: marsSol.value, remainingTimeSec: adjustedRemaining, totalTimeSec: adjustedTotal }
   samEnqueue(fullEntry)
   samDialogVisible.value = false
@@ -1759,14 +1754,8 @@ function handleAPXSComplete(result: {
   )
 
   const baseTime = 10 + Math.random() * 5
-  const apxsInst = siteRover.value?.instruments.find(i => i.id === 'apxs')
-  const apxsEnvLocal = {
-    thermalZone: (thermalZone?.value ?? 'OPTIMAL') as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL',
-    stormLevel: siteWeather.value.dustStormPhase === 'active' ? (siteWeather.value.dustStormLevel ?? 0) : 0,
-    radiationLevel: radLevel.value,
-  }
-  const apxsPerf = resolveInstrumentPerformance(apxsInst?.tier ?? 'standard', apxsInst?.durabilityFactor ?? 1, apxsEnvLocal, playerMod('analysisSpeed'), playerMod('instrumentAccuracy'))
-  const processingTime = baseTime / apxsPerf.speedFactor
+  const apxsInst = siteRover.value?.instruments.find(i => i.id === 'apxs') as APXSController | undefined
+  const processingTime = baseTime / (apxsInst?.perfSpeedFactor ?? 1)
 
   apxsEnqueue({
     rockMeshUuid: apxsGameRockUuid.value,
