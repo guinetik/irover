@@ -503,7 +503,7 @@
           }
         ]
       },
-      "hint": "~5W on the bus while linked. ACTIVATE / STANDBY or [E] toggles. Low data rate (0.5 kbps) when on.",
+      "hint": "ACTIVATE / STANDBY or [E] toggles. Receives mission messages and sends daily heartbeat. CHECK MAIL for incoming transmissions.",
       "stats": []
     },
     {
