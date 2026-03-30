@@ -13,6 +13,8 @@ import type { SiteFrameContext, SiteTickHandler } from './SiteFrameContext'
 import type { MeteorCrater } from './MeteorController'
 import type { VentType, CraterDiscovery } from '@/lib/meteor/craterDiscovery'
 import { rollCraterDiscovery } from '@/lib/meteor/craterDiscovery'
+import { calcExtractorCharge } from '@/lib/neutron/danExtractorCharge'
+import type { ExtractorDockTarget } from '@/types/extractorDock'
 
 /** Pending crater discovery awaiting player acknowledgment. */
 export interface PendingCraterResult {
@@ -30,6 +32,14 @@ import type { ExtractorDockTarget, ExtractorDockState } from '@/types/extractorD
 const DAN_DRILL_MARKER_GLB = '/dan.glb'
 /** Target largest axis length in scene units (~meters); matches prior cone height 0.5. */
 const DAN_DRILL_MARKER_TARGET_SIZE = 0.5
+
+const DAN_DOCK_RADIUS = 1.0 // metres — must drive over the extractor to dock
+
+const FLUID_ITEM_ID: Record<'water' | 'co2' | 'methane', string> = {
+  water: 'ice',
+  co2: 'co2-gas',
+  methane: 'methane-gas',
+}
 
 let danDrillMarkerTemplate: THREE.Group | null = null
 let danDrillMarkerLoadPromise: Promise<THREE.Group> | null = null
@@ -246,6 +256,7 @@ export function createDanHudController(
     danProspectProgress, danSignalStrength, danWaterResult, danDialogVisible,
     passiveUiRevision, siteLat, siteLon, roverWorldX, roverWorldZ, roverSpawnXZ,
     danCraterModeAvailable, pendingCraterResult, pendingWaterDeploy,
+    danDockEnabled, pendingExtractorDock,
   } = refs
   const {
     siteId,
@@ -267,6 +278,13 @@ export function createDanHudController(
     getVentsForSite,
     consumeDanExtractor,
     updateDanProspectDrillSite,
+    getAllExtractorsForSite,
+    updateExtractorStorage,
+    deductRTGPower,
+    addInventoryItem,
+    playDockSound,
+    setDanDockEnabled,
+    getCurrentSol,
   } = callbacks
 
   // Cache inconclusive count — refreshed each prospect completion, cheap to read each frame
@@ -509,6 +527,41 @@ export function createDanHudController(
       if (!instance || !tickHandlerActive) return
       ventMarkers.push(instance)
     })
+  }
+
+  function _initiateDock(target: ExtractorDockTarget, fctx: SiteFrameContext): void {
+    const currentSol = getCurrentSol()
+    const charged = calcExtractorCharge({
+      storedKg: target.storedKg,
+      lastChargedSol: target.lastChargedSol,
+      currentSol,
+      reservoirQuality: target.reservoirQuality,
+      danChargeRateMod: playerMod('danChargeRate'),
+      danStorageCapMod: playerMod('danStorageCapacity'),
+    })
+    updateExtractorStorage(target.archiveId, target.archiveType, charged.storedKg, charged.lastChargedSol)
+
+    // Snap rover to extractor center
+    const rover = fctx.siteScene?.rover
+    if (rover) {
+      rover.position.x = target.x
+      rover.position.z = target.z
+    }
+
+    // Lock rover movement — same mechanism as crater scanning immobilization
+    if (fctx.rover) fctx.rover.criticalPowerMobilitySuspended = true
+
+    playDockSound()
+
+    pendingExtractorDock.value = {
+      archiveId: target.archiveId,
+      archiveType: target.archiveType,
+      fluidType: target.fluidType,
+      storedKg: charged.storedKg,
+      maxStorageKg: 1.0 * playerMod('danStorageCapacity'),
+      chargeRateKgPerSol: target.reservoirQuality * playerMod('danChargeRate'),
+      extractPowerW: 5.0 * playerMod('danPowerCost'),
+    }
   }
 
   function tick(fctx: SiteFrameContext): void {
@@ -756,6 +809,25 @@ export function createDanHudController(
     syncDanProspectingPlayback(
       danInst.passiveSubsystemEnabled && danInst.prospectPhase === 'prospecting',
     )
+
+    // ── DAN dock proximity ──────────────────────────────────────────────
+    if (danDockEnabled.value && pendingExtractorDock.value === null) {
+      const targets = getAllExtractorsForSite(siteId)
+      let nearest: ExtractorDockTarget | null = null
+      let nearestDist = Infinity
+      for (const t of targets) {
+        const dx = roverWorldX.value - t.x
+        const dz = roverWorldZ.value - t.z
+        const dist = Math.sqrt(dx * dx + dz * dz)
+        if (dist < nearestDist) {
+          nearestDist = dist
+          nearest = t
+        }
+      }
+      if (nearest !== null && nearestDist <= DAN_DOCK_RADIUS) {
+        _initiateDock(nearest, fctx)
+      }
+    }
   }
 
   function dispose(): void {
@@ -814,10 +886,44 @@ export function createDanHudController(
     pendingWaterDeploy.value = null
   }
 
-  // Docking stubs — full implementation lives in Task 10 (DanTickHandler docking logic).
-  function extractFromDock(): void {}
-  function undockExtractor(_fctx: SiteFrameContext): void {}
-  function onNewSol(_sol: number): void {}
+  function extractFromDock(): void {
+    const dock = pendingExtractorDock.value
+    if (!dock || dock.storedKg <= 0) return
+
+    const itemId = FLUID_ITEM_ID[dock.fluidType]
+    const weightPerUnit = 0.1  // kg — matches ice, co2-gas, methane-gas in inventory-items.json
+    const transferKg = Math.min(dock.storedKg, 1.0)
+    const units = Math.round(transferKg / weightPerUnit)
+
+    addInventoryItem(itemId, units)
+    deductRTGPower(dock.extractPowerW)
+
+    const newStoredKg = dock.storedKg - transferKg
+    pendingExtractorDock.value = { ...dock, storedKg: newStoredKg }
+    updateExtractorStorage(dock.archiveId, dock.archiveType, newStoredKg, getCurrentSol())
+  }
+
+  function undockExtractor(fctx: SiteFrameContext): void {
+    pendingExtractorDock.value = null
+    // Unlock rover movement — reverse of the lock applied in _initiateDock
+    if (fctx.rover) fctx.rover.criticalPowerMobilitySuspended = false
+    setDanDockEnabled(false)
+  }
+
+  function onNewSol(sol: number): void {
+    const targets = getAllExtractorsForSite(siteId)
+    for (const t of targets) {
+      const charged = calcExtractorCharge({
+        storedKg: t.storedKg,
+        lastChargedSol: t.lastChargedSol,
+        currentSol: sol,
+        reservoirQuality: t.reservoirQuality,
+        danChargeRateMod: playerMod('danChargeRate'),
+        danStorageCapMod: playerMod('danStorageCapacity'),
+      })
+      updateExtractorStorage(t.archiveId, t.archiveType, charged.storedKg, charged.lastChargedSol)
+    }
+  }
 
   return { tick, dispose, handleDanProspect, initIfReady, confirmCraterMode, cancelCraterMode, placeVentMarker, confirmWaterDeploy, skipWaterDeploy, extractFromDock, undockExtractor, onNewSol }
 }
