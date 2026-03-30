@@ -629,7 +629,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
 
     // --- Restore saved buildables from localStorage ---
-    {
+    if (siteScene) {
       const savedBuildables = loadForSite(siteId)
       for (const saved of savedBuildables) {
         const def = getBuildableDef(saved.id)
@@ -637,8 +637,8 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         if (!BuildableRegistry.has(def.controllerType)) continue
         const Ctor = BuildableRegistry.resolve(def.controllerType)
         const pos = new THREE.Vector3(saved.position.x, saved.position.y, saved.position.z)
-        const controller = new Ctor(def, pos, saved.rotationY, (x, z) => siteScene.terrain.heightAt(x, z))
-        await controller.init(siteScene.scene)
+        const controller = new Ctor(def, pos, saved.rotationY, (x, z) => siteScene!.terrain.heightAt(x, z))
+        await controller.init(siteScene!.scene)
         registerController(controller)
       }
     }

@@ -827,21 +827,6 @@ function toggleInventoryFromToolbar(): void {
   inventoryOpen.value = !inventoryOpen.value
 }
 
-registerAction('place-buildable', (buildableId: string) => {
-  const def = getBuildableDef(buildableId)
-  if (!def) return
-  const scene = siteHandle.value?.siteScene
-  if (!scene) return
-  const preview = new BuildablePlacementPreview(
-    def,
-    (x, z) => scene.terrain.heightAt(x, z),
-    (x, z) => scene.terrain.slopeAt(x, z),
-  )
-  preview.init(scene.scene).then(() => {
-    activePlacementPreview.value = preview
-  })
-})
-
 function handleInventoryAction(itemId: string, actionString: string): void {
   pendingPlacementItemId.value = itemId
   const invoked = invokeAction(actionString)
@@ -1481,6 +1466,22 @@ const {
 } = useInventory()
 const { invokeAction, registerAction } = useInventoryActions()
 const { savePlacement, registerController: registerBuildableController } = useBuildables()
+
+registerAction('place-buildable', (buildableId: string) => {
+  const def = getBuildableDef(buildableId)
+  if (!def) return
+  const scene = siteHandle.value?.siteScene
+  if (!scene) return
+  const preview = new BuildablePlacementPreview(
+    def,
+    (x, z) => scene.terrain.heightAt(x, z),
+    (x, z) => scene.terrain.slopeAt(x, z),
+  )
+  preview.init(scene.scene).then(() => {
+    activePlacementPreview.value = preview
+  })
+})
+
 const gameClock = useMarsGameClock()
 const { HEATER_MISSION_DURATIONS } = gameClock
 const {
