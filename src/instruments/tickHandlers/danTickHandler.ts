@@ -15,6 +15,7 @@ export function createDanTickHandler(controller: InstrumentController): TickHand
       const perf = resolveInstrumentPerformance(dan.tier, dan.durabilityFactor, env, mod('analysisSpeed'), mod('instrumentAccuracy'))
       dan.accuracyMod = perf.accuracyFactor
       dan.analysisSpeedMod = perf.speedFactor
+      dan.scanRadiusMod = mod('danScanRadius')
     },
     dispose(): void {},
   }

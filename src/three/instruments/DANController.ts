@@ -68,6 +68,8 @@ export class DANController extends InstrumentController {
   accuracyMod = 1.0
   /** Analysis speed modifier from player profile (1.0 = baseline, >1 = faster). */
   analysisSpeedMod = 1.0
+  /** Scan radius modifier from player profile (1.0 = baseline, >1 = wider). */
+  scanRadiusMod = 1.0
 
   // --- Rover state (set by view each frame) ---
   private roverPos = new THREE.Vector3()
@@ -106,7 +108,8 @@ export class DANController extends InstrumentController {
 
     this.totalSamples++
 
-    const p = danPassiveHitProbability(this.waterIceIndex, this.featureType, this.siteTier, this.totalSP, this.inconclusiveCount)
+    const baseP = danPassiveHitProbability(this.waterIceIndex, this.featureType, this.siteTier, this.totalSP, this.inconclusiveCount)
+    const p = Math.min(1, baseP * this.scanRadiusMod)
 
     if (Math.random() < p) {
       const strength = Math.min(1.0, Math.max(0.3,
