@@ -18,3 +18,6 @@ export const BuildableRegistry = {
     return name in registry
   },
 }
+
+import { HabitatController } from './HabitatController'
+BuildableRegistry.register('HabitatController', HabitatController)
