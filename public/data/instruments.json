@@ -513,10 +513,10 @@
       "name": "UHF",
       "type": "UHF RELAY ANTENNA",
       "desc": "High-bandwidth UHF antenna for relay via overhead orbiters (MRO, MAVEN). Primary science downlink.",
-      "power": "8W",
+      "power": "5W idle / 17W transmitting",
       "tier": "standard",
-      "idlePowerW": 6,
-      "activePowerW": 0,
+      "idlePowerW": 5,
+      "activePowerW": 12,
       "controllerType": "AntennaUHFController",
       "tickHandlerType": "AntennaUHFTickHandler",
       "upgrade": {
@@ -543,8 +543,11 @@
           }
         ]
       },
-      "hint": "~8W on the bus while relay hardware is up. ACTIVATE / STANDBY or [E] toggles. 128 kbps burst when on.",
-      "stats": []
+      "hint": "ACTIVATE / STANDBY or [E] toggles. Auto-transmits queued discoveries during orbital passes. Higher accuracy = faster uplink + lower power draw.",
+      "stats": [
+        { "key": "instrumentAccuracy", "label": "UPLINK SPEED" },
+        { "key": "powerConsumption", "label": "POWER DRAW" }
+      ]
     },
     {
       "id": "wheels",

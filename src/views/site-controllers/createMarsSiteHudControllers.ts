@@ -315,7 +315,6 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
     {
       sampleToastRef: ctx.sampleToastRef,
       awardTransmission: ctx.awardTransmission,
-      playerMod: ctx.playerMod,
       onDSNTransmissionsReceived: ctx.onDSNTransmissionsReceived,
       playUhfLock: () => ctx.playInstrumentActionSound('sfx.uhfLock'),
       startUhfUplinkLoop: () => ctx.startInstrumentActionLoop('sfx.uhfUplink'),

@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
-import { solFractionFromMarsClockHours, sceneSecondsFromSolFraction, secondsPerSol } from '@/lib/missionTime'
+import { solFractionFromMarsClockHours, sceneSecondsFromSolFraction } from '@/lib/missionTime'
 
 import { AntennaLGController } from '@/three/instruments/AntennaLGController'
 import { AntennaUHFController } from '@/three/instruments/AntennaUHFController'
@@ -9,7 +9,6 @@ import { useTransmissionQueue } from '@/composables/useTransmissionQueue'
 import type { TransmissionQueueItem } from '@/types/transmissionQueue'
 import type { SPGain } from '@/composables/useSciencePoints'
 import type SampleToast from '@/components/SampleToast.vue'
-import type { ProfileModifiers } from '@/composables/usePlayerProfile'
 import { useDSNArchive } from '@/composables/useDSNArchive'
 import type { DSNTransmission } from '@/types/dsnArchive'
 import type { AudioPlaybackHandle } from '@/audio/audioTypes'
@@ -31,7 +30,6 @@ export interface AntennaHudRefs {
 export interface AntennaHudCallbacks {
   sampleToastRef: Ref<InstanceType<typeof SampleToast> | null>
   awardTransmission: (archiveId: string, baseSP: number, label: string) => SPGain | null
-  playerMod: (key: keyof ProfileModifiers) => number
   onDSNTransmissionsReceived?: (transmissions: DSNTransmission[]) => void
   playUhfLock: () => void
   startUhfUplinkLoop: () => AudioPlaybackHandle
@@ -180,7 +178,7 @@ export function createAntennaHudController(
       // Progress current item
       if (currentTxItem) {
         currentTxElapsed += sceneDelta
-        const effectiveBandwidth = currentTxItem.bandwidthSec / (callbacks.playerMod('instrumentAccuracy') * Math.max(0.1, uhfCtrl.durabilityFactor))
+        const effectiveBandwidth = currentTxItem.bandwidthSec / uhfCtrl.accuracyMod
         uhfCtrl.transmissionProgress = Math.min(1, currentTxElapsed / effectiveBandwidth)
 
         // Item complete

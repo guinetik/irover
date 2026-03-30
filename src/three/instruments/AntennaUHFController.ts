@@ -23,9 +23,6 @@ export class AntennaUHFController extends InstrumentController {
   readonly focusOffset = new THREE.Vector3(0.0, 0.15, -0.1)
   readonly viewAngle = Math.PI * 1.15    // from behind, slightly left
   readonly viewPitch = 0.2
-  /** Extra power draw during active transmission (on top of idle) */
-  static readonly TRANSMIT_POWER_W = 12
-
   /** Set by tick handler to scale power draw down as accuracy improves (1.0 = no bonus) */
   accuracyMod = 1.0
 
@@ -41,11 +38,11 @@ export class AntennaUHFController extends InstrumentController {
   linkStatus: 'RELAY LOCK' | 'WAITING PASS' | 'OFF' = 'OFF'
   relayOrbiter = ''                                          // set dynamically by tick handler
 
-  /** 6W idle, 18W while actively transmitting — divided by accuracyMod (higher accuracy = less draw) */
+  /** idle + activePowerW while transmitting — divided by accuracyMod (higher accuracy = less draw) */
   override getPassiveBackgroundPowerW(): number {
     if (!this.passiveSubsystemEnabled) return 0
     const base = this.transmitting
-      ? this.selectionIdlePowerW + AntennaUHFController.TRANSMIT_POWER_W
+      ? this.selectionIdlePowerW + this.activePowerW
       : this.selectionIdlePowerW
     return base / this.accuracyMod
   }
