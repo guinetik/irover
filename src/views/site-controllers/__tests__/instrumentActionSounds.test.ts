@@ -660,6 +660,8 @@ describe('instrument action sounds', () => {
         danCraterModeAvailable: ref(false),
         pendingCraterResult: ref(null),
         pendingWaterDeploy: ref(null),
+        danDockEnabled: ref(false),
+        pendingExtractorDock: ref(null),
       },
       {
         siteId: 'test-site',
@@ -681,6 +683,13 @@ describe('instrument action sounds', () => {
         getVentsForSite: () => [],
         consumeDanExtractor: () => false,
         updateDanProspectDrillSite: () => {},
+        getAllExtractorsForSite: () => [],
+        updateExtractorStorage: () => {},
+        deductRTGPower: () => {},
+        addInventoryItem: () => {},
+        playDockSound: () => {},
+        setDanDockEnabled: () => {},
+        getCurrentSol: () => 1,
       },
     )
 
@@ -734,6 +743,8 @@ describe('instrument action sounds', () => {
         danCraterModeAvailable: ref(false),
         pendingCraterResult: ref(null),
         pendingWaterDeploy: ref(null),
+        danDockEnabled: ref(false),
+        pendingExtractorDock: ref(null),
       },
       {
         siteId: 'test-site',
@@ -755,6 +766,13 @@ describe('instrument action sounds', () => {
         getVentsForSite: () => [],
         consumeDanExtractor: () => false,
         updateDanProspectDrillSite: () => {},
+        getAllExtractorsForSite: () => [],
+        updateExtractorStorage: () => {},
+        deductRTGPower: () => {},
+        addInventoryItem: () => {},
+        playDockSound: () => {},
+        setDanDockEnabled: () => {},
+        getCurrentSol: () => 1,
       },
     )
 

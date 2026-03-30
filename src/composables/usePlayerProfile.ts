@@ -28,6 +28,9 @@ export interface ProfileModifiers {
   chainDrillBonus: number
   /** Sample weight multiplier on ChemCam-analyzed rocks. 0 = no bonus, 0.3 = +30% weight (base). */
   chainLootBonus: number
+  danChargeRate: number      // multiplier on kg/sol accumulation rate
+  danPowerCost: number       // multiplier on 5W base extraction cost
+  danStorageCapacity: number // multiplier on 1 kg base storage cap
 }
 
 const ZERO_MODIFIERS: ProfileModifiers = {
@@ -50,6 +53,9 @@ const ZERO_MODIFIERS: ProfileModifiers = {
   heaterEfficiency: 0,
   chainDrillBonus: 0,
   chainLootBonus: 0,
+  danChargeRate: 0,
+  danPowerCost: 0,
+  danStorageCapacity: 0,
 }
 
 // --- Archetypes (Step 1) ---

@@ -289,6 +289,10 @@ export interface MarsSiteViewRefs {
   danCraterModeAvailable: Ref<boolean>
   pendingCraterResult: Ref<import('@/views/site-controllers/DanHudController').PendingCraterResult | null>
   pendingWaterDeploy: Ref<import('@/views/site-controllers/DanHudController').PendingWaterDeploy | null>
+  /** Whether the DAN Dock auto-docking toggle is on. */
+  danDockEnabled: Ref<boolean>
+  /** Non-null while the rover is docked to an extractor. */
+  pendingExtractorDock: Ref<import('@/types/extractorDock').ExtractorDockState | null>
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
@@ -356,6 +360,8 @@ export interface MarsSiteViewContext {
   /** Accumulated reward track modifiers for speed breakdown display. */
   trackModifiers: Ref<Partial<ProfileModifiers>>
   hasPerk: (perkId: string) => boolean
+  /** Deducts watts from RTG currentPowerW (flat one-time cost, e.g. extractor docking). Wired by MartianSiteView. */
+  deductRTGPower?: (watts: number) => void
   tickPower: (deltaSeconds: number, input: PowerTickInput) => void
   tickThermal: (deltaSeconds: number, input: ThermalTickInput) => void
   tickRemsWeather: (input: RemsWeatherTickInput) => void
@@ -452,6 +458,12 @@ export interface MarsSiteViewControllerHandle {
   forceRadEvent: () => void
   /** Returns radiation field metadata for hazard-aware POI placement, or null if not ready. */
   getRadiationFieldData: () => { field: Float32Array; gridSize: number; terrainScale: number; thresholds: import('@/lib/radiation').RadiationThresholds } | null
+  /** Immediately transfer stored fluid from docked extractor to inventory. */
+  extractFromDock: () => void
+  /** Undock the rover from the current extractor (re-enables mobility). */
+  undockExtractor: () => void
+  /** Advance extractor charge state for all extractors when the sol increments. */
+  onNewSol: (sol: number) => void
 }
 
 /**
@@ -1492,5 +1504,15 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       tickHandlers.radHandler.forceEvent()
     },
     getRadiationFieldData: () => tickHandlers?.radHandler?.getFieldData() ?? null,
+    extractFromDock: () => {
+      danHandler.extractFromDock()
+    },
+    undockExtractor: () => {
+      const fctx = buildFrameContext()
+      if (fctx) danHandler.undockExtractor(fctx)
+    },
+    onNewSol: (sol: number) => {
+      danHandler.onNewSol(sol)
+    },
   }
 }

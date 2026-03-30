@@ -245,7 +245,11 @@
       :is-full="isFull"
       @dump="removeInventoryStack"
     />
-    <ProfilePanel :open="profileOpen" />
+    <ProfilePanel
+      :open="profileOpen"
+      :dan-dock-enabled="danDockEnabled"
+      @update:dan-dock-enabled="danDockEnabled = $event"
+    />
     <MapOverlay
       :open="mapOpen"
       :site-name="siteId"
@@ -290,6 +294,16 @@
       @close="danDialogVisible = false"
       @deploy="siteHandle?.confirmWaterDeploy()"
       @skip="siteHandle?.skipWaterDeploy()"
+    />
+    <DANExtractorDialog
+      :visible="pendingExtractorDock !== null"
+      :fluid-type="pendingExtractorDock?.fluidType ?? 'water'"
+      :stored-kg="pendingExtractorDock?.storedKg ?? 0"
+      :max-storage-kg="pendingExtractorDock?.maxStorageKg ?? 1"
+      :charge-rate-kg-per-sol="pendingExtractorDock?.chargeRateKgPerSol ?? 0"
+      :extract-power-w="pendingExtractorDock?.extractPowerW ?? 5"
+      @extract="siteHandle?.extractFromDock()"
+      @undock="siteHandle?.undockExtractor()"
     />
     <CraterDiscoveryDialog
       :result="pendingCraterResult?.discovery ?? null"
@@ -633,8 +647,10 @@ import SampleToast from '@/components/SampleToast.vue'
 import SAMDialog from '@/components/SAMDialog.vue'
 import SAMResultDialog from '@/components/SAMResultDialog.vue'
 import DANDialog from '@/components/DANDialog.vue'
+import DANExtractorDialog from '@/components/DANExtractorDialog.vue'
 import CraterDiscoveryDialog from '@/components/CraterDiscoveryDialog.vue'
 import type { PendingCraterResult, PendingWaterDeploy } from '@/views/site-controllers/DanHudController'
+import type { ExtractorDockState } from '@/types/extractorDock'
 import DANProspectBar from '@/components/DANProspectBar.vue'
 import PowerHud from '@/components/PowerHud.vue'
 import RADHud from '@/components/RADHud.vue'
@@ -1015,6 +1031,8 @@ const danDialogVisible = ref(false)
 const danCraterModeAvailable = ref(false)
 const pendingCraterResult = ref<PendingCraterResult | null>(null)
 const pendingWaterDeploy = ref<PendingWaterDeploy | null>(null)
+const danDockEnabled = ref(false)
+const pendingExtractorDock = ref<ExtractorDockState | null>(null)
 const danSignalStrength = ref(0)
 const danTotalSamples = ref(0)
 const danWaterResult = ref<boolean | null>(null)
@@ -1397,6 +1415,7 @@ const marsSol = ref(getMissionSolForSite(siteId))
 watch(marsSol, (sol) => {
   const id = route.params.siteId as string
   if (id) setMissionSolForSite(id, sol)
+  siteHandle.value?.onNewSol(sol)
 })
 const mastPan = ref(0)
 const mastTilt = ref(0)
@@ -2171,6 +2190,10 @@ function createSiteControllerContext() {
     },
     trackModifiers,
     hasPerk,
+    deductRTGPower: (watts) => {
+      const rtg = siteRover.value?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
+      rtg?.deductPower?.(watts)
+    },
     tickPower,
     tickThermal,
     tickRemsWeather,
@@ -2293,6 +2316,8 @@ function createSiteControllerContext() {
       danCraterModeAvailable,
       pendingCraterResult,
       pendingWaterDeploy,
+      danDockEnabled,
+      pendingExtractorDock,
       internalTempC,
       ambientEffectiveC,
       heaterW,

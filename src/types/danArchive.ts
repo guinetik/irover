@@ -33,4 +33,8 @@ export interface ArchivedDANProspect {
   queuedForTransmission: boolean
   /** After UHF transmit — for future funding flow */
   transmitted: boolean
+  /** kg of fluid accumulated since deploy. Undefined until first dock. */
+  storedKg?: number
+  /** Sol at which storedKg was last calculated. Defaults to capturedSol on first dock. */
+  lastChargedSol?: number
 }

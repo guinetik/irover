@@ -36,6 +36,23 @@
           </div>
         </div>
 
+        <div class="prof-divider" />
+
+        <div class="prof-ext-header">EXTERNAL INTERFACES</div>
+        <div class="prof-ext-section">
+          <div class="prof-ext-row">
+            <span class="prof-ext-label">DAN DOCK</span>
+            <button
+              type="button"
+              class="prof-ext-toggle"
+              :class="danDockEnabled ? 'prof-ext-toggle--on' : 'prof-ext-toggle--off'"
+              @click="emit('update:danDockEnabled', !danDockEnabled)"
+            >
+              {{ danDockEnabled ? 'ON' : 'OFF' }}
+            </button>
+          </div>
+        </div>
+
         <div class="prof-footer">[0] or ROVER to close</div>
       </div>
     </Transition>
@@ -52,7 +69,14 @@ import {
   type ProfileModifiers,
 } from '@/composables/usePlayerProfile'
 
-defineProps<{ open: boolean }>()
+withDefaults(defineProps<{
+  open: boolean
+  danDockEnabled?: boolean
+}>(), {
+  danDockEnabled: false,
+})
+
+const emit = defineEmits<{ 'update:danDockEnabled': [value: boolean] }>()
 
 const { profile } = usePlayerProfile()
 
@@ -86,6 +110,9 @@ const MOD_LABELS: Record<keyof ProfileModifiers, string> = {
   heaterEfficiency: 'HEATER OUTPUT',
   chainDrillBonus: 'CHAIN DRILL BONUS',
   chainLootBonus: 'CHAIN LOOT BONUS',
+  danChargeRate: 'DAN CHARGE RATE',
+  danPowerCost: 'DAN PWR COST',
+  danStorageCapacity: 'DAN STORAGE',
 }
 
 // For "cost" and "draw" modifiers, lower is better (invert the color logic)
@@ -221,6 +248,53 @@ const modifierRows = computed(() => {
   font-size: 11px;
   color: rgba(196, 117, 58, 0.3);
   letter-spacing: 0.15em;
+}
+
+.prof-ext-header {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: rgba(196, 117, 58, 0.4);
+  padding: 4px 4px 2px;
+}
+
+.prof-ext-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.prof-ext-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 4px;
+}
+
+.prof-ext-label {
+  font-size: 10px;
+  color: rgba(196, 117, 58, 0.5);
+  letter-spacing: 0.08em;
+}
+
+.prof-ext-toggle {
+  background: none;
+  border: 1px solid rgba(196, 117, 58, 0.3);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-family: var(--font-ui);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.prof-ext-toggle--on {
+  color: #5dc9a5;
+  border-color: rgba(93, 201, 165, 0.5);
+}
+
+.prof-ext-toggle--off {
+  color: rgba(196, 117, 58, 0.4);
 }
 
 .prof-slide-enter-active,
