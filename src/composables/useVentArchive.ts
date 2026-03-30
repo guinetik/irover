@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { ArchivedVent } from '@/types/ventArchive'
+import type { ExtractorDockTarget } from '@/types/extractorDock'
 
 const STORAGE_KEY = 'mars-vent-archive-v1'
 
@@ -45,5 +46,36 @@ export function useVentArchive() {
     localStorage.removeItem(STORAGE_KEY)
   }
 
-  return { vents, archiveVent, getVentsForSite, hasActiveVent, resetForTests }
+  /**
+   * Returns all vents for the site shaped as ExtractorDockTarget.
+   * Vents do not carry DAN quality data; reservoirQuality defaults to 0.5.
+   */
+  function getExtractorTargetsForSite(siteId: string): ExtractorDockTarget[] {
+    return vents.value
+      .filter((v) => v.siteId === siteId)
+      .map((v) => ({
+        archiveId: v.archiveId,
+        archiveType: 'vent' as const,
+        fluidType: v.ventType as 'co2' | 'methane',
+        x: v.x,
+        z: v.z,
+        storedKg: v.storedKg ?? 0,
+        lastChargedSol: v.lastChargedSol ?? v.placedSol,
+        reservoirQuality: 0.5,
+      }))
+  }
+
+  function updateExtractorStorage(
+    archiveId: string,
+    storedKg: number,
+    lastChargedSol: number,
+  ): void {
+    const next = vents.value.map((v) =>
+      v.archiveId === archiveId ? { ...v, storedKg, lastChargedSol } : v,
+    )
+    vents.value = next
+    persist(next)
+  }
+
+  return { vents, archiveVent, getVentsForSite, hasActiveVent, resetForTests, getExtractorTargetsForSite, updateExtractorStorage }
 }

@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import type { ArchivedDANProspect } from '@/types/danArchive'
+import type { ExtractorDockTarget } from '@/types/extractorDock'
 import { approximateLatLonFromTangentOffset } from '@/lib/areography'
 import { findLatestPersistedDanDrillSite, type DanDrillSiteScene } from '@/lib/neutron/danDrillSitePersistence'
 
@@ -155,6 +156,47 @@ export function useDanArchive() {
     return findLatestPersistedDanDrillSite(prospects.value, siteId)
   }
 
+  /**
+   * Returns all water-confirmed, drill-placed prospects for the site
+   * shaped as ExtractorDockTarget for proximity docking.
+   */
+  function getWaterExtractorsForSite(siteId: string): ExtractorDockTarget[] {
+    return prospects.value
+      .filter(
+        (p) =>
+          p.siteId === siteId &&
+          p.waterConfirmed &&
+          p.drillSiteX !== undefined &&
+          p.drillSiteZ !== undefined,
+      )
+      .map((p) => ({
+        archiveId: p.archiveId,
+        archiveType: 'dan' as const,
+        fluidType: 'water' as const,
+        x: p.drillSiteX!,
+        z: p.drillSiteZ!,
+        storedKg: p.storedKg ?? 0,
+        lastChargedSol: p.lastChargedSol ?? p.capturedSol,
+        reservoirQuality: p.reservoirQuality,
+      }))
+  }
+
+  /**
+   * Persist updated storedKg and lastChargedSol for a water extractor entry.
+   * Called on dock and on each sol change.
+   */
+  function updateExtractorStorage(
+    archiveId: string,
+    storedKg: number,
+    lastChargedSol: number,
+  ): void {
+    const next = prospects.value.map((p) =>
+      p.archiveId === archiveId ? { ...p, storedKg, lastChargedSol } : p,
+    )
+    prospects.value = next
+    saveToStorage(next)
+  }
+
   return {
     prospects,
     pendingTransmission,
@@ -164,5 +206,7 @@ export function useDanArchive() {
     markTransmitted,
     updateDrillSite,
     getLatestPersistedDanDrillSiteForSite,
+    getWaterExtractorsForSite,
+    updateExtractorStorage,
   }
 }
