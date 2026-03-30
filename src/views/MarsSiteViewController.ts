@@ -1,5 +1,9 @@
-import type { ComputedRef, Ref } from 'vue'
+import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import { useVentArchive } from '@/composables/useVentArchive'
+import { useBuildables } from '@/composables/useBuildables'
+import type { BuildablePlacementPreview } from '@/three/buildables/BuildablePlacementPreview'
+import { BuildableRegistry } from '@/three/buildables/BuildableRegistry'
+import { getBuildableDef } from '@/types/buildables'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -338,6 +342,9 @@ export interface MarsSiteViewRefs {
   radEventAlertPending: Ref<boolean>
   radActiveEventId: Ref<string | null>
   radDecoding: Ref<boolean>
+  activePlacementPreview: ShallowRef<BuildablePlacementPreview | null>
+  /** The nearby shelter controller (if any) that the rover can interact with via F key. */
+  nearbyShelter: ShallowRef<import('@/three/buildables/BuildableController').BuildableController | null>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -528,9 +535,12 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     siteWeather,
     micEnabled,
     radLevel,
+    activePlacementPreview,
+    nearbyShelter,
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
+  const { activeControllers: buildableControllers, loadForSite, registerController, isShielded } = useBuildables()
   const missions = useMissions()
   const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
@@ -632,6 +642,21 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const terrainType: TerrainGeneratorType = GLB_TERRAIN_SITES.has(siteId) ? 'glb' : 'default'
     siteScene = new SiteScene(terrainType)
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
+
+    // --- Restore saved buildables from localStorage ---
+    if (siteScene) {
+      const savedBuildables = loadForSite(siteId)
+      for (const saved of savedBuildables) {
+        const def = getBuildableDef(saved.id)
+        if (!def) continue
+        if (!BuildableRegistry.has(def.controllerType)) continue
+        const Ctor = BuildableRegistry.resolve(def.controllerType)
+        const pos = new THREE.Vector3(saved.position.x, saved.position.y, saved.position.z)
+        const controller = new Ctor(def, pos, saved.rotationY, (x, z) => siteScene!.terrain.heightAt(x, z))
+        await controller.init(siteScene!.scene)
+        registerController(controller)
+      }
+    }
 
     // Adjust camera far plane to match terrain scale (default 800 → 1200, GLB 2000 → 3000)
     camera.far = siteScene.terrain.scale * 1.5
@@ -986,23 +1011,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         debugFlyCamera.update(effSceneDelta)
       }
       if (controller) {
-        const sw = siteWeather.value
-        const dustStormEvent: HazardEvent = {
-          source: 'dust-storm',
-          active: sw.dustStormPhase === 'active',
-          level: sw.dustStormLevel ?? 0,
-        }
-        // Lead Lined perk halves radiation hazard decay on instruments
-        const radHazardLevel = Math.ceil(radLevel.value * 5)
-        const radiationEvent: HazardEvent = {
-          source: 'radiation',
-          active: radLevel.value > 0.25,
-          level: hasPerk('lead-lined') ? Math.ceil(radHazardLevel * 0.5) : radHazardLevel,
-        }
-        const hazardEvents = [dustStormEvent, radiationEvent]
-        for (const inst of controller.instruments) {
-          inst.hazardDecayMultiplier = computeDecayMultiplier(hazardEvents, inst.tier)
-          inst.applyPassiveDecay(solDelta)
+        if (isShielded.value) {
+          for (const inst of controller.instruments) {
+            inst.hazardDecayMultiplier = 1
+            inst.applyPassiveDecay(solDelta)
+          }
+        } else {
+          const sw = siteWeather.value
+          const dustStormEvent: HazardEvent = {
+            source: 'dust-storm',
+            active: sw.dustStormPhase === 'active',
+            level: sw.dustStormLevel ?? 0,
+          }
+          // Lead Lined perk halves radiation hazard decay on instruments
+          const radHazardLevel = Math.ceil(radLevel.value * 5)
+          const radiationEvent: HazardEvent = {
+            source: 'radiation',
+            active: radLevel.value > 0.25,
+            level: hasPerk('lead-lined') ? Math.ceil(radHazardLevel * 0.5) : radHazardLevel,
+          }
+          const hazardEvents = [dustStormEvent, radiationEvent]
+          for (const inst of controller.instruments) {
+            inst.hazardDecayMultiplier = computeDecayMultiplier(hazardEvents, inst.tier)
+            inst.applyPassiveDecay(solDelta)
+          }
         }
       }
       if (controller) {
@@ -1037,6 +1069,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
           z: siteScene.rover.position.z,
         }
         roverSpawnCaptured = true
+      }
+
+      // --- Active buildable controllers ---
+      const roverPos = siteScene.rover?.position ?? new THREE.Vector3()
+      for (const b of buildableControllers.value) {
+        b.update(roverPos, effSceneDelta)
+      }
+      // Shelter proximity detection for "Press F" prompt
+      const nearby = isShielded.value
+        ? null
+        : buildableControllers.value.find(
+            (b) => !b.isRoverInside && b.features.includes('hazard-shield') && b.isNearby(roverPos),
+          ) ?? null
+      if (nearby !== nearbyShelter.value) nearbyShelter.value = nearby
+      // Hide dust particles when inside a shielded buildable
+      if (siteScene.dust) {
+        siteScene.dust.mesh.visible = !isShielded.value
+      }
+      // --- Placement preview follows rover heading ---
+      if (activePlacementPreview.value && controller && siteScene.rover) {
+        activePlacementPreview.value.updatePosition(
+          siteScene.rover.position,
+          controller.heading,
+        )
       }
 
       // --- POI dwell detection + mission objective checks ---
@@ -1344,21 +1400,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
-        dustPass.setWeather(sw.renderWindMs, sw.renderDustStormLevel)
+        if (isShielded.value) {
+          dustPass.setWeather(0, 0)
+          dustPass.setStormGlitch(0, 0)
+        } else {
+          dustPass.setWeather(sw.renderWindMs, sw.renderDustStormLevel)
 
-        // Storm-reactive glitch: derive composite intensity from live weather.
-        // glitchIntensity — 0 when idle/cooldown, stormLevel/5 when active.
-        // incomingFactor  — 1.0 during the FSM `incoming` warning phase.
-        const glitchIntensity = sw.dustStormPhase === 'active' && sw.dustStormLevel != null
-          ? sw.dustStormLevel / 5
-          : 0
-        const incomingFactor = sw.dustStormPhase === 'incoming' ? 1.0 : 0.0
-        dustPass.setStormGlitch(glitchIntensity, incomingFactor)
+          // Storm-reactive glitch: derive composite intensity from live weather.
+          // glitchIntensity — 0 when idle/cooldown, stormLevel/5 when active.
+          // incomingFactor  — 1.0 during the FSM `incoming` warning phase.
+          const glitchIntensity = sw.dustStormPhase === 'active' && sw.dustStormLevel != null
+            ? sw.dustStormLevel / 5
+            : 0
+          const incomingFactor = sw.dustStormPhase === 'incoming' ? 1.0 : 0.0
+          dustPass.setStormGlitch(glitchIntensity, incomingFactor)
+        }
       }
 
       if (radPass) {
         radPass.uniforms.uTime.value = simulationTime
-        radPass.setRadiation(radLevel.value)
+        if (isShielded.value) {
+          radPass.setRadiation(0)
+        } else {
+          radPass.setRadiation(radLevel.value)
+        }
         // Instrument cameras (MastCam/ChemCam) are sensitive CCDs —
         // the shader amplifies radiation 1.8× and adds CCD artifacts
         // (charge bleed streaks, vertical banding, saturation flashes).
@@ -1424,6 +1489,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
     tickHandlers.disposeAll()
     setInstrumentProvides({})
+
+    // Dispose active buildable controllers
+    for (const b of buildableControllers.value) {
+      b.dispose()
+    }
 
     controller?.dispose()
     if (siteScene) {

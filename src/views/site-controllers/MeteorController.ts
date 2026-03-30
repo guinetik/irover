@@ -36,6 +36,7 @@ export interface MeteorControllerOptions {
   shockWhiteoutActive: Ref<boolean>
   triggerMeteorAchievement?: (event: string) => void
   meteorSenseBonus?: number
+  getPlacedFootprints?: () => import('@/lib/buildableFootprint').FootprintEntry[]
 }
 
 export interface MeteorSceneComponents {
@@ -94,6 +95,7 @@ export function createMeteorController(
     meteorRisk,
     heightAt: (x, z) => heightAt?.(x, z) ?? 0,
     meteorSenseBonus: options.meteorSenseBonus ?? 0,
+    getPlacedFootprints: options.getPlacedFootprints ?? (() => []),
 
     onShowerScheduled(shower: MeteorShower) {
       const label = SEVERITY_LABELS[shower.severity]

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "buildables": [
+    {
+      "id": "shelter",
+      "label": "Shelter",
+      "desc": "Pressurized shelter. Protects the rover from all environmental hazards. Press F near entrance to enter.",
+      "image": "/inventory/shelter-kit.png",
+      "model": "/habitat.glb",
+      "category": "shelter",
+      "placement": "exterior",
+      "footprint": { "x": 20, "z": 20 },
+      "maxPlacementSlope": 0.3,
+      "scale": 5.0,
+      "interactionDistance": 12,
+      "controllerType": "HabitatController",
+      "inventoryItemId": "shelter-kit",
+      "features": ["hazard-shield"]
+    }
+  ]
+}

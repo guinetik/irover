@@ -125,6 +125,12 @@ export class RoverController {
   private cameraTarget = new THREE.Vector3()
   private initialized = false
 
+  /** When true, WASD driving is suppressed (e.g. rover is inside a shelter). */
+  private _drivingLocked = false
+
+  /** Saved orbit state before entering a shelter; restored on exit. */
+  private savedOrbit: { angle: number; pitch: number; distance: number } | null = null
+
   // Smoothed tilt quaternion
   private tiltQuat = new THREE.Quaternion()
 
@@ -570,7 +576,7 @@ export class RoverController {
     let steerSign = 0
     let moveDir = new THREE.Vector3()
 
-    if (!drivingDisengaged && !wheelsMobilityDead && !mobilitySuspended) {
+    if (!drivingDisengaged && !wheelsMobilityDead && !mobilitySuspended && !this._drivingLocked) {
       if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) {
         this.heading += this.config.turnSpeed * delta
       }
@@ -825,6 +831,43 @@ export class RoverController {
       } else {
         inst.passiveSubsystemEnabled = false
       }
+    }
+  }
+
+  // --- Shelter interaction ---
+
+  /** Lock the rover in place and teleport to shelter center. Returns previous position for reference. */
+  enterShelter(shelterCenter: THREE.Vector3): THREE.Vector3 {
+    const prevPos = this.rover.position.clone()
+    this.rover.position.set(shelterCenter.x, shelterCenter.y, shelterCenter.z)
+    this._drivingLocked = true
+    return prevPos
+  }
+
+  /** Unlock the rover and teleport to exit position. */
+  exitShelter(exitPosition: THREE.Vector3): void {
+    this.rover.position.set(exitPosition.x, exitPosition.y, exitPosition.z)
+    this._drivingLocked = false
+  }
+
+  /** Save current orbit state and switch to shelter interior camera. */
+  enterShelterCamera(pitch: number, distance: number): void {
+    this.savedOrbit = {
+      angle: this.orbitAngle,
+      pitch: this.orbitPitch,
+      distance: this.cameraDistance,
+    }
+    this.orbitPitch = pitch
+    this.cameraDistance = distance
+  }
+
+  /** Restore orbit state saved before entering the shelter. */
+  exitShelterCamera(): void {
+    if (this.savedOrbit) {
+      this.orbitAngle = this.savedOrbit.angle
+      this.orbitPitch = this.savedOrbit.pitch
+      this.cameraDistance = this.savedOrbit.distance
+      this.savedOrbit = null
     }
   }
 
