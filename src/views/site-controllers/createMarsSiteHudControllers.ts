@@ -72,6 +72,8 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
     danCraterModeAvailable,
     pendingCraterResult,
     pendingWaterDeploy,
+    danDockEnabled,
+    pendingExtractorDock,
   } = refs
 
   // Track which instruments have been used on each meteorite rock (by mesh UUID)
@@ -129,6 +131,8 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
       danCraterModeAvailable,
       pendingCraterResult,
       pendingWaterDeploy,
+      danDockEnabled,
+      pendingExtractorDock,
     },
     {
       siteId: ctx.siteId,
@@ -169,6 +173,23 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
       getVentsForSite: (siteId) => useVentArchive().getVentsForSite(siteId),
       consumeDanExtractor: () => useInventory().consumeItem('dan-extractor', 1).ok,
       updateDanProspectDrillSite: (x, y, z) => useDanArchive().updateDrillSite(ctx.siteId, x, y, z),
+      getAllExtractorsForSite: (sid) => {
+        const danTargets = useDanArchive().getWaterExtractorsForSite(sid)
+        const ventTargets = useVentArchive().getExtractorTargetsForSite(sid)
+        return [...danTargets, ...ventTargets]
+      },
+      updateExtractorStorage: (archiveId, archiveType, storedKg, lastChargedSol) => {
+        if (archiveType === 'dan') {
+          useDanArchive().updateExtractorStorage(archiveId, storedKg, lastChargedSol)
+        } else {
+          useVentArchive().updateExtractorStorage(archiveId, storedKg, lastChargedSol)
+        }
+      },
+      addInventoryItem: (itemId, qty) => useInventory().addComponent(itemId, qty),
+      playDockSound: () => {},  // placeholder — sfx.danDock not yet in audio manifest
+      setDanDockEnabled: (v: boolean) => { danDockEnabled.value = v },
+      getCurrentSol: () => ctx.refs.marsSol?.value ?? 0,
+      deductRTGPower: (watts) => ctx.deductRTGPower?.(watts),
     },
   )
 

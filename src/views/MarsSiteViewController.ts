@@ -289,6 +289,10 @@ export interface MarsSiteViewRefs {
   danCraterModeAvailable: Ref<boolean>
   pendingCraterResult: Ref<import('@/views/site-controllers/DanHudController').PendingCraterResult | null>
   pendingWaterDeploy: Ref<import('@/views/site-controllers/DanHudController').PendingWaterDeploy | null>
+  /** Whether the DAN Dock auto-docking toggle is on. */
+  danDockEnabled: Ref<boolean>
+  /** Non-null while the rover is docked to an extractor. */
+  pendingExtractorDock: Ref<import('@/types/extractorDock').ExtractorDockState | null>
   internalTempC: Ref<number>
   ambientEffectiveC: Ref<number>
   heaterW: Ref<number>
@@ -356,6 +360,8 @@ export interface MarsSiteViewContext {
   /** Accumulated reward track modifiers for speed breakdown display. */
   trackModifiers: Ref<Partial<ProfileModifiers>>
   hasPerk: (perkId: string) => boolean
+  /** Deducts watts from RTG currentPowerW (flat one-time cost, e.g. extractor docking). Wired by MartianSiteView. */
+  deductRTGPower?: (watts: number) => void
   tickPower: (deltaSeconds: number, input: PowerTickInput) => void
   tickThermal: (deltaSeconds: number, input: ThermalTickInput) => void
   tickRemsWeather: (input: RemsWeatherTickInput) => void

@@ -151,6 +151,14 @@ export class RTGController extends InstrumentController {
     this.durabilityPct = Math.max(0, this.durabilityPct - amount)
   }
 
+  /**
+   * One-time flat power deduction (e.g. extractor docking cost).
+   * Floors at zero — does not trigger overdrive or phase transitions.
+   */
+  deductPower(watts: number): void {
+    this.currentPowerW = Math.max(0, this.currentPowerW - watts)
+  }
+
   override update(delta: number): void {
     if (this.phase === 'idle') {
       this.currentPowerW = Math.min(this.totalPowerW, this.currentPowerW + this.chargeRateWPerHr * delta * 0.01)
