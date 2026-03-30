@@ -1,5 +1,7 @@
-import type { ComputedRef, Ref } from 'vue'
+import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import { useVentArchive } from '@/composables/useVentArchive'
+import { useBuildables } from '@/composables/useBuildables'
+import type { BuildablePlacementPreview } from '@/three/buildables/BuildablePlacementPreview'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -334,6 +336,7 @@ export interface MarsSiteViewRefs {
   radEventAlertPending: Ref<boolean>
   radActiveEventId: Ref<string | null>
   radDecoding: Ref<boolean>
+  activePlacementPreview: ShallowRef<BuildablePlacementPreview | null>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -516,9 +519,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     siteWeather,
     micEnabled,
     radLevel,
+    activePlacementPreview,
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
+  const { activeControllers: buildableControllers } = useBuildables()
   const missions = useMissions()
   const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
@@ -1027,6 +1032,19 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         roverSpawnCaptured = true
       }
 
+      // --- Active buildable controllers ---
+      const roverPos = siteScene.rover?.position ?? new THREE.Vector3()
+      for (const b of buildableControllers.value) {
+        b.update(roverPos, effSceneDelta)
+      }
+      // --- Placement preview follows rover heading ---
+      if (activePlacementPreview.value && controller && siteScene.rover) {
+        activePlacementPreview.value.updatePosition(
+          siteScene.rover.position,
+          controller.heading,
+        )
+      }
+
       // --- POI dwell detection + mission objective checks ---
       tickPoiArrivals(roverWorldX.value, roverWorldZ.value, missionPoisRef.value, effSceneDelta)
       // Update waypoint marker colors based on dwell progress
@@ -1412,6 +1430,11 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
     tickHandlers.disposeAll()
     setInstrumentProvides({})
+
+    // Dispose active buildable controllers
+    for (const b of buildableControllers.value) {
+      b.dispose()
+    }
 
     controller?.dispose()
     if (siteScene) {

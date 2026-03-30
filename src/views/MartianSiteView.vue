@@ -648,6 +648,11 @@ import MeteorShockOverlay from '@/components/MeteorShockOverlay.vue'
 import MeteorDeathOverlay from '@/components/MeteorDeathOverlay.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
 import { useInventoryActions } from '@/composables/useInventoryActions'
+import { getBuildableDef } from '@/types/buildables'
+import { useBuildables } from '@/composables/useBuildables'
+import { BuildablePlacementPreview } from '@/three/buildables/BuildablePlacementPreview'
+// Named import also triggers controller auto-registration side effect
+import { BuildableRegistry } from '@/three/buildables/BuildableRegistry'
 import { useSamExperiments } from '@/composables/useSamExperiments'
 import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
 import { useSamArchive } from '@/composables/useSamArchive'
@@ -800,6 +805,8 @@ const { unlocked: dsnUnlocked, unreadCount: dsnUnreadCount } = useDSNArchive()
 const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
 const siteRover = computed(() => siteHandle.value?.rover ?? null)
+const activePlacementPreview = shallowRef<BuildablePlacementPreview | null>(null)
+const pendingPlacementItemId = ref<string | null>(null)
 const mapCanvasMars = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasMars ?? null)
 const mapCanvasHypso = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasHypso ?? null)
 const terrainScale = computed(() => siteHandle.value?.siteScene?.terrain.scale ?? 1000)
@@ -820,11 +827,61 @@ function toggleInventoryFromToolbar(): void {
   inventoryOpen.value = !inventoryOpen.value
 }
 
+registerAction('place-buildable', (buildableId: string) => {
+  const def = getBuildableDef(buildableId)
+  if (!def) return
+  const scene = siteHandle.value?.siteScene
+  if (!scene) return
+  const preview = new BuildablePlacementPreview(
+    def,
+    (x, z) => scene.terrain.heightAt(x, z),
+    (x, z) => scene.terrain.slopeAt(x, z),
+  )
+  preview.init(scene.scene).then(() => {
+    activePlacementPreview.value = preview
+  })
+})
+
 function handleInventoryAction(itemId: string, actionString: string): void {
+  pendingPlacementItemId.value = itemId
   const invoked = invokeAction(actionString)
-  if (invoked) {
-    inventoryOpen.value = false
+  if (!invoked) {
+    pendingPlacementItemId.value = null
   }
+  inventoryOpen.value = false
+}
+
+function confirmPlacement(): void {
+  const preview = activePlacementPreview.value
+  const scene = siteHandle.value?.siteScene
+  if (!preview || !preview.isValid || !scene) return
+
+  const def = preview.def
+  const pos = preview.position.clone()
+  const rot = preview.rotationY
+
+  const heightAt = (x: number, z: number) => scene.terrain.heightAt(x, z)
+  const Ctor = BuildableRegistry.resolve(def.controllerType)
+  const ctrl = new Ctor(def, pos, rot, heightAt)
+  ctrl.init(scene.scene)
+
+  registerBuildableController(ctrl)
+  savePlacement({ id: def.id, siteId, position: { x: pos.x, y: pos.y, z: pos.z }, rotationY: rot })
+
+  if (pendingPlacementItemId.value) {
+    const { consumeItem } = useInventory()
+    consumeItem(pendingPlacementItemId.value, 1)
+    pendingPlacementItemId.value = null
+  }
+
+  preview.dispose()
+  activePlacementPreview.value = null
+}
+
+function cancelPlacement(): void {
+  activePlacementPreview.value?.dispose()
+  activePlacementPreview.value = null
+  pendingPlacementItemId.value = null
 }
 
 function toggleProfilePanel(): void {
@@ -1422,7 +1479,8 @@ const {
   addComponentsBatch,
   removeStack: removeInventoryStack,
 } = useInventory()
-const { invokeAction } = useInventoryActions()
+const { invokeAction, registerAction } = useInventoryActions()
+const { savePlacement, registerController: registerBuildableController } = useBuildables()
 const gameClock = useMarsGameClock()
 const { HEATER_MISSION_DURATIONS } = gameClock
 const {
@@ -2141,6 +2199,19 @@ function onRadAcknowledge(): void {
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {
+  if (activePlacementPreview.value) {
+    if (e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault()
+      confirmPlacement()
+      return
+    }
+    if (e.code === 'Escape') {
+      e.preventDefault()
+      cancelPlacement()
+      return
+    }
+    return // Block all other keys while in placement mode
+  }
   if (e.code === 'Tab') {
     if (e.repeat) return
     e.preventDefault()
@@ -2341,6 +2412,7 @@ function createSiteControllerContext() {
       radEventAlertPending,
       radActiveEventId,
       radDecoding,
+      activePlacementPreview,
     },
   })
 }
