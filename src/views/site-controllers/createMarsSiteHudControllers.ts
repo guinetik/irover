@@ -20,6 +20,8 @@ import { createRadHudController } from './RadHudController'
 import { createMeteorController } from './MeteorController'
 import { useAudio } from '@/audio/useAudio'
 import { useMeteorArchive } from '@/composables/useMeteorArchive'
+import { useBuildables } from '@/composables/useBuildables'
+import type { FootprintEntry } from '@/lib/buildableFootprint'
 import * as THREE from 'three'
 
 /**
@@ -108,6 +110,15 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
     onGameOver: ctx.onMeteorGameOver,
     triggerMeteorAchievement: ctx.triggerMeteorAchievement,
     meteorSenseBonus: ctx.hasPerk('meteor-sense') ? 5 : 0,
+    getPlacedFootprints: (): FootprintEntry[] => {
+      const { activeControllers } = useBuildables()
+      return activeControllers.value.map(c => ({
+        position: { x: c.position.x, z: c.position.z },
+        footprint: c.footprint,
+        scale: c.def.scale,
+        rotationY: c.rotationY,
+      }))
+    },
   })
 
   const danHandler = createDanHudController(

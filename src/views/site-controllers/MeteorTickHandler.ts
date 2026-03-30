@@ -14,6 +14,7 @@ import {
   FALL_DURATION,
 } from '@/lib/meteor'
 import { TERRAIN_SCALE } from '@/three/terrain/terrainConstants'
+import { isInsideBuildableFootprint, type FootprintEntry } from '@/lib/buildableFootprint'
 
 /** Markers appear within this window so the player sees the full shower scope at once. */
 const MARKER_STAGGER_SEC = 2
@@ -24,6 +25,7 @@ export interface MeteorTickCallbacks {
   meteorRisk: number
   heightAt: (x: number, z: number) => number
   meteorSenseBonus: number
+  getPlacedFootprints: () => FootprintEntry[]
   onShowerScheduled: (shower: MeteorShower) => void
   onFallMarkerShow: (fall: MeteorFall) => void
   onFallStart: (fall: MeteorFall) => void
@@ -35,12 +37,15 @@ function generateFalls(
   shower: MeteorShower,
   heightAt: (x: number, z: number) => number,
   meteorSenseBonus: number,
+  getPlacedFootprints: () => FootprintEntry[],
 ): MeteorFall[] {
   const half = TERRAIN_SCALE / 2
+  const footprints = getPlacedFootprints()
   const falls: MeteorFall[] = []
   for (let i = 0; i < shower.meteorCount; i++) {
     const targetX = (Math.random() - 0.5) * half * 1.6
     const targetZ = (Math.random() - 0.5) * half * 1.6
+    if (isInsideBuildableFootprint(targetX, targetZ, footprints)) continue
     const groundY = heightAt(targetX, targetZ)
     if (Number.isNaN(groundY)) continue
 
@@ -92,7 +97,7 @@ export function createMeteorTickHandler(
       triggerAtSolFraction: triggerFraction,
     }
 
-    pendingFalls = generateFalls(shower, heightAt, callbacks.meteorSenseBonus)
+    pendingFalls = generateFalls(shower, heightAt, callbacks.meteorSenseBonus, callbacks.getPlacedFootprints)
     scheduledShower = { ...shower, triggered: false, warningFired: false }
     callbacks.onShowerScheduled(shower)
   }
@@ -194,7 +199,7 @@ export function createMeteorTickHandler(
       triggerAtSolFraction: 0,
     }
 
-    pendingFalls = generateFalls(shower, heightAt, callbacks.meteorSenseBonus)
+    pendingFalls = generateFalls(shower, heightAt, callbacks.meteorSenseBonus, callbacks.getPlacedFootprints)
     showerElapsed = 0
     allFallsCompleted = false
     scheduledShower = { ...shower, triggered: true, warningFired: true }

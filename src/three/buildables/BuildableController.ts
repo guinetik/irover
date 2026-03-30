@@ -10,6 +10,7 @@ export interface BuildableController {
   readonly id: string
   readonly def: BuildableDef
   readonly position: THREE.Vector3
+  readonly rotationY: number
   readonly footprint: BuildableFootprint
   readonly features: string[]
   readonly isRoverInside: boolean

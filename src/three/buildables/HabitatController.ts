@@ -16,7 +16,7 @@ export class HabitatController implements BuildableController {
   private doorOpen = 0
   private scene: THREE.Scene | null = null
   private heightAt: (x: number, z: number) => number
-  private rotationY: number
+  readonly rotationY: number
   private _isRoverInside = false
 
   constructor(

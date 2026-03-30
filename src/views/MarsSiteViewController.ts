@@ -525,7 +525,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
-  const { activeControllers: buildableControllers, loadForSite, registerController } = useBuildables()
+  const { activeControllers: buildableControllers, loadForSite, registerController, isShielded } = useBuildables()
   const missions = useMissions()
   const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
@@ -996,23 +996,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
         debugFlyCamera.update(effSceneDelta)
       }
       if (controller) {
-        const sw = siteWeather.value
-        const dustStormEvent: HazardEvent = {
-          source: 'dust-storm',
-          active: sw.dustStormPhase === 'active',
-          level: sw.dustStormLevel ?? 0,
-        }
-        // Lead Lined perk halves radiation hazard decay on instruments
-        const radHazardLevel = Math.ceil(radLevel.value * 5)
-        const radiationEvent: HazardEvent = {
-          source: 'radiation',
-          active: radLevel.value > 0.25,
-          level: hasPerk('lead-lined') ? Math.ceil(radHazardLevel * 0.5) : radHazardLevel,
-        }
-        const hazardEvents = [dustStormEvent, radiationEvent]
-        for (const inst of controller.instruments) {
-          inst.hazardDecayMultiplier = computeDecayMultiplier(hazardEvents, inst.tier)
-          inst.applyPassiveDecay(solDelta)
+        if (isShielded.value) {
+          for (const inst of controller.instruments) {
+            inst.hazardDecayMultiplier = 1
+            inst.applyPassiveDecay(solDelta)
+          }
+        } else {
+          const sw = siteWeather.value
+          const dustStormEvent: HazardEvent = {
+            source: 'dust-storm',
+            active: sw.dustStormPhase === 'active',
+            level: sw.dustStormLevel ?? 0,
+          }
+          // Lead Lined perk halves radiation hazard decay on instruments
+          const radHazardLevel = Math.ceil(radLevel.value * 5)
+          const radiationEvent: HazardEvent = {
+            source: 'radiation',
+            active: radLevel.value > 0.25,
+            level: hasPerk('lead-lined') ? Math.ceil(radHazardLevel * 0.5) : radHazardLevel,
+          }
+          const hazardEvents = [dustStormEvent, radiationEvent]
+          for (const inst of controller.instruments) {
+            inst.hazardDecayMultiplier = computeDecayMultiplier(hazardEvents, inst.tier)
+            inst.applyPassiveDecay(solDelta)
+          }
         }
       }
       if (controller) {
@@ -1053,6 +1060,10 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       const roverPos = siteScene.rover?.position ?? new THREE.Vector3()
       for (const b of buildableControllers.value) {
         b.update(roverPos, effSceneDelta)
+      }
+      // Hide dust particles when inside a shielded buildable
+      if (siteScene.dust) {
+        siteScene.dust.mesh.visible = !isShielded.value
       }
       // --- Placement preview follows rover heading ---
       if (activePlacementPreview.value && controller && siteScene.rover) {
@@ -1367,21 +1378,30 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       if (dustPass) {
         dustPass.uniforms.uTime.value = simulationTime
-        dustPass.setWeather(sw.renderWindMs, sw.renderDustStormLevel)
+        if (isShielded.value) {
+          dustPass.setWeather(0, 0)
+          dustPass.setStormGlitch(0, 0)
+        } else {
+          dustPass.setWeather(sw.renderWindMs, sw.renderDustStormLevel)
 
-        // Storm-reactive glitch: derive composite intensity from live weather.
-        // glitchIntensity — 0 when idle/cooldown, stormLevel/5 when active.
-        // incomingFactor  — 1.0 during the FSM `incoming` warning phase.
-        const glitchIntensity = sw.dustStormPhase === 'active' && sw.dustStormLevel != null
-          ? sw.dustStormLevel / 5
-          : 0
-        const incomingFactor = sw.dustStormPhase === 'incoming' ? 1.0 : 0.0
-        dustPass.setStormGlitch(glitchIntensity, incomingFactor)
+          // Storm-reactive glitch: derive composite intensity from live weather.
+          // glitchIntensity — 0 when idle/cooldown, stormLevel/5 when active.
+          // incomingFactor  — 1.0 during the FSM `incoming` warning phase.
+          const glitchIntensity = sw.dustStormPhase === 'active' && sw.dustStormLevel != null
+            ? sw.dustStormLevel / 5
+            : 0
+          const incomingFactor = sw.dustStormPhase === 'incoming' ? 1.0 : 0.0
+          dustPass.setStormGlitch(glitchIntensity, incomingFactor)
+        }
       }
 
       if (radPass) {
         radPass.uniforms.uTime.value = simulationTime
-        radPass.setRadiation(radLevel.value)
+        if (isShielded.value) {
+          radPass.setRadiation(0)
+        } else {
+          radPass.setRadiation(radLevel.value)
+        }
         // Instrument cameras (MastCam/ChemCam) are sensitive CCDs —
         // the shader amplifies radiation 1.8× and adds CCD artifacts
         // (charge bleed streaks, vertical banding, saturation flashes).
