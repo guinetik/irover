@@ -19,14 +19,32 @@ export const CRATER_DISCOVERIES: CraterDiscovery[] = [
 ]
 
 /**
- * Roll a crater discovery. Pass a forced roll value (0-100) for testing; omit for random.
+ * Roll a crater discovery.
+ * @param rareBoost — shifts weight from Common toward Rare (0 = no change, 0.2 = +20% rare bias).
+ *   Mechanically: Common weight is reduced by `rareBoost * commonWeight`, and that weight
+ *   is redistributed equally to Rare entries. Clamped so Common never goes below 10.
+ * @param forcedRoll — forced roll value (0-100) for testing; omit for random.
  */
-export function rollCraterDiscovery(forcedRoll?: number): CraterDiscovery {
-  const roll = forcedRoll ?? Math.random() * 100
+export function rollCraterDiscovery(rareBoost = 0, forcedRoll?: number): CraterDiscovery {
+  // Build adjusted weights
+  const adjusted = CRATER_DISCOVERIES.map(d => ({ ...d }))
+  if (rareBoost > 0) {
+    const common = adjusted.find(d => d.rarity === 'Common')
+    const rares = adjusted.filter(d => d.rarity === 'Rare')
+    if (common && rares.length > 0) {
+      const shift = Math.min(common.weight - 10, common.weight * rareBoost)
+      common.weight -= shift
+      const perRare = shift / rares.length
+      for (const r of rares) r.weight += perRare
+    }
+  }
+
+  const totalWeight = adjusted.reduce((sum, d) => sum + d.weight, 0)
+  const roll = forcedRoll ?? Math.random() * totalWeight
   let cumulative = 0
-  for (const d of CRATER_DISCOVERIES) {
+  for (const d of adjusted) {
     cumulative += d.weight
     if (roll < cumulative) return d
   }
-  return CRATER_DISCOVERIES[CRATER_DISCOVERIES.length - 1]
+  return adjusted[adjusted.length - 1]
 }

@@ -579,7 +579,7 @@ export function createDanHudController(
       syncDanProspectingPlayback(true)
 
       if (danProspectProgress.value >= 1) {
-        const discovery = rollCraterDiscovery()
+        const discovery = rollCraterDiscovery(danInst.scanRadiusMod - 1)
         const wantVent = discovery.ventType !== null && !hasActiveVent(discovery.ventType)
 
         // Store pending result — Vue shows the result dialog, user must acknowledge

@@ -38,18 +38,28 @@ describe('rollCraterDiscovery', () => {
     }
   })
 
-  it('returns the discovery matching a forced roll value', () => {
+  it('returns the discovery matching a forced roll value (no rare boost)', () => {
     // DC01 weight=40, cumulative 0-40
-    expect(rollCraterDiscovery(0).id).toBe('DC01')
-    expect(rollCraterDiscovery(39.9).id).toBe('DC01')
+    expect(rollCraterDiscovery(0, 0).id).toBe('DC01')
+    expect(rollCraterDiscovery(0, 39.9).id).toBe('DC01')
     // DC02 weight=15, cumulative 40-55
-    expect(rollCraterDiscovery(40).id).toBe('DC02')
+    expect(rollCraterDiscovery(0, 40).id).toBe('DC02')
     // DC03 weight=15, cumulative 55-70
-    expect(rollCraterDiscovery(55).id).toBe('DC03')
+    expect(rollCraterDiscovery(0, 55).id).toBe('DC03')
     // DC04 weight=15, cumulative 70-85
-    expect(rollCraterDiscovery(70).id).toBe('DC04')
+    expect(rollCraterDiscovery(0, 70).id).toBe('DC04')
     // DC05 weight=15, cumulative 85-100
-    expect(rollCraterDiscovery(85).id).toBe('DC05')
-    expect(rollCraterDiscovery(99.9).id).toBe('DC05')
+    expect(rollCraterDiscovery(0, 85).id).toBe('DC05')
+    expect(rollCraterDiscovery(0, 99.9).id).toBe('DC05')
+  })
+
+  it('rare boost shifts weight from Common to Rare', () => {
+    // At rareBoost=0.5, Common (DC01) loses 50% of its weight (40*0.5=20) → weight 20
+    // That 20 is given to Rare (DC04) → weight 35
+    // New weights: 20, 15, 15, 35, 15 = 100
+    // DC04 now spans cumulative 50-85 instead of 70-85
+    expect(rollCraterDiscovery(0.5, 50).id).toBe('DC04')
+    // DC01 still reachable at low rolls
+    expect(rollCraterDiscovery(0.5, 0).id).toBe('DC01')
   })
 })
