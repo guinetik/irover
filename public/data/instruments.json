@@ -186,7 +186,7 @@
           }
         ]
       },
-      "hint": "Drive within 1.5m of a rock. WASD aims the arm. Hold [E] to place sensor — 3s countdown, then minigame. Trace elements on drill if analyzed.",
+      "hint": "Drive within 1.5m of a rock. WASD aims the arm. Hold [E] to place sensor — 3s countdown, then detect surface elements. Trace elements on drill if analyzed.",
       "stats": [
         { "key": "analysisSpeed", "label": "ANALYSIS SPEED" },
         { "key": "instrumentAccuracy", "label": "ACCURACY" }
