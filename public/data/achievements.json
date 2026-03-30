@@ -420,6 +420,16 @@
       "modifierValue": 0.05
     },
     {
+      "sp": 130,
+      "id": "track-hardened-treads",
+      "icon": "🛞",
+      "title": "HARDENED TREADS",
+      "description": "Wheel tread compound adapted to regolith abrasion. Treads degrade slower.",
+      "type": "REWARD TRACK",
+      "modifierKey": "instrumentDurability",
+      "modifierValue": 0.10
+    },
+    {
       "sp": 160,
       "id": "track-power-nap",
       "icon": "🔋",

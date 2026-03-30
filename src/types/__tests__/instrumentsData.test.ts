@@ -22,6 +22,7 @@ const VALID_MODIFIER_KEYS = [
   'buildSpeed',
   'structureDurability',
   'radiationTolerance',
+  'instrumentDurability',
   'heaterEfficiency',
   'chainDrillBonus',
   'chainLootBonus',

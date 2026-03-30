@@ -17,6 +17,9 @@ export function createRoverWheelsTickHandler(controller: InstrumentController): 
       const durability = Math.max(0.1, wheels.durabilityFactor)
       const stormPenalty = env.stormLevel > 0 ? 1.0 - (env.stormLevel * STORM_SPEED_LOSS_PER_LEVEL) : 1.0
       wheels.movementSpeedMod = profileMod * durability * Math.max(0, stormPenalty)
+
+      // Per-instrument durability buff — stacks on top of system-wide structureDurability
+      wheels.durabilityMod *= mod('instrumentDurability')
     },
     dispose(): void {},
   }

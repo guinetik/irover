@@ -82,6 +82,7 @@ const MOD_LABELS: Record<keyof ProfileModifiers, string> = {
   buildSpeed: 'BUILD SPD',
   structureDurability: 'STRUCT HP',
   radiationTolerance: 'RADIATION TOLERANCE',
+  instrumentDurability: 'INSTRUMENT DURABILITY',
   heaterEfficiency: 'HEATER OUTPUT',
   chainDrillBonus: 'CHAIN DRILL BONUS',
   chainLootBonus: 'CHAIN LOOT BONUS',

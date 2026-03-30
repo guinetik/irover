@@ -85,6 +85,8 @@ export abstract class InstrumentController {
   readonly repairComponentId: string = 'engineering-components'
   tier: InstrumentTier = 'standard'
   hazardDecayMultiplier = 1.0
+  /** Structure durability modifier from player profile (1.0 = baseline, >1 = slower decay). Set each frame by InstrumentTickController. */
+  durabilityMod = 1.0
 
   // ── Upgrade system ──────────────────────────────────────────────────
   upgradeLevel = 0
@@ -123,7 +125,7 @@ export abstract class InstrumentController {
     if (this.durabilityPct <= stormFloor) return
     this.durabilityPct = Math.max(
       stormFloor,
-      this.durabilityPct - this.passiveDecayPerSol * this.hazardDecayMultiplier * solDelta,
+      this.durabilityPct - this.passiveDecayPerSol * this.hazardDecayMultiplier * solDelta / this.durabilityMod,
     )
   }
 

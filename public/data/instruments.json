@@ -588,7 +588,8 @@
       },
       "hint": "Select with [B] (slot 13). WASD to drive. REPAIR restores traction hardware. UPGRADE track reserved for drive efficiency / tread packages.",
       "stats": [
-        { "key": "movementSpeed", "label": "DRIVE SPEED" }
+        { "key": "movementSpeed", "label": "DRIVE SPEED" },
+        { "key": "instrumentDurability", "label": "TREAD DURABILITY" }
       ]
     },
     {

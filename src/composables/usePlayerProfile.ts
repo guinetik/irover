@@ -20,6 +20,8 @@ export interface ProfileModifiers {
   buildSpeed: number
   structureDurability: number
   radiationTolerance: number
+  /** Per-instrument durability — reduces decay rate for instruments that opt in via their tick handler. */
+  instrumentDurability: number
   /** Heater thermal efficiency — scales warming rate per watt. 0 = baseline, +0.1 = 10% more effective. */
   heaterEfficiency: number
   /** Drill speed multiplier on MastCam-tagged rocks. 0 = no bonus, 0.4 = 40% faster (base). */
@@ -44,6 +46,7 @@ const ZERO_MODIFIERS: ProfileModifiers = {
   buildSpeed: 0,
   structureDurability: 0,
   radiationTolerance: 0,
+  instrumentDurability: 0,
   heaterEfficiency: 0,
   chainDrillBonus: 0,
   chainLootBonus: 0,
