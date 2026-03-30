@@ -7,6 +7,9 @@ import {
 import type { MissionCatalog } from '@/types/missions'
 import { resetForTests as resetRadArchive, useRadArchive } from '../useRadArchive'
 import { resetForTests as resetChemCamArchive, useChemCamArchive } from '../useChemCamArchive'
+import { useInventory, resetInventoryForTests } from '../useInventory'
+import { tickPoiArrivals, resetPoiArrivalsForTests } from '../usePoiArrival'
+import type { SiteMissionPoi } from '../useSiteMissionPois'
 
 // --- Minimal localStorage mock for Node environment ---
 const store: Record<string, string> = {}
@@ -391,5 +394,138 @@ describe('transmit checker — RAD counting', () => {
 
     m.checkAllObjectives(0, 0, [], 1)
     expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+  })
+})
+
+describe('gather checker — live reactivity', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    resetInventoryForTests()
+    const { resetForTests } = useMissions()
+    resetForTests()
+  })
+
+  it('completes gather objective when addComponent adds item after mission accepted', () => {
+    const m = useMissions()
+    m.wireArchiveCheckers()
+
+    const catalog: MissionCatalog = {
+      version: 1,
+      missions: [{
+        id: 'gather-test',
+        name: 'Gather Test',
+        patron: null,
+        description: 'test',
+        briefing: 'test',
+        reward: { sp: 10 },
+        unlocks: [],
+        chain: null,
+        objectives: [
+          { id: 'g1', type: 'gather', label: 'Collect DAN extractor', params: { itemId: 'dan-extractor', quantity: 1 }, sequential: false },
+        ],
+      }],
+    }
+    m.loadCatalog(catalog)
+    m.accept('gather-test', 1)
+
+    // Before adding item — should be incomplete
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+
+    // Add item via useInventory (simulates orbital drop collection)
+    const { addComponent } = useInventory()
+    const result = addComponent('dan-extractor', 1)
+    expect(result.ok).toBe(true)
+
+    // After adding item — should complete on next check
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+  })
+
+  it('completes rock-sample gather objective when addRockSample adds a rock', () => {
+    const m = useMissions()
+    m.wireArchiveCheckers()
+
+    const catalog: MissionCatalog = {
+      version: 1,
+      missions: [{
+        id: 'drill-test',
+        name: 'Drill Test',
+        patron: null,
+        description: 'test',
+        briefing: 'test',
+        reward: { sp: 10 },
+        unlocks: [],
+        chain: null,
+        objectives: [
+          { id: 'd1', type: 'gather', label: 'Drilled sample', params: { itemId: 'rock-sample', quantity: 1 }, sequential: false },
+        ],
+      }],
+    }
+    m.loadCatalog(catalog)
+    m.accept('drill-test', 1)
+
+    // Before drilling — should be incomplete
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+
+    // Add rock via useInventory (simulates drill collection)
+    const { addRockSample } = useInventory()
+    const result = addRockSample('basalt', 'test-uuid-1')
+    expect(result.ok).toBe(true)
+
+    // After drilling — should complete on next check
+    m.checkAllObjectives(0, 0, [], 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+  })
+
+  it('completes sequential gather after go-to arrival (full mission flow)', () => {
+    const m = useMissions()
+    m.wireArchiveCheckers()
+    resetPoiArrivalsForTests()
+
+    const catalog: MissionCatalog = {
+      version: 1,
+      missions: [{
+        id: 'seq-gather-test',
+        name: 'Sequential Gather',
+        patron: null,
+        description: 'test',
+        briefing: 'test',
+        reward: { sp: 10 },
+        unlocks: [],
+        chain: null,
+        objectives: [
+          { id: 'go-1', type: 'go-to', label: 'Go to cache', params: { poiId: 'test-cache' }, sequential: true },
+          { id: 'g-1', type: 'gather', label: 'Collect extractor', params: { itemId: 'dan-extractor', quantity: 1 }, sequential: true },
+        ],
+      }],
+    }
+    m.loadCatalog(catalog)
+    m.accept('seq-gather-test', 1)
+
+    // POI for the go-to objective
+    const pois: SiteMissionPoi[] = [{ id: 'test-cache', label: 'Cache', x: 5, z: 5, color: '#fff' }]
+
+    // Frame 1: rover far from POI — nothing completes
+    m.checkAllObjectives(0, 0, pois, 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(false)
+    expect(m.activeMissions.value[0].objectives[1].done).toBe(false)
+
+    // Simulate rover arriving at POI (dwell for 3 seconds to exceed DWELL_SECONDS=2)
+    tickPoiArrivals(5, 5, pois, 3)
+
+    // Frame 2: go-to should complete, gather still blocked (no item yet)
+    m.checkAllObjectives(5, 5, pois, 1)
+    expect(m.activeMissions.value[0].objectives[0].done).toBe(true)
+    expect(m.activeMissions.value[0].objectives[1].done).toBe(false)
+
+    // Player opens orbital drop — item added to inventory
+    const { addComponent } = useInventory()
+    addComponent('dan-extractor', 1)
+
+    // Frame 3: gather should now complete
+    m.checkAllObjectives(5, 5, pois, 1)
+    expect(m.activeMissions.value[0].objectives[1].done).toBe(true)
   })
 })

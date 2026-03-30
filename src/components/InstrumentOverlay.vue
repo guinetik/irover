@@ -587,9 +587,9 @@ const instrument = computed(() => {
     health: `${Math.round(props.durabilityPct ?? 100)}%`,
     hint: def.hint,
     temp: def.tempWarning ?? '',
-    upgName: def.upgrade.name,
-    upgDesc: def.upgrade.desc,
-    upgReq: def.upgrade.req,
+    upgName: def.upgrade?.name,
+    upgDesc: def.upgrade?.desc,
+    upgReq: def.upgrade?.req,
   }
   const wh = props.wheelsHud
   if (props.activeSlot === WHLS_SLOT && wh) {

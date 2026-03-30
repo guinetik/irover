@@ -167,18 +167,18 @@ const tipRtg = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 10px;
-  min-width: 92px;
-  width: max-content;
-  max-width: 120px;
+  gap: 2px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 4px;
   background: rgba(10, 5, 2, 0.8);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(196, 117, 58, 0.2);
   border-radius: 8px;
   font-family: var(--font-ui);
-  font-size: 11px;
-  letter-spacing: 0.1em;
+  font-size: 9px;
+  letter-spacing: 0.06em;
   pointer-events: none;
   transition: border-color 0.5s ease;
 }
@@ -188,14 +188,14 @@ const tipRtg = computed(() => {
 }
 
 .pp-label {
-  font-size: 11px;
+  font-size: 9px;
   color: #6b4a30;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.12em;
 }
 
 .pp-bar-track {
-  width: 26px;
-  height: 80px;
+  width: 22px;
+  height: 72px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(196, 117, 58, 0.2);
   border-radius: 3px;
@@ -243,14 +243,15 @@ const tipRtg = computed(() => {
   align-items: baseline;
   justify-content: center;
   gap: 0;
+  max-width: 100%;
   white-space: nowrap;
-  letter-spacing: normal;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .pp-wh-main {
   font-family: var(--font-instrument);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
   color: #e8a060;
   font-variant-numeric: tabular-nums;
@@ -258,7 +259,7 @@ const tipRtg = computed(() => {
 
 .pp-wh-cap {
   font-family: var(--font-instrument);
-  font-size: 11px;
+  font-size: 9px;
   color: #6b4a30;
   font-variant-numeric: tabular-nums;
 }
@@ -272,11 +273,13 @@ const tipRtg = computed(() => {
 
 .pp-net {
   font-family: var(--font-instrument);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
   font-variant-numeric: tabular-nums;
-  letter-spacing: normal;
+  letter-spacing: -0.02em;
   white-space: nowrap;
+  text-align: center;
+  width: 100%;
   transition: color 0.3s ease;
 }
 
@@ -289,9 +292,9 @@ const tipRtg = computed(() => {
 }
 
 .pp-detail {
-  font-size: 12px;
+  font-size: 9px;
   color: #6b4a30;
-  letter-spacing: normal;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   text-align: center;
   width: 100%;
@@ -330,17 +333,17 @@ const tipRtg = computed(() => {
 }
 
 .pp-source-icons {
-  font-size: 12px;
-  letter-spacing: 2px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
   opacity: 0.9;
   white-space: nowrap;
   text-align: center;
 }
 
 .pp-source-label {
-  font-size: 12px;
+  font-size: 9px;
   color: #6b4a30;
-  letter-spacing: normal;
+  letter-spacing: -0.02em;
   white-space: nowrap;
   text-align: center;
 }
@@ -352,13 +355,16 @@ const tipRtg = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 8px;
-  margin: 4px 0;
+  gap: 4px;
+  padding: 8px 2px;
+  margin: 2px 0 0;
   width: 100%;
+  box-sizing: border-box;
   font-family: var(--font-ui);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-align: center;
   color: #e8a060;
   background: rgba(196, 117, 58, 0.1);
   border: 1px solid rgba(196, 117, 58, 0.35);

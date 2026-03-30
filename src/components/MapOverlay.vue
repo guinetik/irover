@@ -1,13 +1,20 @@
 <template>
   <Transition name="map-fade">
-    <div v-if="open" class="map-overlay" @click.self="$emit('close')" @keydown.escape="$emit('close')">
-      <div class="map-overlay__panel">
+    <div v-if="open" class="map-minimap-root">
+      <div class="map-overlay__panel" role="dialog" aria-label="Terrain minimap">
         <div class="map-overlay__header font-instrument">
-          <span class="map-overlay__title">{{ siteName }} — TERRAIN MAP</span>
-          <button class="map-overlay__mode-btn" @click="toggleMode">
-            {{ mode === 'mars' ? 'HYPSOMETRIC' : 'MARS COLOR' }}
-          </button>
-          <button class="map-overlay__close-btn" @click="$emit('close')">ESC</button>
+          <span class="map-overlay__title" :title="`${siteName} — terrain`">{{ siteName }}</span>
+          <div class="map-overlay__header-actions">
+            <button
+              type="button"
+              class="map-overlay__mode-btn"
+              :title="mode === 'mars' ? 'Hypsometric ramp' : 'Mars color ramp'"
+              @click="toggleMode"
+            >
+              {{ mode === 'mars' ? 'HYPSO' : 'MARS' }}
+            </button>
+            <button type="button" class="map-overlay__close-btn" @click="emit('close')">ESC</button>
+          </div>
         </div>
         <div class="map-overlay__canvas-wrap" ref="wrapRef">
           <canvas
@@ -80,7 +87,14 @@ const props = withDefaults(
   { markers: () => [] },
 )
 
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>()
+
+/** Close on Escape from anywhere while open (panel is not focus-trapped). */
+function onDocumentKeyDown(e: KeyboardEvent): void {
+  if (!props.open || e.key !== 'Escape') return
+  e.preventDefault()
+  emit('close')
+}
 
 const displayCanvas = ref<HTMLCanvasElement | null>(null)
 const wrapRef = ref<HTMLElement | null>(null)
@@ -246,50 +260,86 @@ watch([() => props.mapCanvasMars, () => props.mapCanvasHypso], () => {
   if (props.open) redraw()
 })
 
-onBeforeUnmount(() => resizeObs?.disconnect())
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) window.addEventListener('keydown', onDocumentKeyDown)
+    else window.removeEventListener('keydown', onDocumentKeyDown)
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onDocumentKeyDown)
+  resizeObs?.disconnect()
+})
 </script>
 
 <style scoped>
-.map-overlay {
+/* Bottom-left minimap: no fullscreen scrim — clicks pass through except on the panel */
+.map-minimap-root {
   position: fixed;
-  inset: 0;
+  left: 8px;
+  bottom: 24px;
   z-index: 900;
-  background: rgba(0, 0, 0, 0.85);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
 }
 
 .map-overlay__panel {
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: min(260px, 34vw);
+  max-width: calc(100vw - 16px);
+  max-height: min(380px, 42vh);
+  background: rgba(10, 5, 2, 0.92);
+  border: 1px solid rgba(196, 117, 58, 0.38);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 
 .map-overlay__header {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 8px;
   color: #e0b888;
-  font-size: 14px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(196, 117, 58, 0.15);
+  flex-shrink: 0;
 }
 
 .map-overlay__title {
-  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.map-overlay__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .map-overlay__mode-btn,
 .map-overlay__close-btn {
+  flex: 0 0 auto;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(224, 184, 136, 0.3);
   color: #e0b888;
-  padding: 4px 12px;
+  padding: 3px 8px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 10px;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -305,19 +355,24 @@ onBeforeUnmount(() => resizeObs?.disconnect())
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: 4px;
 }
 
 .map-overlay__canvas {
-  max-width: 80vw;
-  max-height: 80vh;
+  width: 100%;
+  height: auto;
+  max-height: min(320px, 36vh);
+  display: block;
   image-rendering: pixelated;
   cursor: crosshair;
 }
 
 .map-overlay__dot {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--dot-color, #ffffff);
   border: 2px solid color-mix(in srgb, var(--dot-color, #ffffff) 55%, black);

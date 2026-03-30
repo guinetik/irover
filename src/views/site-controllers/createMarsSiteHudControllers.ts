@@ -332,6 +332,7 @@ export function createMarsSiteHudControllers(ctx: MarsSiteViewContext): MarsSite
     {
       playAmbientLoop: ctx.playAmbientLoop,
       setAmbientVolume: ctx.setAmbientVolume,
+      setAmbientStereo: (handle, pan) => handle.setStereo(pan),
     },
   )
 

@@ -106,7 +106,7 @@ function emitAcceptMission(missionId: string): void {
 
 .msg-dialog {
   position: relative;
-  width: 540px;
+  width: 680px;
   max-width: 100%;
   max-height: 85vh;
   background: rgba(15, 10, 8, 0.95);
@@ -186,6 +186,8 @@ function emitAcceptMission(missionId: string): void {
   flex: 1;
   overflow-y: auto;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar for body */
@@ -207,13 +209,63 @@ function emitAcceptMission(missionId: string): void {
 .msg-body-content {
   color: rgba(220, 210, 200, 0.85);
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.6;
   font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: auto; /* Pushes the chat to the bottom if it's smaller than the container */
 }
-.msg-body-content p { 
-  margin: 0 0 16px 0; 
+
+:deep(.msg-body-content p) { 
+  margin: 0;
+  padding: 14px 18px;
+  background: rgba(196, 149, 106, 0.06);
+  border: 1px solid rgba(196, 149, 106, 0.15);
+  border-left: 3px solid rgba(196, 149, 106, 0.4);
+  border-radius: 4px 12px 12px 12px;
+  max-width: 100%;
+  align-self: flex-start;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  position: relative;
+  transform-origin: bottom left;
+  
+  /* Animation for sequential appearance */
+  opacity: 0;
+  animation: message-appear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
-.msg-body-content p:last-child {
+
+@keyframes message-appear {
+  0% { opacity: 0; transform: translateY(20px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+:deep(.msg-body-content p:nth-child(1)) { animation-delay: 0.2s; }
+:deep(.msg-body-content p:nth-child(2)) { animation-delay: 0.8s; }
+:deep(.msg-body-content p:nth-child(3)) { animation-delay: 1.4s; }
+:deep(.msg-body-content p:nth-child(4)) { animation-delay: 2.0s; }
+:deep(.msg-body-content p:nth-child(5)) { animation-delay: 2.6s; }
+:deep(.msg-body-content p:nth-child(6)) { animation-delay: 3.2s; }
+:deep(.msg-body-content p:nth-child(7)) { animation-delay: 3.8s; }
+:deep(.msg-body-content p:nth-child(8)) { animation-delay: 4.4s; }
+:deep(.msg-body-content p:nth-child(9)) { animation-delay: 5.0s; }
+:deep(.msg-body-content p:nth-child(10)) { animation-delay: 5.6s; }
+:deep(.msg-body-content p:nth-child(11)) { animation-delay: 6.2s; }
+:deep(.msg-body-content p:nth-child(12)) { animation-delay: 6.8s; }
+:deep(.msg-body-content p:nth-child(n+13)) { animation-delay: 7.4s; }
+
+:deep(.msg-body-content p::before) {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -8px;
+  border-width: 8px 8px 0 0;
+  border-style: solid;
+  border-color: rgba(196, 149, 106, 0.4) transparent transparent transparent;
+  display: none; /* Optional: turn on if you want a literal chat tail, but the flat border-radius often looks cleaner for sci-fi */
+}
+
+:deep(.msg-body-content p:last-child) {
   margin-bottom: 0;
 }
 

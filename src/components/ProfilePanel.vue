@@ -114,9 +114,10 @@ const modifierRows = computed(() => {
 </script>
 
 <style scoped>
+/* Just right of `.power-hud-stack` (left: 8px, width: 52px) + small gap */
 .profile-panel {
   position: fixed;
-  left: 140px;
+  left: 72px;
   top: 50%;
   transform: translateY(-50%);
   width: 200px;

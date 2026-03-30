@@ -26,6 +26,7 @@ function makeFctx(overrides: Partial<SiteFrameContext> = {}): SiteFrameContext {
     totalSP: 0,
     activeInstrumentSlot: null,
     windMs: 3,
+    windDirDeg: 0,
     dustStormPhase: 'none',
     dustStormLevel: null,
     radiationLevel: 0,

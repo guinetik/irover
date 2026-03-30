@@ -47,6 +47,11 @@ export class InstrumentTickController {
     return this._activeProvides
   }
 
+  /** All controllers in slot order — used to wire into RoverController.instruments. */
+  getAllControllers(): InstrumentController[] {
+    return [...this.tuples].sort((a, b) => a.def.slot - b.def.slot).map(t => t.controller)
+  }
+
   getControllerById(id: string): InstrumentController | undefined {
     return this.tuples.find(t => t.def.id === id)?.controller
   }

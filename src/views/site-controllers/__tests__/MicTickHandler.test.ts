@@ -27,6 +27,7 @@ function makeFctx(overrides: Partial<SiteFrameContext> = {}): SiteFrameContext {
     totalSP: 0,
     activeInstrumentSlot: null,
     windMs: 3,
+    windDirDeg: 0,
     dustStormPhase: 'none',
     dustStormLevel: null,
     radiationLevel: 0,
@@ -42,6 +43,7 @@ function makeHandle(): AudioPlaybackHandle {
     progress: () => 0,
     duration: () => 0,
     setVolume: vi.fn(),
+    setStereo: vi.fn(),
   }
 }
 
@@ -50,7 +52,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn()
     const handler = createMicTickHandler(
       { micEnabled: ref(false) },
-      { playAmbientLoop, setAmbientVolume: vi.fn() },
+      { playAmbientLoop, setAmbientVolume: vi.fn(), setAmbientStereo: vi.fn() },
     )
     handler.tick(makeFctx())
     expect(playAmbientLoop).not.toHaveBeenCalled()
@@ -60,7 +62,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createMicTickHandler(
       { micEnabled: ref(true) },
-      { playAmbientLoop, setAmbientVolume: vi.fn() },
+      { playAmbientLoop, setAmbientVolume: vi.fn(), setAmbientStereo: vi.fn() },
     )
     handler.tick(makeFctx())
     expect(playAmbientLoop).toHaveBeenCalledTimes(6)
@@ -73,7 +75,7 @@ describe('MicTickHandler', () => {
     const micEnabled = ref(true)
     const handler = createMicTickHandler(
       { micEnabled },
-      { playAmbientLoop, setAmbientVolume: vi.fn() },
+      { playAmbientLoop, setAmbientVolume: vi.fn(), setAmbientStereo: vi.fn() },
     )
 
     handler.tick(makeFctx())
@@ -90,7 +92,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createMicTickHandler(
       { micEnabled: ref(true) },
-      { playAmbientLoop, setAmbientVolume },
+      { playAmbientLoop, setAmbientVolume, setAmbientStereo: vi.fn() },
     )
 
     // Run several ticks to let lerp converge
@@ -111,7 +113,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createMicTickHandler(
       { micEnabled: ref(true) },
-      { playAmbientLoop, setAmbientVolume },
+      { playAmbientLoop, setAmbientVolume, setAmbientStereo: vi.fn() },
     )
 
     for (let i = 0; i < 60; i++) {
@@ -130,7 +132,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createMicTickHandler(
       { micEnabled: ref(true) },
-      { playAmbientLoop, setAmbientVolume },
+      { playAmbientLoop, setAmbientVolume, setAmbientStereo: vi.fn() },
     )
 
     for (let i = 0; i < 60; i++) {
@@ -154,7 +156,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
     const handler = createMicTickHandler(
       { micEnabled: ref(true) },
-      { playAmbientLoop, setAmbientVolume },
+      { playAmbientLoop, setAmbientVolume, setAmbientStereo: vi.fn() },
     )
 
     // Storm level 3 — no quake
@@ -195,7 +197,7 @@ describe('MicTickHandler', () => {
     const playAmbientLoop = vi.fn().mockImplementation(() => handles[callIdx++])
     const handler = createMicTickHandler(
       { micEnabled: ref(true) },
-      { playAmbientLoop, setAmbientVolume: vi.fn() },
+      { playAmbientLoop, setAmbientVolume: vi.fn(), setAmbientStereo: vi.fn() },
     )
 
     handler.tick(makeFctx())
@@ -204,5 +206,27 @@ describe('MicTickHandler', () => {
     for (const h of handles) {
       expect(h.stop).toHaveBeenCalled()
     }
+  })
+
+  it('pans the winds layer based on wind direction', () => {
+    const setAmbientStereo = vi.fn()
+    const playAmbientLoop = vi.fn().mockReturnValue(makeHandle())
+    const handler = createMicTickHandler(
+      { micEnabled: ref(true) },
+      { playAmbientLoop, setAmbientVolume: vi.fn(), setAmbientStereo },
+    )
+
+    // Wind from east (90°) → sin(90°) = 1.0 → pan right
+    handler.tick(makeFctx({ windDirDeg: 90 }))
+    expect(setAmbientStereo).toHaveBeenCalled()
+    const lastCall = setAmbientStereo.mock.calls[setAmbientStereo.mock.calls.length - 1]
+    expect(lastCall[1]).toBeCloseTo(1.0, 1)
+
+    setAmbientStereo.mockClear()
+
+    // Wind from west (270°) → sin(270°) = -1.0 → pan left
+    handler.tick(makeFctx({ windDirDeg: 270 }))
+    const leftCall = setAmbientStereo.mock.calls[setAmbientStereo.mock.calls.length - 1]
+    expect(leftCall[1]).toBeCloseTo(-1.0, 1)
   })
 })

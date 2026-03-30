@@ -45,6 +45,7 @@ function makeFrameContext(activeInstrument: object, overrides: Partial<SiteFrame
     totalSP: 0,
     activeInstrumentSlot: (activeInstrument as { slot?: number }).slot ?? null,
     windMs: 0,
+    windDirDeg: 0,
     dustStormPhase: 'none',
     dustStormLevel: null,
     radiationLevel: 0,

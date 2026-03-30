@@ -8,7 +8,7 @@
       "description": "Sol 1. You're on Mars. Let's make sure the bus still works.",
       "briefing": "<p>EDL telemetry confirms touchdown. Welcome to Mars, Operator.</p> <p>Your vehicle is a refurbished MSL-class rover — original deployment circa 2012, decommissioned, pulled from mothball, rebuilt under the Consortium's Second Surface Initiative. She's old. She's been patched more times than the documentation admits. But the reactor is warm and you're upright, which puts you ahead of the last three drops.</p> <p>Before we clear you for field ops, we need to verify the primary systems survived descent. Work through these in order — each step unlocks the next.</p> <p><b>POWER:</b> Boot the RTG using the power control on your HUD. The Radioisotope Thermoelectric Generator is your only power source. Every instrument, every heater cycle, every transmission draws from it. Nothing works until it's online — and nothing works if it ever goes offline permanently. Boot it now.</p> <p><b>PROFILE [0]:</b> Press 0 to open your operator profile. This shows your archetype, active mission, and science points — the currency that keeps the Consortium funding your surface time. Zero science means zero justification for keeping the lights on. Know your numbers.</p> <p><b>WHEELS [B]:</b> Press B to open the mobility panel. WASD drives the rover. This panel shows wheel condition and drive status — six wheels, each one degradable. Mars eats wheels. Keep an eye on them.</p> <p><b>AVIONICS:</b> Drive at least 5 meters in any direction. We need to confirm your inputs are translating to actual movement and not just warming up a dead actuator.</p> <p><b>HEATER [H]:</b> Press H to open the thermal panel. Mars surface temperature can drop below –80°C. The heater kicks in automatically when it gets too cold — but it draws power. Every minute it runs is a minute your instruments aren't. You'll learn to watch the thermal gauge the way you watch your fuel.</p> <p><b>LGA [R]:</b> Press R to open the Low-Gain Antenna panel. This is your mailbox. Mission assignments arrive here, and when you've completed an objective and need to file results, you transmit from here too. If you're ever unsure what to do next — check the LGA.</p> <p>Complete the sequence. Once all checks pass, we'll push your first field assignment.</p>",
       "reward": { "sp": 10 },
-      "unlocks": ["mic"],
+      "unlocks": [],
       "chain": "m01-triangulate",
       "objectives": [
         {
@@ -62,28 +62,28 @@
       "description": "Three stakes in the dirt, three pings to prove you're where you say you are. Time to drive",
       "briefing": "<p>Systems check is green. You're cleared for field ops.</p> <p>First order of business: position fix. Your nav system has a best-guess coordinate from EDL — good enough to land, not good enough to bill instrument time against. The Consortium's insurance does not cover best estimates.</p> <p>Three transponder stakes — Alpha, Beta, Gamma — were air-dropped ahead of your arrival. They're already in the ground. Drive to each one and your antenna will ping it automatically when you're close enough. No interaction required — just get there.</p> <p><b>NAVIGATION:</b> Open your terrain map [M] to see all three stakes marked on the surface. The compass ribbon at the top of your HUD also shows nearby points of interest — watch for the markers as you drive. You can visit the stakes in any order.</p> <p>This is your first real traverse. The checkout asked for 5 meters. These stakes are further out. Watch your footing — the terrain isn't flat, and rocks that look small from a distance can stop a wheel. Take it steady. You've got time.</p> <p>Three pings. Then we talk science.</p>",
       "reward": { "sp": 25 },
-      "unlocks": ["rems"],
-      "chain": "m03-rems",
+      "unlocks": ["inventory", "rtg"],
+      "chain": "m02-repair",
       "objectives": [
         {
           "id": "tri-1",
           "type": "go-to",
           "label": "Stake Alpha — confirm ping",
-          "params": { "poiId": "tri-alpha" },
+          "params": { "poiId": "tri-alpha", "dist": 6 },
           "sequential": false
         },
         {
           "id": "tri-2",
           "type": "go-to",
           "label": "Stake Beta — confirm ping",
-          "params": { "poiId": "tri-beta" },
+          "params": { "poiId": "tri-beta", "dist": 16 },
           "sequential": false
         },
         {
           "id": "tri-3",
           "type": "go-to",
           "label": "Stake Gamma — confirm ping",
-          "params": { "poiId": "tri-gamma" },
+          "params": { "poiId": "tri-gamma", "dist": 27 },
           "sequential": false
         }
       ]
@@ -93,17 +93,31 @@
       "name": "RTG — Maintenance",
       "patron": null,
       "description": "The RTG took damage during descent. It's at 60% and falling. Fix it now.",
-      "briefing": "<p>The RTG was damaged during EDL. It is currently operating at 60% durability and degrading every sol. This is your power source. Your <b>only</b> power source. If it reaches zero, the mission is over: no instruments, no heater, no drive, no recovery.</p> <p>Every instrument on this vehicle has a durability rating. It drops passively from exposure, faster from active use, and sharply from hazards: dust storms, radiation events, extreme cold, meteor impacts. As durability falls, performance falls with it. Readings slow down, outputs lose precision, power draw climbs. Instruments don't just break suddenly. They get worse. It is always in your interest to repair early.</p> <p>Open the RTG panel and use the <b>REPAIR</b> function. Small repairs cost only <b>welding wire</b>. Bigger damage starts requiring <b>components</b> too, and the cost scales with severity. Another reason not to let things slide.</p> <p>After repair, the RTG will not return to 100%. It will come back to around 98%. Next time, 96%. Durability damage is permanent: every repair leaves a scar on the ceiling, and that ceiling only goes down. This is not a bug in your readout. It's a 175-year-old machine. Manage it.</p>",
+      "briefing": "<p>The RTG was damaged during EDL. It is currently operating at 60% durability and degrading every sol. This is your power source. Your <b>only</b> power source. If it reaches zero, the mission is over: no instruments, no heater, no drive, no recovery.</p> <p>Every instrument on this vehicle has a durability rating. It drops passively from exposure, faster from active use, and sharply from hazards: dust storms, radiation events, extreme cold, meteor impacts. As durability falls, performance falls with it. Readings slow down, outputs lose precision, power draw climbs. Instruments don't just break suddenly. They get worse. It is always in your interest to repair early.</p> <p>At 60% durability, the RTG needs <b>3 welding wire</b> and <b>2 mechatronics components</b> to repair. You shipped with wire but no components. The Consortium anticipated this — a resupply pod with the parts you need was dropped near your position during descent. A waypoint marker is active on your map. It's close. Drive to it and collect the components.</p> <p>Once you have the parts, open the RTG panel and use the <b>REPAIR</b> function. Small repairs cost only welding wire. Bigger damage starts requiring components too, and the cost scales with severity. Another reason not to let things slide.</p> <p>After repair, the RTG will not return to 100%. It will come back to around 98%. Next time, 96%. Durability damage is permanent: every repair leaves a scar on the ceiling, and that ceiling only goes down. This is not a bug in your readout. It's a 175-year-old machine. Manage it.</p>",
       "reward": { "sp": 15 },
-      "unlocks": ["mastcam"],
-      "chain": "m05-mastcam",
+      "unlocks": ["rems"],
+        "chain": "m03-rems",
       "objectives": [
         {
           "id": "repair-1",
+          "type": "go-to",
+          "label": "Resupply pod — retrieve mechatronics components",
+          "params": { "poiId": "supply-cache-repair-01", "dist": 60 },
+          "sequential": true
+        },
+        {
+          "id": "repair-2",
+          "type": "gather",
+          "label": "Collect mechatronics components (×2)",
+          "params": { "itemId": "mechatronics-components", "quantity": 2 },
+          "sequential": true
+        },
+        {
+          "id": "repair-3",
           "type": "use-repair-kit",
           "label": "RTG integrity within spec (field repair)",
           "params": {},
-          "sequential": false
+          "sequential": true
         }
       ]
     },
@@ -114,7 +128,7 @@
       "description": "You're blind to the weather. Fix that.",
       "briefing": "<p>Right now you have no surface weather data. You can't see wind speed, temperature, pressure, UV, or dust conditions. If a storm rolls in, you won't know until it hits you. REMS fixes that.</p> <p>Open the REMS panel and activate it. Once on, REMS runs passively in the background at about 1 watt of continuous draw. It monitors atmospheric conditions and feeds live readings to your HUD. More importantly: REMS is your early warning system. Dust storms on Mars don't announce themselves. REMS does. If it's off when a storm approaches, you get no warning and no time to prepare.</p> <p>There's a second reason to keep it running. When REMS is active, it applies a quality bonus to any science collected near the rover. Spectra, drill samples, contact readings: they're all worth more when REMS can certify the atmospheric conditions at the time of collection. The Consortium won't accept uncertified results at full value.</p> <p>Turn it on. Leave it on. The only reason to shut it off is a power emergency, and even then, think twice.</p>",
       "reward": { "sp": 20 },
-      "unlocks": ["rtg"],
+      "unlocks": ["inventory"],
       "chain": "m04-rtg",
       "objectives": [
         {
@@ -126,21 +140,23 @@
         }
       ]
     },
+    
+    
     {
       "id": "m04-rtg",
       "name": "Orbital Delivery: DAN Field Hardware",
       "patron": null,
       "description": "The Consortium shipped DAN field equipment to your site. They want subsurface data. Go collect their investment.",
-      "briefing": "<p>The Consortium has sent supplementary hardware for your DAN instrument via orbital drop. DAN reads subsurface neutron signatures: water ice, volatile pockets, geological structure beneath the surface. The instrument on your rover does the sensing, but certain field operations require deployable hardware that the original vehicle was never built to carry. The Consortium wants that capability online. So they paid for a drop.</p><p><b>Orbital drops</b> are how the Consortium extends rover operations beyond what shipped with the vehicle. Their satellites are in Mars orbit carrying equipment, components, buildable hardware: everything a refurbished rover from 2012 wasn't designed for. Drops are expensive. When one lands at your site, someone decided it was worth the cost.</p><p>This one arrived early and off-target. Some of the delivery satellites still report in imperial. Apparently that wasn't in the refurbishment budget. The pod landed about half a mile from your position. A waypoint marker is active on your map and compass. Drive to it and open the cargo pod to collect your DAN extractor unit.</p><p>Once you've collected the payload, you need to return to the rock outcrop. It's a long drive back. Open the RTG panel and fire <b>overdrive</b>: the reactor dumps its thermal reserve into the power bus, doubling your drive speed. While the sequence runs, every instrument on the vehicle goes offline, including comms. The cycle completes automatically. When power returns, keep driving.</p><p>You won't need the DAN extractor yet. But corporate don't want their expensive gear collecting Martian dust and losing durability.</p>",
+      "briefing": "<p>The Consortium has sent supplementary hardware for your DAN instrument via orbital drop. DAN reads subsurface neutron signatures: water ice, volatile pockets, geological structure beneath the surface. The instrument on your rover does the sensing, but certain field operations require deployable hardware that the original vehicle was never built to carry. The Consortium wants that capability online. So they paid for a drop.</p><p><b>Orbital drops</b> are how the Consortium extends rover operations beyond what shipped with the vehicle. Their satellites are in Mars orbit carrying equipment, components, buildable hardware: everything a refurbished rover from 2012 wasn't designed for. Drops are expensive. When one lands at your site, someone decided it was worth the cost.</p><p>This one arrived early and off-target. Some of the delivery satellites still report in imperial. Apparently that wasn't in the refurbishment budget. The pod landed a short drive from your position. A waypoint marker is active on your map and compass. Drive to it and open the cargo pod to collect your DAN extractor unit.</p><p>Once you've collected the payload, you need to return to the rock outcrop. It's a long drive back. Open the RTG panel and fire <b>overdrive</b>: the reactor dumps its thermal reserve into the power bus, doubling your drive speed. While the sequence runs, every instrument on the vehicle goes offline, including comms. The cycle completes automatically. When power returns, keep driving.</p><p>You won't need the DAN extractor yet. But corporate don't want their expensive gear collecting Martian dust and losing durability.</p>",
       "reward": { "sp": 30 },
-      "unlocks": [],
-      "chain": "m02-repair",
+      "unlocks": ["mastcam"],
+      "chain": "m05-mastcam",
       "objectives": [
         {
           "id": "rtg-1",
           "type": "go-to",
           "label": "Supply cache — retrieve DAN extractor",
-          "params": { "poiId": "supply-cache-01", "dist": 380 },
+          "params": { "poiId": "supply-cache-01", "dist": 150 },
           "sequential": true
         },
         {

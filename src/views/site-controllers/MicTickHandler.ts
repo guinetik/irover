@@ -11,15 +11,22 @@ export interface MicTickRefs {
 export interface MicTickCallbacks {
   playAmbientLoop: (soundId: AudioSoundId) => AudioPlaybackHandle
   setAmbientVolume: (handle: AudioPlaybackHandle, volume: number) => void
+  setAmbientStereo: (handle: AudioPlaybackHandle, pan: number) => void
 }
 
 /** Smoothing rate per second — higher = faster convergence. */
 const LERP_SPEED = 3.0
 
-/** Map wind m/s (0–15+) to volume (0.05–0.6). */
+/** Map wind m/s (0–15+) to volume (0.1–0.8). */
 function windVolume(windMs: number): number {
   const t = Math.min(windMs / 15, 1)
-  return 0.05 + t * 0.55
+  return 0.1 + t * 0.7
+}
+
+/** Convert wind direction degrees to stereo pan (-1 left, 0 center, 1 right). */
+function windDirToPan(deg: number): number {
+  const rad = (deg * Math.PI) / 180
+  return Math.sin(rad)
 }
 
 /** Map storm level (1–5) to volume (0.3–0.8) during active phase. */
@@ -54,7 +61,7 @@ export function createMicTickHandler(
   callbacks: MicTickCallbacks,
 ): SiteTickHandler {
   const { micEnabled } = refs
-  const { playAmbientLoop, setAmbientVolume } = callbacks
+  const { playAmbientLoop, setAmbientVolume, setAmbientStereo } = callbacks
 
   const layers: AmbientLayer[] = [
     { id: 'ambient.base' as AudioSoundId, handle: null, currentVol: 0 },
@@ -120,6 +127,12 @@ export function createMicTickHandler(
       if (layer.handle) {
         setAmbientVolume(layer.handle, layer.currentVol)
       }
+    }
+
+    // Stereo pan the winds layer toward the current wind bearing
+    const windsLayer = layers[3]
+    if (windsLayer.handle) {
+      setAmbientStereo(windsLayer.handle, windDirToPan(fctx.windDirDeg))
     }
   }
 

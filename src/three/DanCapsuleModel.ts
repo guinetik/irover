@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 const CAPSULE_GLB = '/dan.glb'
-const TARGET_SIZE = 0.5
+const TARGET_SIZE = 0.4
 
 /**
  * Material role mapping — each GLB material name maps to a visual role
@@ -195,7 +195,7 @@ export async function createBioCapsule(
     const accent = FLUID_COLORS[fluidType] ?? FLUID_COLORS.water
     instance.userData.fluidType = fluidType
     applyMaterials(instance, accent)
-    stretchBody(instance, 1.2)
+    stretchBody(instance, 1.0)
     placeInstance(instance, x, z, groundY)
     scene.add(instance)
     return instance

@@ -26,6 +26,8 @@ export interface SiteFrameContext {
   activeInstrumentSlot: number | null
   /** Wind speed in m/s from site weather model. */
   windMs: number
+  /** Wind direction in degrees (meteorological convention, 0 = from north). */
+  windDirDeg: number
   /** 'none' | 'incoming' | 'active' */
   dustStormPhase: 'none' | 'incoming' | 'active'
   /** Storm intensity 1–5, or null when no storm. */
