@@ -2,10 +2,11 @@
   <div class="comm-toolbar">
     <button
       v-for="comm in comms"
+      v-show="comm.slot !== 12 || uhfUnlocked"
       :key="comm.slot"
       class="comm-slot"
-      :class="{ active: activeSlot === comm.slot, disabled: comm.slot === 12 && !uhfUnlocked, 'lga-alert': comm.slot === 11 && lgaAlert }"
-      @click="!(comm.slot === 12 && !uhfUnlocked) && handleClick(comm.slot)"
+      :class="{ active: activeSlot === comm.slot, 'lga-alert': comm.slot === 11 && lgaAlert }"
+      @click="handleClick(comm.slot)"
     >
       <span class="comm-key">{{ comm.key }}</span>
       <span class="comm-icon">{{ comm.icon }}</span>
