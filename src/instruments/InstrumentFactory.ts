@@ -33,6 +33,10 @@ export function createInstrumentTuple(def: InstrumentDef): InstrumentTuple {
   controller.tier = def.tier
   controller.selectionIdlePowerW = def.idlePowerW
   controller.activePowerW = def.activePowerW
+  if (def.upgrade) {
+    controller.upgradeItemId = def.upgrade.itemId
+    controller.upgradeItemQty = def.upgrade.itemQty ?? 1
+  }
 
   const handlerFactory = TICK_HANDLER_REGISTRY[def.tickHandlerType]
   const tickHandler = handlerFactory ? handlerFactory(controller) : null

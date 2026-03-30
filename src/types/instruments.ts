@@ -27,6 +27,10 @@ export interface InstrumentUpgradeDef {
   name: string
   desc: string
   req: string
+  /** Inventory item consumed when installing. */
+  itemId: string
+  /** Quantity consumed per upgrade (default 1). */
+  itemQty?: number
 }
 
 export interface InstrumentStatDef {
@@ -93,7 +97,7 @@ export interface InstrumentDef {
   controllerType: string
   /** Key into TICK_HANDLER_REGISTRY (populated in Plan B) */
   tickHandlerType: string
-  upgrade: InstrumentUpgradeDef
+  upgrade: InstrumentUpgradeDef | null
   help: InstrumentHelp
   /** Keyboard/usage hint shown at bottom of instrument card. */
   hint: string

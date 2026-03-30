@@ -14,11 +14,7 @@
       "activePowerW": 31,
       "controllerType": "MastCamController",
       "tickHandlerType": "MastCamTickHandler",
-      "upgrade": {
-        "name": "INFRARED / MULTISPECTRAL",
-        "desc": "Stronger mineral contrast in the passive survey view.",
-        "req": "Requires: Science Pack Alpha drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Visual classifier. Tags rocks for ChemCam and drill targeting.",
         "sections": [
@@ -65,11 +61,7 @@
       "activePowerW": 102,
       "controllerType": "ChemCamController",
       "tickHandlerType": "ChemCamTickHandler",
-      "upgrade": {
-        "name": "MULTI-SHOT BURST",
-        "desc": "3 shots on different spots for averaged reading. Better accuracy.",
-        "req": "Requires: Science Pack Alpha drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Laser spectrometer. Identifies rock composition at standoff distance.",
         "sections": [
@@ -118,11 +110,7 @@
       "activePowerW": 100,
       "controllerType": "DrillController",
       "tickHandlerType": "DrillTickHandler",
-      "upgrade": {
-        "name": "BIT WEAR KIT",
-        "desc": "Reduces drill time on tagged rocks.",
-        "req": "Requires: Deep Analysis Kit drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Core sampler. Collects rock powder for SAM analysis.",
         "sections": [
@@ -162,11 +150,7 @@
       "activePowerW": 18,
       "controllerType": "APXSController",
       "tickHandlerType": "APXSTickHandler",
-      "upgrade": {
-        "name": "LONG INTEGRATION",
-        "desc": "Longer dwells, lower detection limits.",
-        "req": "Requires: Contact Science Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Contact spectrometer. Elemental analysis by physical proximity.",
         "sections": [
@@ -213,11 +197,7 @@
       "activePowerW": 0,
       "controllerType": "DANController",
       "tickHandlerType": "DANTickHandler",
-      "upgrade": {
-        "name": "DEPTH EXTENDER",
-        "desc": "Scan depth from 0.5m to 1.0m below surface.",
-        "req": "Requires: Subsurface Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Subsurface hydrogen detector. Finds ice and hydrated minerals while driving.",
         "sections": [
@@ -262,11 +242,7 @@
       "activePowerW": 25,
       "controllerType": "SAMController",
       "tickHandlerType": "SAMTickHandler",
-      "upgrade": {
-        "name": "SENSITIVITY MODULE",
-        "desc": "Detects organics at 10x lower concentration.",
-        "req": "Requires: Full Science Suite drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Onboard lab. Runs chemical analysis on drill samples.",
         "sections": [
@@ -307,11 +283,7 @@
       "activePowerW": 0,
       "controllerType": "RTGController",
       "tickHandlerType": "RoverVfxTickHandler",
-      "upgrade": {
-        "name": "HEAT EXCHANGER",
-        "desc": "Improves thermal efficiency. Faster charge rate.",
-        "req": "Requires: Engineering Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Primary power source. The only instrument where failure ends the mission.",
         "sections": [
@@ -349,11 +321,7 @@
       "activePowerW": 0,
       "controllerType": "REMSController",
       "tickHandlerType": "REMSTickHandler",
-      "upgrade": {
-        "name": "DUST STORM PREDICTOR",
-        "desc": "Forecasts storms 2 sols ahead.",
-        "req": "Requires: Meteorology Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Weather station. Passive environmental monitoring with sample quality bonus.",
         "sections": [
@@ -394,11 +362,7 @@
       "activePowerW": 0,
       "controllerType": "RADController",
       "tickHandlerType": "RadTickHandler",
-      "upgrade": {
-        "name": "PARTICLE SPECTROMETER",
-        "desc": "Identifies individual isotopes in cosmic ray flux.",
-        "req": "Requires: Deep Space Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Radiation monitor. Tracks cumulative dose and alerts on solar events.",
         "sections": [
@@ -436,11 +400,7 @@
       "activePowerW": 12,
       "controllerType": "HeaterController",
       "tickHandlerType": "HeaterTickHandler",
-      "upgrade": {
-        "name": "INSULATION UPGRADE",
-        "desc": "Reduces heat loss rate by 30%. Less heater draw at cold sites.",
-        "req": "Requires: Engineering Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Thermal management. Automatic — protects instruments from cold damage.",
         "sections": [
@@ -480,9 +440,10 @@
       "controllerType": "AntennaLGController",
       "tickHandlerType": "AntennaLGTickHandler",
       "upgrade": {
-        "name": "SIGNAL AMPLIFIER",
-        "desc": "Doubles direct-to-Earth data rate.",
-        "req": "Requires: Comms Package drop"
+        "name": "DSN ARCHAEOLOGY MODULE",
+        "desc": "Deep Space Network signal archaeology. Decodes archived transmissions from previous Mars missions.",
+        "req": "Requires: DSN Archaeology Module (orbital drop)",
+        "itemId": "dsn-archaeology-module"
       },
       "help": {
         "summary": "Mission mailbox. Missions arrive here; completed results transmit from here.",
@@ -519,11 +480,7 @@
       "activePowerW": 12,
       "controllerType": "AntennaUHFController",
       "tickHandlerType": "AntennaUHFTickHandler",
-      "upgrade": {
-        "name": "DUAL-BAND MODULE",
-        "desc": "Enables simultaneous uplink/downlink during passes. Halves transfer time.",
-        "req": "Requires: Comms Package drop"
-      },
+      "upgrade": null,
       "help": {
         "summary": "Science downlink. Transmits queued data automatically during orbital relay windows.",
         "sections": [
