@@ -2,6 +2,8 @@ import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import { useVentArchive } from '@/composables/useVentArchive'
 import { useBuildables } from '@/composables/useBuildables'
 import type { BuildablePlacementPreview } from '@/three/buildables/BuildablePlacementPreview'
+import { BuildableRegistry } from '@/three/buildables/BuildableRegistry'
+import { getBuildableDef } from '@/types/buildables'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
@@ -523,7 +525,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
-  const { activeControllers: buildableControllers } = useBuildables()
+  const { activeControllers: buildableControllers, loadForSite, registerController } = useBuildables()
   const missions = useMissions()
   const { loadCatalog, wireArchiveCheckers, checkAllObjectives, tickTransmit } = missions
   const { pois: missionPoisRef } = useSiteMissionPois()
@@ -625,6 +627,21 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     const terrainType: TerrainGeneratorType = GLB_TERRAIN_SITES.has(siteId) ? 'glb' : 'default'
     siteScene = new SiteScene(terrainType)
     await siteScene.init(terrainParams, { skipIntroSequence: isSiteIntroSequenceSkipped() })
+
+    // --- Restore saved buildables from localStorage ---
+    {
+      const savedBuildables = loadForSite(siteId)
+      for (const saved of savedBuildables) {
+        const def = getBuildableDef(saved.id)
+        if (!def) continue
+        if (!BuildableRegistry.has(def.controllerType)) continue
+        const Ctor = BuildableRegistry.resolve(def.controllerType)
+        const pos = new THREE.Vector3(saved.position.x, saved.position.y, saved.position.z)
+        const controller = new Ctor(def, pos, saved.rotationY, (x, z) => siteScene.terrain.heightAt(x, z))
+        await controller.init(siteScene.scene)
+        registerController(controller)
+      }
+    }
 
     // Adjust camera far plane to match terrain scale (default 800 → 1200, GLB 2000 → 3000)
     camera.far = siteScene.terrain.scale * 1.5
