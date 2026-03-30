@@ -16,9 +16,10 @@
       <span v-if="inst.slot === 6 && (samUnread ?? 0) > 0" class="badge-dot font-instrument">{{ samUnread }}</span>
     </button>
 
-    <div class="toolbar-divider" />
+    <div v-if="sandbox || unlockedInstruments.includes('inventory')" class="toolbar-divider" />
 
     <button
+      v-if="sandbox || unlockedInstruments.includes('inventory')"
       class="instrument-slot inventory-btn"
       :class="{ active: inventoryOpen }"
       @click="emit('toggleInventory')"
