@@ -550,6 +550,7 @@
           <span class="wheels-hud-name">HTR</span>
         </button>
         <button
+          v-if="playerProfile.sandbox || unlockedInstruments.includes('mic')"
           type="button"
           class="wheels-hud-btn wheels-hud-btn--mic"
           :class="{
@@ -566,6 +567,7 @@
           <span class="wheels-hud-name">MIC</span>
         </button>
         <button
+          v-if="playerProfile.sandbox || unlockedInstruments.includes('map')"
           type="button"
           class="wheels-hud-btn"
           :class="{ active: mapOpen }"
