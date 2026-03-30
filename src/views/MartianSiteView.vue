@@ -1259,6 +1259,7 @@ watch(lgaUpgraded, (upgraded) => {
 function handleOpenScienceLog() {
   scienceLogOpen.value = true
   useMissions().notifyUiInspected('dan-science')
+  useMissions().notifyUiInspected('rad-science')
 }
 
 function handleOpenArchive() {
@@ -2112,7 +2113,6 @@ function onRadAcknowledge(): void {
 
   // Notify mission system
   useMissions().notifyRadDecodeCompleted()
-  useMissions().notifyUiInspected('rad-science')
 
   const classifiedId = result.classifiedAs
   if (classifiedId === 'soft-sep' || classifiedId === 'hard-sep') {
