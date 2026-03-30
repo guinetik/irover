@@ -1,7 +1,8 @@
 <template>
   <Teleport to="body">
     <Transition name="ext-slide">
-      <div v-if="visible" class="ext-dialog">
+      <div v-if="visible" class="ext-overlay">
+      <div class="ext-dialog">
         <div class="ext-header">
           <span class="ext-icon">&#x25C6;</span>
           <span class="ext-title">DAN EXTRACTOR — {{ fluidLabel }}</span>
@@ -32,11 +33,12 @@
             :disabled="storedKg <= 0"
             @click="emitExtract"
           >
-            EXTRACT (up to 1 kg)
+            EXTRACT (100g)
             <span class="ext-power-cost">{{ extractPowerW.toFixed(1) }}W</span>
           </button>
           <button type="button" class="ext-btn ext-btn--undock" @click="emitUndock">UNDOCK</button>
         </div>
+      </div>
       </div>
     </Transition>
   </Teleport>
@@ -87,11 +89,17 @@ const chargeRatePct = computed(() => Math.min(100, Math.round(props.chargeRateKg
 </script>
 
 <style scoped>
-.ext-dialog {
+.ext-overlay {
   position: fixed;
-  top: 50%;
-  right: 320px;
-  transform: translateY(-50%);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 50;
+}
+
+.ext-dialog {
   width: 420px;
   background: rgba(5, 10, 25, 0.94);
   backdrop-filter: blur(12px);
@@ -99,7 +107,6 @@ const chargeRatePct = computed(() => Math.min(100, Math.round(props.chargeRateKg
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  z-index: 50;
   font-family: var(--font-ui);
   overflow: hidden;
 }
@@ -165,7 +172,6 @@ const chargeRatePct = computed(() => Math.min(100, Math.round(props.chargeRateKg
 .ext-btn--undock { color: rgba(255, 255, 255, 0.35); margin-left: auto; }
 .ext-btn--undock:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.3); }
 
-.ext-slide-enter-active, .ext-slide-leave-active { transition: all 0.25s ease; }
-.ext-slide-enter-from { opacity: 0; transform: translateY(-50%) translateX(20px); }
-.ext-slide-leave-to { opacity: 0; transform: translateY(-50%) translateX(20px); }
+.ext-slide-enter-active, .ext-slide-leave-active { transition: opacity 0.25s ease; }
+.ext-slide-enter-from, .ext-slide-leave-to { opacity: 0; }
 </style>

@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { MARS_SOL_CLOCK_MINUTES, SOL_DURATION } from '@/lib/marsTimeConstants'
 import { DANController } from '@/three/instruments'
+import { RoverWheelsController } from '@/three/instruments/RoverWheelsController'
 import type { TerrainParams } from '@/types/terrain'
 import { danSignalQualityLabel } from '@/lib/neutron/danSampling'
 import type { SPGain } from '@/composables/useSciencePoints'
@@ -33,7 +34,14 @@ const DAN_DRILL_MARKER_GLB = '/dan.glb'
 /** Target largest axis length in scene units (~meters); matches prior cone height 0.5. */
 const DAN_DRILL_MARKER_TARGET_SIZE = 0.5
 
-const DAN_DOCK_RADIUS = 1.0 // metres — must drive over the extractor to dock
+/** Rover must be within this distance (XZ) to trigger magnetic pull. */
+const DAN_PULL_RADIUS = 0.5
+/** Spring commits dock when rover centre is this close to extractor centre. */
+const DAN_DOCK_RADIUS = 0.12
+/** Spring stiffness — underdamped so the rover bounces slightly on lock-in. */
+const DAN_SPRING_K    = 18.0
+/** Spring damping — ratio ~0.5 → one small overshoot then settles. */
+const DAN_SPRING_D    = 6.0
 
 const FLUID_ITEM_ID: Record<'water' | 'co2' | 'methane', string> = {
   water: 'ice',
@@ -309,6 +317,13 @@ export function createDanHudController(
   /** Last siteScene reference from tick — used by placeVentMarker called outside tick. */
   let lastSiteScene: SiteFrameContext['siteScene'] | null = null
 
+  // ── Magnetic dock pull state ────────────────────────────────────────
+  /** Extractor the rover is currently being pulled toward (null = not pulling). */
+  let pullTarget: ExtractorDockTarget | null = null
+  /** Spring velocity for the magnetic pull animation (scene metres/sec). */
+  let pullVelX = 0
+  let pullVelZ = 0
+
   /**
    * Rebuilds completed disc + GLB from the persisted DAN archive after a full reload.
    */
@@ -540,16 +555,6 @@ export function createDanHudController(
       danStorageCapMod: playerMod('danStorageCapacity'),
     })
     updateExtractorStorage(target.archiveId, target.archiveType, charged.storedKg, charged.lastChargedSol)
-
-    // Snap rover to extractor center
-    const rover = fctx.siteScene?.rover
-    if (rover) {
-      rover.position.x = target.x
-      rover.position.z = target.z
-    }
-
-    // Lock rover movement — same mechanism as crater scanning immobilization
-    if (fctx.rover) fctx.rover.criticalPowerMobilitySuspended = true
 
     playDockSound()
 
@@ -810,23 +815,68 @@ export function createDanHudController(
       danInst.passiveSubsystemEnabled && danInst.prospectPhase === 'prospecting',
     )
 
-    // ── DAN dock proximity ──────────────────────────────────────────────
+    // ── DAN dock proximity + magnetic pull ─────────────────────────────
+    // If dock toggle was turned off mid-pull, cancel cleanly
+    if (!danDockEnabled.value && pullTarget !== null) {
+      _releaseDockLock(fctx)
+    }
+
     if (danDockEnabled.value && pendingExtractorDock.value === null) {
-      const targets = getAllExtractorsForSite(siteId)
-      let nearest: ExtractorDockTarget | null = null
-      let nearestDist = Infinity
-      for (const t of targets) {
-        const dx = roverWorldX.value - t.x
-        const dz = roverWorldZ.value - t.z
-        const dist = Math.sqrt(dx * dx + dz * dz)
-        if (dist < nearestDist) {
-          nearestDist = dist
-          nearest = t
+      const roverMesh = siteScene?.rover
+
+      if (pullTarget === null) {
+        // Scan for a nearby extractor to start pulling toward
+        const targets = getAllExtractorsForSite(siteId)
+        let nearest: ExtractorDockTarget | null = null
+        let nearestDist = Infinity
+        for (const t of targets) {
+          const dx = roverWorldX.value - t.x
+          const dz = roverWorldZ.value - t.z
+          const dist = Math.sqrt(dx * dx + dz * dz)
+          if (dist < nearestDist) { nearestDist = dist; nearest = t }
+        }
+        if (nearest !== null && nearestDist <= DAN_PULL_RADIUS) {
+          // Enter pull phase — freeze rover input, kill wheels
+          pullTarget = nearest
+          pullVelX = 0
+          pullVelZ = 0
+          if (fctx.rover) {
+            fctx.rover.criticalPowerMobilitySuspended = true
+            const wheels = fctx.rover.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+            if (wheels) wheels.passiveSubsystemEnabled = false
+          }
+        }
+      } else {
+        // Advance spring toward pullTarget each frame
+        if (roverMesh) {
+          const dx = pullTarget.x - roverMesh.position.x
+          const dz = pullTarget.z - roverMesh.position.z
+          const fx = dx * DAN_SPRING_K - pullVelX * DAN_SPRING_D
+          const fz = dz * DAN_SPRING_K - pullVelZ * DAN_SPRING_D
+          pullVelX += fx * sceneDelta
+          pullVelZ += fz * sceneDelta
+          roverMesh.position.x += pullVelX * sceneDelta
+          roverMesh.position.z += pullVelZ * sceneDelta
+
+          const dist = Math.sqrt(dx * dx + dz * dz)
+          const speed = Math.sqrt(pullVelX * pullVelX + pullVelZ * pullVelZ)
+          if (dist <= DAN_DOCK_RADIUS && speed < 0.5) {
+            // Settled — hard-pin to centre and complete dock
+            roverMesh.position.x = pullTarget.x
+            roverMesh.position.z = pullTarget.z
+            const committed = pullTarget
+            pullTarget = null
+            pullVelX = 0
+            pullVelZ = 0
+            _initiateDock(committed, fctx)
+          }
         }
       }
-      if (nearest !== null && nearestDist <= DAN_DOCK_RADIUS) {
-        _initiateDock(nearest, fctx)
-      }
+    } else if (pullTarget !== null && pendingExtractorDock.value !== null) {
+      // Already docked — clear any residual pull state
+      pullTarget = null
+      pullVelX = 0
+      pullVelZ = 0
     }
   }
 
@@ -892,7 +942,7 @@ export function createDanHudController(
 
     const itemId = FLUID_ITEM_ID[dock.fluidType]
     const weightPerUnit = 0.1  // kg — matches ice, co2-gas, methane-gas in inventory-items.json
-    const transferKg = Math.min(dock.storedKg, 1.0)
+    const transferKg = Math.min(dock.storedKg, 0.1)
     const units = Math.round(transferKg / weightPerUnit)
 
     addInventoryItem(itemId, units)
@@ -903,10 +953,20 @@ export function createDanHudController(
     updateExtractorStorage(dock.archiveId, dock.archiveType, newStoredKg, getCurrentSol())
   }
 
+  function _releaseDockLock(fctx: SiteFrameContext): void {
+    pullTarget = null
+    pullVelX = 0
+    pullVelZ = 0
+    if (fctx.rover) {
+      fctx.rover.criticalPowerMobilitySuspended = false
+      const wheels = fctx.rover.instruments.find(i => i.id === 'wheels') as RoverWheelsController | undefined
+      if (wheels) wheels.passiveSubsystemEnabled = true
+    }
+  }
+
   function undockExtractor(fctx: SiteFrameContext): void {
     pendingExtractorDock.value = null
-    // Unlock rover movement — reverse of the lock applied in _initiateDock
-    if (fctx.rover) fctx.rover.criticalPowerMobilitySuspended = false
+    _releaseDockLock(fctx)
     setDanDockEnabled(false)
   }
 
