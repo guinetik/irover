@@ -653,6 +653,7 @@ import { useBuildables } from '@/composables/useBuildables'
 import { BuildablePlacementPreview } from '@/three/buildables/BuildablePlacementPreview'
 // Named import also triggers controller auto-registration side effect
 import { BuildableRegistry } from '@/three/buildables/BuildableRegistry'
+import type { BuildableController } from '@/three/buildables/BuildableController'
 import { useSamExperiments } from '@/composables/useSamExperiments'
 import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
 import { useSamArchive } from '@/composables/useSamArchive'
@@ -806,6 +807,7 @@ const siteHandle = shallowRef<MarsSiteViewControllerHandle | null>(null)
 /** Rover controller — use `siteRover` in template (unwraps); use `siteRover.value` in `<script>`. */
 const siteRover = computed(() => siteHandle.value?.rover ?? null)
 const activePlacementPreview = shallowRef<BuildablePlacementPreview | null>(null)
+const nearbyShelter = shallowRef<BuildableController | null>(null)
 const pendingPlacementItemId = ref<string | null>(null)
 const mapCanvasMars = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasMars ?? null)
 const mapCanvasHypso = computed(() => siteHandle.value?.siteScene?.terrain.mapCanvasHypso ?? null)
@@ -1914,10 +1916,22 @@ const orbitalDropInteractHint = computed(() => {
   if (!orbitalDrops.nearbyDrop.value) return ''
   return 'PAYLOAD IN RANGE \u00b7 PRESS F TO COLLECT'
 })
+const shelterInteractHint = computed(() => {
+  if (!introComplete.value || isSleeping.value) return ''
+  if (!nearbyShelter.value) return ''
+  return 'SHELTER IN RANGE \u00b7 PRESS F TO ENTER'
+})
+const shelterInsideHint = computed(() => {
+  const { isShielded } = useBuildables()
+  if (!isShielded.value) return ''
+  return 'INSIDE SHELTER \u00b7 PRESS F OR ESC TO EXIT'
+})
 const centerHintText = computed(() => {
+  if (shelterInsideHint.value) return shelterInsideHint.value
   if (introComplete.value && activeInstrumentSlot.value === null && rtgPhase.value === 'idle' && rtgConservationMode.value !== 'active' && !controlsHintDismissed.value) {
     return 'WASD drive · drag orbit · 1-9 TOOLS'
   }
+  if (shelterInteractHint.value) return shelterInteractHint.value
   if (orbitalDropInteractHint.value) return orbitalDropInteractHint.value
   if (introComplete.value && activeInstrumentSlot.value === null && rtgConservationMode.value === 'active') {
     return 'Power shunt: driving offline · -50% instrument load · Drag to orbit'
@@ -1926,7 +1940,9 @@ const centerHintText = computed(() => {
 })
 const centerHintClass = computed(() => ({
   'controls-hint-shunt': centerHintText.value.startsWith('Power shunt:'),
-  'orbital-drop-hint': centerHintText.value === orbitalDropInteractHint.value && orbitalDropInteractHint.value.length > 0,
+  'orbital-drop-hint': (centerHintText.value === orbitalDropInteractHint.value && orbitalDropInteractHint.value.length > 0)
+    || (centerHintText.value === shelterInteractHint.value && shelterInteractHint.value.length > 0)
+    || (centerHintText.value === shelterInsideHint.value && shelterInsideHint.value.length > 0),
 }))
 
 function handleActivate() {
@@ -2102,6 +2118,28 @@ function handleOrbitalDropOpen(): void {
   orbitalDrops.openDrop(drop.id, addComponentsBatch)
 }
 
+function handleShelterEnter(): void {
+  const shelter = nearbyShelter.value
+  const rover = siteRover.value
+  if (!shelter || !rover || rover.mode !== 'driving') return
+  const center = shelter.enter()
+  rover.enterShelter(center)
+  const orbit = shelter.getInteriorCameraOrbit()
+  rover.enterShelterCamera(orbit.pitch, orbit.distance)
+}
+
+function handleShelterExit(): void {
+  const { isShielded, activeControllers } = useBuildables()
+  if (!isShielded.value) return
+  const rover = siteRover.value
+  if (!rover) return
+  const shelter = activeControllers.value.find((b) => b.isRoverInside && b.features.includes('hazard-shield'))
+  if (!shelter) return
+  const exitPos = shelter.exit()
+  rover.exitShelter(exitPos)
+  rover.exitShelterCamera()
+}
+
 function handleDanProspect(): void {
   siteHandle.value?.handleDanProspect()
 }
@@ -2228,6 +2266,18 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   }
   if (e.key === 'p' || e.key === 'P') {
     if (playerProfile.sandbox || unlockedInstruments.value.includes('mic')) toggleMicPanel()
+    return
+  }
+  // Shelter exit: F or Escape while inside a shelter
+  if (!e.repeat && (e.code === 'KeyF' || e.code === 'Escape') && useBuildables().isShielded.value) {
+    e.preventDefault()
+    handleShelterExit()
+    return
+  }
+  // Shelter enter: F while near a shelter
+  if (e.code === 'KeyF' && !e.repeat && nearbyShelter.value) {
+    e.preventDefault()
+    handleShelterEnter()
     return
   }
   if (e.code === 'KeyF' && !e.repeat && orbitalDrops.nearbyDrop.value) {
@@ -2414,6 +2464,7 @@ function createSiteControllerContext() {
       radActiveEventId,
       radDecoding,
       activePlacementPreview,
+      nearbyShelter,
     },
   })
 }

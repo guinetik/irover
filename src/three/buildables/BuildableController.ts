@@ -15,6 +15,19 @@ export interface BuildableController {
   readonly features: string[]
   readonly isRoverInside: boolean
 
+  /** True when the rover is close enough to interact (press F). */
+  isNearby(roverPosition: THREE.Vector3): boolean
+  /** Enter the shelter — sets isRoverInside and returns the center position for teleporting the rover. */
+  enter(): THREE.Vector3
+  /** Exit the shelter — clears isRoverInside and returns the entrance position for teleporting the rover. */
+  exit(): THREE.Vector3
+  /** Fixed camera orbit parameters for the interior view. */
+  getInteriorCameraOrbit(): { distance: number; pitch: number }
+  /** World-space center position of the buildable interior. */
+  getCenterPosition(): THREE.Vector3
+  /** World-space position just outside the entrance. */
+  getEntrancePosition(): THREE.Vector3
+
   init(scene: THREE.Scene): Promise<void>
   update(roverPosition: THREE.Vector3, dt: number): void
   dispose(): void

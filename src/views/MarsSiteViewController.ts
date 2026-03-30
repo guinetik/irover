@@ -339,6 +339,8 @@ export interface MarsSiteViewRefs {
   radActiveEventId: Ref<string | null>
   radDecoding: Ref<boolean>
   activePlacementPreview: ShallowRef<BuildablePlacementPreview | null>
+  /** The nearby shelter controller (if any) that the rover can interact with via F key. */
+  nearbyShelter: ShallowRef<import('@/three/buildables/BuildableController').BuildableController | null>
 }
 
 /** Services and callbacks supplied by the view — no Vue imports in the loop beyond ref reads. */
@@ -522,6 +524,7 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
     micEnabled,
     radLevel,
     activePlacementPreview,
+    nearbyShelter,
   } = ctx.refs
 
   const { syncFromControllers } = useInstrumentDurability()
@@ -1061,6 +1064,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
       for (const b of buildableControllers.value) {
         b.update(roverPos, effSceneDelta)
       }
+      // Shelter proximity detection for "Press F" prompt
+      const nearby = isShielded.value
+        ? null
+        : buildableControllers.value.find(
+            (b) => !b.isRoverInside && b.features.includes('hazard-shield') && b.isNearby(roverPos),
+          ) ?? null
+      if (nearby !== nearbyShelter.value) nearbyShelter.value = nearby
       // Hide dust particles when inside a shielded buildable
       if (siteScene.dust) {
         siteScene.dust.mesh.visible = !isShielded.value

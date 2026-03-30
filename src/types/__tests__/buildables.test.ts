@@ -13,14 +13,10 @@ describe('buildable catalog', () => {
     expect(shelter!.features).toContain('hazard-shield')
   })
 
-  it('has required fields on shelter door def', () => {
+  it('has interactionDistance on shelter def', () => {
     const shelter = getBuildableDef('shelter')!
-    expect(shelter.door).toBeDefined()
-    expect(shelter.door!.meshName).toBe('Cube012__0')
-    expect(shelter.door!.axis).toBe('x')
-    expect(shelter.door!.openAngle).toBeCloseTo(1.57)
-    expect(shelter.door!.speed).toBe(2.0)
-    expect(shelter.door!.triggerDistance).toBe(8)
+    expect(shelter.interactionDistance).toBe(12)
+    expect(shelter.door).toBeUndefined()
   })
 
   it('catalog keys match buildable ids', () => {

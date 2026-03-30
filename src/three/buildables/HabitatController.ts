@@ -4,6 +4,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { BuildableController } from './BuildableController'
 import type { BuildableDef, BuildableFootprint } from '@/types/buildables'
 
+/** Default interaction distance when not specified in the buildable definition. */
+const DEFAULT_INTERACTION_DISTANCE = 12
+/** Camera distance when viewing the rover inside the shelter. */
+const INTERIOR_CAMERA_DISTANCE = 3.5
+/** Camera pitch (radians) when viewing the rover inside the shelter. */
+const INTERIOR_CAMERA_PITCH = 0.8
+
 export class HabitatController implements BuildableController {
   readonly id: string
   readonly def: BuildableDef
@@ -12,12 +19,11 @@ export class HabitatController implements BuildableController {
   readonly features: string[]
 
   private group = new THREE.Group()
-  private doorMesh: THREE.Object3D | null = null
-  private doorOpen = 0
   private scene: THREE.Scene | null = null
   private heightAt: (x: number, z: number) => number
   readonly rotationY: number
   private _isRoverInside = false
+  private interactionDistance: number
 
   constructor(
     def: BuildableDef,
@@ -32,14 +38,11 @@ export class HabitatController implements BuildableController {
     this.features = [...def.features]
     this.rotationY = rotationY
     this.heightAt = heightAt
+    this.interactionDistance = def.interactionDistance ?? DEFAULT_INTERACTION_DISTANCE
   }
 
   get isRoverInside(): boolean {
     return this._isRoverInside
-  }
-
-  get doorOpenFraction(): number {
-    return this.doorOpen
   }
 
   async init(scene: THREE.Scene): Promise<void> {
@@ -52,11 +55,15 @@ export class HabitatController implements BuildableController {
       if ((child as THREE.Mesh).isMesh) {
         child.castShadow = true
         child.receiveShadow = true
+        // Render both sides so interior walls are visible when camera is inside
+        const mat = (child as THREE.Mesh).material
+        if (Array.isArray(mat)) {
+          mat.forEach((m) => { m.side = THREE.DoubleSide })
+        } else if (mat) {
+          mat.side = THREE.DoubleSide
+        }
       }
     })
-    if (this.def.door) {
-      this.doorMesh = model.getObjectByName(this.def.door.meshName) ?? null
-    }
     this.group.add(model)
     const groundY = this.heightAt(this.position.x, this.position.z)
     this.group.position.set(this.position.x, groundY, this.position.z)
@@ -65,33 +72,47 @@ export class HabitatController implements BuildableController {
     scene.add(this.group)
   }
 
-  update(roverPosition: THREE.Vector3, dt: number): void {
-    const halfX = (this.footprint.x * this.def.scale) / 2
-    const halfZ = (this.footprint.z * this.def.scale) / 2
+  /** True when the rover is close enough to interact (press F to enter). */
+  isNearby(roverPosition: THREE.Vector3): boolean {
     const dx = roverPosition.x - this.position.x
     const dz = roverPosition.z - this.position.z
-    const cos = Math.cos(-this.rotationY)
-    const sin = Math.sin(-this.rotationY)
-    const localX = dx * cos - dz * sin
-    const localZ = dx * sin + dz * cos
-    this._isRoverInside = Math.abs(localX) < halfX && Math.abs(localZ) < halfZ
+    const dist = Math.sqrt(dx * dx + dz * dz)
+    return dist < this.interactionDistance
+  }
 
-    if (this.doorMesh && this.def.door) {
-      const distToShelter = Math.sqrt(dx * dx + dz * dz)
-      const shouldOpen = distToShelter < this.def.door.triggerDistance
-      const target = shouldOpen ? 1 : 0
-      const step = (this.def.door.speed / this.def.door.openAngle) * dt
-      if (this.doorOpen < target) {
-        this.doorOpen = Math.min(this.doorOpen + step, target)
-      } else if (this.doorOpen > target) {
-        this.doorOpen = Math.max(this.doorOpen - step, target)
-      }
-      const angle = this.doorOpen * this.def.door.openAngle
-      const axis = this.def.door.axis
-      if (axis === 'x') this.doorMesh.rotation.x = angle
-      else if (axis === 'y') this.doorMesh.rotation.y = angle
-      else if (axis === 'z') this.doorMesh.rotation.z = angle
-    }
+  /** Enter the shelter. Sets isRoverInside true and returns the center position. */
+  enter(): THREE.Vector3 {
+    this._isRoverInside = true
+    return this.getCenterPosition()
+  }
+
+  /** Exit the shelter. Clears isRoverInside and returns the entrance position. */
+  exit(): THREE.Vector3 {
+    this._isRoverInside = false
+    return this.getEntrancePosition()
+  }
+
+  /** World-space center of the shelter (at terrain height). */
+  getCenterPosition(): THREE.Vector3 {
+    return this.position.clone()
+  }
+
+  /** World-space position just outside the shelter entrance, at interaction distance along the shelter's forward axis. */
+  getEntrancePosition(): THREE.Vector3 {
+    const entranceOffset = this.interactionDistance * 0.9
+    const ex = this.position.x + Math.sin(this.rotationY) * entranceOffset
+    const ez = this.position.z + Math.cos(this.rotationY) * entranceOffset
+    const ey = this.heightAt(ex, ez)
+    return new THREE.Vector3(ex, ey, ez)
+  }
+
+  /** Fixed camera orbit parameters for the interior view. */
+  getInteriorCameraOrbit(): { distance: number; pitch: number } {
+    return { distance: INTERIOR_CAMERA_DISTANCE, pitch: INTERIOR_CAMERA_PITCH }
+  }
+
+  update(_roverPosition: THREE.Vector3, _dt: number): void {
+    // No per-frame logic needed — proximity and enter/exit are handled externally.
   }
 
   dispose(): void {

@@ -5,13 +5,7 @@ import { HabitatController } from '../HabitatController'
 import type { BuildableDef } from '@/types/buildables'
 
 vi.mock('three/addons/loaders/GLTFLoader.js', () => {
-  const doorMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 1, 1),
-    new THREE.MeshBasicMaterial(),
-  )
-  doorMesh.name = 'Cube012__0'
   const scene = new THREE.Group()
-  scene.add(doorMesh)
   return {
     GLTFLoader: class {
       loadAsync() {
@@ -32,13 +26,7 @@ const SHELTER_DEF: BuildableDef = {
   footprint: { x: 20, z: 20 },
   maxPlacementSlope: 0.3,
   scale: 0.5,
-  door: {
-    meshName: 'Cube012__0',
-    axis: 'x',
-    openAngle: 1.57,
-    speed: 2.0,
-    triggerDistance: 8,
-  },
+  interactionDistance: 12,
   controllerType: 'HabitatController',
   inventoryItemId: 'shelter-kit',
   features: ['hazard-shield'],
@@ -60,30 +48,38 @@ describe('HabitatController', () => {
     expect(controller.features).toContain('hazard-shield')
   })
 
-  it('detects rover inside footprint', () => {
-    const roverInside = new THREE.Vector3(50, 0, 50)
-    controller.update(roverInside, 0.016)
-    expect(controller.isRoverInside).toBe(true)
+  it('isNearby returns true when rover is within interaction distance', () => {
+    const roverNear = new THREE.Vector3(55, 0, 50) // 5 units away, within 12
+    expect(controller.isNearby(roverNear)).toBe(true)
   })
 
-  it('detects rover outside footprint', () => {
-    const roverOutside = new THREE.Vector3(200, 0, 200)
-    controller.update(roverOutside, 0.016)
-    expect(controller.isRoverInside).toBe(false)
-  })
-
-  it('opens door when rover is within trigger distance', () => {
-    const roverNear = new THREE.Vector3(50, 0, 50)
-    for (let i = 0; i < 60; i++) {
-      controller.update(roverNear, 0.016)
-    }
-    expect(controller.doorOpenFraction).toBeGreaterThan(0)
-  })
-
-  it('keeps door closed when rover is far away', () => {
+  it('isNearby returns false when rover is beyond interaction distance', () => {
     const roverFar = new THREE.Vector3(200, 0, 200)
-    controller.update(roverFar, 0.016)
-    expect(controller.doorOpenFraction).toBe(0)
+    expect(controller.isNearby(roverFar)).toBe(false)
+  })
+
+  it('enter() sets isRoverInside true and returns center position', () => {
+    expect(controller.isRoverInside).toBe(false)
+    const center = controller.enter()
+    expect(controller.isRoverInside).toBe(true)
+    expect(center.x).toBe(position.x)
+    expect(center.z).toBe(position.z)
+  })
+
+  it('exit() clears isRoverInside and returns entrance position', () => {
+    controller.enter()
+    expect(controller.isRoverInside).toBe(true)
+    const exitPos = controller.exit()
+    expect(controller.isRoverInside).toBe(false)
+    // Entrance position should be offset from center
+    const distFromCenter = exitPos.distanceTo(position)
+    expect(distFromCenter).toBeGreaterThan(0)
+  })
+
+  it('getInteriorCameraOrbit returns valid orbit params', () => {
+    const orbit = controller.getInteriorCameraOrbit()
+    expect(orbit.distance).toBeGreaterThan(0)
+    expect(orbit.pitch).toBeGreaterThan(0)
   })
 
   it('disposes without error', () => {

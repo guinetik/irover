@@ -25,6 +25,7 @@ export interface BuildableDef {
   maxPlacementSlope: number
   scale: number
   door?: BuildableDoorDef
+  interactionDistance?: number
   controllerType: string
   inventoryItemId: string
   features: string[]
