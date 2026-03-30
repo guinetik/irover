@@ -162,7 +162,7 @@ export function useInventory() {
   function addComponent(itemId: string, quantity: number): AddComponentResult {
     if (quantity <= 0) return { ok: false, message: 'Invalid quantity.' }
     const def = INVENTORY_CATALOG[itemId]
-    if (!def || (def.category !== 'component' && def.category !== 'trace' && def.category !== 'refined') || def.weightPerUnit == null || def.maxStack == null) {
+    if (!def || (def.category !== 'component' && def.category !== 'trace' && def.category !== 'refined' && def.category !== 'buildable') || def.weightPerUnit == null || def.maxStack == null) {
       return { ok: false, message: 'Unknown component.' }
     }
     const addWeight = def.weightPerUnit * quantity
@@ -325,7 +325,7 @@ function tryMergeOneDevItem(itemId: string): boolean {
   }
 
   if (
-    (def.category === 'component' || def.category === 'trace' || def.category === 'refined') &&
+    (def.category === 'component' || def.category === 'trace' || def.category === 'refined' || def.category === 'buildable') &&
     def.weightPerUnit != null &&
     def.maxStack != null
   ) {
@@ -403,7 +403,7 @@ export function devSpawnInventoryItem(itemId: string, quantity = 1): DevSpawnInv
   }
 
   if (
-    (def.category === 'component' || def.category === 'trace' || def.category === 'refined') &&
+    (def.category === 'component' || def.category === 'trace' || def.category === 'refined' || def.category === 'buildable') &&
     def.weightPerUnit != null &&
     def.maxStack != null
   ) {

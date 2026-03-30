@@ -354,6 +354,16 @@
       "image": "/inventory/refined-regolith-concrete.png",
       "weightPerUnit": 0.02,
       "maxStack": 100
+    },
+    {
+      "id": "shelter-kit",
+      "category": "buildable",
+      "label": "Shelter Kit",
+      "description": "Prefab pressurized shelter module. Activate to construct.",
+      "image": "/inventory/shelter-kit.png",
+      "action": "place-buildable:shelter",
+      "weightPerUnit": 50.0,
+      "maxStack": 1
     }
   ]
 }

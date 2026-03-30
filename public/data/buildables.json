@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "buildables": [
+    {
+      "id": "shelter",
+      "label": "Shelter",
+      "desc": "Pressurized shelter. Protects the rover from all environmental hazards. Drive inside to activate.",
+      "image": "/inventory/shelter-kit.png",
+      "model": "/habitat.glb",
+      "category": "shelter",
+      "placement": "exterior",
+      "footprint": { "x": 20, "z": 20 },
+      "maxPlacementSlope": 0.3,
+      "scale": 0.5,
+      "door": {
+        "meshName": "Cube012__0",
+        "axis": "x",
+        "openAngle": 1.57,
+        "speed": 2.0,
+        "triggerDistance": 8
+      },
+      "controllerType": "HabitatController",
+      "inventoryItemId": "shelter-kit",
+      "features": ["hazard-shield"]
+    }
+  ]
+}

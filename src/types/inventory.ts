@@ -7,7 +7,7 @@ export interface InventoryItemsFile {
   items: InventoryItemDefJson[]
 }
 
-export type InventoryItemCategory = 'rock' | 'component' | 'trace' | 'refined'
+export type InventoryItemCategory = 'rock' | 'component' | 'trace' | 'refined' | 'buildable'
 
 /** One row from the inventory catalog JSON. */
 export interface InventoryItemDefJson {
@@ -23,6 +23,8 @@ export interface InventoryItemDefJson {
   weightPerUnit?: number
   /** Components only — max count per stack. Rocks omit (unlimited count, cargo mass only). */
   maxStack?: number
+  /** Buildables only — action string encoding the operation (e.g. `place-buildable:shelter`). */
+  action?: string
 }
 
 /** Runtime catalog entry with validated fields. */
@@ -35,6 +37,7 @@ export interface InventoryItemDef {
   weightRange: [number, number] | null
   weightPerUnit: number | null
   maxStack: number | null
+  action: string | null
 }
 
 /** All item ids from the bundled catalog (rocks + components). */
@@ -81,6 +84,7 @@ function buildCatalog(items: InventoryItemDefJson[]): Record<string, InventoryIt
         weightRange: row.weightRange,
         weightPerUnit: null,
         maxStack: null,
+        action: null,
       }
     } else if (row.category === 'component' || row.category === 'trace' || row.category === 'refined') {
       if (row.weightPerUnit == null || row.maxStack == null)
@@ -94,6 +98,21 @@ function buildCatalog(items: InventoryItemDefJson[]): Record<string, InventoryIt
         weightRange: null,
         weightPerUnit: row.weightPerUnit,
         maxStack: row.maxStack,
+        action: null,
+      }
+    } else if (row.category === 'buildable') {
+      if (row.weightPerUnit == null || row.maxStack == null)
+        throw new Error(`[inventory] buildable "${row.id}" needs weightPerUnit and maxStack`)
+      out[row.id] = {
+        id: row.id,
+        category: 'buildable',
+        label: row.label,
+        description: row.description,
+        image: row.image,
+        weightRange: null,
+        weightPerUnit: row.weightPerUnit,
+        maxStack: row.maxStack,
+        action: row.action ?? null,
       }
     }
   }
