@@ -1438,6 +1438,8 @@ const {
 } = useSiteRemsWeather()
 /** One or more REMS weather lines joined for the top-bar marquee (dust + meteor if both active). */
 const remsTickerLine = computed(() => {
+  // Weather notifications require REMS to be surveying — no sensor, no warning
+  if (!remsSurveying.value) return null
   const lines = [
     remsStormActiveText.value,
     remsStormIncomingText.value,
