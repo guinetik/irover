@@ -203,6 +203,24 @@
       "maxStack": 100
     },
     {
+      "id": "co2-gas",
+      "category": "gas",
+      "label": "CO₂ Gas",
+      "description": "Pressurised carbon dioxide captured from a subsurface CO₂ vent. Stored in the rover's onboard gas compartment.",
+      "image": "/inventory/gas-co2.png",
+      "weightPerUnit": 0.1,
+      "maxStack": 100
+    },
+    {
+      "id": "methane-gas",
+      "category": "gas",
+      "label": "Methane Gas",
+      "description": "Pressurised methane captured from a subsurface vent. Possible biogenic origin — handle with care.",
+      "image": "/inventory/gas-methane.png",
+      "weightPerUnit": 0.1,
+      "maxStack": 100
+    },
+    {
       "id": "purified-iron-oxide",
       "category": "refined",
       "label": "Purified Iron Oxide",
