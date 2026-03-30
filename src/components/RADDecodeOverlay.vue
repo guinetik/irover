@@ -92,19 +92,20 @@ const PTYPES: Record<RadParticleType, {
   id: string; color: string; glowColor: string; size: number
   speed: number; onScreen: number; label: string
 }> = {
-  proton:  { id: 'p+',  color: '#ff7733', glowColor: 'rgba(255,119,51,', size: 4,   speed: 2.8, onScreen: 1.5, label: 'p+' },
-  neutron: { id: 'n',   color: '#6699cc', glowColor: 'rgba(102,153,204,', size: 5,   speed: 2.2, onScreen: 2.0, label: 'n' },
-  gamma:   { id: 'γ',   color: '#eeeeff', glowColor: 'rgba(238,238,255,', size: 2.5, speed: 4.0, onScreen: 1.0, label: 'γ' },
-  hze:     { id: 'HZE', color: '#cc55ff', glowColor: 'rgba(204,85,255,',  size: 7,   speed: 1.4, onScreen: 2.5, label: 'HZE' },
+  proton:  { id: 'p+',  color: '#ff7733', glowColor: 'rgba(255,119,51,', size: 5,   speed: 280, onScreen: 4.0, label: 'p+' },
+  neutron: { id: 'n',   color: '#6699cc', glowColor: 'rgba(102,153,204,', size: 6,   speed: 220, onScreen: 5.0, label: 'n' },
+  gamma:   { id: 'γ',   color: '#eeeeff', glowColor: 'rgba(238,238,255,', size: 3,   speed: 400, onScreen: 3.0, label: 'γ' },
+  hze:     { id: 'HZE', color: '#cc55ff', glowColor: 'rgba(204,85,255,',  size: 9,   speed: 160, onScreen: 6.0, label: 'HZE' },
 }
 const PTYPE_KEYS: RadParticleType[] = ['proton', 'neutron', 'gamma', 'hze']
 
 // ── Rate curve mapping ──
+// Returns particles-per-second at time progress t (0–1)
 const RATE_CURVES: Record<string, (t: number) => number> = {
-  'steady':       (t: number) => 0.9,
-  'ramp-up':      (t: number) => 0.8 + t * 1.2,
-  'peak-mid':     (t: number) => 2.0 + Math.sin(t * Math.PI) * 1.0,
-  'front-loaded': (t: number) => t < 0.25 ? 1.6 : 0.08,
+  'steady':       (t: number) => 5,
+  'ramp-up':      (t: number) => 2 + t * 8,
+  'peak-mid':     (t: number) => 4 + Math.sin(t * Math.PI) * 6,
+  'front-loaded': (t: number) => t < 0.25 ? 12 : 2,
 }
 
 // ── Rarity color mapping ──
@@ -203,9 +204,9 @@ function pickParticleType(composition: Record<RadParticleType, number>): RadPart
 // ── Spawn a particle ──
 function spawnParticle(typeKey: RadParticleType, isGhost: boolean) {
   const pt = PTYPES[typeKey]
-  const sx = W * 0.2 + Math.random() * W * 0.6
-  const sy = -10 - Math.random() * 30
-  const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.6
+  const sx = W * 0.05 + Math.random() * W * 0.9
+  const sy = -10 - Math.random() * 40
+  const angle = Math.PI / 2 + (Math.random() - 0.5) * 0.8
   const speed = pt.speed * (0.8 + Math.random() * 0.4)
 
   totalSpawned++
@@ -251,7 +252,7 @@ function update(dt: number) {
   const rate = rateCurveFn(progress)
   emitAccumulator += rate * dt
 
-  while (emitAccumulator >= 1 && totalSpawned < eventDef.totalParticles) {
+  while (emitAccumulator >= 1) {
     emitAccumulator -= 1
     const isGhostPhase = eventDef.id === 'forbush-decrease' && progress > 0.4
     const typeKey = pickParticleType(eventDef.composition)
@@ -291,9 +292,9 @@ function update(dt: number) {
       continue
     }
 
-    p.x += p.vx
-    p.y += p.vy
-    p.vy += 0.02 // gravity
+    p.x += p.vx * dt
+    p.y += p.vy * dt
+    p.vy += 20 * dt // gravity
     p.life -= dt * (1.0 / p.pt.onScreen)
     p.pulse += dt * 6
 
