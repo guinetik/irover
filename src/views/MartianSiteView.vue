@@ -117,6 +117,7 @@
       :active-instrument-slots="activeInstrumentSlots"
       :storm-level="activeStormLevel"
       :radiation-level="radiationLevelForOverlay"
+      :stat-extras="overlayStatExtras"
       :thermal="activeInstrumentSlot === HEATER_SLOT ? { internalTempC: internalTempC, ambientC: ambientEffectiveC, ambientMeasured: remsSurveying, heaterW: heaterEffectiveW, zone: thermalZone } : null"
       :rems-hud="activeInstrumentSlot === REMS_SLOT ? remsHud : null"
       :chem-cam-shots="chemcamShotsRemaining + '/' + chemcamShotsMax"
@@ -1124,6 +1125,29 @@ const activeStormLevel = computed(() => {
 })
 
 const radiationLevelForOverlay = computed(() => radLevel.value)
+
+/** Rover-level display extras for instrument stat bars (night penalty, RTG overdrive on movementSpeed). */
+const overlayStatExtras = computed(() => {
+  const extras: { label: string; value: string; color: string }[] = []
+  const nf = currentNightFactor.value
+  if (nf > 0.01) {
+    const penaltyFactor = hasPerk('night-vision') ? 0.35 : 0.5
+    const pct = Math.round(-(nf * penaltyFactor) * 100)
+    extras.push({
+      label: hasPerk('night-vision') ? 'NIGHT (NV)' : 'NIGHT',
+      value: `${pct}%`,
+      color: '#e05030',
+    })
+  }
+  const rtg = siteRover.value?.instruments.find(i => i.id === 'rtg') as RTGController | undefined
+  const rtgBoost = rtg?.speedMultiplier ?? 1.0
+  if (rtgBoost > 1) {
+    const pct = Math.round((rtgBoost - 1) * 100)
+    extras.push({ label: 'RTG OVERDRIVE', value: `+${pct}%`, color: '#5dc9a5' })
+  }
+  if (extras.length === 0) return undefined
+  return { movementSpeed: extras }
+})
 
 const activeChemCamReadout = computed(() => {
   if (!showChemCamResults.value) return null

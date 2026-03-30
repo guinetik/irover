@@ -25,6 +25,8 @@ export interface ResolvedInstrumentStatsInput {
   thermalZone?: 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL'
   stormLevel?: number
   radiationLevel?: number
+  /** Additional display-only buff entries per modifier key (e.g. night penalty on movementSpeed). */
+  extras?: Partial<Record<keyof ProfileModifiers, SpeedBuffEntry[]>>
 }
 
 /**
@@ -68,7 +70,10 @@ export function resolveInstrumentStats(input: ResolvedInstrumentStatsInput): Res
       stormLevel: input.stormLevel,
       instrumentTier: def.tier,
       radiationLevel: input.radiationLevel,
-      extras: passiveExtras.get(stat.key),
+      extras: [
+        ...(passiveExtras.get(stat.key) ?? []),
+        ...(input.extras?.[stat.key] ?? []),
+      ],
     }),
   }))
 }

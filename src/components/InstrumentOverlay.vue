@@ -107,27 +107,6 @@
           </div>
         </div>
 
-        <!-- WHLS: movement speed indicator -->
-        <div v-if="activeSlot === WHLS_SLOT && wheelsHud" class="ov-spd-speed">
-          <div class="ov-spd-speed-row">
-            <span class="ov-spd-speed-label">MOVE SPD</span>
-            <span class="ov-spd-speed-value" :style="{ color: wheelsSpeedColor }">{{ wheelsSpeedStr }}</span>
-          </div>
-          <div class="ov-spd-speed-bar-track">
-            <div class="ov-spd-speed-bar-fill" :style="{ width: wheelsSpeedBarPct + '%', background: wheelsSpeedColor }" />
-          </div>
-          <div class="ov-spd-buffs">
-            <div
-              v-for="buff in wheelsHud.speedBuffs"
-              :key="buff.label"
-              class="ov-spd-buff"
-            >
-              <span class="ov-spd-buff-label">{{ buff.label }}</span>
-              <span class="ov-spd-buff-value" :style="{ color: buff.color }">{{ buff.value }}</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Instrument stats (data-driven from instruments.json stats[]) -->
         <InstrumentStatBar
           v-for="resolved in resolvedStats"
@@ -435,6 +414,8 @@ const props = withDefaults(
     stormLevel?: number
     /** Radiation level at rover position (0-1). */
     radiationLevel?: number
+    /** Additional display-only buff entries per modifier key (e.g. night penalty on movementSpeed). */
+    statExtras?: Partial<Record<string, { label: string; value: string; color: string }[]>>
     /** Radiation zone: 'safe' | 'intermediate' | 'hazardous' */
     radZone?: string
     /** Current RAD dose rate in mGy/day */
@@ -481,6 +462,7 @@ const props = withDefaults(
     activeInstrumentSlots: () => [],
     stormLevel: 0,
     radiationLevel: 0,
+    statExtras: undefined,
     radZone: 'safe',
     radDoseRate: 0,
     radEnabled: false,
@@ -507,6 +489,7 @@ const resolvedStats = computed(() => {
     thermalZone: props.thermal?.zone as 'OPTIMAL' | 'COLD' | 'FRIGID' | 'CRITICAL' | undefined,
     stormLevel: props.stormLevel,
     radiationLevel: props.radiationLevel,
+    extras: props.statExtras as any,
   })
 })
 
@@ -636,22 +619,6 @@ const healthColor = computed(() => {
   return '#e05030'
 })
 
-const wheelsSpeedStr = computed(() => {
-  const pct = props.wheelsHud?.speedPct ?? 100
-  return `${Math.round(pct)}%`
-})
-
-const wheelsSpeedColor = computed(() => {
-  const pct = props.wheelsHud?.speedPct ?? 100
-  if (pct > 105) return '#5dc9a5'
-  if (pct >= 95) return '#ef9f27'
-  return '#e05030'
-})
-
-const wheelsSpeedBarPct = computed(() => {
-  const pct = props.wheelsHud?.speedPct ?? 100
-  return Math.min(100, Math.max(0, pct / 1.5))
-})
 
 const ZONE_COLORS: Record<string, string> = {
   OPTIMAL: '#5dc9a5',
