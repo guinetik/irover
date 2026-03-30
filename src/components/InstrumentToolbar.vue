@@ -75,7 +75,7 @@ const instruments: ToolbarInstrument[] = [
 // LGA/UHF are in the CommToolbar, not here.
 // RAD is always available (passive dosimeter, no gating).
 // REMS is unlocked by m01 completion.
-const ALWAYS_AVAILABLE = ['rad']
+const ALWAYS_AVAILABLE: string[] = []
 
 const visibleInstruments = computed(() => {
   if (props.sandbox) return instruments
