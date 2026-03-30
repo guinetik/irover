@@ -244,6 +244,7 @@
       :capacity-kg="capacityKg"
       :is-full="isFull"
       @dump="removeInventoryStack"
+      @action="handleInventoryAction"
     />
     <ProfilePanel :open="profileOpen" />
     <MapOverlay
@@ -646,6 +647,7 @@ import MapOverlay from '@/components/MapOverlay.vue'
 import MeteorShockOverlay from '@/components/MeteorShockOverlay.vue'
 import MeteorDeathOverlay from '@/components/MeteorDeathOverlay.vue'
 import { useInventory, devSpawnRandomInventoryItems, devSpawnInventoryItem } from '@/composables/useInventory'
+import { useInventoryActions } from '@/composables/useInventoryActions'
 import { useSamExperiments } from '@/composables/useSamExperiments'
 import { useSamQueue, type SamQueueEntry } from '@/composables/useSamQueue'
 import { useSamArchive } from '@/composables/useSamArchive'
@@ -816,6 +818,13 @@ const achievementsOpen = ref(false)
 function toggleInventoryFromToolbar(): void {
   playUiCue('ui.switch')
   inventoryOpen.value = !inventoryOpen.value
+}
+
+function handleInventoryAction(itemId: string, actionString: string): void {
+  const invoked = invokeAction(actionString)
+  if (invoked) {
+    inventoryOpen.value = false
+  }
 }
 
 function toggleProfilePanel(): void {
@@ -1413,6 +1422,7 @@ const {
   addComponentsBatch,
   removeStack: removeInventoryStack,
 } = useInventory()
+const { invokeAction } = useInventoryActions()
 const gameClock = useMarsGameClock()
 const { HEATER_MISSION_DURATIONS } = gameClock
 const {

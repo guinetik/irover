@@ -44,6 +44,15 @@
                 >
                   ×
                 </button>
+                <button
+                  v-if="getAction(cell.itemId)"
+                  type="button"
+                  class="inv-action-btn"
+                  title="Activate"
+                  @click.stop="emitAction(cell.itemId, getAction(cell.itemId)!)"
+                >
+                  ▶
+                </button>
               </template>
               <template v-else>
                 <span class="inv-slot-empty">—</span>
@@ -92,6 +101,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   dump: [itemId: string]
+  action: [itemId: string, actionString: string]
 }>()
 
 const { playUiCue } = useUiSound()
@@ -99,6 +109,16 @@ const { playUiCue } = useUiSound()
 function emitDump(itemId: string): void {
   playUiCue('ui.switch')
   emit('dump', itemId)
+}
+
+function getAction(itemId: string): string | null {
+  const def = getInventoryItemDef(itemId)
+  return def?.action ?? null
+}
+
+function emitAction(itemId: string, action: string): void {
+  playUiCue('ui.switch')
+  emit('action', itemId, action)
 }
 
 const hoverIdx = ref(-1)
@@ -368,6 +388,28 @@ watch(
 .inv-dump-btn:hover {
   color: #fff;
   background: rgba(224, 80, 48, 0.7);
+}
+
+.inv-action-btn {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(93, 201, 165, 0.85);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(93, 201, 165, 0.35);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.inv-action-btn:hover {
+  color: #fff;
+  background: rgba(93, 201, 165, 0.5);
 }
 
 .inv-tooltip {
