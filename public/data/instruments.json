@@ -462,7 +462,8 @@
       },
       "hint": "Automatic thermostat. Heater kicks in below -10\u00b0C, shuts off above +5\u00b0C. Colder sites = more power to survive = less for science. [H] or the HTR control under WHLS beside the power HUD.",
       "stats": [
-        { "key": "heaterDraw", "label": "HEAT DRAW" }
+        { "key": "heaterDraw", "label": "HEAT DRAW" },
+        { "key": "heaterEfficiency", "label": "HEAT OUTPUT" }
       ]
     },
     {
@@ -472,7 +473,7 @@
       "name": "LGA",
       "type": "LOW-GAIN ANTENNA",
       "desc": "Omnidirectional low-gain antenna for direct-to-Earth communication. Primary command uplink and mission mailbox.",
-      "power": "5W",
+      "power": "2W",
       "tier": "standard",
       "idlePowerW": 2,
       "activePowerW": 0,

@@ -11,6 +11,8 @@ export interface ThermalTickInput {
   temperatureMaxK: number
   /** Max heater output in watts — from HeaterController.activePowerW (instruments.json). */
   maxHeaterW?: number
+  /** Heater thermal efficiency multiplier — from HeaterController.efficiencyMod (profile modifier). */
+  heaterEfficiency?: number
 }
 
 // --- TODO: Instrument durability & modifier system ---
@@ -101,7 +103,8 @@ export function useMarsThermal() {
     const heaterOverdriveMul = missionCooldowns.isActive(MISSION_COOLDOWN_ID.HEATER_OVERDRIVE_HEAT) ? 2 : 1
     const effectiveW = heaterW.value * heaterOverdriveMul
     heaterEffectiveW.value = effectiveW
-    const heaterWarmRate = (effectiveW / maxW) * HEATER_MAX_WARM_CS
+    const efficiency = input.heaterEfficiency ?? 1.0
+    const heaterWarmRate = (effectiveW / maxW) * HEATER_MAX_WARM_CS * efficiency
     const heatIn = (RTG_WASTE_HEAT_CS + heaterWarmRate) * deltaSeconds
     const heatLoss = HEAT_LOSS_COEFF * INSULATION_FACTOR *
       (internalTempC.value - ambientEffectiveC.value) * deltaSeconds

@@ -20,6 +20,8 @@ export interface ProfileModifiers {
   buildSpeed: number
   structureDurability: number
   radiationTolerance: number
+  /** Heater thermal efficiency — scales warming rate per watt. 0 = baseline, +0.1 = 10% more effective. */
+  heaterEfficiency: number
   /** Drill speed multiplier on MastCam-tagged rocks. 0 = no bonus, 0.4 = 40% faster (base). */
   chainDrillBonus: number
   /** Sample weight multiplier on ChemCam-analyzed rocks. 0 = no bonus, 0.3 = +30% weight (base). */
@@ -42,6 +44,7 @@ const ZERO_MODIFIERS: ProfileModifiers = {
   buildSpeed: 0,
   structureDurability: 0,
   radiationTolerance: 0,
+  heaterEfficiency: 0,
   chainDrillBonus: 0,
   chainLootBonus: 0,
 }
@@ -330,6 +333,7 @@ const chosenPatron = ref<PatronId | null>(null)
 const chosenOrigin = ref<OriginId | null>(null)
 const chosenMotivation = ref<MotivationId | null>(null)
 const rewardTrackLayer = ref<Partial<ProfileModifiers>>({})
+const instrumentProvidesLayer = ref<Partial<ProfileModifiers>>({})
 
 function saveToStorage(): void {
   try {
@@ -440,9 +444,19 @@ export function usePlayerProfile() {
     saveToStorage()
   }
 
-  /** Convenience: get a single modifier multiplier */
+  /**
+   * Set the instrument-provides modifier layer (additive offsets from active
+   * instrument passive bonuses). Applied at read-time by {@link mod} — no
+   * recomputeModifiers() needed, safe to call every frame.
+   */
+  function setInstrumentProvides(provides: Partial<ProfileModifiers>): void {
+    instrumentProvidesLayer.value = provides
+  }
+
+  /** Convenience: get a single modifier multiplier (includes instrument provides). */
   function mod(key: keyof ProfileModifiers): number {
-    return profile.modifiers[key]
+    const instrumentBonus = instrumentProvidesLayer.value[key] ?? 0
+    return profile.modifiers[key] + instrumentBonus
   }
 
   return {
@@ -450,6 +464,7 @@ export function usePlayerProfile() {
     setProfile,
     setIdentity,
     applyRewardTrack,
+    setInstrumentProvides,
     hydrateProfile,
     clearProfile,
     mod,

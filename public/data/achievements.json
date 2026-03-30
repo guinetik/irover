@@ -777,6 +777,16 @@
       "modifierValue": 0.015
     },
     {
+      "sp": 1690,
+      "id": "track-heat-exchanger",
+      "icon": "♨",
+      "title": "HEAT EXCHANGER",
+      "description": "Improved thermal coupling. Each watt of heater power warms the rover faster.",
+      "type": "REWARD TRACK",
+      "modifierKey": "heaterEfficiency",
+      "modifierValue": 0.10
+    },
+    {
       "sp": 1700,
       "id": "track-powerpack-gamma",
       "icon": "⚛",

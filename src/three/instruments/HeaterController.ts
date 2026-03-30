@@ -25,6 +25,9 @@ export class HeaterController extends InstrumentController {
   override readonly usageDecayChance = 0.10
   override readonly usageDecayAmount = 0.5
 
+  /** Thermal efficiency modifier — scales warming rate per watt. Set by domain tick handler. */
+  efficiencyMod = 1.0
+
   // Thermal state — updated from useMarsThermal each frame by the view
   internalTempC = 15
   ambientC = -10

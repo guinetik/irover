@@ -1124,12 +1124,13 @@ export function createMarsSiteViewController(ctx: MarsSiteViewContext): MarsSite
 
       // --- Thermal + heater ---
       if (siteTerrainParams.value) {
-        const heaterForThermal = controller?.instruments.find(i => i.id === 'heater')
+        const heaterForThermal = controller?.instruments.find(i => i.id === 'heater') as HeaterController | undefined
         tickThermal(effSceneDelta, {
           timeOfDay: siteScene.sky?.timeOfDay ?? 0.5,
           temperatureMinK: siteTerrainParams.value.temperatureMinK,
           temperatureMaxK: siteTerrainParams.value.temperatureMaxK,
           maxHeaterW: heaterForThermal?.activePowerW,
+          heaterEfficiency: heaterForThermal?.efficiencyMod,
         })
       }
       {
