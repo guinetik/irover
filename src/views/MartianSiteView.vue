@@ -823,7 +823,7 @@ function toggleProfilePanel(): void {
 
 const rewardTrackOpen = ref(false)
 const showArchive = ref(false)
-const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0)
+const hasScienceDiscoveries = computed(() => chemCamArchivedSpectra.value.length > 0 || danArchivedProspects.value.length > 0 || samArchivedDiscoveries.value.length > 0 || apxsArchivedAnalyses.value.length > 0 || radArchivedEvents.value.length > 0)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const mapMarkers = computed((): import('@/components/MapOverlay.vue').MapMarker[] => {
   const out: import('@/components/MapOverlay.vue').MapMarker[] = []
